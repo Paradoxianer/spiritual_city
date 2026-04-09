@@ -21,7 +21,7 @@ class GameOfLifeService {
         }
         final bonus = prayerZoneKeys.contains('$x,$y') ? 0.2 : 0.0;
         final nextIntensity =
-            (nextActive ? 1.0 : 0.0 + bonus).clamp(0.0, 1.0);
+            ((nextActive ? 1.0 : 0.0) + bonus).clamp(0.0, 1.0);
         return SpiritualCellState(
           lightIntensity: nextIntensity,
           isActive: nextActive,

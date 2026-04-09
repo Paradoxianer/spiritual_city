@@ -8,6 +8,7 @@ class PlayerJoystickComponent extends PositionComponent with DragCallbacks {
   static const double _knobRadius = GameConstants.joystickKnobRadius;
 
   Vector2 _knobOffset = Vector2.zero();
+  bool isVisible = true;
 
   Vector2 get direction =>
       _knobOffset.length > 0 ? _knobOffset.normalized() : Vector2.zero();
@@ -35,6 +36,7 @@ class PlayerJoystickComponent extends PositionComponent with DragCallbacks {
 
   @override
   void render(Canvas canvas) {
+    if (!isVisible) return;
     final center = Offset(_joystickRadius, _joystickRadius);
 
     canvas.drawCircle(
