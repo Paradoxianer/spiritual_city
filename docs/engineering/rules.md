@@ -13,6 +13,7 @@
 * **Automatisches Schließen:** Nutze in Commits oder PR-Beschreibungen Closing-Keywords (z.B. `fixes #123`), um den Workflow zu automatisieren.
 
 ## 3. Git- & Commit-Disziplin
+* **Branching** Wenn du ein neues Feature einsetzt, erstelle ein Branch.
 * **Conventional Commits:** Nutze strikt das Format `type: description` (z.B. `feat:`, `fix:`, `refactor:`, `chore:`).
 * **Issue-Integration:**  Wenn ein Issue durch einen commit geschlossen wird füge fixe: #issuenr hinzu
 * **Scope-Reinheit:** Ein Commit sollte nur Änderungen enthalten, die zum referenzierten Issue gehören.
