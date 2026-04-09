@@ -12,7 +12,7 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
   
-  // Lock orientation
+  // Lock orientation to landscape for the game
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
