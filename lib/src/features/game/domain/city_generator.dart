@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:fast_noise/fast_noise.dart';
+import 'package:flame_noise/flame_noise.dart';
 import '../../../core/utils/seed_manager.dart';
 import 'models/city_cell.dart';
 import 'models/city_chunk.dart';
@@ -11,35 +11,29 @@ class CityGenerator {
   CityGenerator(this.seedManager);
 
   void generateChunk(CityChunk chunk) {
-    // In fast_noise v2.0.0 wird die Generierung über die Top-Level-Funktionen
-    // wie perlin2, simplex2 etc. oder über ein FastNoise-Objekt abgewickelt.
-    // Falls FastNoise nicht als Klasse erkannt wird, nutzen wir die Funktionen.
-    
+    // Initialisierung der Noise-Generatoren via flame_noise
+    // Wir nutzen PerlinNoise für weiche Übergänge
+    final densityNoise = PerlinNoise(
+      seed: seedManager.seed,
+    );
+
+    final structureNoise = PerlinNoise(
+      seed: seedManager.seed + 123,
+    );
+
     for (int y = 0; y < CityChunk.chunkSize; y++) {
       for (int x = 0; x < CityChunk.chunkSize; x++) {
         final worldX = chunk.getWorldX(x);
         final worldY = chunk.getWorldY(y);
         
-        // Wir nutzen noise2 (Top-Level Funktion in v2.0.0)
-        // Die Parameter sind x, y und optional ein Objekt für Einstellungen
-        // oder wir nutzen direkt perlin2/simplex2.
+        // flame_noise Noise-Klassen bieten noise2(x, y)
+        // Wir skalieren die Koordinaten mit der Frequenz manuell, 
+        // da flame_noise PerlinNoise oft im Bereich 0..1 oder -1..1 arbeitet.
         
-        final double densRaw = noise2(
-          worldX.toDouble(), 
-          worldY.toDouble(),
-          seed: seedManager.seed,
-          frequency: 0.01,
-          noiseType: NoiseType.Perlin,
-        );
+        final densRaw = densityNoise.noise2(worldX * 0.05, worldY * 0.05);
         final dens = (densRaw + 1) / 2;
         
-        final double struct = noise2(
-          worldX.toDouble(), 
-          worldY.toDouble(),
-          seed: seedManager.seed + 123,
-          frequency: 0.1,
-          noiseType: NoiseType.Perlin,
-        );
+        final struct = structureNoise.noise2(worldX * 0.1, worldY * 0.1);
 
         CellData? data;
         
