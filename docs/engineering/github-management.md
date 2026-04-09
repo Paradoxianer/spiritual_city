@@ -25,12 +25,6 @@ Um alle Milestones via CLI aufzulisten:
 
 | ID | Title | Strategic Goal                      |
 | :--- | :--- |:------------------------------------|
-| **1** | **Release 1 (MVP)** | **MVP - The Multi-Platform Launch** |
-| **2** | **Release 2** | **Enhanced Coordination & Selection** |
-| **3** | **Release 3** | **Scalability & Polish** |
-
-## 🛠 Useful Commands
-- `.\scripts\init_store_metadata.ps1`: Syncs Android & iOS metadata.
-- `fastlane supply init`: Fetch metadata from Google Play.
-- `gh issue list --milestone 1`: List all issues for Release 1.
-- `gh issue list --milestone 2`: List all issues for Release 2.
+| **1** | **Release 1 (MVP)** | **MVP - The First Multi-Platform Launch** |
+| **2** | **Release 2** | **Enhanced R1** |
+| **3** | **Release 3** | **Enhanced R2** |
