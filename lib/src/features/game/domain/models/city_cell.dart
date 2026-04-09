@@ -1,7 +1,9 @@
 enum CellType {
   empty,
   road,
-  building,
+  buildingSmall,
+  buildingLarge,
+  church,
   park,
 }
 

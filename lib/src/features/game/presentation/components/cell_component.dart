@@ -20,8 +20,14 @@ class CellComponent extends PositionComponent {
       case CellType.road:
         paint.color = Colors.grey[800]!;
         break;
-      case CellType.building:
+      case CellType.buildingLarge:
+        paint.color = Colors.blueGrey[900]!;
+        break;
+      case CellType.buildingSmall:
         paint.color = Colors.brown[400]!;
+        break;
+      case CellType.church:
+        paint.color = Colors.amber[200]!;
         break;
       case CellType.park:
         paint.color = Colors.green[700]!;

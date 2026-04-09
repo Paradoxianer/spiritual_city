@@ -6,7 +6,7 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
-import 'components/cell_component.dart';
+import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection {
@@ -17,6 +17,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final CityGenerator generator;
   late final PlayerComponent player;
   late final JoystickComponent joystick;
+  late final ChunkManager chunkManager;
 
   @override
   Color backgroundColor() => const Color(0xFF111111);
@@ -28,29 +29,30 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // 1. Initialize logic
     seedManager = SeedManager(42);
     generator = CityGenerator(seedManager);
-    grid = generator.generate(30, 30); // Reduced size for faster initial load
+    grid = CityGrid();
 
-    // 2. Add Grid to world (using addAll for performance)
-    final cellComponents = grid.getAllCells().map((cell) => CellComponent(cell)).toList();
-    await world.addAll(cellComponents);
-
-    // 3. Add Player to world
+    // 2. Add Player to world first (so ChunkManager has a target)
     player = PlayerComponent(joystick: _createJoystick());
-    player.position = Vector2(
-      (grid.width * CellComponent.cellSize) / 2,
-      (grid.height * CellComponent.cellSize) / 2,
-    );
+    // Start at a "safe" positive coordinate
+    player.position = Vector2(1000, 1000); 
     await world.add(player);
 
+    // 3. Add ChunkManager to world
+    chunkManager = ChunkManager(
+      grid: grid,
+      generator: generator,
+      target: player,
+    );
+    await world.add(chunkManager);
+
     // 4. Add Joystick to Camera Viewport (HUD)
-    // In Flame 1.x, elements added to camera.viewport stay on screen
     await camera.viewport.add(joystick);
 
     // 5. Camera Setup
     camera.viewfinder.anchor = Anchor.center;
     camera.follow(player);
 
-    _log.info('SpiritWorldGame loaded and visible.');
+    _log.info('SpiritWorldGame loaded with ChunkManager.');
   }
 
   JoystickComponent _createJoystick() {

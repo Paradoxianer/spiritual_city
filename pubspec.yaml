@@ -14,6 +14,9 @@ dependencies:
   flame: ^1.11.0
   flame_audio: ^2.1.0
   
+  # Noise for procedural generation
+  fast_noise: ^1.1.1
+  
   # State Management & DI
   get_it: ^7.6.0
   provider: ^6.0.5

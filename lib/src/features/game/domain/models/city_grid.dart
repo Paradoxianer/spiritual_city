@@ -1,23 +1,35 @@
+import 'city_chunk.dart';
 import 'city_cell.dart';
 
 class CityGrid {
-  final int width;
-  final int height;
-  final Map<String, CityCell> _cells = {};
+  final Map<String, CityChunk> _chunks = {};
 
-  CityGrid({required this.width, required this.height});
-
-  void setCell(int x, int y, CityCell cell) {
-    _cells['$x,$y'] = cell;
+  CityChunk getOrCreateChunk(int chunkX, int chunkY) {
+    final key = '$chunkX,$chunkY';
+    return _chunks.putIfAbsent(key, () => CityChunk(chunkX: chunkX, chunkY: chunkY));
   }
 
-  CityCell? getCell(int x, int y) {
-    return _cells['$x,$y'];
+  CityCell? getCell(int worldX, int worldY) {
+    final chunkX = (worldX / CityChunk.chunkSize).floor();
+    final chunkY = (worldY / CityChunk.chunkSize).floor();
+    
+    final chunk = _chunks['$chunkX,$chunkY'];
+    if (chunk == null) return null;
+
+    final localX = worldX % CityChunk.chunkSize;
+    final localY = worldY % CityChunk.chunkSize;
+    return chunk.cells['$localX,$localY'];
   }
 
-  List<CityCell> getAllCells() => _cells.values.toList();
-  
-  bool isWithinBounds(int x, int y) {
-    return x >= 0 && x < width && y >= 0 && y < height;
+  void setCell(int worldX, int worldY, CityCell cell) {
+    final chunkX = (worldX / CityChunk.chunkSize).floor();
+    final chunkY = (worldY / CityChunk.chunkSize).floor();
+    
+    final chunk = getOrCreateChunk(chunkX, chunkY);
+    final localX = worldX % CityChunk.chunkSize;
+    final localY = worldY % CityChunk.chunkSize;
+    chunk.cells['$localX,$localY'] = cell;
   }
+
+  List<CityChunk> getLoadedChunks() => _chunks.values.toList();
 }
