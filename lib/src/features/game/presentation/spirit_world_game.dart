@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flame/input.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
@@ -79,7 +80,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final toggleButton = ButtonComponent(
       button: CircleComponent(radius: 30, paint: Paint()..color = Colors.purple.withOpacity(0.5)),
       onPressed: toggleWorld,
-      position: Vector2(size.x - 80, 40),
+      position: Vector2(size.x - 80, 80),
       anchor: Anchor.center,
     );
     await camera.viewport.add(toggleButton);

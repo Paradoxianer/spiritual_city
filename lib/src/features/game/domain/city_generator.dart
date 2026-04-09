@@ -17,7 +17,7 @@ class CityGenerator {
       CityChunk.chunkSize,
       seed: seedManager.seed,
       frequency: 0.01,
-      noiseType: NoiseType.perlin,
+      noiseType: NoiseType.Perlin,
       xOffset: chunk.chunkX * CityChunk.chunkSize,
       yOffset: chunk.chunkY * CityChunk.chunkSize,
     ));
@@ -28,7 +28,7 @@ class CityGenerator {
       CityChunk.chunkSize,
       seed: seedManager.seed + 123,
       frequency: 0.1, 
-      noiseType: NoiseType.perlin,
+      noiseType: NoiseType.Perlin,
       xOffset: chunk.chunkX * CityChunk.chunkSize,
       yOffset: chunk.chunkY * CityChunk.chunkSize,
     ));
