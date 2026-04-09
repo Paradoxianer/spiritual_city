@@ -1,5 +1,5 @@
 import 'dart:math';
-import '../../core/utils/seed_manager.dart';
+import '../../../core/utils/seed_manager.dart';
 import 'models/city_cell.dart';
 import 'models/city_grid.dart';
 
