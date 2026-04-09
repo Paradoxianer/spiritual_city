@@ -11,14 +11,18 @@ class CityGenerator {
   CityGenerator(this.seedManager);
 
   void generateChunk(CityChunk chunk) {
-    // Initialisierung der Noise-Generatoren via flame_noise
-    // Wir nutzen PerlinNoise für weiche Übergänge
-    final densityNoise = PerlinNoise(
+    // In flame_noise v0.1.0 nutzen wir die FastNoise-Klasse, 
+    // die alle Algorithmen (Perlin, Simplex etc.) bündelt.
+    final densityNoiseGen = FastNoise(
       seed: seedManager.seed,
+      frequency: 0.05,
+      noiseType: NoiseType.perlin,
     );
 
-    final structureNoise = PerlinNoise(
+    final structureNoiseGen = FastNoise(
       seed: seedManager.seed + 123,
+      frequency: 0.1,
+      noiseType: NoiseType.perlin,
     );
 
     for (int y = 0; y < CityChunk.chunkSize; y++) {
@@ -26,14 +30,11 @@ class CityGenerator {
         final worldX = chunk.getWorldX(x);
         final worldY = chunk.getWorldY(y);
         
-        // flame_noise Noise-Klassen bieten noise2(x, y)
-        // Wir skalieren die Koordinaten mit der Frequenz manuell, 
-        // da flame_noise PerlinNoise oft im Bereich 0..1 oder -1..1 arbeitet.
-        
-        final densRaw = densityNoise.noise2(worldX * 0.05, worldY * 0.05);
+        // Nutzung von getNoise2 für die Generierung
+        final densRaw = densityNoiseGen.getNoise2(worldX.toDouble(), worldY.toDouble());
         final dens = (densRaw + 1) / 2;
         
-        final struct = structureNoise.noise2(worldX * 0.1, worldY * 0.1);
+        final struct = structureNoiseGen.getNoise2(worldX.toDouble(), worldY.toDouble());
 
         CellData? data;
         
