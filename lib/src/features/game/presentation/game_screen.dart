@@ -1,5 +1,8 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import '../../../core/di/service_locator.dart';
+import '../../player/domain/services/player_service.dart';
+import '../../interaction/domain/services/prayer_service.dart';
 import 'spirit_world_game.dart';
 
 class GameScreen extends StatefulWidget {
@@ -15,7 +18,10 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    _game = SpiritWorldGame();
+    _game = SpiritWorldGame(
+      playerService: getIt<PlayerService>(),
+      prayerService: getIt<PrayerService>(),
+    );
   }
 
   @override
@@ -23,7 +29,6 @@ class _GameScreenState extends State<GameScreen> {
     return Scaffold(
       body: GameWidget(
         game: _game,
-        // Loading overlay can be added here
         loadingBuilder: (context) => const Center(
           child: CircularProgressIndicator(),
         ),
