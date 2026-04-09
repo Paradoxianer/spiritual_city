@@ -13,7 +13,7 @@ dependencies:
   # Game Engine
   flame: ^1.11.0
   flame_audio: ^2.1.0
-  flame_noise: ^0.1.0
+  flame_noise: ^0.2.0
   
   # State Management & DI
   get_it: ^7.6.0
