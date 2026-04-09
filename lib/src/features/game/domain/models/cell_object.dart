@@ -1,5 +1,5 @@
 enum RoadType { small, big, highway }
-enum BuildingType { house, skyscraper, church, hospital }
+enum BuildingType { house, skyscraper, church, hospital, shop }
 enum NatureType { park, water, tree }
 
 abstract class CellData {
@@ -8,9 +8,10 @@ abstract class CellData {
 
 class RoadData extends CellData {
   final RoadType type;
-  final int connections; // Bitmask for auto-tiling
+  final bool isIntersection;
+  final int connections; // Bitmask for auto-tiling (N:1, E:2, S:4, W:8)
 
-  RoadData({required this.type, this.connections = 0});
+  RoadData({required this.type, this.isIntersection = false, this.connections = 0});
   
   @override
   String get categoryId => 'road_${type.name}';
@@ -18,9 +19,18 @@ class RoadData extends CellData {
 
 class BuildingData extends CellData {
   final BuildingType type;
-  final int size; // e.g., 1 for 1x1, 2 for 2x2
+  final String buildingId; // Unique ID to link to an interior/state
+  final bool hasInterior;
+  final int floorCount;
+  final bool isEntrance;
 
-  BuildingData({required this.type, this.size = 1});
+  BuildingData({
+    required this.type, 
+    required this.buildingId,
+    this.hasInterior = true,
+    this.floorCount = 1,
+    this.isEntrance = false,
+  });
 
   @override
   String get categoryId => 'building_${type.name}';
