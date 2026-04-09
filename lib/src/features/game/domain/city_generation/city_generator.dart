@@ -56,7 +56,8 @@ class CityGenerator {
   }
 
   CityCell _createCell(int wx, int wy, CellData? data, DistrictType district, double density) {
-    final detail = _detailNoise.noise2(wx * 0.1, wy * 0.1);
+    // In fast_noise 2.0.0 (via flame_noise) heißt die Methode getNoise2
+    final detail = _detailNoise.getNoise2(wx.toDouble() * 0.1, wy.toDouble() * 0.1);
     return CityCell(
       x: wx,
       y: wy,

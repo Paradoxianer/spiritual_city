@@ -23,8 +23,8 @@ class LotGenerator {
 
     if (rand.nextDouble() > buildChance) return _generateNature(district, rand);
 
-    // Gebäude-Typ-Auswahl
-    final double sVal = (_spiritNoise.noise2(wx * 0.1, wy * 0.1) + 1) / 2;
+    // Gebäude-Typ-Auswahl (getNoise2 nutzen)
+    final double sVal = (_spiritNoise.getNoise2(wx.toDouble() * 0.1, wy.toDouble() * 0.1) + 1) / 2;
     BuildingType bType = _getBuildingType(district, rand, sVal);
     
     // Eindeutige ID für das Gebäude (Zentrum der Parzelle)
@@ -32,7 +32,7 @@ class LotGenerator {
     final rootY = (wy ~/ grid) * grid;
     final String bId = 'b_${rootX}_$rootY';
 
-    // EINGANGS-LOGIK: Der Eingang ist immer an der Seite, die zur Straße zeigt.
+    // EINGANGS-LOGIK
     final bool isEntrance = (modX == grid ~/ 2 && modY == 1);
 
     return BuildingData(
