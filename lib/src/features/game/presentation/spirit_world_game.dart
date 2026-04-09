@@ -8,6 +8,7 @@ import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
+import 'components/cell_component.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection {
   final _log = Logger('SpiritWorldGame');
@@ -19,8 +20,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final JoystickComponent joystick;
   late final ChunkManager chunkManager;
 
+  bool isSpiritualWorld = false;
+
   @override
-  Color backgroundColor() => const Color(0xFF111111);
+  Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
 
   @override
   Future<void> onLoad() async {
@@ -31,13 +34,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     generator = CityGenerator(seedManager);
     grid = CityGrid();
 
-    // 2. Add Player to world first (so ChunkManager has a target)
+    // 2. Add Player
     player = PlayerComponent(joystick: _createJoystick());
-    // Start at a "safe" positive coordinate
-    player.position = Vector2(1000, 1000); 
+    player.position = Vector2(256, 256); 
     await world.add(player);
 
-    // 3. Add ChunkManager to world
+    // 3. Add ChunkManager
     chunkManager = ChunkManager(
       grid: grid,
       generator: generator,
@@ -45,14 +47,20 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     );
     await world.add(chunkManager);
 
-    // 4. Add Joystick to Camera Viewport (HUD)
+    // 4. HUD elements
     await camera.viewport.add(joystick);
+    await _addHudButtons();
 
-    // 5. Camera Setup
+    // 5. Camera follow
     camera.viewfinder.anchor = Anchor.center;
     camera.follow(player);
 
-    _log.info('SpiritWorldGame loaded with ChunkManager.');
+    _log.info('SpiritWorldGame loaded.');
+  }
+
+  void toggleWorld() {
+    isSpiritualWorld = !isSpiritualWorld;
+    _log.info('Switched to ${isSpiritualWorld ? "Spiritual" : "Physical"} world');
   }
 
   JoystickComponent _createJoystick() {
@@ -65,5 +73,15 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       margin: const EdgeInsets.only(left: 40, bottom: 40),
     );
     return joystick;
+  }
+
+  Future<void> _addHudButtons() async {
+    final toggleButton = ButtonComponent(
+      button: CircleComponent(radius: 30, paint: Paint()..color = Colors.purple.withOpacity(0.5)),
+      onPressed: toggleWorld,
+      position: Vector2(size.x - 80, 40),
+      anchor: Anchor.center,
+    );
+    await camera.viewport.add(toggleButton);
   }
 }

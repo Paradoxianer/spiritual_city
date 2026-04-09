@@ -1,11 +1,11 @@
 import 'package:flame/components.dart';
+import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
-import 'cell_component.dart';
 
 class PlayerComponent extends PositionComponent with HasGameRef {
   static const double playerSize = 24.0;
   final JoystickComponent joystick;
-  final double speed = 150.0;
+  final double speed = 200.0;
 
   PlayerComponent({required this.joystick})
       : super(
@@ -14,16 +14,20 @@ class PlayerComponent extends PositionComponent with HasGameRef {
         );
 
   @override
+  Future<void> onLoad() async {
+    add(CircleHitbox());
+  }
+
+  @override
   void render(Canvas canvas) {
     final paint = Paint()..color = Colors.blueAccent;
-    // Draw a simple circle for the pastor
     canvas.drawCircle(
       (size / 2).toOffset(),
       size.x / 2,
       paint,
     );
     
-    // Simple "cross" indicator
+    // Cross
     paint.color = Colors.white;
     paint.strokeWidth = 2;
     canvas.drawLine(
