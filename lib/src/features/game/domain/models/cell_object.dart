@@ -1,5 +1,49 @@
 enum RoadType { small, big, highway }
-enum BuildingType { house, skyscraper, church, hospital, shop }
+
+/// All placeable building types in the city.
+/// Grouped roughly by category for readability.
+enum BuildingType {
+  // --- Residential ---
+  house,        // Single-family home (suburbs)
+  apartment,    // Multi-storey apartment block (inner rings)
+
+  // --- Commercial ---
+  shop,         // Small shop / boutique
+  supermarket,  // Neighbourhood grocery store
+  mall,         // Large shopping centre (unique per large zone)
+  office,       // Office building (commercial districts)
+  skyscraper,   // High-rise office tower (downtown core)
+
+  // --- Industrial ---
+  factory,      // Manufacturing plant
+  warehouse,    // Storage / logistics
+
+  // --- Civic / Infrastructure ---
+  trainStation, // Main / district rail station       (unique)
+  policeStation,// Police station                     (per zone)
+  fireStation,  // Fire station                       (per zone)
+  postOffice,   // Post office                        (per zone)
+
+  // --- Health & Education ---
+  hospital,     // Hospital                           (per large zone)
+  school,       // Primary / secondary school         (per zone)
+  university,   // University campus                  (unique)
+
+  // --- Culture / Religion ---
+  church,       // Small neighbourhood church         (per zone)
+  cathedral,    // Central cathedral / dom            (unique)
+  library,      // Public library                     (per zone)
+  museum,       // Museum                             (unique/rare)
+  stadium,      // Sports arena                       (unique)
+
+  // --- Government ---
+  cityHall,     // Rathaus – city hall                (unique)
+
+  // --- Other ---
+  cemetery,     // Cemetery                           (rare)
+  powerPlant,   // Power plant (industrial edge)      (unique)
+}
+
 enum NatureType { park, water, tree }
 
 abstract class CellData {
