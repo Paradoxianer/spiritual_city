@@ -55,13 +55,35 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
   static final Paint _fillCemetery    = Paint()..color = const Color(0xFF424242); // grey[800]
   static final Paint _fillPowerPlant  = Paint()..color = const Color(0xFF212121);
 
-  // Accent / detail colours
-  static final Paint _accentRed    = Paint()..color = Colors.red..strokeWidth = 3;
-  static final Paint _accentBrown  = Paint()..color = Colors.brown..strokeWidth = 2;
-  static final Paint _accentWhite  = Paint()..color = Colors.white..strokeWidth = 2;
-  static final Paint _accentYellow = Paint()..color = Colors.yellow.withValues(alpha: 0.5);
+  // Accent / detail colours – stroke variants defined per use-case so that
+  // no static Paint object is ever mutated at render time.
+  static final Paint _accentRedStroke3  = Paint()
+    ..color = Colors.red
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3;
+  static final Paint _accentBrownStroke2 = Paint()
+    ..color = Colors.brown
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2;
+  static final Paint _accentBrownStroke3 = Paint()
+    ..color = Colors.brown
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3;
+  static final Paint _accentWhiteStroke1 = Paint()
+    ..color = Colors.white
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5;
+  static final Paint _accentWhiteStroke2 = Paint()
+    ..color = Colors.white
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2;
+  static final Paint _accentGoldStroke15 = Paint()
+    ..color = const Color(0xFFFFD700)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5;
+  static final Paint _accentYellow = Paint()
+    ..color = Colors.yellow.withValues(alpha: 0.5);
   static final Paint _accentBlack  = Paint()..color = Colors.black45;
-  static final Paint _accentGold   = Paint()..color = const Color(0xFFFFD700)..strokeWidth = 2;
 
   static final Paint _borderPaint = Paint()
     ..style = PaintingStyle.stroke
@@ -160,7 +182,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Large entrance arch
         canvas.drawArc(
             Rect.fromLTWH(size.x * 0.2, size.y * 0.5, size.x * 0.6, size.y * 0.5),
-            3.14, 3.14, false, _accentWhite..style = PaintingStyle.stroke);
+            3.14, 3.14, false, _accentWhiteStroke2);
         break;
 
       // ---- Industrial ----------------------------------------------------
@@ -175,7 +197,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         canvas.drawRect(size.toRect(), _fillWarehouse);
         // Roof line
         canvas.drawLine(Offset(0, size.y * 0.35),
-            Offset(size.x, size.y * 0.35), _accentWhite..strokeWidth = 1.5);
+            Offset(size.x, size.y * 0.35), _accentWhiteStroke1);
         break;
 
       // ---- Civic ---------------------------------------------------------
@@ -205,18 +227,18 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Garage door
         canvas.drawRect(
             Rect.fromLTWH(size.x * 0.15, size.y * 0.45, size.x * 0.7, size.y * 0.5),
-            _accentWhite..style = PaintingStyle.stroke..strokeWidth = 2);
+            _accentWhiteStroke2);
         break;
       case BuildingType.postOffice:
         canvas.drawRect(size.toRect(), _fillPostOffice);
         // Envelope symbol
         canvas.drawRect(
             Rect.fromLTWH(size.x * 0.2, size.y * 0.3, size.x * 0.6, size.y * 0.4),
-            _accentWhite..style = PaintingStyle.stroke..strokeWidth = 2);
+            _accentWhiteStroke2);
         canvas.drawLine(Offset(size.x * 0.2, size.y * 0.3),
-            Offset(size.x * 0.5, size.y * 0.5), _accentWhite);
+            Offset(size.x * 0.5, size.y * 0.5), _accentWhiteStroke2);
         canvas.drawLine(Offset(size.x * 0.8, size.y * 0.3),
-            Offset(size.x * 0.5, size.y * 0.5), _accentWhite);
+            Offset(size.x * 0.5, size.y * 0.5), _accentWhiteStroke2);
         break;
       case BuildingType.trainStation:
         canvas.drawRect(size.toRect(), _fillTrainSt);
@@ -228,19 +250,19 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Track lines
         canvas.drawLine(
             Offset(size.x * 0.3, size.y * 0.7), Offset(size.x * 0.3, size.y),
-            _accentGold..strokeWidth = 1.5);
+            _accentGoldStroke15);
         canvas.drawLine(
             Offset(size.x * 0.7, size.y * 0.7), Offset(size.x * 0.7, size.y),
-            _accentGold..strokeWidth = 1.5);
+            _accentGoldStroke15);
         break;
 
       // ---- Health & Education -------------------------------------------
       case BuildingType.hospital:
         canvas.drawRect(size.toRect(), _fillHospital);
         canvas.drawLine(Offset(size.x * 0.5, size.y * 0.25),
-            Offset(size.x * 0.5, size.y * 0.75), _accentRed);
+            Offset(size.x * 0.5, size.y * 0.75), _accentRedStroke3);
         canvas.drawLine(Offset(size.x * 0.25, size.y * 0.5),
-            Offset(size.x * 0.75, size.y * 0.5), _accentRed);
+            Offset(size.x * 0.75, size.y * 0.5), _accentRedStroke3);
         break;
       case BuildingType.school:
         canvas.drawRect(size.toRect(), _fillSchool);
@@ -265,17 +287,17 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         canvas.drawRect(size.toRect(), _fillChurch);
         // Cross
         canvas.drawLine(Offset(size.x * 0.5, size.y * 0.15),
-            Offset(size.x * 0.5, size.y * 0.8), _accentBrown);
+            Offset(size.x * 0.5, size.y * 0.8), _accentBrownStroke2);
         canvas.drawLine(Offset(size.x * 0.3, size.y * 0.35),
-            Offset(size.x * 0.7, size.y * 0.35), _accentBrown);
+            Offset(size.x * 0.7, size.y * 0.35), _accentBrownStroke2);
         break;
       case BuildingType.cathedral:
         canvas.drawRect(size.toRect(), _fillCathedral);
         // Prominent cross + spire
         canvas.drawLine(Offset(size.x * 0.5, size.y * 0.05),
-            Offset(size.x * 0.5, size.y * 0.85), _accentBrown..strokeWidth = 3);
+            Offset(size.x * 0.5, size.y * 0.85), _accentBrownStroke3);
         canvas.drawLine(Offset(size.x * 0.25, size.y * 0.3),
-            Offset(size.x * 0.75, size.y * 0.3), _accentBrown..strokeWidth = 3);
+            Offset(size.x * 0.75, size.y * 0.3), _accentBrownStroke3);
         // Side towers
         canvas.drawRect(
             Rect.fromLTWH(size.x * 0.05, size.y * 0.25, size.x * 0.18, size.y * 0.7),

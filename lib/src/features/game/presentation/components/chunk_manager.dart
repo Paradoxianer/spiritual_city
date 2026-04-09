@@ -13,9 +13,9 @@ class ChunkManager extends Component with HasGameRef {
   final int renderDistance = 2; // Radius in Chunks um den Spieler
 
   // Track last chunk position so we only rebuild when the player crosses a
-  // chunk boundary – not on every single frame.
-  int _lastChunkX = 0x7FFFFFFF;
-  int _lastChunkY = 0x7FFFFFFF;
+  // chunk boundary – not on every single frame. Null means "not yet set".
+  int? _lastChunkX;
+  int? _lastChunkY;
 
   ChunkManager({
     required this.grid,
@@ -36,7 +36,6 @@ class ChunkManager extends Component with HasGameRef {
 
     // Only re-evaluate chunks when the player enters a new chunk.
     if (currentChunkX == _lastChunkX && currentChunkY == _lastChunkY) return;
-
     _lastChunkX = currentChunkX;
     _lastChunkY = currentChunkY;
     _updateChunks(currentChunkX, currentChunkY);

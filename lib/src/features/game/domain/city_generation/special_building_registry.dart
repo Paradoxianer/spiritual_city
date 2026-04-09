@@ -197,7 +197,8 @@ class SpecialBuildingRegistry {
   }
 
   int _zoneHash(int zx, int zy, int salt) {
-    // Fast integer hash – deterministic for (seed, zx, zy, salt)
+    // Large primes chosen for good hash distribution across zone coordinates.
+    // The bit-mixing step (xor-shift + multiply) reduces clustering.
     int h = seed ^ (zx * 374761393) ^ (zy * 668265263) ^ (salt * 1013904223);
     h = ((h >> 16) ^ h) * 0x45D9F3B;
     h = ((h >> 16) ^ h);
