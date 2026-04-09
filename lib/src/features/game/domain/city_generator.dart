@@ -3,6 +3,7 @@ import 'package:fast_noise/fast_noise.dart';
 import '../../../core/utils/seed_manager.dart';
 import 'models/city_cell.dart';
 import 'models/city_chunk.dart';
+import 'models/cell_object.dart';
 
 class CityGenerator {
   final SeedManager seedManager;
@@ -10,18 +11,18 @@ class CityGenerator {
   CityGenerator(this.seedManager);
 
   void generateChunk(CityChunk chunk) {
-    // 1. Dichte-Noise (Großflächig)
+    // 1. Density Noise (Large scale)
     final densityNoise = array2dTo1d(noise2d(
       CityChunk.chunkSize,
       CityChunk.chunkSize,
       seed: seedManager.seed,
-      frequency: 0.01, // Sehr niedrige Frequenz für große Stadtviertel
+      frequency: 0.01,
       noiseType: NoiseType.perlin,
       xOffset: chunk.chunkX * CityChunk.chunkSize,
       yOffset: chunk.chunkY * CityChunk.chunkSize,
     ));
 
-    // 2. Struktur-Noise (Straßen/Blöcke)
+    // 2. Structure Noise (Roads/Blocks)
     final structureNoise = array2dTo1d(noise2d(
       CityChunk.chunkSize,
       CityChunk.chunkSize,
@@ -38,40 +39,51 @@ class CityGenerator {
         final worldY = chunk.getWorldY(y);
         final index = y * CityChunk.chunkSize + x;
         
-        final dens = (densityNoise[index] + 1) / 2; // 0.0 (Rand) bis 1.0 (Zentrum)
+        final dens = (densityNoise[index] + 1) / 2; // 0.0 to 1.0
         final struct = structureNoise[index];
 
-        CellType type = CellType.empty;
+        CellData? data;
         
-        // Einfache Logik für Stadtstruktur
+        // Logical structure based on your hierarchy
         if (struct.abs() < 0.1) {
-          type = CellType.road;
+          data = RoadData(type: dens > 0.6 ? RoadType.big : RoadType.small);
         } else if (struct > 0.3) {
-          if (dens > 0.7) {
-            type = CellType.buildingLarge; // Zentrum
+          if (dens > 0.8) {
+            data = BuildingData(type: BuildingType.skyscraper);
           } else if (dens > 0.4) {
-            type = CellType.buildingSmall; // Wohngebiete
+            // Check for special buildings
+            final buildingRand = Random(seedManager.seed + worldX * 1000 + worldY);
+            if (buildingRand.nextDouble() < 0.05) {
+              data = BuildingData(type: BuildingType.church);
+            } else if (buildingRand.nextDouble() < 0.02) {
+              data = BuildingData(type: BuildingType.hospital);
+            } else {
+              data = BuildingData(type: BuildingType.house);
+            }
           } else {
-            type = CellType.park; // Stadtrand
+            data = NatureData(type: NatureType.park);
           }
-        }
-
-        // Kirchen-Platzierung (Sehr selten, deterministisch)
-        final churchRandom = Random(seedManager.seed + worldX * 1000 + worldY);
-        if (type == CellType.buildingSmall && churchRandom.nextDouble() < 0.02) {
-          type = CellType.church;
+        } else if (struct < -0.4 && dens < 0.3) {
+           data = NatureData(type: NatureType.water);
         }
 
         chunk.cells['$x,$y'] = CityCell(
           x: worldX,
           y: worldY,
-          type: type,
+          data: data,
           density: dens,
           crime: (1.0 - dens) * struct.abs(),
-          spiritualState: type == CellType.church ? 1.0 : (struct * dens),
+          spiritualState: _calculateSpiritualInitialState(data, struct, dens),
         );
       }
     }
+  }
+
+  double _calculateSpiritualInitialState(CellData? data, double struct, double dens) {
+    if (data is BuildingData && data.type == BuildingType.church) return 0.8;
+    if (data is BuildingData && data.type == BuildingType.hospital) return 0.4;
+    if (data is NatureData && data.type == NatureType.water) return 0.2;
+    return struct * dens;
   }
 
   List<double> array2dTo1d(List<List<double>> source) {
