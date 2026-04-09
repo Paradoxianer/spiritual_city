@@ -1,7 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flame/input.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
@@ -11,7 +10,7 @@ import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
 import 'components/cell_component.dart';
 
-class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection {
+class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
   
   late final CityGrid grid;
@@ -77,12 +76,36 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   Future<void> _addHudButtons() async {
-    final toggleButton = ButtonComponent(
-      button: CircleComponent(radius: 30, paint: Paint()..color = Colors.purple.withOpacity(0.5)),
+    final toggleButton = WorldToggleButton(
       onPressed: toggleWorld,
       position: Vector2(size.x - 80, 80),
-      anchor: Anchor.center,
     );
     await camera.viewport.add(toggleButton);
+  }
+}
+
+class WorldToggleButton extends PositionComponent with TapCallbacks {
+  final VoidCallback onPressed;
+
+  WorldToggleButton({
+    required this.onPressed,
+    required super.position,
+  }) : super(anchor: Anchor.center, size: Vector2.all(60));
+
+  @override
+  void render(Canvas canvas) {
+    final paint = Paint()..color = Colors.purple.withOpacity(0.5);
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
+    
+    // Icon-like drawing
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 2;
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.3, paint);
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    onPressed();
   }
 }
