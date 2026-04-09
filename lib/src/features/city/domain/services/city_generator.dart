@@ -4,6 +4,9 @@ import '../entities/city_grid.dart';
 import 'noise_generator.dart';
 
 class CityGeneratorService {
+  static const int _crimeNoiseOffset = 100;
+  static const int _spiritualStrengthNoiseOffset = 200;
+
   CityGrid generate(int seed, int width, int height) {
     final noise = SeededNoiseGenerator(seed);
     final cells = List.generate(height, (y) {
@@ -20,9 +23,10 @@ class CityGeneratorService {
         } else {
           type = CellType.building;
         }
-        final crime = noise.getValue(x + 100, y);
+        final crime = noise.getValue(x + _crimeNoiseOffset, y);
         final hope = 1.0 - crime;
-        final spiritualStrength = noise.getValue(x + 200, y);
+        final spiritualStrength =
+            noise.getValue(x + _spiritualStrengthNoiseOffset, y);
         final population =
             type == CellType.building ? (noiseVal * 50).round() : 0;
         return CellState(

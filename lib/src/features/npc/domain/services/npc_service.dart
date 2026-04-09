@@ -6,6 +6,9 @@ import '../../../city/domain/entities/city_grid.dart';
 import '../../../../core/constants/game_constants.dart';
 
 class NpcService {
+  static const int _maxNpcs = 20;
+  static const int _roadCellStep = 10;
+
   List<Npc> generateNpcs(CityGrid grid, int seed) {
     final random = Random(seed);
     final roadCells = <(int, int)>[];
@@ -19,7 +22,9 @@ class NpcService {
     }
 
     final npcs = <Npc>[];
-    for (int i = 0; i < roadCells.length && npcs.length < 20; i += 10) {
+    for (int i = 0;
+        i < roadCells.length && npcs.length < _maxNpcs;
+        i += _roadCellStep) {
       final (x, y) = roadCells[i];
       final spiritualState = (random.nextDouble() * 200) - 100;
       npcs.add(Npc(
