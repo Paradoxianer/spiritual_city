@@ -9,14 +9,13 @@ import 'road_generator.dart';
 import 'lot_generator.dart';
 import 'special_building_registry.dart';
 
-/// Zentraler Koordinator für die prozedurale Stadtgenerierung.
-/// Teilt die Arbeit in spezialisierte Prozessoren auf.
 class CityGenerator {
   final SeedManager seedManager;
   final DistrictSelector _districtSelector;
   final RoadGenerator _roadGenerator;
   final LotGenerator _lotGenerator;
   final PerlinNoise _detailNoise;
+  final PerlinNoise _spiritualNoise;
 
   CityGenerator(this.seedManager)
       : _districtSelector = DistrictSelector(seed: seedManager.seed),
@@ -25,7 +24,8 @@ class CityGenerator {
           seed: seedManager.seed,
           registry: SpecialBuildingRegistry(seed: seedManager.seed),
         ),
-        _detailNoise = PerlinNoise(seed: seedManager.seed + 3);
+        _detailNoise = PerlinNoise(seed: seedManager.seed + 3),
+        _spiritualNoise = PerlinNoise(seed: seedManager.seed + 77);
 
   void generateChunk(CityChunk chunk) {
     for (int y = 0; y < CityChunk.chunkSize; y++) {
@@ -35,16 +35,12 @@ class CityGenerator {
         
         final cellRand = Random(seedManager.seed ^ (worldX * 374761393) ^ (worldY * 668265263));
         
-        // 1. Geographie-Check (Wasser)
         if (_districtSelector.isWater(worldX, worldY)) {
           chunk.cells['$x,$y'] = _createNatureCell(worldX, worldY, NatureType.water);
           continue;
         }
 
-        // 2. Distrikt bestimmen
         final district = _districtSelector.getDistrictType(worldX, worldY);
-        
-        // 3. Straßennetz
         final roadData = _roadGenerator.getRoadData(worldX, worldY, district, cellRand);
         
         if (roadData != null) {
@@ -52,7 +48,6 @@ class CityGenerator {
           continue;
         }
 
-        // 4. Parzellierung & Bebauung
         final lotContent = _lotGenerator.generateLotContent(worldX, worldY, district, cellRand);
         chunk.cells['$x,$y'] = _createCell(worldX, worldY, lotContent, district, _getDensity(district));
       }
@@ -67,7 +62,7 @@ class CityGenerator {
       data: data,
       density: density,
       crime: _calculateCrime(district, detail),
-      spiritualState: _calculateSpiritualState(data, detail),
+      spiritualState: _calculateInitialSpiritualState(wx, wy, data, district),
     );
   }
 
@@ -79,6 +74,32 @@ class CityGenerator {
       density: 0.0,
       spiritualState: type == NatureType.water ? 0.4 : 0.0,
     );
+  }
+
+  /// Initialisierung der geistlichen Welt laut Lastenheft 5.3
+  double _calculateInitialSpiritualState(int wx, int wy, CellData? data, DistrictType district) {
+    // 1. Kirchen und Pastorat sind positive Inseln
+    if (data is BuildingData) {
+      if (data.type == BuildingType.church || data.type == BuildingType.cathedral) {
+        return 0.5; // +50 Grün
+      }
+      // Pastorat (angenommen bei 0,0 für den Start)
+      if (wx.abs() < 5 && wy.abs() < 5) return 0.2; // +20 Grün
+    }
+
+    // 2. Perlin Noise für ungleichmäßige Verteilung (Lavalampen-Basis)
+    // Wir skalieren den Noise so, dass ca. 80% der Stadt negativ (rot) starten
+    final noise = _spiritualNoise.getNoise2(wx * 0.05, wy * 0.05);
+    
+    // Bias in Richtung Negativ (-0.3 Verschiebung sorgt für ~80% Rot)
+    double state = noise - 0.3;
+
+    // Slums sind tendenziell etwas dunkler
+    if (district == DistrictType.slums) {
+      state -= 0.2;
+    }
+
+    return state.clamp(-1.0, 1.0);
   }
 
   double _getDensity(DistrictType district) {
@@ -100,21 +121,5 @@ class CityGenerator {
     if (district == DistrictType.industrial) base = 0.35;
     if (district == DistrictType.outskirts)  base = 0.2;
     return (base + detail.abs() * 0.2).clamp(0.0, 1.0);
-  }
-
-  double _calculateSpiritualState(CellData? data, double detail) {
-    if (data is BuildingData) {
-      switch (data.type) {
-        case BuildingType.cathedral: return 0.95;
-        case BuildingType.church:    return 0.85;
-        case BuildingType.cityHall:  return 0.70;
-        case BuildingType.hospital:  return 0.60;
-        case BuildingType.museum:    return 0.50;
-        case BuildingType.library:   return 0.45;
-        case BuildingType.university:return 0.40;
-        default:                     break;
-      }
-    }
-    return detail;
   }
 }

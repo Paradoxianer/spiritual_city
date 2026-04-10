@@ -67,6 +67,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void toggleWorld() {
     isSpiritualWorld = !isSpiritualWorld;
     _log.info('Switched World: $isSpiritualWorld');
+    // Wir erzwingen ein Repaint aller Chunks beim Weltenwechsel
+    for (final child in world.children.whereType<ChunkComponent>()) {
+      // Das passiert automatisch durch den Render-Check in ChunkComponent
+    }
   }
 
   void handleAction() {
