@@ -83,10 +83,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final viewportSize = camera.viewport.size;
     if (viewportSize.x <= 0) return;
 
+    // Viewfinder current center
     final camPos = camera.viewfinder.position;
     final pPos = player.position;
 
-    // 75% Zone Calculation
+    // Deadzone: 75% center
     final limitX = viewportSize.x * 0.375; 
     final limitY = viewportSize.y * 0.375;
 
@@ -100,11 +101,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (dy.abs() > limitY) pushY = dy - (limitY * dy.sign);
 
     if (pushX != 0 || pushY != 0) {
-      // PRINT LOGS TO CONSOLE
-      print('DEBUG: Player at ${pPos.x.toInt()},${pPos.y.toInt()} | Cam at ${camPos.x.toInt()},${camPos.y.toInt()} | Pushing: $pushX, $pushY');
+      // Direct assignment to force Flame to update the view
+      camera.viewfinder.position = Vector2(camPos.x + pushX, camPos.y + pushY);
       
-      // Move the camera
-      camera.viewfinder.position.translate(pushX, pushY);
+      // LOG THE NEW CAMERA POSITION TO VERIFY IT MOVED
+      print('DEBUG: Camera MOVED to ${camera.viewfinder.position.x.toInt()},${camera.viewfinder.position.y.toInt()} (Pushed by $pushX)');
     }
   }
 
