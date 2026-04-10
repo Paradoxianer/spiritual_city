@@ -24,10 +24,14 @@ class PlayerComponent extends PositionComponent
   double _intensityPulseTime = 0.0;
 
   // MODIFIER (Vorbereitung für Missionen/Upgrades)
-  double modifierSizeSpeed = 3.0;      // Wie schnell pulsiert der Radius
-  double modifierIntensitySpeed = 5.0; // Wie schnell pulsiert die Kraft
-  double modifierBasePower = 80.0;     // Grundstärke des Gebets
-  double modifierResistanceFactor = 1.0; // Globaler Widerstand-Multiplikator
+  double modifierSizeSpeed = 3.0;      // Geschwindigkeit des Radius-Pulses
+  double modifierIntensitySpeed = 5.0; // Geschwindigkeit des Kraft-Pulses
+  double modifierBasePower = 80.0;     // Grundstärke der Gebetsenergie
+  double modifierResistanceFactor = 1.0; // Multiplikator für Zell-Widerstand
+
+  // Getters für das HUD
+  double get faithPulse => prayerZone.pulseValue;
+  double get zoneSize => prayerZone.sizeFactor;
 
   PlayerComponent({required this.joystick})
       : super(
@@ -84,7 +88,7 @@ class PlayerComponent extends PositionComponent
       game.handleActionUp();
     }
 
-    // Shift als Joystick-Ersatz für die Größe
+    // Shift als Joystick-Ersatz für den Größen-Puls
     _isChargingSize = keysPressed.contains(LogicalKeyboardKey.shiftLeft) || !joystick.delta.isZero();
 
     return true;
@@ -100,25 +104,27 @@ class PlayerComponent extends PositionComponent
   }
 
   void _executePrayerImpact() {
+    // Timing Werte abfragen (0.1 bis 1.0)
     final intensity = (math.sin(_intensityPulseTime * modifierIntensitySpeed).abs()).clamp(0.1, 1.0);
     final radiusFactor = (math.sin(_sizePulseTime * modifierSizeSpeed).abs()).clamp(0.05, 1.0);
     
     final radius = radiusFactor * PrayerZoneComponent.maxRadius;
     
-    // ENERGIE-BERECHNUNG:
-    // Gesamtenergie basiert auf dem Intensity-Timing
+    // ENERGIE-VERTEILUNG:
+    // Gesamte Gebetsenergie basierend auf dem Stärke-Timing
     final totalEnergy = modifierBasePower * intensity;
     
     // Impact pro Zelle ist umgekehrt proportional zur Fläche
-    // (Konzentrierter Strahl vs. breite Welle)
-    // Wir nutzen radiusFactor^2 für die Flächendichte
-    final areaEffectScale = 1.0 / (radiusFactor * radiusFactor).clamp(0.1, 5.0);
+    // Kleine Fläche (radiusFactor nah 0) -> Extrem hoher Impact pro Zelle
+    // Große Fläche (radiusFactor nah 1) -> Schwacher Impact verteilt auf viele Zellen
+    final areaEffectScale = 1.0 / (radiusFactor * radiusFactor * 10.0).clamp(1.0, 100.0);
     final impactPower = totalEnergy * areaEffectScale;
 
     final center = position;
     final gridX = (center.x / CellComponent.cellSize).floor();
     final gridY = (center.y / CellComponent.cellSize).floor();
-    final cellRange = (radius / CellComponent.cellSize).ceil() + 1;
+    // Sicherheitsmarge beim Scannen der Zellen
+    final cellRange = (radius / CellComponent.cellSize).ceil() + 2;
 
     for (int dy = -cellRange; dy <= cellRange; dy++) {
       for (int dx = -cellRange; dx <= cellRange; dx++) {
@@ -145,8 +151,8 @@ class PlayerComponent extends PositionComponent
             final dist = center.distanceTo(cellPos);
             final falloff = 1.0 - (dist / (radius * 1.5)).clamp(0.0, 1.0);
             
-            // Jeder Zelle könnte einen Widerstand haben (hier Vorbereitung)
-            double cellResistance = 1.0; // TODO: Aus Cell-Daten lesen
+            // Jeder Zelle kann einen individuellen Widerstand haben
+            double cellResistance = 1.0; 
             final finalImpact = (impactPower / 100.0) * falloff / (cellResistance * modifierResistanceFactor);
             
             cell.spiritualState = (cell.spiritualState + finalImpact).clamp(-1.0, 1.0);
@@ -181,6 +187,7 @@ class PlayerComponent extends PositionComponent
 
   void _updatePrayerMechanics(double dt) {
     // 1. Größe & Form (Joystick / Shift)
+    // Wenn gedrückt, pulsiert die Größe von Mini bis Super-Groß
     _isChargingSize = !joystick.delta.isZero() || RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.shiftLeft);
     
     if (_isChargingSize) {
@@ -188,20 +195,22 @@ class PlayerComponent extends PositionComponent
       prayerZone.sizeFactor = math.sin(_sizePulseTime * modifierSizeSpeed).abs();
       if (!joystick.delta.isZero()) {
         prayerZone.direction = joystick.relativeDelta;
+      } else {
+        prayerZone.direction = Vector2.zero();
       }
     } else {
-      // Wenn nichts gedrückt wird, schrumpft die Zone auf ein Minimum
+      // Beim Loslassen schrumpft die Zone schnell auf ein Minimum
       _sizePulseTime = 0;
-      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 2).clamp(0.05, 1.0);
+      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 3.0).clamp(0.01, 1.0);
     }
 
-    // 2. Kraft (Aktionsbutton)
+    // 2. Stärke (Aktionsbutton)
     if (_isChargingIntensity) {
       _intensityPulseTime += dt;
       prayerZone.pulseValue = math.sin(_intensityPulseTime * modifierIntensitySpeed).abs();
     } else {
       _intensityPulseTime = 0;
-      prayerZone.pulseValue = 0.1;
+      prayerZone.pulseValue = 0.1; // Grundleuchten
     }
 
     prayerZone.isActive = true; 
