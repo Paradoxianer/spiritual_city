@@ -28,12 +28,160 @@ class _GameScreenState extends State<GameScreen> {
             overlayBuilderMap: {
               'DialogOverlay': (context, game) => DialogOverlay(game: _game),
             },
-            loadingBuilder: (context) => const Center(
-              child: CircularProgressIndicator(),
-            ),
+          ),
+          // Loading overlay – shown until the world is ready
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (isReady) return const SizedBox.shrink();
+              return const _LoadingOverlay();
+            },
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Animated spiritual loading screen shown while the city generates.
+class _LoadingOverlay extends StatefulWidget {
+  const _LoadingOverlay();
+
+  @override
+  State<_LoadingOverlay> createState() => _LoadingOverlayState();
+}
+
+class _LoadingOverlayState extends State<_LoadingOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  static const _verses = [
+    '"Der Herr ist mein Hirte" – Psalm 23,1',
+    '"Bittet, so wird euch gegeben" – Mt 7,7',
+    '"Die Wahrheit wird euch frei machen" – Joh 8,32',
+    '"Ich kann alles durch Christus" – Phil 4,13',
+    '"Gott ist Liebe" – 1 Joh 4,8',
+  ];
+
+  int _verseIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    // Cycle through Bible verses every 2.5 s
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(milliseconds: 2500));
+      if (!mounted) return false;
+      setState(() => _verseIndex = (_verseIndex + 1) % _verses.length);
+      return true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final pulse = _controller.value;
+        return Container(
+          color: Colors.black,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Pulsing cross / spiritual symbol
+                Opacity(
+                  opacity: 0.5 + pulse * 0.5,
+                  child: Text(
+                    '✝',
+                    style: TextStyle(
+                      fontSize: 64 + pulse * 12,
+                      color: Colors.amber,
+                      shadows: [
+                        Shadow(
+                          color: Colors.amber.withValues(alpha: 0.6),
+                          blurRadius: 20 + pulse * 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  'SPIRITWORLD CITY',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 4,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Die Stadt erwacht...',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Glowing progress dots
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(3, (i) {
+                    final dotPhase = (pulse + i / 3) % 1.0;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.purpleAccent.withValues(
+                            alpha: 0.3 + dotPhase * 0.7,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.purpleAccent.withValues(alpha: dotPhase * 0.5),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 28),
+                // Bible verse
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 600),
+                  child: Text(
+                    _verses[_verseIndex],
+                    key: ValueKey(_verseIndex),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

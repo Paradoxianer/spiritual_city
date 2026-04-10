@@ -126,6 +126,7 @@ class PlayerComponent extends PositionComponent
     _executePrayerImpact();
     _isChargingIntensity = false;
     _intensityPulseTime = 0;
+    game.recordPrayerCombat();
   }
 
   void _executePrayerImpact() {
@@ -134,8 +135,10 @@ class PlayerComponent extends PositionComponent
     final radiusFactor = math.sin(_sizePulseTime * modifierSizeSpeed).abs().clamp(0.001, 1.0);
 
     // TIMING MULTIPLIER (Lastenheft 2.3)
+    // Inbrunst modifier widens the optimal window
+    final optimalThreshold = 0.7 - game.modifiers.optimalWindowExtension;
     final double timingMultiplier;
-    if (rawIntensity >= 0.7) {
+    if (rawIntensity >= optimalThreshold) {
       timingMultiplier = 1.0; // OPTIMAL
     } else if (rawIntensity >= 0.5) {
       timingMultiplier = 0.8; // GOOD
@@ -145,15 +148,16 @@ class PlayerComponent extends PositionComponent
       timingMultiplier = 0.4; // TOO LATE
     }
 
-    // FAITH EINSATZ: Nadel als Volumenregler für den Faith-Vorrat
-    final double faithToSpend = game.faith * rawIntensity;
+    // FAITH EINSATZ: Weisheit modifier reduces faith cost
+    final double faithToSpend = game.faith * rawIntensity * game.modifiers.faithCostMultiplier;
     game.faith -= faithToSpend;
 
     final radius = radiusFactor * modifierMaxRadius;
 
-    // IMPACT BERECHNUNG: (investierter Glaube / Fläche) × BasisPower × Timing
+    // IMPACT BERECHNUNG: includes Kraft modifier
     final areaUnits = math.pi * math.pow(radius / CellComponent.cellSize, 2.0);
-    final impactPower = (faithToSpend * modifierBasePower * timingMultiplier) /
+    final impactPower = (faithToSpend * modifierBasePower * timingMultiplier *
+            game.modifiers.impactPowerMultiplier) /
         areaUnits.clamp(0.1, 1000.0);
 
     final center = position;
@@ -239,10 +243,15 @@ class PlayerComponent extends PositionComponent
     _isChargingSize = !joystick.delta.isZero() ||
         _keyboardDirection.x != 0 || _keyboardDirection.y != 0 ||
         _pressedShift;
+
+    // Apply Ausdauer modifier to zone growth speed
+    final effectiveSizeSpeed = modifierSizeSpeed * game.modifiers.zoneSizeSpeedMultiplier;
+    // Apply Konzentration modifier to intensity pulse speed (slower = more control)
+    final effectiveIntensitySpeed = modifierIntensitySpeed * game.modifiers.faithPulseSpeedMultiplier;
     
     if (_isChargingSize) {
       _sizePulseTime += dt;
-      prayerZone.sizeFactor = math.sin(_sizePulseTime * modifierSizeSpeed).abs();
+      prayerZone.sizeFactor = math.sin(_sizePulseTime * effectiveSizeSpeed).abs();
       
       if (!joystick.delta.isZero()) {
         prayerZone.direction = joystick.relativeDelta;
@@ -256,7 +265,7 @@ class PlayerComponent extends PositionComponent
 
     if (_isChargingIntensity && game.faith > 0.05) {
       _intensityPulseTime += dt;
-      prayerZone.pulseValue = math.sin(_intensityPulseTime * modifierIntensitySpeed).abs();
+      prayerZone.pulseValue = math.sin(_intensityPulseTime * effectiveIntensitySpeed).abs();
     } else {
       _isChargingIntensity = false;
       _intensityPulseTime = 0;

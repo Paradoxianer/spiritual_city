@@ -9,10 +9,13 @@ import 'cell_component.dart';
 
 class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGame> implements Interactable {
   final NPCModel model;
-  
+
   static const double npcSize = 20.0;
-  double _currentSpeed = 40.0;
   final Random _random = Random();
+  
+  // Timer for daily NPC spiritual influence on cells (Lastenheft §6.3)
+  double _spiritualInfluenceTimer = 0.0;
+  static const double _spiritualInfluenceInterval = 60.0; // every 60 seconds = 1 "game day"
 
   NPCComponent({required this.model}) : super(
     position: model.homePosition.clone(),
@@ -62,6 +65,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     if (type == 'talk') {
       model.applyInfluence(1.0);
+      game.recordConversation();
       return '💬😊';
     }
 
@@ -91,6 +95,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       if (interactionScore > 60) {
         model.applyInfluence(100);
         game.gainFaith(25.0);
+        game.recordConversion();
         return '✝️🕊️';
       } else {
         model.applyInfluence(3.0); 
@@ -112,6 +117,30 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     super.update(dt);
     if (game.paused) return;
     _updateAI(dt);
+    _updateSpiritualInfluence(dt);
+  }
+
+  /// Daily: NPC faith state influences the cell they are standing on (Lastenheft §6.3)
+  void _updateSpiritualInfluence(double dt) {
+    _spiritualInfluenceTimer += dt;
+    if (_spiritualInfluenceTimer < _spiritualInfluenceInterval) return;
+    _spiritualInfluenceTimer = 0.0;
+
+    final gx = (position.x / CellComponent.cellSize).floor();
+    final gy = (position.y / CellComponent.cellSize).floor();
+    final cell = game.grid.getCell(gx, gy);
+    if (cell == null) return;
+
+    if (model.isChristian) {
+      // Converted Christians radiate positive influence
+      cell.spiritualState = (cell.spiritualState + model.faith * 0.003).clamp(-1.0, 1.0);
+    } else if (model.faith > 50) {
+      // Sympathetic NPCs provide a weak positive nudge
+      cell.spiritualState = (cell.spiritualState + 0.05).clamp(-1.0, 1.0);
+    } else if (model.faith < -50) {
+      // Very hostile NPCs reinforce darkness
+      cell.spiritualState = (cell.spiritualState - model.faith.abs() * 0.002).clamp(-1.0, 1.0);
+    }
   }
 
   void _updateAI(double dt) {

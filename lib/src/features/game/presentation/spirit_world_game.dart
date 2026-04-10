@@ -7,12 +7,15 @@ import '../../../core/utils/seed_manager.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
+import '../domain/models/modifier_manager.dart';
+import '../domain/models/player_progress.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
 import 'components/cell_component.dart';
 import 'components/chunk_component.dart';
 import 'components/radial_menu.dart';
 import 'components/prayer_hud_component.dart';
+import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
@@ -24,6 +27,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final PlayerComponent player;
   late final JoystickComponent joystick;
   late final ChunkManager chunkManager;
+  late final SpiritualDynamicsSystem spiritualDynamics;
   late final HudButton actionButton;
   late final HudButton worldToggleButton;
   late final PrayerHudComponent prayerHud;
@@ -31,6 +35,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
+
+  // Progress & Modifiers
+  late final PlayerProgress progress;
+  late final ModifierManager modifiers;
 
   // Ressourcen
   double faith = 100.0;
@@ -66,12 +74,23 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     generator = CityGenerator(seedManager);
     grid = CityGrid();
 
+    // Progress & modifiers
+    progress = PlayerProgress();
+    modifiers = ModifierManager(progress: progress);
+
     player = PlayerComponent(joystick: _createJoystick());
     player.position = Vector2(256, 256); 
     await world.add(player);
 
     chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
     await world.add(chunkManager);
+
+    spiritualDynamics = SpiritualDynamicsSystem();
+    await world.add(spiritualDynamics);
+
+    // Wire modifier values to the dynamics system
+    spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
+    spiritualDynamics.modifierDecayReduction = modifiers.decayReduction;
 
     await camera.viewport.add(joystick);
     await _addHudButtons();
@@ -203,6 +222,34 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void gainHealth(double amount) => health = (health + amount).clamp(0.0, maxHealth);
   void gainHunger(double amount) => hunger = (hunger + amount).clamp(0.0, maxHunger);
   void gainMaterials(double amount) => materials = (materials + amount).clamp(0.0, maxMaterials);
+
+  /// Record a completed prayer combat and check modifier unlocks
+  void recordPrayerCombat() {
+    progress.recordPrayerCombat();
+    _checkAndApplyModifiers();
+  }
+
+  /// Record a completed conversation
+  void recordConversation() {
+    progress.recordConversation();
+    _checkAndApplyModifiers();
+  }
+
+  /// Record an NPC conversion
+  void recordConversion() {
+    progress.recordConversion();
+    _checkAndApplyModifiers();
+  }
+
+  void _checkAndApplyModifiers() {
+    final unlocked = modifiers.checkUnlocks();
+    if (unlocked.isNotEmpty) {
+      // Re-wire modifier values after new unlocks
+      spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
+      spiritualDynamics.modifierDecayReduction = modifiers.decayReduction;
+      _log.info('New modifiers unlocked: $unlocked');
+    }
+  }
 
   void _updateNearestInteractable() {
     Interactable? nearest;
