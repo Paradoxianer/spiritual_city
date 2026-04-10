@@ -36,8 +36,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   String _getNPCEmoji() {
     if (model.isChristian) return '🕊️';
-    if (model.faith < -50) return '😠';
-    if (model.faith < 0) return '😒';
+    if (model.faith < -30) return '😠';
     if (model.faith < 30) return '👤';
     return '🤔';
   }
@@ -49,44 +48,48 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   String handleInteraction(String type) {
-    // 1. Umgebungs-Einfluss (Lastenheft 5.2)
+    // 1. Hole den Wert der unsichtbaren Welt (-1.0 bis +1.0)
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
     final spiritualState = cell?.spiritualState ?? 0.0; 
 
-    // Schwierigkeits-Modifikator: Dunkelheit (-1.0) halbiert Erfolg, Licht (+1.0) verdoppelt ihn.
-    double envMod = 1.0 + (spiritualState * 0.5); 
+    // 2. Berechne den Interaktions-Score
+    // Glaube des NPC + Einfluss der Umgebung
+    // Ein Wert > 0 ist tendenziell positiv.
+    final interactionScore = model.faith + (spiritualState * 50);
 
     if (type == 'pray') {
       model.prayerCount++;
-      // Wahrscheinlichkeit basiert auf Faith (-100 bis 100 -> 0.0 bis 1.0)
-      double successChance = ((model.faith + 100) / 200.0) * envMod;
-      
-      if (_random.nextDouble() < successChance) {
-        model.applyInfluence(15.0 * envMod);
+      // Erfolgswahrscheinlichkeit steigt mit positivem Score
+      if (interactionScore + _random.nextInt(40) > 20) {
+        model.applyInfluence(15.0); // Gebet erhöht Faith
         return '❤️';
       } else {
-        model.applyInfluence(-10.0 / envMod); 
-        return spiritualState < -0.3 ? '💀' : '😠';
+        model.applyInfluence(-5.0); // Ablehnung senkt Faith leicht
+        return interactionScore < -20 ? '💀' : '😠';
       }
-    } else if (type == 'help') {
+    } 
+    
+    if (type == 'help') {
       model.conversationCount++;
-      model.applyInfluence(10.0 * envMod);
+      // Hilfe ist immer positiv, aber stärker in "hellen" Gebieten
+      model.applyInfluence(10.0 + (spiritualState * 5));
       return '📦😊';
-    } else if (type == 'convert') {
-      // Lastenheft 6.2: Konversion bei Faith > 50
-      if (model.isChristian) return '🙏✨'; // Bereits Christ
-      
-      if (model.faith > 50) {
-        model.applyInfluence(50.0); // Festigt den Glauben
-        return '✨🕊️'; 
+    } 
+    
+    if (type == 'convert') {
+      // Bekehrung erfordert einen hohen Score (> 50)
+      if (interactionScore > 50) {
+        model.applyInfluence(100); // Voller Glaube
+        return '✨🕊️';
       } else {
-        if (model.faith < -30) return '🚫💨';
-        if (model.faith < 20) return '🤨';
-        return '🤔'; 
+        // Reaktion zeigt, wie weit man noch entfernt ist
+        if (interactionScore < 0) return '🚫';
+        return '🤔';
       }
     }
+
     return '❓';
   }
 
@@ -117,11 +120,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     final cell = game.grid.getCell(gx, gy);
     final state = cell?.spiritualState ?? 0;
 
-    // Lastenheft 6.3: NPCs reagieren auf Territorium
-    if (state < -0.6 && !model.isChristian) {
-      _currentSpeed = 15.0; // Gelähmt in der Dunkelheit
-    } else if (model.isChristian) {
-      _currentSpeed = 50.0; // Christen agiler
+    if (state < -0.5 && !model.isChristian) {
+      _currentSpeed = 15.0;
     } else {
       _currentSpeed = 35.0 + (model.faith / 10.0);
     }
@@ -164,7 +164,6 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (model.isChristian) {
       bodyColor = Colors.white;
     } else {
-      // Visuelle Skala basierend auf Faith (-100 bis +50)
       if (model.faith < 0) {
         bodyColor = Color.lerp(Colors.red[900], Colors.grey, (model.faith + 100) / 100)!;
       } else {
@@ -175,21 +174,16 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
     
     if (model.isChristian) {
-      _renderChristianCross(canvas);
+      final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
+      final center = (size / 2).toOffset();
+      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);
+      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), paint);
     }
 
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
   }
 
-  void _renderChristianCross(Canvas canvas) {
-    final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
-    final center = (size / 2).toOffset();
-    canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);
-    canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), paint);
-  }
-
   void _renderSpiritualAura(Canvas canvas) {
-    // Aura spiegelt Faith wider (Rot -> Grün)
     final faithFactor = (model.faith + 100) / 200.0;
     final auraColor = Color.lerp(Colors.red, Colors.green, faithFactor)!
         .withValues(alpha: 0.3 + (faithFactor * 0.4));
