@@ -48,13 +48,34 @@ class DialogOverlay extends StatefulWidget {
 
 class _DialogOverlayState extends State<DialogOverlay> {
   final List<_ChatMessage> _messages = [];
+  final ScrollController _scrollController = ScrollController();
   bool _isWaiting = false;
   bool _isSessionOver = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Scrollt sanft zum Ende der Liste, wenn eine neue Nachricht erscheint
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
   void _addMessage(String content, bool isPlayer) {
     setState(() {
       _messages.add(_ChatMessage(content: content, isPlayer: isPlayer));
     });
+    _scrollToBottom();
   }
 
   void _handleInteraction(String type, String emoji) {
@@ -69,7 +90,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
       _addMessage(reaction, false);
       setState(() => _isWaiting = false);
       
-      // Check for session end (👋)
+      // Check for session end (👋) - 5 Sekunden Zeit zum Lesen
       if (reaction == '👋') {
         setState(() => _isSessionOver = true);
         Future.delayed(const Duration(seconds: 5), () {
@@ -77,7 +98,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
         });
       }
 
-      // Wenn Bekehrung erfolgreich
+      // Wenn Bekehrung erfolgreich - 5 Sekunden Zeit zum Feiern
       if (reaction == '✨🕊️') {
         setState(() => _isSessionOver = true);
         Future.delayed(const Duration(seconds: 5), () {
@@ -104,6 +125,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
         ),
         child: Column(
           children: [
+            // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: const BoxDecoration(
@@ -127,17 +149,20 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
             
+            // Chat Area mit ScrollController
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
                 child: ListView.builder(
+                  controller: _scrollController,
                   itemCount: _messages.length,
                   itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
                 ),
               ),
             ),
 
+            // Interaction Bar (nur wenn Session noch läuft)
             if (!_isSessionOver)
               Container(
                 padding: const EdgeInsets.all(12),
