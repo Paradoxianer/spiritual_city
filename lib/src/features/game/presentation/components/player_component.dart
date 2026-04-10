@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
@@ -67,7 +68,7 @@ class PlayerComponent extends PositionComponent
 
     if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
 
-    // INPUT A: Faith-Button (Leertaste oder Aktionsbutton)
+    // INPUT A: Faith-Button (Leertaste)
     if (game.isSpiritualWorld) {
       if (keysPressed.contains(LogicalKeyboardKey.space)) {
         _startCharging();
@@ -88,7 +89,6 @@ class PlayerComponent extends PositionComponent
   void _releasePrayer() {
     if (!_isChargingFaith) return;
     
-    // Impact auslösen
     _executePrayerImpact();
     
     _isChargingFaith = false;
@@ -99,15 +99,15 @@ class PlayerComponent extends PositionComponent
 
   void _executePrayerImpact() {
     // Timing Multiplier (Lastenheft 2.3)
-    final pulse = (sin(_faithPulseTime * 5) + 1) / 2;
+    // Wir nutzen math.sin für das zyklische Pulsieren (0 -> 1 -> 0)
+    final pulse = (math.sin(_faithPulseTime * 5).abs());
     double multiplier = 0.4;
     if (pulse >= 0.7) multiplier = 1.0;
     else if (pulse >= 0.5) multiplier = 0.6;
 
-    final impactPower = 50.0 * multiplier; // Basis-Wert
+    final impactPower = 50.0 * multiplier;
     final radius = prayerZone.sizeFactor * PrayerZoneComponent.maxRadius;
 
-    // Beeinflusse Zellen im Umkreis
     final center = position;
     final gridX = (center.x / CellComponent.cellSize).floor();
     final gridY = (center.y / CellComponent.cellSize).floor();
@@ -123,7 +123,6 @@ class PlayerComponent extends PositionComponent
           );
           final dist = center.distanceTo(cellPos);
           if (dist <= radius) {
-            // Kraft nimmt nach außen ab
             final falloff = 1.0 - (dist / radius);
             cell.spiritualState = (cell.spiritualState + (impactPower / 100.0) * falloff).clamp(-1.0, 1.0);
           }
@@ -159,11 +158,10 @@ class PlayerComponent extends PositionComponent
   }
 
   void _updatePrayerMechanics(double dt) {
-    // 1. Faith Pulse (0 -> 1 -> 0)
     _faithPulseTime += dt;
-    prayerZone.pulseValue = (sin(_faithPulseTime * 5) + 1) / 2;
+    // Pulsieren für visuelle Darstellung
+    prayerZone.pulseValue = math.sin(_faithPulseTime * 5).abs();
 
-    // 2. Zone Size (Wächst solange Joystick/Input gehalten wird)
     if (!joystick.delta.isZero()) {
       prayerZone.sizeFactor = (prayerZone.sizeFactor + dt * 0.5).clamp(0.0, 1.0);
       prayerZone.direction = joystick.relativeDelta;
