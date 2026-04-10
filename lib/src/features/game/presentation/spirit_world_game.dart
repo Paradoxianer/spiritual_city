@@ -7,10 +7,12 @@ import '../../../core/utils/seed_manager.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/cell_object.dart';
+import '../domain/models/interactions.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
 import 'components/cell_component.dart';
 import 'components/radial_menu.dart';
+import 'game_screen.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
@@ -27,6 +29,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
+
+  // Interaction State
+  Interactable? _nearestInteractable;
+  Interactable? get nearestInteractable => _nearestInteractable;
+  static const double interactionRange = 60.0;
+  
+  GameDialogData? activeDialog;
 
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
@@ -62,10 +71,29 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   void handleAction() {
+    if (activeDialog != null) { closeDialog(); return; }
     if (_currentMenu != null) { closeMenu(); return; }
-    final actions = [RadialAction(label: 'Umsehen', icon: Icons.search, onSelect: () => _log.info('Looking around'))];
+    
+    if (_nearestInteractable != null) {
+      _nearestInteractable!.onInteract();
+      return;
+    }
+
+    final actions = [RadialAction(label: '👀', icon: Icons.search, onSelect: () => _log.info('Looking around'))];
     _currentMenu = RadialMenu(actions: actions, position: player.position);
     world.add(_currentMenu!);
+  }
+
+  void showDialog(String title, String emoji, {String? rewardEmoji}) {
+    activeDialog = GameDialogData(title: title, emoji: emoji, rewardEmoji: rewardEmoji);
+    overlays.add('DialogOverlay');
+    paused = true; 
+  }
+
+  void closeDialog() {
+    activeDialog = null;
+    overlays.remove('DialogOverlay');
+    paused = false;
   }
 
   void closeMenu() { _currentMenu?.removeFromParent(); _currentMenu = null; }
@@ -74,8 +102,27 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void update(double dt) {
     super.update(dt);
     if (_currentMenu != null) _currentMenu!.position = player.position;
-    if (isWorldReady.value) {
+    if (isWorldReady.value && !paused) {
       _updateCamera(dt);
+      _updateNearestInteractable();
+    }
+  }
+
+  void _updateNearestInteractable() {
+    Interactable? nearest;
+    double minDistance = interactionRange;
+
+    for (final interactable in world.children.whereType<Interactable>()) {
+      final dist = player.position.distanceTo(interactable.interactionPosition);
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearest = interactable;
+      }
+    }
+
+    if (_nearestInteractable != nearest) {
+      _nearestInteractable = nearest;
+      actionButton.setActive(nearest != null);
     }
   }
 
@@ -86,7 +133,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final camPos = camera.viewfinder.position;
     final pPos = player.position;
 
-    // Deadzone: 75% center
     final limitX = viewportSize.x * 0.375; 
     final limitY = viewportSize.y * 0.375;
 
@@ -131,11 +177,24 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
 class ActionButton extends PositionComponent with TapCallbacks {
   final VoidCallback onPressed;
+  bool _isActive = false;
+
   ActionButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(80));
+
+  void setActive(bool active) => _isActive = active;
+
   @override
   void render(Canvas canvas) {
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.blue.withOpacity(0.6));
-    TextPainter(text: const TextSpan(text: 'A', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(size.x / 2 - 12, size.y / 2 - 20));
+    final paint = Paint()..color = _isActive ? Colors.yellow.withOpacity(0.8) : Colors.blue.withOpacity(0.6);
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
+    
+    TextPainter(
+      text: TextSpan(
+        text: _isActive ? '💬' : '🖐️', 
+        style: const TextStyle(fontSize: 32)
+      ), 
+      textDirection: TextDirection.ltr
+    )..layout()..paint(canvas, Offset(size.x / 2 - 16, size.y / 2 - 20));
   }
   @override
   void onTapDown(TapDownEvent event) => onPressed();
@@ -147,7 +206,10 @@ class PrayerButton extends PositionComponent with TapCallbacks {
   @override
   void render(Canvas canvas) {
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.purple.withOpacity(0.6));
-    TextPainter(text: const TextSpan(text: 'B', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(size.x / 2 - 10, size.y / 2 - 18));
+    TextPainter(
+      text: const TextSpan(text: '🙏', style: TextStyle(fontSize: 28)), 
+      textDirection: TextDirection.ltr
+    )..layout()..paint(canvas, Offset(size.x / 2 - 14, size.y / 2 - 18));
   }
   @override
   void onTapDown(TapDownEvent event) => onPressed();

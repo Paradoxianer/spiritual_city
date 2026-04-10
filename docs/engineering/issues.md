@@ -1,14 +1,34 @@
 ﻿# 📋 GitHub Issues Roadmap
-_Last updated: 10.04.2026 11:20_
+_Last updated: 10.04.2026 20:40_
 _Sorted by Release and Priority (High > Medium > Low)_
 
 ## 🔥 ✨ #3: feat: Die Geistliche Welt (The Invisible Realm) [prio: 1, feature] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Toggle-Mechanik für Weltenwechsel. Visuelle Überlagerung (Blau/Gold vs. Grau/Rot) und Game-of-Life Dynamik. 
-die geistliche Welt sollte im Vergelich zur "realen" Welt organischer sein (reale Welt ist ja pixel look) geistliche welt (Transparenter overlay über die Reale WElt" mit permanent verändernderder "lebender" "weichgezeichnetem" look .. so wie eine Lavalampe nur mit einem eigenen Prinzip vergleichbar dem "game of life"
-Kap. 2.2 Lastenheft.
+Toggle-Mechanik fuer Weltenwechsel (Kosten: 10 Faith).
+
+**Visueller Stil:**
+- Transparenter, organisch-lebendiger Overlay ueber die reale Welt
+- Zellen werden mit **Gaussian Blur** weichgezeichnet (kein harter Pixel-Look)
+- Dunkle Bereiche haben animierte **Perlin-Noise-Verschiebung** (Lavalampen-Effekt)
+- Positive Bereiche: funkelnde Partikel / leichtes Pulsieren
+
+**Farbpalette (Rot <-> Gruen):**
+- Hellgruen bis Dunkelgruen = Gottes Prasenz (+30..+100)
+  - Hellgruen: schwache Prasenz; Dunkelgruen: stark fuer Gott eingenommen
+- Rot bis Dunkelrot = Dunkelheit (-30..-100)
+  - Tiefrot/Schwarz: daemonische Bastion, bewegt sich wie Lavalampe
+- Beige/Weiss: Neutral (-30..+30)
+
+**Startverteilung:**
+- 80% der Stadt: ROT, bewusst ungleichmaessig verteilt
+- Einige Bereiche sehr dunkel (-90), andere nur leicht negativ (-20)
+- Kirchen-Zellen: +50 Gruen (isolierte positive Inseln)
+
+**Game-of-Life Dynamik:** Zellen beeinflussen Nachbarn stÃ¼ndlich.
+
+Kap. 5.1, 5.3 Lastenheft.
 
 ---
 
@@ -44,19 +64,19 @@ Kap. 2.2 Lastenheft.
 
 ---
 
-## ⚡ ✨ #8: feat: Daten-Persistenz & Welt-Speicherung [prio: 2, feature] 🏁 [Release 1]
----
-**Status / Description:**
-
-Implementierung der Speicherlogik mit Hive. Speichern von Zellzuständen (geistlich/real) und NPC-Eigenschaften beim Verlassen des Spiels. Kap. 8 & 10.
-
----
-
 ## ⚡ ✨ #9: feat: Balancing & UX-Fine-tuning [enhancement, prio: 2] 🏁 [Release 1]
 ---
 **Status / Description:**
 
 Optimierung der Game-of-Life Parameter für die geistliche Welt. Validierung der Erfolgskriterien (Intuitive Steuerung, Stabilität). Kap. 13.
+
+---
+
+## ⚡ ✨ #8: feat: Daten-Persistenz & Welt-Speicherung [prio: 2, feature] 🏁 [Release 1]
+---
+**Status / Description:**
+
+Implementierung der Speicherlogik mit Hive. Speichern von Zellzuständen (geistlich/real) und NPC-Eigenschaften beim Verlassen des Spiels. Kap. 8 & 10.
 
 ---
 
@@ -84,6 +104,14 @@ Optimierung der Game-of-Life Parameter für die geistliche Welt. Validierung der
 - [ ] Asset-Caching funktioniert
 - [ ] Vehicle-Sprites (5-10) vorhanden
 - [ ] Alle Sprites vorhanden
+
+---
+
+## ⚡ ✨ #15: chore: Global Error Handling & Logging [enhancement, prio: 2] 🏁 [Release 1]
+---
+**Status / Description:**
+
+Implementierung eines robusten Error Handlings (try-catch Blocks) und Logging (z.B. mit logger package) laut rules.md.
 
 ---
 
@@ -134,45 +162,15 @@ class InteractionAction {
 ---
 **Status / Description:**
 
-# feat: UI-Layer & HUD
+HUD mit 4 Ressourcen-Balken (Health, Hunger, Faith, Materials) oben links und kontext-sensitivem Aktions-Button unten rechts.
 
-## Haupt-HUD (Reale Welt):
-\\\
-OBEN LINKS:
-❤️  HEALTH:     ██████░░░░ 60/100
-🍽️  HUNGER:     █████░░░░░ 50/100
-⛪ FAITH:      ████████░░ 85/100
-📦 MATERIALS:  ██████░░░░ 42/100 MP
+**Prayer-Combat HUD (Unsichtbare Welt):**
+- Zeigt zwei unabhaengige Balken: FAITH POWER (pulsiert 0->100%) und ZONE SIZE (waechst mit Joystick)
+- Visuell: flammige Zone um den Pastor formt sich je nach Joystick-Richtung
+- Timing-Fenster-Indikator (gruen wenn 70-100%)
+- Abort-Button (-5 Faith)
 
-UNTEN RECHTS:
-[A] Interact / [B] Prayer / [X] Menu
-\\\
-
-## Prayer-Combat HUD:
-\\\
-💫  🔷 🔷  💫
-🔷    ⛪    🔷
-🔷         🔷
-🔷     🔷
-
-FAITH INVESTED: 75→60→45...
-RING SIZE: ████████░░░░░░ (75%)
-🟢 WINDOW OPEN – RELEASE NOW!
-\\\
-
-## Akzeptanzkriterien:
-- [ ] Resource-Bars korrekt angezeigt
-- [ ] Prayer-Ring flüssig
-- [ ] Optimal-Fenster sichtbar
-- [ ] Buttons klar
-
----
-
-## ⚡ ✨ #15: chore: Global Error Handling & Logging [enhancement, prio: 2] 🏁 [Release 1]
----
-**Status / Description:**
-
-Implementierung eines robusten Error Handlings (try-catch Blocks) und Logging (z.B. mit logger package) laut rules.md.
+Kap. 9 Lastenheft. Depends on #2, #4.
 
 ---
 
@@ -192,14 +190,6 @@ Basis-Klasse für NPCs mit geistlichem Zustand (-100 bis +100). Prozedurale Bewo
 
 ---
 
-## ☕ #14: task: Multi-Platform Compatibility Check [question, prio: 3] 🏁 [Release 1]
----
-**Status / Description:**
-
-Validierung der Performance und Steuerung auf Web, Android und iOS (Lastenheft Punkt 1).
-
----
-
 ## ☕ #12: chore: Setup GitHub Actions for CI [documentation, prio: 3] 🏁 [Release 1]
 ---
 **Status / Description:**
@@ -208,25 +198,66 @@ Automatisierte Tests und Linting bei jedem Push/PR sicherstellen (Analyze & Test
 
 ---
 
-## ⚡ ✨ #23: feat: Deterministic Building Interiors [prio: 2, feature]
+## ☕ #14: task: Multi-Platform Compatibility Check [question, prio: 3] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Jedes Gebäude im Grid erhält basierend auf seinen Welt-Koordinaten einen eindeutigen Seed. 
-- Beim Betreten eines Hauses wird ein Innenraum generiert, der bei jedem Besuch identisch bleibt.
-- Verknüpfung der Außen-Zelle mit der Innenraum-Logik.
-Blocks #8
+Validierung der Performance und Steuerung auf Web, Android und iOS (Lastenheft Punkt 1).
 
 ---
 
-## ⚡ ✨ #21: feat: Building Interaction & Action Button [prio: 2, feature]
+## 🔥 ✨ #30: feat: Invisible World Visual Renderer (Gaussian Blur + Perlin Lava) [prio: 1, feature]
 ---
 **Status / Description:**
 
-Ein kontextsensitiver Button im HUD, der erscheint, wenn der Spieler vor einem interaktiven Gebäude steht. 
-- Ermöglicht das Betreten von Häusern oder das Handeln mit NPCs.
-- Erste Implementierung einer 'Interaktions-Range'.
-Blocks #4
+Technische Implementierung des organischen Looks fuer die unsichtbare Welt.
+
+**Anforderungen:**
+- Zell-Farbwerte (-100..+100) werden mit Gaussian Blur weichgezeichnet (kein Pixellook)
+- Negative Zellen (-60..-100): animierte Perlin-Noise-Verschiebung (Lavalampen-Effekt, daemonisch)
+- Positive Zellen (+60..+100): funkelnde Partikel-Effekte oder leichtes Pulsieren
+- Farbskala: Dunkelrot/Schwarz (negativ) <-> Beige/Weiss (neutral) <-> Hellgruen/Dunkelgruen (positiv)
+- Transparenter Overlay ueber die reale Pixel-Welt
+
+**Performance:**
+- Gaussian Blur nur auf aendernde Bereiche anwenden (dirty-rect Optimierung)
+- Perlin-Noise vorab berechnen und pro Frame interpolieren
+
+Kap. 5.1 Lastenheft. Depends on #3.
+
+---
+
+## 🔥 ✨ #28: feat: Dual-Control Prayer Combat Mechanics [prio: 1, feature]
+---
+**Status / Description:**
+
+Skill-basierter Gebet-Mechanismus in der unsichtbaren Welt mit zwei unabhaengigen Eingaben:
+
+**INPUT A â€“ Faith-Button (rechter Daumen):**
+- Gedrueckt halten: Faith-Ladebalken pulsiert zyklisch 0% -> 100% -> 0%
+- Loslassen: loest den Angriff aus; aktueller %-Wert = Timing-Multiplikator
+- OPTIMAL (70-100%): 1.0x | FRUEH (<50%): 0.6x | SPAET (<30%): 0.4x
+
+**INPUT B â€“ Joystick (linker Daumen):**
+- Nur gedrueckt (keine Richtung): Ringfoermige Zone waechst gleichmaessig um Pastor
+- In Richtung gedrueckt: Ring beugt sich flammig in Joystick-Richtung (Apg 2,3)
+- Zone waechst solange Joystick gedrueckt; schrumpft langsam beim Loslassen
+- Farbintensitaet der Zone zeigt Groesse/Kraft
+
+**Ausloesung:**
+- Zone wird erst aktiviert wenn INPUT A losgelassen wird
+- Groessere Zone = mehr Flaeche, aber weniger Kraft pro Zelle
+- Mehr Faith = staerkerer Gesamteffekt
+
+Kap. 2.3 & 9.2 Lastenheft. Depends on #3, #6.
+
+---
+
+## ⚡ ✨ #25: feat: Initial Loading Screen & Progress Indicator [enhancement, prio: 2]
+---
+**Status / Description:**
+
+Zeigt einen Ladebildschirm an, während die ersten Stadt-Chunks generiert werden. Verhindert das 'Springen' der Welt beim Start.
 
 ---
 
@@ -238,11 +269,38 @@ Ersetzt die Canvas-Zeichnungen durch Pixel-Art Sprites. Nutzt SpriteBatch für P
 
 ---
 
-## ⚡ ✨ #25: feat: Initial Loading Screen & Progress Indicator [enhancement, prio: 2]
+## ⚡ ✨ #29: feat: Modifier-System (Progressive Kampf- & Territoriums-Verstaerker) [prio: 2, feature]
 ---
 **Status / Description:**
 
-Zeigt einen Ladebildschirm an, während die ersten Stadt-Chunks generiert werden. Verhindert das 'Springen' der Welt beim Start.
+Einfaches, passives Modifier-System das durch Spielfortschritt freigeschaltet wird.
+Kein aktives Ausruesten noetig - einmal freigeschaltet immer aktiv.
+
+**COMBAT-MODIFIER (Kampfring):**
+- Inbrunst (10x Prayer Combat): Timing-Fenster +5% breiter
+- Ausdauer (5 Territorien teilweise eingenommen): Zone waechst 20% schneller
+- Konzentration (10x Bibellesen): Faith-Pulse 15% langsamer
+- Kraft (3 NPCs konvertiert): Impact-Power +20%
+- Weisheit (20 Gespraeche): Faith-Kosten -10%
+
+**TERRITORIUMS-MODIFIER (Eingenommene Bereiche):**
+- Bewahrung (1 Territorium voll): Rueckfall-Rate -15%
+- Gemeinde (5 Christen in einer Zelle): Zelle verliert weniger Einfluss/Tag
+- Wachstum (30 Gespraeche): Gruene Zellen beeinflussen Nachbarn +10%
+- Fundament (Kirche): Zellen um Kirche resistent gegen Rueckfall
+
+Kap. 5.4 & 10.1 Lastenheft. Depends on #3, Prayer-Combat Issue.
+
+---
+
+## ⚡ ✨ #23: feat: Deterministic Building Interiors [prio: 2, feature]
+---
+**Status / Description:**
+
+Jedes Gebäude im Grid erhält basierend auf seinen Welt-Koordinaten einen eindeutigen Seed. 
+- Beim Betreten eines Hauses wird ein Innenraum generiert, der bei jedem Besuch identisch bleibt.
+- Verknüpfung der Außen-Zelle mit der Innenraum-Logik.
+Blocks #8
 
 ---
 
@@ -258,11 +316,14 @@ Blocks #2
 
 ---
 
-## ☕ ✨ #19: feat: Stadt-Grenzen & Biom-Fading [enhancement, prio: 3]
+## ⚡ ✨ #21: feat: Building Interaction & Action Button [prio: 2, feature]
 ---
 **Status / Description:**
 
-Implementierung eines Übergangs von Stadt zu unendlicher Natur am Rand der Welt.
+Ein kontextsensitiver Button im HUD, der erscheint, wenn der Spieler vor einem interaktiven Gebäude steht. 
+- Ermöglicht das Betreten von Häusern oder das Handeln mit NPCs.
+- Erste Implementierung einer 'Interaktions-Range'.
+Blocks #4
 
 ---
 
@@ -274,6 +335,14 @@ NPCs (Bewohner) sollen sich entlang des Straßennetzes und in Parks bewegen.
 - Pathfinding-Logik für einfache Patrouillen oder Wege von A nach B.
 - NPCs reagieren auf den geistlichen Zustand der Zelle, in der sie sich befinden.
 Blocks #5
+
+---
+
+## ☕ ✨ #19: feat: Stadt-Grenzen & Biom-Fading [enhancement, prio: 3]
+---
+**Status / Description:**
+
+Implementierung eines Übergangs von Stadt zu unendlicher Natur am Rand der Welt.
 
 ---
 

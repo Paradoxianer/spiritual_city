@@ -2,20 +2,22 @@ import 'package:flame/components.dart';
 import '../../domain/models/city_grid.dart';
 import '../../domain/city_generator.dart';
 import '../../domain/models/city_chunk.dart';
+import '../../domain/npc_registry.dart';
 import 'cell_component.dart';
 import 'chunk_component.dart';
+import 'npc_component.dart';
 import '../spirit_world_game.dart';
 
 class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   final CityGrid grid;
   final CityGenerator generator;
   final PositionComponent target; // Der Spieler
+  final NPCRegistry npcRegistry = NPCRegistry();
 
   final Map<String, ChunkComponent> _renderedChunks = {};
+  final Map<String, List<NPCComponent>> _activeNPCs = {};
   
   /// Radius in Chunks um den Spieler. 
-  /// 1 = 3x3 Chunks (9)
-  /// 2 = 5x5 Chunks (25)
   final int renderDistance = 2;
 
   int? _lastChunkX;
@@ -61,8 +63,7 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     final keysToRemove =
         _renderedChunks.keys.where((k) => !activeKeys.contains(k)).toList();
     for (final key in keysToRemove) {
-      _renderedChunks[key]!.removeFromParent();
-      _renderedChunks.remove(key);
+      _unloadChunk(key);
     }
   }
 
@@ -76,5 +77,30 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     final chunkComp = ChunkComponent(chunk);
     _renderedChunks[chunk.id] = chunkComp;
     parent?.add(chunkComp);
+
+    // NPCs für diesen Chunk laden
+    final npcs = npcRegistry.getNPCsInChunk(cx, cy);
+    final npcComponents = <NPCComponent>[];
+    for (final npcModel in npcs) {
+      final npcComp = NPCComponent(model: npcModel);
+      npcComponents.add(npcComp);
+      parent?.add(npcComp);
+    }
+    _activeNPCs[chunk.id] = npcComponents;
+  }
+
+  void _unloadChunk(String key) {
+    // Chunk entfernen
+    _renderedChunks[key]?.removeFromParent();
+    _renderedChunks.remove(key);
+
+    // NPCs entfernen
+    final npcs = _activeNPCs[key];
+    if (npcs != null) {
+      for (final npc in npcs) {
+        npc.removeFromParent();
+      }
+      _activeNPCs.remove(key);
+    }
   }
 }

@@ -10,7 +10,6 @@ class PlayerComponent extends PositionComponent
   static const double playerSize = 24.0;
   final JoystickComponent joystick;
   
-  // Back to 100 speed for testing.
   final double speed = 100.0;
 
   PlayerComponent({required this.joystick})
@@ -27,6 +26,22 @@ class PlayerComponent extends PositionComponent
 
   @override
   void render(Canvas canvas) {
+    // Interaction Aura
+    final isNear = game.nearestInteractable != null;
+    final auraPaint = Paint()
+      ..color = isNear ? Colors.yellow.withOpacity(0.2) : Colors.blueAccent.withOpacity(0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    
+    // Pulsierender Effekt für die Aura
+    final pulse = 1.0 + (isNear ? (DateTime.now().millisecondsSinceEpoch % 1000 / 5000) : 0);
+    canvas.drawCircle((size / 2).toOffset(), SpiritWorldGame.interactionRange * pulse, auraPaint);
+
+    if (isNear) {
+      _renderSpeechBubbleHint(canvas);
+    }
+
+    // Player Body
     final paint = Paint()..color = Colors.blueAccent;
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, paint);
     
@@ -35,6 +50,19 @@ class PlayerComponent extends PositionComponent
     paint.strokeWidth = 2;
     canvas.drawLine(Offset(size.x / 2, size.y * 0.2), Offset(size.x / 2, size.y * 0.8), paint);
     canvas.drawLine(Offset(size.x * 0.3, size.y * 0.4), Offset(size.x * 0.7, size.y * 0.4), paint);
+  }
+
+  void _renderSpeechBubbleHint(Canvas canvas) {
+    const bubbleSize = 20.0;
+    final offset = Offset(size.x * 0.8, -size.y * 0.5);
+    
+    final paint = Paint()..color = Colors.white;
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(offset.dx, offset.dy, bubbleSize, bubbleSize), const Radius.circular(5)), paint);
+    
+    TextPainter(
+      text: const TextSpan(text: '💬', style: TextStyle(fontSize: 12)),
+      textDirection: TextDirection.ltr,
+    )..layout()..paint(canvas, offset + const Offset(2, 2));
   }
 
   final Vector2 _keyboardDirection = Vector2.zero();
@@ -63,8 +91,6 @@ class PlayerComponent extends PositionComponent
     }
 
     if (!direction.isZero()) {
-      // --- SUB-STEPPING FOR SMOOTHNESS ---
-      // 20 steps per frame = 1200 updates per second at 60fps.
       const int steps = 20;
       final Vector2 frameDelta = direction * speed * dt;
       final Vector2 subStep = frameDelta / steps.toDouble();
@@ -84,7 +110,6 @@ class PlayerComponent extends PositionComponent
       position.setFrom(nextPos);
       game.closeMenu();
     } else {
-      // Sliding per sub-step
       _slidingSubStep(delta);
     }
   }
