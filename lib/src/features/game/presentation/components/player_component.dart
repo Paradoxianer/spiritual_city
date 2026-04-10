@@ -11,7 +11,7 @@ class PlayerComponent extends PositionComponent
   final JoystickComponent joystick;
   
   // Reduced speed for more "game-like" feel
-  final double speed = 150.0;
+  final double speed = 75.0;
 
   PlayerComponent({required this.joystick})
       : super(
