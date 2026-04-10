@@ -49,6 +49,7 @@ class DialogOverlay extends StatefulWidget {
 class _DialogOverlayState extends State<DialogOverlay> {
   final List<_ChatMessage> _messages = [];
   bool _isWaiting = false;
+  bool _isSessionOver = false;
 
   void _addMessage(String content, bool isPlayer) {
     setState(() {
@@ -57,20 +58,28 @@ class _DialogOverlayState extends State<DialogOverlay> {
   }
 
   void _handleInteraction(String type, String emoji) {
-    if (_isWaiting) return;
+    if (_isWaiting || _isSessionOver) return;
     
     _addMessage(emoji, true);
     setState(() => _isWaiting = true);
 
-    // Verzögerung für NPC-Antwort
     Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       final reaction = widget.game.handleInteraction(type);
       _addMessage(reaction, false);
       setState(() => _isWaiting = false);
       
+      // Check for session end (👋)
+      if (reaction == '👋') {
+        setState(() => _isSessionOver = true);
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (mounted) widget.game.closeDialog();
+        });
+      }
+
       // Wenn Bekehrung erfolgreich, nach kurzer Zeit schließen
       if (reaction == '✨🕊️') {
+        setState(() => _isSessionOver = true);
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (mounted) widget.game.closeDialog();
         });
@@ -89,13 +98,12 @@ class _DialogOverlayState extends State<DialogOverlay> {
         height: MediaQuery.of(context).size.height * 0.45,
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF075E54).withValues(alpha: 0.95), // WhatsApp Dark Green
+          color: const Color(0xFF075E54).withValues(alpha: 0.95), 
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10)],
         ),
         child: Column(
           children: [
-            // Header (WhatsApp Style)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: const BoxDecoration(
@@ -119,11 +127,10 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
             
-            // Chat Area
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: const Color(0xFFECE5DD).withValues(alpha: 0.1), // WhatsApp BG
+                color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
                 child: ListView.builder(
                   itemCount: _messages.length,
                   itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
@@ -131,27 +138,34 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
 
-            // Interaction Bar (Chips)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _InteractionChip(emoji: '🙏', label: 'Pray', onTap: () => _handleInteraction('pray', '🙏')),
-                  _InteractionChip(emoji: '📦', label: 'Help', onTap: () => _handleInteraction('help', '📦')),
-                  _InteractionChip(
-                    emoji: '✨🕊️', 
-                    label: 'Convert', 
-                    isSpecial: true,
-                    onTap: () => _handleInteraction('convert', '🕊️?'),
+            if (!_isSessionOver)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _InteractionChip(emoji: '💬', label: 'Talk', onTap: () => _handleInteraction('talk', '💬')),
+                      const SizedBox(width: 8),
+                      _InteractionChip(emoji: '🙏', label: 'Pray', onTap: () => _handleInteraction('pray', '🙏')),
+                      const SizedBox(width: 8),
+                      _InteractionChip(emoji: '📦', label: 'Help', onTap: () => _handleInteraction('help', '📦')),
+                      const SizedBox(width: 8),
+                      _InteractionChip(
+                        emoji: '✨🕊️', 
+                        label: 'Convert', 
+                        isSpecial: true,
+                        onTap: () => _handleInteraction('convert', '🕊️?'),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
           ],
         ),
       ),

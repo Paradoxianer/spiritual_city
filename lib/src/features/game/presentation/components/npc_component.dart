@@ -39,26 +39,37 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   void onInteract() {
+    model.resetSession(); // Zähler für diese Begegnung auf 0 setzen
     game.showDialog(model.name, _getNPCEmoji());
   }
 
   @override
   String handleInteraction(String type) {
+    // 1. Session-Check: Nach 3 Aktionen verabschiedet sich der NPC
+    model.currentSessionInteractions++;
+    if (model.currentSessionInteractions > 3) {
+      return '👋'; 
+    }
+
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
     final spiritualState = cell?.spiritualState ?? 0.0; 
 
-    // Der Score bestimmt den Erfolg von Aktionen (NPC Glaube + Umgebungs-Licht)
     final interactionScore = model.faith + (spiritualState * 50);
 
     // ===========================================================================
-    // FAITH-RESONANZ (Geben und Nehmen)
-    // Jede Interaktion löst einen Energie-Austausch aus.
+    // FAITH-RESONANZ (Glaubens-Austausch bei JEDER Interaktion)
     // +100 NPC Faith -> +5 Player Faith | -100 NPC Faith -> -5 Player Faith
     // ===========================================================================
-    final double resonanceExchange = (model.faith / 20.0); 
+    final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0); 
     game.faith = (game.faith + resonanceExchange).clamp(0.0, 100.0);
+
+    // NEU: Ganz normales Gespräch (+1 NPC Faith)
+    if (type == 'talk') {
+      model.applyInfluence(1.0);
+      return '💬😊';
+    }
 
     if (type == 'pray') {
       model.prayerCount++;
@@ -66,36 +77,28 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         model.applyInfluence(12.0 + (spiritualState * 5)); 
         return '❤️';
       } else {
-        model.applyInfluence(-8.0); // Ablehnung kostet NPC-Glauben
+        model.applyInfluence(-8.0);
         return interactionScore < -20 ? '💀' : '😠';
       }
     } 
     
     if (type == 'help') {
       model.conversationCount++;
-      // Ein Gespräch/Hilfe verbessert den NPC-Zustand immer ein wenig
       model.applyInfluence(8.0 + (spiritualState * 4));
       return '📦😊';
     } 
     
     if (type == 'convert') {
-      // 1. Check: Ist die Person bereits Christ?
-      if (model.isChristian) {
-        return '🙏✨'; // Bereits gläubig, keine Bekehrung nötig
-      }
-
-      // 2. Check: Ist das "Herz" bereit? (Score-Schwelle)
+      if (model.isChristian) return '🙏✨'; // Bereits gläubig
+      
       if (interactionScore > 60) {
-        model.applyInfluence(100); // NPC wird voll gläubig
-        
-        // MASSIVER FAITH-BOOST FÜR DEN SPIELER
+        model.applyInfluence(100);
+        // BEKEHRUNGS-BOOST: Massiver Faith-Schub (+25)
         game.faith = (game.faith + 25.0).clamp(0.0, 100.0);
-        
         return '✨🕊️';
       } else {
-        // Bei Misserfolg: Kleiner Fortschritt, aber keine Bekehrung
         model.applyInfluence(3.0); 
-        if (interactionScore < 0) return '🚫'; // Abblocken bei zu viel Dunkelheit
+        if (interactionScore < 0) return '🚫';
         return '🤔';
       }
     }
@@ -141,7 +144,6 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     Color bodyColor = model.isChristian ? Colors.white : (model.faith < 0 ? Colors.red[800]! : Colors.grey);
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
     
-    // Kreuz-Symbol für Christen
     if (model.isChristian) {
       final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
       final center = (size / 2).toOffset();

@@ -22,6 +22,9 @@ class NPCModel {
   int conversationCount;
   int prayerCount;
   
+  /// Tracks interactions in the current active dialogue session
+  int currentSessionInteractions = 0;
+  
   String? currentMessage;
 
   NPCModel({
@@ -41,5 +44,9 @@ class NPCModel {
   /// Logic to update faith based on interaction and environment
   void applyInfluence(double amount) {
     faith = (faith + amount).clamp(-100.0, 100.0);
+  }
+
+  void resetSession() {
+    currentSessionInteractions = 0;
   }
 }
