@@ -14,6 +14,9 @@ import 'components/radial_menu.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
+
+  /// How fast the camera catches up to the dead-zone boundary (units per second).
+  static const double _cameraLerpSpeed = 10.0;
   
   late final CityGrid grid;
   late final SeedManager seedManager;
@@ -52,6 +55,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     camera.viewfinder.position = player.position.clone();
 
     await Future.delayed(const Duration(milliseconds: 1000));
+    // Fix 4: re-anchor camera hard on the player after the delay so any
+    // movement during the loading pause does not cause a visible jump.
+    camera.viewfinder.position = player.position.clone();
     isWorldReady.value = true;
     _log.info('--- GAME READY ---');
   }
@@ -81,13 +87,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   void _updateCamera(double dt) {
     final viewportSize = camera.viewport.size;
-    if (viewportSize.x <= 0) return;
+    // Fix 5: check both dimensions before using them
+    if (viewportSize.x <= 0 || viewportSize.y <= 0) return;
 
     final camPos = camera.viewfinder.position;
     final pPos = player.position;
 
-    // 75% Zone Calculation
-    final limitX = viewportSize.x * 0.375; 
+    // 75% dead-zone: camera only moves when the player exceeds 37.5 % from centre
+    final limitX = viewportSize.x * 0.375;
     final limitY = viewportSize.y * 0.375;
 
     final dx = pPos.x - camPos.x;
@@ -100,11 +107,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (dy.abs() > limitY) pushY = dy - (limitY * dy.sign);
 
     if (pushX != 0 || pushY != 0) {
-      // PRINT LOGS TO CONSOLE
-      print('DEBUG: Player at ${pPos.x.toInt()},${pPos.y.toInt()} | Cam at ${camPos.x.toInt()},${camPos.y.toInt()} | Pushing: $pushX, $pushY');
-      
-      // Move the camera
-      camera.viewfinder.position.translate(pushX, pushY);
+      _log.finest('Player at ${pPos.x.toInt()},${pPos.y.toInt()} | Cam at ${camPos.x.toInt()},${camPos.y.toInt()} | Push: $pushX, $pushY');
+
+      // Fix 2: lerp the push so the camera glides smoothly instead of snapping.
+      // clamp ensures we never overshoot in a single frame.
+      final lerpFactor = (_cameraLerpSpeed * dt).clamp(0.0, 1.0);
+
+      // Fix 1: assign a new Vector2 to trigger Flame's internal _notify().
+      camera.viewfinder.position = camPos + Vector2(pushX, pushY) * lerpFactor;
     }
   }
 
