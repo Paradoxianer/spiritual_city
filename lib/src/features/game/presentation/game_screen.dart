@@ -58,7 +58,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
     super.dispose();
   }
 
-  /// Scrollt sanft zum Ende der Liste, wenn eine neue Nachricht erscheint
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -98,8 +97,8 @@ class _DialogOverlayState extends State<DialogOverlay> {
         });
       }
 
-      // Wenn Bekehrung erfolgreich - 5 Sekunden Zeit zum Feiern
-      if (reaction == '✨🕊️') {
+      // Wenn Bekehrung erfolgreich (✝️ statt ✨)
+      if (reaction == '✝️🕊️') {
         setState(() => _isSessionOver = true);
         Future.delayed(const Duration(seconds: 5), () {
           if (mounted) widget.game.closeDialog();
@@ -125,7 +124,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
         ),
         child: Column(
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: const BoxDecoration(
@@ -149,7 +147,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
             
-            // Chat Area mit ScrollController
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -162,7 +159,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
 
-            // Interaction Bar (nur wenn Session noch läuft)
             if (!_isSessionOver)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -182,10 +178,10 @@ class _DialogOverlayState extends State<DialogOverlay> {
                       _InteractionChip(emoji: '📦', label: 'Help', onTap: () => _handleInteraction('help', '📦')),
                       const SizedBox(width: 8),
                       _InteractionChip(
-                        emoji: '✨🕊️', 
+                        emoji: '✝️🕊️', 
                         label: 'Convert', 
                         isSpecial: true,
-                        onTap: () => _handleInteraction('convert', '🕊️?'),
+                        onTap: () => _handleInteraction('convert', '✝️?'),
                       ),
                     ],
                   ),

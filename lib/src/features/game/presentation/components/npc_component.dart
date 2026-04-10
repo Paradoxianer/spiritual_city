@@ -31,7 +31,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   Vector2 get interactionPosition => position;
 
   String _getNPCEmoji() {
-    if (model.isChristian) return '🕊️';
+    if (model.isChristian) return '✝️'; // Geändert von 🕊️ zu ✝️
     if (model.faith < -30) return '😠';
     if (model.faith < 30) return '👤';
     return '🤔';
@@ -39,13 +39,12 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   void onInteract() {
-    model.resetSession(); // Zähler für diese Begegnung auf 0 setzen
+    model.resetSession(); 
     game.showDialog(model.name, _getNPCEmoji());
   }
 
   @override
   String handleInteraction(String type) {
-    // 1. Session-Check: Nach 3 Aktionen verabschiedet sich der NPC
     model.currentSessionInteractions++;
     if (model.currentSessionInteractions > 3) {
       return '👋'; 
@@ -58,14 +57,9 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     final interactionScore = model.faith + (spiritualState * 50);
 
-    // ===========================================================================
-    // FAITH-RESONANZ (Glaubens-Austausch bei JEDER Interaktion)
-    // +100 NPC Faith -> +5 Player Faith | -100 NPC Faith -> -5 Player Faith
-    // ===========================================================================
     final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0); 
     game.faith = (game.faith + resonanceExchange).clamp(0.0, 100.0);
 
-    // NEU: Ganz normales Gespräch (+1 NPC Faith)
     if (type == 'talk') {
       model.applyInfluence(1.0);
       return '💬😊';
@@ -89,13 +83,12 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     } 
     
     if (type == 'convert') {
-      if (model.isChristian) return '🙏✨'; // Bereits gläubig
+      if (model.isChristian) return '✝️🙏'; // Kreuz statt Stern
       
       if (interactionScore > 60) {
         model.applyInfluence(100);
-        // BEKEHRUNGS-BOOST: Massiver Faith-Schub (+25)
         game.faith = (game.faith + 25.0).clamp(0.0, 100.0);
-        return '✨🕊️';
+        return '✝️🕊️'; // Kreuz statt Stern
       } else {
         model.applyInfluence(3.0); 
         if (interactionScore < 0) return '🚫';
@@ -144,11 +137,14 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     Color bodyColor = model.isChristian ? Colors.white : (model.faith < 0 ? Colors.red[800]! : Colors.grey);
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
     
+    // Kreuz-Symbol Rendering auf dem NPC
     if (model.isChristian) {
-      final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
+      final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.5;
       final center = (size / 2).toOffset();
-      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);
-      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), paint);
+      // Vertikaler Balken
+      canvas.drawLine(center + const Offset(0, -5), center + const Offset(0, 5), paint);
+      // Horizontaler Balken
+      canvas.drawLine(center + const Offset(-3.5, -1.5), center + const Offset(3.5, -1.5), paint);
     }
 
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
