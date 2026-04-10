@@ -1,91 +1,623 @@
 
-# Lastenheft – 2D-Geistliches Open-World-Prozedural-Game („SpiritWorld City“)
+# Lastenheft – 2D-Geistliches Open-World-Prozedural-Game („SpiritWorld City")
+## VERSION 3 – VEREINFACHT, PRAKTISCH, IMPLEMENTIERBAR
 
-## 1. Zielsetzung des Projekts
-Ziel ist die Entwicklung eines minimalistisch gestalteten 2D-Top-Down-Spiels, das eine moderne Stadt darstellt, die prozedural generiert wird. Der Spieler übernimmt die Rolle eines Pastors, der zwischen der sichtbaren realen Welt und der unsichtbaren geistlichen Welt wechseln kann.
-Durch Gebet, Bibellesen, Gottesdienste und Interaktionen beeinflusst der Spieler beide Welten.
+---
 
-## 2. Spielwelt
-### 2.1 Reale Welt
-- Moderne prozedural generierte Stadt
-- Grid-basiert
-- Enthält Straßen, Häuser, Parks, NPCs
-- Werte jeder Zelle: Kriminalität, Hoffnung, geistliche Prägung, Bevölkerungsdichte
+## 1. ZIEL DES SPIELS
 
-### 2.2 Unsichtbare Welt
-- Transparente Überlagerung
-- Farben zeigen geistliche Zustände: Blau/Gold (positiv), Grau/Rot (negativ)
-- Dynamik wie Game of Life: dunkle Zellen verstärken Dunkelheit
-- Menschen sichtbar als Licht- oder Schattenfiguren
+Ein spirituelles Sandbox-Simulationsspiel, wo ein Pastor eine prozedural generierte Stadt in zwei Welten gleichzeitig beeinflusst:
 
-## 3. Spielfigur
-- Pastor
-- Freie Bewegung in realer Welt
-- Wechsel in unsichtbare Welt jederzeit möglich
-- Ressourcen: Fokus, Energie/Hunger, geistliche Stärke
+- **Reale Welt:** Stadt mit NPCs, Verkehr, Gebäuden
+  - Pastor läuft herum, spricht mit Menschen, dient, sammelt Ressourcen
+  - **Zweck:** Faith & Materials (Ressourcen) akkumulieren
+  
+- **Unsichtbare Welt:** Spirituelles Overlay mit dynamischer Zell-Farbe (Rot = Dunkel, Blau = Licht)
+  - Pastor betritt diese durch Gebets-Button
+  - **Zweck:** Mit gesammeltem Faith "Territorium für Jesus gewinnen"
+  - **Mechanik:** Pulsing-Ring-Combat mit Skill-Element
 
-## 4. Steuerung
-- Joystick links
-- Zwei Buttons rechts: Interaktion & Gebet
-- In unsichtbarer Welt: Bewegung deaktiviert, Tap-&-Hold-Pulsmechanik
+**Core Loop:**
+1. In realer Welt umherlaufen → Faith & Materials sammeln
+2. Zu Kirche/Pastorat gehen → Faith durch Bibellesen + Gebet regenerieren
+3. In unsichtbare Welt wechseln → Gesamten Faith im Ring-Combat "ausgeben"
+4. Territorium wird Blau/Gold → NPCs werden empfänglicher → mehr Ressourcen
+5. Zurück zu Schritt 1
 
-## 5. Kernspielmechaniken
-### 5.1 Wechsel der Welten
-- jederzeit möglich, keine Cooldowns
-- kostet Fokus
+---
 
-### 5.2 Geistlicher Einfluss
-- Gebet, Bibel, Gottesdienst erzeugen Einflusszonen
-- Reinigen negativer Bereiche
+## 2. RESSOURCEN-SYSTEM (UNIVERSAL & SIMPEL)
 
-### 5.3 Häuser & Bewohner
-- prozedurale Bewohner
-- geistliche Zustände (-100 bis +100)
-- Mini-Maps in Häusern
-- Missionen abhängig vom Bewohnerzustand
+### 2.1 FAITH (Glaube) – Primäre Ressource
 
-### 5.4 Missionen
-- Dialogmissionen
-- Hilfeleistung
-- Stadtteilbefreiung
-- Gottesdienstvorbereitung
+**Generierung (In Realer Welt):**
+- Bibellesen in Kirche: +10-20 Faith
+- Gebet mit Gemeinde: +5-15 Faith
+- Mit NPCs sprechen (positiv): +2-5 Faith
+- Hilfsaktion durchführen: +5-10 Faith
+- NPC konvertiert zum Glauben: +30 Faith
+- Gottesdienst halten: +20-50 Faith
 
-## 6. Prozedurale Generierung
-- Map per Noise/Random Walk
-- Gebäudegrößen zufällig
-- NPCs mit Routinen
+**Verbrauch:**
+- **Weltenwechsel zur unsichtbaren Welt:** 10 Faith (Eintritts-Kosten)
+- **Gebets-Ring in unsichtbarer Welt:** Wird vollständig aufgebraucht (siehe 2.3)
 
-## 7. Grafik
-- Minimalistischer Pixelstil (4x4 bis 8x8)
-- Wenige Farben
+**Regeneration:**
+- Passiv in Kirche/Pastorat: +1 Faith/Sekunde wenn wartend
+- Täglich: Wenn Pastor >2h in Kirche verbracht hat → nächster Morgen kein Drain
 
-## 8. Datenmodelle
-### 8.1 Zellen
-- Zustand real + geistlich
-### 8.2 NPCs
-- geistlicher Zustand, Eigenschaften, Offenheit
+**Darstellung im HUD:**
+```
+FAITH: [████████░░] 85/100
+```
 
-## 9. Sound
-- Ambient, leichte Pads
-- Stadtgeräusche
+---
 
-## 10. Technologie
-- Flutter + Flame
-- Hive/Drift als Speicher
-- Spatial Grid für Welt
+### 2.2 MATERIALS (Sachspenden & Versorgung)
 
-## 11. Erweiterbarkeit
-- Mehr NPC-Verhalten
-- Mehr Missionen
-- Multiplayer optional
+**Einheit:** "Material Points" (MP)
+- Repräsentiert: Lebensmittel, Kleidung, Medikamente, Baumaterial, etc.
+- **Nicht-monetär**, sondern direkte Sachspenden
+- Visuell: "Kartons" oder "Pakete" im Inventory
 
-## 12. Abgrenzung
-- Keine Kämpfe
-- Keine Fahrzeuge
-- Keine High-End-Grafik
+**Generierung (In Realer Welt):**
+- Kirchen-Sammlung: +20-40 MP pro Gottesdienst
+- Von wohlhabenden NPCs: +5-15 MP pro Gespräch
+- Gemeinde-Hilfe organisieren: +30-50 MP
+- Mission: "Lebensmittel-Ausgabe" durchführen: +20 MP
 
-## 13. Erfolgskriterien
-- Steuerung in < 30s verstanden
-- Geistliche Welt intuitiv
-- Prozedurale Welt stabil
+**Verbrauch:**
+- Mit bedürftigen NPCs teilen: -10 MP, +15 Faith (!) 
+- Kirche instand halten: -5 MP/Spieltag
+- Gemeinde-Projekte (Obdach-Hilfe, Essen für Arme): -30-50 MP, +20-30 Faith
 
+**Effekt auf unsichtbare Welt:**
+- Zellen wo Materialien verteilt wurden: +3 Blau (sanfter Effekt)
+- Symbolisiert: "praktischer Glaube reinigt Territorium"
+
+**Darstellung im HUD:**
+```
+MATERIALS: [██████░░░░] 42/100 MP
+(Icon: Karton/Paket)
+```
+
+---
+
+### 2.3 GLAUBE IN DER UNSICHTBAREN WELT – DETAILLIERT
+
+**Szenario:**
+1. Pastor befindet sich in **unsichtbarer Welt** (Ring-Combat-Modus)
+2. Pastor hat z.B. **75 Faith** in HUD-Anzeige
+3. Pastor drückt **"BEGIN PRAYER"**
+4. **Pulsing-Ring beginnt zu wachsen:**
+   - Ring wächst langsam: 0 → 75 (max Faith-Größe)
+   - Gleichzeitig: **Faith-Counter läuft herunter: 75 → 74 → 73...**
+   - Wenn Ring seine max-Größe erreicht (bei 0 Faith übrig): **Ring schrumpft zurück zu minimal**
+   - Dann wieder: Ring wächst von 0 → 75
+
+**Visuelle Darstellung:**
+```
+╔════════════════════════════════════╗
+║     PRAYER COMBAT MODE             ║
+╠════════════════════════════════════╣
+║                                    ║
+║         💫  🔷 🔷  💫            ║
+║       🔷    ⛪    🔷            ║  ← Ring wächst/schrumpft
+║       🔷   Pastor 🔷            ║
+║         🔷     🔷               ║
+║                                    ║
+║ FAITH INVESTED: 75 → 60 → 45 ... ║ ← Herunter-Zähler
+║ RING SIZE: ████████░░░░░░░░     ║ ← Visuelle Größe
+║                                    ║
+║ [⚡ OPTIMAL WINDOW: 50-75 Range]  ║ ← Grün wenn im Fenster
+║                                    ║
+║ [A] RELEASE PRAYER NOW             ║
+╚════════════════════════════════════╝
+```
+
+**Timing-Fenster:**
+- **Optimal:** Ring ist bei 70-100% seiner max-Größe
+  - Timing Multiplier: **1.0x (100% Effekt)**
+  - Dauer: ~0.5 Sek pro Zyklus
+  
+- **Früh:** Ring <50% der Größe
+  - Multiplier: **0.6x (60% Effekt)**
+  
+- **Zu spät:** Ring zwischen 0-30%
+  - Multiplier: **0.4x (40% Effekt)**
+
+**Bei RELEASE:**
+
+```
+faith_spent = faith_at_start - faith_remaining
+// Z.B. 75 - 25 = 50 Faith ausgegeben
+
+timing_multiplier = {
+  1.0 if ring_size in [70%, 100%],    // OPTIMAL
+  0.6 if ring_size < 50%,             // EARLY
+  0.4 if ring_size in [0%, 30%]       // LATE
+}
+
+impact_radius = faith_spent * 3       // Z.B. 50 * 3 = 150 Pixel Radius
+impact_power = faith_spent * timing_multiplier * 0.5
+// Z.B. 50 * 1.0 * 0.5 = 25 Power
+
+// Alle Zellen im Radius werden beeinflusst:
+for each cell in radius:
+  cell_influence += impact_power * (1 - distance_from_center)
+```
+
+**Wichtig:** 
+- Je mehr Faith man investiert, desto größer der Effekt
+- Aber: Optimal-Timing muss noch getroffen werden
+- **Neue Spieler:** Vielleicht mit weniger Faith anfangen (20-30) um Timing zu lernen
+
+---
+
+## 3. SPIELFIGUR: PASTOR
+
+### 3.1 Attribute
+```
+HEALTH:    [██████░░░░] 60/100
+HUNGER:    [█████░░░░░] 50/100
+FAITH:     [████████░░] 85/100    ← Primary Ressource
+MATERIALS: [██████░░░░] 42/100    ← Sekundär-Ressource
+```
+
+### 3.2 Home Base: Pastorat/Wohnung
+- **Funktion:**
+  - Sicherer Ort zum Ausruhen
+  - Bibellesen-Station
+  - Essen & Trinken (regeneriert Health)
+  - Sitzen im Gebet-Zimmer (Faith +1/Sek)
+
+- **Visual:** Pixeliges Häuschen mit Fenster, "Home" markiert auf Minimap
+
+---
+
+## 4. KIRCHEN – SANCTUARY FÜR FAITH-REGENERATION
+
+**Kirchen sind prozedural platziert** (Gebäude mit Kreuz-Symbol)
+
+**Mögliche Aktionen in Kirchen:**
+
+| Aktion | Dauer | Reward | Kosten |
+|--------|-------|--------|--------|
+| Bibellesen | 10 Min | +15 Faith | - |
+| Mit Gemeinde beten | 15 Min | +20 Faith | - |
+| Stilles Gebet | 10 Min | +10 Faith | - |
+| Gottesdienst halten | 20 Min | +40 Faith, +30 MP | - |
+
+**Bibellesen Mechanik (Teleprompter):**
+```
+┌──────────────────────────────────────┐
+| Römer 10,17                          |
+| "Glaube kommt durch Hören            |
+|  des Wortes Gottes..."               |
+|                                      |
+| [Reflect 15s more] [Continue]        |
+└──────────────────────────────────────┘
+```
+- Pro Vers: ~30 Sek Lesedauer
+- Liste von 15-20 wichtigen Bibelversen
+- Reward: +10-15 Faith
+
+---
+
+## 5. UNSICHTBARE WELT – TERRITORIUM-KONTROLLE
+
+### 5.1 Visuelle Darstellung
+
+**Transparenter Overlay über reale Welt:**
+
+```
+POSITIVE ZONEN (Blau/Gold):
+- Blau: Milde Präsenz Gottes (50% Sättigung)
+- Gold: Starke Präsenz Gottes (90-100% Sättigung)
+
+NEGATIVE ZONEN (Grau/Rot):
+- Grau: Milde Dunkelheit (50%)
+- Dunkelrot/Purpur: Starke Dunkelheit (90-100%)
+
+NEUTRAL: Braun/Weiß (Unentschieden)
+```
+
+**Game-of-Life Dynamik:**
+- Jede Spielstunde: Zellen beeinflussen ihre Nachbarn
+- Positive Zellen verstärken nahegelegene positive Zellen
+- Negative Zellen tun dasselbe mit Negativem
+- Territorium "breitet sich aus" organisch
+
+### 5.2 Zell-Einfluss-Berechnung
+
+```
+cell_influence = (
+    base_spiritual_state +          // Start: -100 bis +100
+    (npc_faith_in_cell * 0.3) +    // Glaubende Menschen
+    (recent_prayer_power * 0.5) +   // Frische Gebete
+    (materials_distributed * 0.2) + // Sachspenden vor Ort
+    (nearby_churches * 15) +        // Kirchen strahlen +15 pro Kirche
+    (gol_neighbor_influence * 0.4)  // Game of Life Nachbar-Effekt
+    - (crime_reports * 0.3)        // Kriminalität
+)
+
+// Zelle zwischen -100 und +100 clamped
+// Farbe basiert auf Intensität
+```
+
+### 5.3 Initiale Stadt-State
+
+**Bei Spielstart:**
+- 80% der Stadt: ROT/Grau (Dunkelheit dominiert)
+- Kirchen-Zellen: +50 Blau (isolierte positive Inseln)
+- Pastorat: +20 Blau (schwach)
+- Parks: Neutral (0)
+- Arme Gegenden: etwas negativ (-20)
+- Reiche Gegenden: neutral bis schwach positiv (+10)
+
+---
+
+## 6. NPC-SYSTEM MIT GEDÄCHTNIS
+
+### 6.1 InteractableObject Framework
+
+**Alles in der Welt, das interaktiv ist, erbt von InteractableObject:**
+
+```dart
+abstract class InteractableObject {
+  String name;
+  Vector2 position;
+  List<InteractionAction> actions;
+}
+
+class InteractionAction {
+  String title;          // "Sprich mit Maria"
+  String description;
+  int faithRequired;
+  void Function() onExecute;
+}
+```
+
+**Beispiele:**
+
+| Object | Action 1 | Action 2 | Action 3 |
+|--------|----------|----------|----------|
+| **NPC** | "Sprich" | "Bete für ihn" | "Diene" |
+| **Kirche** | "Bibellesen" | "Mit Gemeinde beten" | "Gottesdienst" |
+| **Park** | "Für Park beten" | "Müll aufräumen" | - |
+| **Haus (mit NPC)** | "Klopfen" | "Mit Familie beten" | - |
+| **Gemeinde-Zentrum** | "Hilfe org." | "Spende sammeln" | - |
+
+---
+
+### 6.2 NPC-Memory System
+
+```dart
+class NPCProfile {
+  String name;
+  int faithLevel = 0;               // -100 bis +100
+  int conversationCount = 0;        // Wie oft gesprochen?
+  int prayerCount = 0;              // Wie oft für ihn gebetet?
+  bool isConvertedChristian = false;
+  DateTime lastInteraction;
+  String topic;                     // "Arbeitslos", "Sucht", etc.
+}
+```
+
+**Konversions-Bedingungen:**
+1. conversationCount ≥ 5 ODER prayerCount ≥ 3
+2. faithLevel ≥ 40
+3. Pastor wählt "Sprich über Glauben" Dialog-Option
+4. → NPC konvertiert: isConvertedChristian = true, faithLevel = +80
+
+**Effekte nach Konversion:**
+- NPC kann in Gottesdiensten teilnehmen
+- NPC regeneriert +2 Blau pro Tag in ihrer Zelle
+- NPC wird "missionarisch" (spricht mit anderen NPCs)
+- +30 Faith Reward an Pastor
+
+---
+
+### 6.3 NPC-Einfluss auf Territorium
+
+**Täglich (um 12:00 Uhr):**
+
+```
+for each npc in city:
+  cell = npc.position.toCell()
+  
+  if npc.isConvertedChristian:
+    cell.influence += npc.faithLevel * 0.3  // Z.B. +24
+  else if npc.faithLevel > 50:
+    cell.influence += 5  // Schwach positiv
+  else if npc.faithLevel < -50:
+    cell.influence -= npc.faithLevel * 0.2  // Negativ verstärken
+```
+
+**Effekt:** 
+- Ein konvertierter Christ in einer roten Zelle kann sie zu Blau kippen
+- Viele Christen in Zelle = stark Gold
+
+---
+
+## 7. MISSIONEN – VEREINFACHTES ACTION-SYSTEM
+
+### 7.1 Standard-Missionen (gebunden an Objects)
+
+**Jedes InteractableObject kann Missionen haben:**
+
+```dart
+class Mission extends InteractionAction {
+  String missionId;
+  MissionState state;  // NOT_STARTED, ACTIVE, COMPLETED
+  
+  void onAccept() { state = ACTIVE; }
+  void onComplete() { 
+    state = COMPLETED;
+    giveRewards();
+  }
+}
+```
+
+### 7.2 Missionstypen (Einfach implementierbar)
+
+#### A. Dialog-Missionen
+- **Trigger:** Neben NPC, "Sprich"-Button
+- **Flow:** Dialog-Optionen anzeigen
+- **Reward:** +5-10 Faith, NPC-conversationCount +1
+- **Scheitern:** Keine Strafe, einfach weniger Effekt
+
+#### B. Dienst-Missionen
+- **Trigger:** "Diene" Button bei NPC oder an Ort
+- **Flow:** 2-3 Min Animation (helfen, reparieren, etc.)
+- **Reward:** +10 Faith, +10 MP, NPC-faithLevel +5
+- **Effekt:** Zelle +2 Blau-Einfluss
+
+#### C. Gebets-Missionen (In unsichtbarer Welt)
+- **Trigger:** Automatisch wenn Stadtteil >70% ROT
+- **Mission:** "Bete für dieses Territorium"
+- **Aufgabe:** Führe 3-5 Prayer-Combats in diesem Gebiet durch
+- **Reward:** +50 Faith, Gebiet kippt +30 Blau
+- **Beschreibung:** "Dieser Bereich braucht geistlichen Kampf"
+
+#### D. Sammelmissionen
+- **Beispiel:** "Sammle Lebensmittel für Bedürftige"
+- **Flow:** Gehe zu 3 Haushalten, "Spende"-Option wählen
+- **Reward:** +30 MP, +15 Faith
+- **Segen-Effekt:** Diese 3 Zellen +3 Blau
+
+#### E. Territoriums-Befreiung (Multi-Step)
+- **Trigger:** Stadtteil >75% ROT
+- **Steps:**
+  1. Bete 5x im Gebiet (Prayer-Combat)
+  2. Sprich mit 3+ NPCs im Gebiet
+  3. Drücke "Bete Segen über Bereich" Button
+- **Reward:** +100 Faith, +50 MP, Bereich wird +40 Blau, Missions unlocked
+- **Dauer:** ~30 Min Spielzeit
+
+---
+
+### 7.3 Event-basierte Dynamik (Zufällige Incidents)
+
+**Jede Spielstunde: 5% Chance auf Incident**
+
+```
+incidents = [
+  { name: "Crime Reported", zone: random_red_zone, 
+    action: "Go & Pray", reward: "+15 Faith" },
+  { name: "NPC in Distress", npc: random_unhappy_npc,
+    action: "Visit & Help", reward: "+20 Faith, +npc.faithLevel +10" },
+  { name: "Spiritual Breakthrough", npc: random_almost_converted,
+    action: "Finish Dialog", reward: "+npc converts, +30 Faith" },
+]
+```
+
+---
+
+## 8. BELEBUNG DER REALEN WELT: VERKEHR
+
+### 8.1 Fahrzeug-Sprites & Bewegung
+
+**Einfache Auto-Implementierung:**
+- 5-10 verschiedene Auto-Varianten (Farben/Stile)
+- 8x8 oder 16x16 Pixel-Sprites
+- Bewegen sich auf Straßen-Pfaden (A*-Pathfinding oder Grid-Routes)
+
+### 8.2 Spawn & Despawn
+
+- 30-50 Autos gleichzeitig im Speicher
+- Spawnen zufällig an Straßen-Rändern
+- Folgen Straßen-Pfaden
+- Despawnen wenn außer Sicht
+
+### 8.3 Pastor-Interaktion
+
+- **Autos sind NICHT kollidierbar** (Pastor läuft durch)
+- **Optional später:** "Carpool" – mit Auto fahren (MVP: nicht nötig)
+
+### 8.4 Audio
+
+- Leise Motor-Sounds
+- Gelegentliche Hupen
+- Ambient Verkehrslärm
+
+---
+
+## 9. HUD & UI
+
+### 9.1 Haupt-HUD (Reale Welt)
+
+```
+┌─────────────────────────────────────────────┐
+│ OBEN LINKS: RESOURCES                       │
+│ ❤️ HEALTH: ██████░░░░ 60/100              │
+│ 🍽️ HUNGER: █████░░░░░ 50/100              │
+│ ⛪ FAITH: ████████░░ 85/100               │
+│ 📦 MATERIALS: ██████░░░░ 42/100 MP        │
+├─────────────────────────────────────────────┤
+│ UNSICHTBARE WELT OVERLAY (transparent)     │
+│ (Farbige Zellen zeigen Territorium)        │
+├─────────────────────────────────────────────┤
+│ UNTEN RECHTS: AKTIONS-BUTTONS              │
+│ [A] Interact / [B] Prayer / [X] Menu       │
+└─────────────────────────────────────────────┘
+```
+
+### 9.2 Prayer-Combat HUD (Unsichtbare Welt)
+
+```
+╔═════════════════════════════════════╗
+║      PRAYER MODE – GEISTLICHER KAMPF║
+╠═════════════════════════════════════╣
+║                                     ║
+║       💫  🔷 🔷  💫  ← Ring        ║
+║     🔷    ⛪    🔷                 ║
+║     🔷         🔷                 ║
+║       🔷     🔷                   ║
+║                                     ║
+║ FAITH INVESTED: 75→60→45→30...    ║
+║ RING SIZE: ████████░░░░░░ (75%)  ║
+║ [OPTIMAL WINDOW: 70-100%]         ║
+║ 🟢 WINDOW OPEN – RELEASE NOW!     ║
+║                                     ║
+║ [A] RELEASE PRAYER                 ║
+║ [B] ABORT PRAYER (-5 Faith)        ║
+╚═════════════════════════════════════╝
+```
+
+---
+
+## 10. PROGRESSION & BALANCE
+
+### 10.1 Keine klassischen "Level"
+
+Stattdessen: Graduelle Unlock basierend auf Erfolge
+
+```
+Nach 5 Conversions:
+  → Unlock: "Protection Prayer" (andere Gebets-Art)
+  → Effect: Kann eine Zelle für 1h vor Dunkelheit schützen
+
+Nach 3 Territorien befreit:
+  → Unlock: Prayer-Combo (2x Gebet hintereinander = Bonus)
+
+Nach 20 Gesprächen mit unterschiedlichen NPCs:
+  → Unlock: "Mass Prayer" (Gebets-Event)
+```
+
+### 10.2 Schwierigkeits-Anpassungen (Optional)
+
+```
+[EASY]
+- Opposition in Prayer: -30% Häufigkeit
+- Faith regeneriert schneller
+- Ring-Fenster: größer (0.8-1.0 statt 0.7-1.0)
+
+[NORMAL]
+- Balanciert
+
+[HARD]
+- Opposition: +30% Häufigkeit
+- NPC-Konversions-Weg: 2x länger
+- Ring-Fenster: enger (0.85-1.0)
+```
+
+---
+
+## 11. SOUND & ATMOSPHERE
+
+### 11.1 Musik
+- **Reale Welt:** Minimale Stadtgeräusche + sanfter Loop
+- **Unsichtbare Welt:** Dunkel, ethereal, leicht beängstigend
+- **Prayer-Combat:** Aufbauend, episch, orchestral
+
+### 11.2 SFX
+- Prayer-Impact: "Whoosh" + Glockenspiel-Ton
+- Faith-Regeneration: Sanfter harmonischer Sound
+- NPC-Konversion: Hoffnungs-voller melodischer Ton
+- Opposition-Attack: Verzerrter Alarm-Sound
+
+---
+
+## 12. CORE LOOP (ZUSAMMENFASSUNG)
+
+```
+1. START im Pastorat
+   ↓
+2. Gehe zu Kirche
+   ├─ Bibellesen: +15 Faith
+   └─ Bete mit Gemeinde: +20 Faith
+   ↓
+3. Erkunde Stadt
+   ├─ Sprich mit NPCs: +2-5 Faith pro Gespräch
+   ├─ Hilfsaktionen: +5-10 Faith, +10 MP
+   └─ Sammle Events: evtl. +5-30 Faith
+   ↓
+4. Gehe in UNSICHTBARE WELT
+   ├─ Kosten: 10 Faith Eintritt
+   └─ Prayer-Combats: Investiere 20-80 Faith pro Combat
+   ↓
+5. Territorium wird BLAU/GOLD
+   ├─ NPCs in Blau-Zonen werden empfänglicher
+   └─ Mehr Faith & MP in diesen Zellen verfügbar
+   ↓
+6. Wiederhole → Core Loop
+```
+
+---
+
+## 13. IMPLEMENTIERUNGS-ROADMAP (VEREINFACHT)
+
+### Phase 1 – MVP (Wochen 1-3)
+- Stadt-Generierung
+- Pastor-Bewegung
+- Basic NPC-System (Gespräche)
+- Simple Unsichtbare-Welt (Farb-Overlay)
+- Prayer-Ring Mechanik (Wachsen/Schrumpfen)
+- Kirche + Bibellesen
+- HUD
+
+### Phase 2 – Gameplay-Loop (Wochen 4-6)
+- NPC-Memory-System
+- Mission-Action-System
+- Faith/Material-Regeneration
+- Game-of-Life Territorium-Dynamik
+- SFX + Musik
+
+### Phase 3 – Polish & Content (Wochen 7+)
+- Mehr NPC-Archetypen
+- Mehr Missions-Varianten
+- Opposition in Prayer (selten)
+- Fahrzeug-Verkehr
+- Balancing
+
+---
+
+## 14. ERFOLGSKRITERIEN
+
+| Kriterium | Messung |
+|-----------|---------|
+| Neue Spieler verstehen Steuerung in <60s | Playtests |
+| Prayer-Ring fühlt sich "skill-basiert" an | Spieler-Feedback |
+| Territorium-Kontrolle ist visuell klar | Farb-Kontrast ausreichend |
+| NPCs fühlen sich verschieden an (nicht repetitiv) | Dialog-Varianz |
+| Faith-Loop ist motivierend | Spieler möchte weiterspielen |
+| Biblische Mechaniken wirken authentisch | Keine negative Kritik zum Konzept |
+
+---
+
+## 15. ABGRENZUNG
+
+**❌ NICHT IM SPIEL:**
+- Gewalt/physische Kämpfe gegen Gegner
+- Sexuelle oder unangemessene Inhalte
+- Denominational-Kritik
+
+**✅ IM SPIEL:**
+- Fahrzeug-Verkehr (einfach, ambient)
+- Gebets-Kampf-Mechanik (abstrakt, strategisch)
+- Territorium-Kontrolle (Rot ↔ Blau)
+- Mission-System (flexibel, nicht-linear)
+- Sandbox mit optionalen Zielen
+
+---
