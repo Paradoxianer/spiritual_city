@@ -11,13 +11,12 @@ import '../spirit_world_game.dart';
 class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   final CityGrid grid;
   final CityGenerator generator;
-  final PositionComponent target; // Der Spieler
+  final PositionComponent target; 
   final NPCRegistry npcRegistry = NPCRegistry();
 
   final Map<String, ChunkComponent> _renderedChunks = {};
   final Map<String, List<NPCComponent>> _activeNPCs = {};
   
-  /// Radius in Chunks um den Spieler. 
   final int renderDistance = 2;
 
   int? _lastChunkX;
@@ -78,8 +77,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     _renderedChunks[chunk.id] = chunkComp;
     parent?.add(chunkComp);
 
-    // NPCs für diesen Chunk laden
-    final npcs = npcRegistry.getNPCsInChunk(cx, cy);
+    // NPCs basierend auf Chunk-Inhalt prozedural laden
+    final npcs = npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
     final npcComponents = <NPCComponent>[];
     for (final npcModel in npcs) {
       final npcComp = NPCComponent(model: npcModel);
@@ -90,11 +89,9 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   }
 
   void _unloadChunk(String key) {
-    // Chunk entfernen
     _renderedChunks[key]?.removeFromParent();
     _renderedChunks.remove(key);
 
-    // NPCs entfernen
     final npcs = _activeNPCs[key];
     if (npcs != null) {
       for (final npc in npcs) {
