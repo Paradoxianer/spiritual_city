@@ -35,7 +35,6 @@ class PlayerComponent extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    // Interaction Aura (nur in realer Welt relevant für NPC Hints)
     if (!game.isSpiritualWorld) {
       final isNear = game.nearestInteractable != null;
       final auraPaint = Paint()
@@ -47,11 +46,9 @@ class PlayerComponent extends PositionComponent
       canvas.drawCircle((size / 2).toOffset(), SpiritWorldGame.interactionRange * pulse, auraPaint);
     }
 
-    // Player Body
     final paint = Paint()..color = Colors.blueAccent;
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, paint);
     
-    // Cross
     paint.color = Colors.white;
     paint.strokeWidth = 2;
     canvas.drawLine(Offset(size.x / 2, size.y * 0.2), Offset(size.x / 2, size.y * 0.8), paint);
@@ -64,7 +61,6 @@ class PlayerComponent extends PositionComponent
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
     _keyboardDirection.setZero();
     
-    // In der geistlichen Welt keine Bewegung erlauben
     if (!game.isSpiritualWorld) {
       if (keysPressed.contains(LogicalKeyboardKey.keyW) || keysPressed.contains(LogicalKeyboardKey.arrowUp)) _keyboardDirection.y -= 1;
       if (keysPressed.contains(LogicalKeyboardKey.keyS) || keysPressed.contains(LogicalKeyboardKey.arrowDown)) _keyboardDirection.y += 1;
@@ -73,25 +69,32 @@ class PlayerComponent extends PositionComponent
       if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
     }
 
-    // INPUT A: Faith-Button (Leertaste) - Funktioniert nur in geistlicher Welt
+    // Leertaste als Aktions-Trigger (Web-kompatibel)
+    if (keysPressed.contains(LogicalKeyboardKey.space)) {
+      game.handleActionDown();
+    } else if (event is KeyUpEvent && event.logicalKey == LogicalKeyboardKey.space) {
+      game.handleActionUp();
+    }
+
+    // Zusätzliche Web-Steuerung für Joystick-Ersatz in der geistlichen Welt
+    // Falls man keine Touch-Steuerung/Joystick hat
     if (game.isSpiritualWorld) {
-      if (keysPressed.contains(LogicalKeyboardKey.space)) {
-        _startCharging();
-      } else if (event is KeyUpEvent && event.logicalKey == LogicalKeyboardKey.space) {
-        _releasePrayer();
+      if (keysPressed.contains(LogicalKeyboardKey.shiftLeft) || keysPressed.contains(LogicalKeyboardKey.shiftRight)) {
+        // Shift gedrückt halten = Zone vergrößern (Joystick-Sim)
+        if (!_isChargingFaith) startCharging();
       }
     }
 
     return true;
   }
 
-  void _startCharging() {
+  void startCharging() {
     if (_isChargingFaith) return;
     _isChargingFaith = true;
     prayerZone.isActive = true;
   }
 
-  void _releasePrayer() {
+  void releasePrayer() {
     if (!_isChargingFaith) return;
     _executePrayerImpact();
     _isChargingFaith = false;
@@ -123,18 +126,15 @@ class PlayerComponent extends PositionComponent
             (gridY + dy) * CellComponent.cellSize + CellComponent.cellSize / 2,
           );
           
-          // Hier prüfen wir, ob die Zelle innerhalb der geformten Zone liegt
-          // Bei direction.isZero() ist es ein Kreis, sonst die Flamme
           bool inZone = false;
           if (prayerZone.direction.isZero()) {
             inZone = center.distanceTo(cellPos) <= radius;
           } else {
-            // Vereinfachter Check für Flamme: Distanz + Richtungs-Bias
             final toCell = cellPos - center;
             final dist = toCell.length;
             if (dist <= radius * 1.5) {
               final angle = toCell.angleTo(prayerZone.direction);
-              if (angle.abs() < math.pi / 3) inZone = true; // 60 Grad Kegel
+              if (angle.abs() < math.pi / 3) inZone = true;
             }
           }
 
@@ -152,16 +152,13 @@ class PlayerComponent extends PositionComponent
   void update(double dt) {
     super.update(dt);
     
-    // In der geistlichen Welt wird der Joystick für die PrayerZone genutzt
     if (game.isSpiritualWorld) {
       if (_isChargingFaith) {
         _updatePrayerMechanics(dt);
       } else if (!joystick.delta.isZero()) {
-        // Falls Joystick bewegt wird ohne zu laden -> laden automatisch starten
-        _startCharging();
+        startCharging();
       }
     } else {
-      // Normale Bewegung in der realen Welt
       _updateMovement(dt);
     }
   }
@@ -188,9 +185,15 @@ class PlayerComponent extends PositionComponent
     _faithPulseTime += dt;
     prayerZone.pulseValue = math.sin(_faithPulseTime * 5).abs();
 
+    // Tastatur-Alternative für Joystick (Shift)
+    final isShiftPressed = RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.shiftLeft);
+
     if (!joystick.delta.isZero()) {
       prayerZone.sizeFactor = (prayerZone.sizeFactor + dt * 0.5).clamp(0.0, 1.0);
       prayerZone.direction = joystick.relativeDelta;
+    } else if (isShiftPressed) {
+      prayerZone.sizeFactor = (prayerZone.sizeFactor + dt * 0.5).clamp(0.0, 1.0);
+      prayerZone.direction = Vector2.zero();
     } else {
       prayerZone.sizeFactor = (prayerZone.sizeFactor + dt * 0.3).clamp(0.0, 1.0);
       prayerZone.direction = Vector2.zero();
