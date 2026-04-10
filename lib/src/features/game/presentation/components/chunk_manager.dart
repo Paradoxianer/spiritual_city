@@ -4,14 +4,19 @@ import '../../domain/city_generator.dart';
 import '../../domain/models/city_chunk.dart';
 import 'cell_component.dart';
 import 'chunk_component.dart';
+import '../spirit_world_game.dart';
 
-class ChunkManager extends Component with HasGameRef {
+class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   final CityGrid grid;
   final CityGenerator generator;
   final PositionComponent target; // Der Spieler
 
   final Map<String, ChunkComponent> _renderedChunks = {};
-  final int renderDistance = 1; // Radius in Chunks um den Spieler (3x3 = 9 Chunks)
+  
+  /// Radius in Chunks um den Spieler. 
+  /// 1 = 3x3 Chunks (9)
+  /// 2 = 5x5 Chunks (25)
+  final int renderDistance = 2;
 
   int? _lastChunkX;
   int? _lastChunkY;

@@ -1,8 +1,9 @@
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
+import '../spirit_world_game.dart';
 
-class PlayerComponent extends PositionComponent with HasGameRef {
+class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
   static const double playerSize = 24.0;
   final JoystickComponent joystick;
   final double speed = 200.0;
