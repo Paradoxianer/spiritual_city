@@ -6,7 +6,6 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
-import '../domain/models/cell_object.dart';
 import '../domain/models/interactions.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
@@ -168,8 +167,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   JoystickComponent _createJoystick() {
     return joystick = JoystickComponent(
-      knob: CircleComponent(radius: 20, paint: Paint()..color = Colors.white.withOpacity(0.5)),
-      background: CircleComponent(radius: 50, paint: Paint()..color = Colors.white.withOpacity(0.2)),
+      knob: CircleComponent(radius: 20, paint: Paint()..color = Colors.white.withValues(alpha: 0.5)),
+      background: CircleComponent(radius: 50, paint: Paint()..color = Colors.white.withValues(alpha: 0.2)),
       margin: const EdgeInsets.only(left: 40, bottom: 40),
     );
   }
@@ -197,7 +196,7 @@ class ActionButton extends PositionComponent with TapCallbacks {
 
   @override
   void render(Canvas canvas) {
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.blue.withOpacity(0.6));
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.blue.withValues(alpha: 0.6));
     TextPainter(
       text: const TextSpan(text: '🖐️', style: TextStyle(fontSize: 32)),
       textDirection: TextDirection.ltr
@@ -212,7 +211,7 @@ class PrayerButton extends PositionComponent with TapCallbacks {
   PrayerButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(70));
   @override
   void render(Canvas canvas) {
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.purple.withOpacity(0.6));
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.purple.withValues(alpha: 0.6));
     TextPainter(
       text: const TextSpan(text: '🙏', style: TextStyle(fontSize: 28)), 
       textDirection: TextDirection.ltr
