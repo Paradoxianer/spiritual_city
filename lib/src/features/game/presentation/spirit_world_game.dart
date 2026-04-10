@@ -19,6 +19,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final PlayerComponent player;
   late final JoystickComponent joystick;
   late final ChunkManager chunkManager;
+  late final ActionButton actionButton;
 
   bool isSpiritualWorld = false;
 
@@ -63,6 +64,23 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     _log.info('Switched to ${isSpiritualWorld ? "Spiritual" : "Physical"} world');
   }
 
+  void handleAction() {
+    // Determine the cell in front of the player or at player position
+    final int gridX = (player.position.x / CellComponent.cellSize).floor();
+    final int gridY = (player.position.y / CellComponent.cellSize).floor();
+    
+    final cell = grid.getCell(gridX, gridY);
+    _log.info('Action at cell $gridX, $gridY: ${cell?.data}');
+    
+    // Future logic: show radial menu around player
+    _showRadialMenu();
+  }
+
+  void _showRadialMenu() {
+    _log.info('Radial menu requested (To be implemented)');
+    // Placeholder for Issue #21
+  }
+
   JoystickComponent _createJoystick() {
     final knobPaint = Paint()..color = const Color(0xFFFFFFFF).withOpacity(0.5);
     final backgroundPaint = Paint()..color = const Color(0xFFFFFFFF).withOpacity(0.2);
@@ -81,6 +99,20 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       position: Vector2(size.x - 80, 80),
     );
     await camera.viewport.add(toggleButton);
+
+    actionButton = ActionButton(
+      onPressed: handleAction,
+      position: Vector2(size.x - 80, size.y - 80),
+    );
+    await camera.viewport.add(actionButton);
+  }
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    if (this.isLoaded) {
+      actionButton.position = Vector2(size.x - 80, size.y - 80);
+    }
   }
 }
 
@@ -97,11 +129,46 @@ class WorldToggleButton extends PositionComponent with TapCallbacks {
     final paint = Paint()..color = Colors.purple.withOpacity(0.5);
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
     
-    // Icon-like drawing
     paint.color = Colors.white;
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = 2;
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.3, paint);
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    onPressed();
+  }
+}
+
+class ActionButton extends PositionComponent with TapCallbacks {
+  final VoidCallback onPressed;
+
+  ActionButton({
+    required this.onPressed,
+    required super.position,
+  }) : super(anchor: Anchor.center, size: Vector2.all(80));
+
+  @override
+  void render(Canvas canvas) {
+    final paint = Paint()..color = Colors.blue.withOpacity(0.5);
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
+    
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 3;
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.35, paint);
+    
+    // "A" letter
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: 'A',
+        style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, size.y / 2 - textPainter.height / 2));
   }
 
   @override
