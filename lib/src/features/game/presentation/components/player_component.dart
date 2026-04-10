@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
+import 'cell_component.dart';
 
 class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
   static const double playerSize = 24.0;
@@ -48,7 +49,34 @@ class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorl
   void update(double dt) {
     super.update(dt);
     if (!joystick.delta.isZero()) {
-      position.add(joystick.relativeDelta * speed * dt);
+      final Vector2 delta = joystick.relativeDelta * speed * dt;
+      final Vector2 nextPosition = position + delta;
+
+      // Simple collision check:
+      // Convert pixel position to grid coordinates
+      final int gridX = (nextPosition.x / CellComponent.cellSize).floor();
+      final int gridY = (nextPosition.y / CellComponent.cellSize).floor();
+
+      if (game.grid.isWalkable(gridX, gridY)) {
+        position.setFrom(nextPosition);
+      } else {
+        // Try sliding (only X or only Y)
+        final Vector2 nextX = position + Vector2(delta.x, 0);
+        final int gridXonly = (nextX.x / CellComponent.cellSize).floor();
+        final int currentGridY = (position.y / CellComponent.cellSize).floor();
+        
+        if (game.grid.isWalkable(gridXonly, currentGridY)) {
+          position.setFrom(nextX);
+        } else {
+          final Vector2 nextY = position + Vector2(0, delta.y);
+          final int currentGridX = (position.x / CellComponent.cellSize).floor();
+          final int gridYonly = (nextY.y / CellComponent.cellSize).floor();
+          
+          if (game.grid.isWalkable(currentGridX, gridYonly)) {
+            position.setFrom(nextY);
+          }
+        }
+      }
     }
   }
 }
