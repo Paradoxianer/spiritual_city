@@ -6,9 +6,11 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
+import '../domain/models/cell_object.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
 import 'components/cell_component.dart';
+import 'components/radial_menu.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
@@ -21,6 +23,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final ChunkManager chunkManager;
   late final ActionButton actionButton;
 
+  RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
 
   @override
@@ -65,20 +68,59 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   void handleAction() {
-    // Determine the cell in front of the player or at player position
+    if (_currentMenu != null) {
+      _currentMenu?.removeFromParent();
+      _currentMenu = null;
+      return;
+    }
+
     final int gridX = (player.position.x / CellComponent.cellSize).floor();
     final int gridY = (player.position.y / CellComponent.cellSize).floor();
     
     final cell = grid.getCell(gridX, gridY);
-    _log.info('Action at cell $gridX, $gridY: ${cell?.data}');
-    
-    // Future logic: show radial menu around player
-    _showRadialMenu();
+    final actions = <RadialAction>[];
+
+    // Check for building interaction
+    if (cell?.data is BuildingData) {
+      final building = cell!.data as BuildingData;
+      actions.add(RadialAction(
+        label: 'Betreten',
+        icon: Icons.door_front_door,
+        onSelect: () => _log.info('Entering ${building.type}...'),
+      ));
+      
+      if (building.type == BuildingType.church || building.type == BuildingType.cathedral) {
+        actions.add(RadialAction(
+          label: 'Beten',
+          icon: Icons.auto_awesome,
+          onSelect: () => _log.info('Praying in church...'),
+        ));
+      }
+    }
+
+    // Default actions
+    actions.add(RadialAction(
+      label: 'Umsehen',
+      icon: Icons.search,
+      onSelect: () => _log.info('Looking around...'),
+    ));
+
+    if (actions.isNotEmpty) {
+      _currentMenu = RadialMenu(
+        actions: actions,
+        position: player.position,
+      );
+      world.add(_currentMenu!);
+    }
   }
 
-  void _showRadialMenu() {
-    _log.info('Radial menu requested (To be implemented)');
-    // Placeholder for Issue #21
+  @override
+  void update(double dt) {
+    super.update(dt);
+    // Move menu with player if open
+    if (_currentMenu != null) {
+      _currentMenu!.position = player.position;
+    }
   }
 
   JoystickComponent _createJoystick() {
@@ -159,7 +201,6 @@ class ActionButton extends PositionComponent with TapCallbacks {
     paint.strokeWidth = 3;
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.35, paint);
     
-    // "A" letter
     final textPainter = TextPainter(
       text: const TextSpan(
         text: 'A',

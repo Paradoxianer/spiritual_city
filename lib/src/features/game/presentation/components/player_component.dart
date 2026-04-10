@@ -59,6 +59,8 @@ class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorl
 
       if (game.grid.isWalkable(gridX, gridY)) {
         position.setFrom(nextPosition);
+        // If the player moves, close the menu to avoid "menu trailing"
+        game.closeMenu();
       } else {
         // Try sliding (only X or only Y)
         final Vector2 nextX = position + Vector2(delta.x, 0);
@@ -67,6 +69,7 @@ class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorl
         
         if (game.grid.isWalkable(gridXonly, currentGridY)) {
           position.setFrom(nextX);
+          game.closeMenu();
         } else {
           final Vector2 nextY = position + Vector2(0, delta.y);
           final int currentGridX = (position.x / CellComponent.cellSize).floor();
@@ -74,6 +77,7 @@ class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorl
           
           if (game.grid.isWalkable(currentGridX, gridYonly)) {
             position.setFrom(nextY);
+            game.closeMenu();
           }
         }
       }
