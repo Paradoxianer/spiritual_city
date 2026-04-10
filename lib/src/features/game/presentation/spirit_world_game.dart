@@ -26,6 +26,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
+  bool isLoadedAndReady = false;
 
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
@@ -56,11 +57,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     await camera.viewport.add(joystick);
     await _addHudButtons();
 
-    // 5. Camera follow
+    // 5. Camera Configuration (Deadzone & Smoothing)
     camera.viewfinder.anchor = Anchor.center;
-    camera.follow(player);
+    
+    // Initial snap
+    camera.viewfinder.position = player.position;
 
     _log.info('SpiritWorldGame loaded.');
+    isLoadedAndReady = true;
   }
 
   void toggleWorld() {
@@ -80,7 +84,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final cell = grid.getCell(gridX, gridY);
     final actions = <RadialAction>[];
 
-    // Check for building interaction
     if (cell?.data is BuildingData) {
       final building = cell!.data as BuildingData;
       actions.add(RadialAction(
@@ -98,7 +101,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       }
     }
 
-    // Default actions
     actions.add(RadialAction(
       label: 'Umsehen',
       icon: Icons.search,
@@ -125,6 +127,40 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (_currentMenu != null) {
       _currentMenu!.position = player.position;
     }
+
+    // Manual smooth camera with deadzone (75/25 rule)
+    _updateCamera(dt);
+  }
+
+  void _updateCamera(double dt) {
+    if (!isLoadedAndReady) return;
+
+    // Viewport size in world coordinates
+    final viewportSize = camera.viewport.size;
+    
+    // Deadzone: 40% center free move
+    final deadzoneWidth = viewportSize.x * 0.4; 
+    final deadzoneHeight = viewportSize.y * 0.4;
+
+    // Player position relative to camera center
+    final relativeX = player.position.x - camera.viewfinder.position.x;
+    final relativeY = player.position.y - camera.viewfinder.position.y;
+
+    double moveX = 0;
+    double moveY = 0;
+
+    if (relativeX.abs() > deadzoneWidth / 2) {
+      moveX = relativeX - (deadzoneWidth / 2 * relativeX.sign);
+    }
+
+    if (relativeY.abs() > deadzoneHeight / 2) {
+      moveY = relativeY - (deadzoneHeight / 2 * relativeY.sign);
+    }
+
+    if (moveX != 0 || moveY != 0) {
+      // Lerp for smoothness
+      camera.viewfinder.position.add(Vector2(moveX, moveY) * 4 * dt);
+    }
   }
 
   JoystickComponent _createJoystick() {
@@ -140,14 +176,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   Future<void> _addHudButtons() async {
-    // Action Button [A]
     actionButton = ActionButton(
       onPressed: handleAction,
       position: Vector2(size.x - 80, size.y - 80),
     );
     await camera.viewport.add(actionButton);
 
-    // Prayer Button [B] - Now next to Action Button
     prayerButton = PrayerButton(
       onPressed: toggleWorld,
       position: Vector2(size.x - 170, size.y - 80),

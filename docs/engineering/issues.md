@@ -1,5 +1,5 @@
 ﻿# 📋 GitHub Issues Roadmap
-_Last updated: 10.04.2026 10:55_
+_Last updated: 10.04.2026 11:20_
 _Sorted by Release and Priority (High > Medium > Low)_
 
 ## 🔥 ✨ #3: feat: Die Geistliche Welt (The Invisible Realm) [prio: 1, feature] 🏁 [Release 1]
@@ -44,19 +44,19 @@ Kap. 2.2 Lastenheft.
 
 ---
 
-## ⚡ ✨ #15: chore: Global Error Handling & Logging [enhancement, prio: 2] 🏁 [Release 1]
----
-**Status / Description:**
-
-Implementierung eines robusten Error Handlings (try-catch Blocks) und Logging (z.B. mit logger package) laut rules.md.
-
----
-
 ## ⚡ ✨ #8: feat: Daten-Persistenz & Welt-Speicherung [prio: 2, feature] 🏁 [Release 1]
 ---
 **Status / Description:**
 
 Implementierung der Speicherlogik mit Hive. Speichern von Zellzuständen (geistlich/real) und NPC-Eigenschaften beim Verlassen des Spiels. Kap. 8 & 10.
+
+---
+
+## ⚡ ✨ #9: feat: Balancing & UX-Fine-tuning [enhancement, prio: 2] 🏁 [Release 1]
+---
+**Status / Description:**
+
+Optimierung der Game-of-Life Parameter für die geistliche Welt. Validierung der Erfolgskriterien (Intuitive Steuerung, Stabilität). Kap. 13.
 
 ---
 
@@ -84,44 +84,6 @@ Implementierung der Speicherlogik mit Hive. Speichern von Zellzuständen (geistl
 - [ ] Asset-Caching funktioniert
 - [ ] Vehicle-Sprites (5-10) vorhanden
 - [ ] Alle Sprites vorhanden
-
----
-
-## ⚡ ✨ #6: feat: UI-Layer & HUD [prio: 2, feature] 🏁 [Release 1]
----
-**Status / Description:**
-
-# feat: UI-Layer & HUD
-
-## Haupt-HUD (Reale Welt):
-\\\
-OBEN LINKS:
-❤️  HEALTH:     ██████░░░░ 60/100
-🍽️  HUNGER:     █████░░░░░ 50/100
-⛪ FAITH:      ████████░░ 85/100
-📦 MATERIALS:  ██████░░░░ 42/100 MP
-
-UNTEN RECHTS:
-[A] Interact / [B] Prayer / [X] Menu
-\\\
-
-## Prayer-Combat HUD:
-\\\
-💫  🔷 🔷  💫
-🔷    ⛪    🔷
-🔷         🔷
-🔷     🔷
-
-FAITH INVESTED: 75→60→45...
-RING SIZE: ████████░░░░░░ (75%)
-🟢 WINDOW OPEN – RELEASE NOW!
-\\\
-
-## Akzeptanzkriterien:
-- [ ] Resource-Bars korrekt angezeigt
-- [ ] Prayer-Ring flüssig
-- [ ] Optimal-Fenster sichtbar
-- [ ] Buttons klar
 
 ---
 
@@ -168,19 +130,49 @@ class InteractionAction {
 
 ---
 
-## ⚡ ✨ #9: feat: Balancing & UX-Fine-tuning [enhancement, prio: 2] 🏁 [Release 1]
+## ⚡ ✨ #6: feat: UI-Layer & HUD [prio: 2, feature] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Optimierung der Game-of-Life Parameter für die geistliche Welt. Validierung der Erfolgskriterien (Intuitive Steuerung, Stabilität). Kap. 13.
+# feat: UI-Layer & HUD
+
+## Haupt-HUD (Reale Welt):
+\\\
+OBEN LINKS:
+❤️  HEALTH:     ██████░░░░ 60/100
+🍽️  HUNGER:     █████░░░░░ 50/100
+⛪ FAITH:      ████████░░ 85/100
+📦 MATERIALS:  ██████░░░░ 42/100 MP
+
+UNTEN RECHTS:
+[A] Interact / [B] Prayer / [X] Menu
+\\\
+
+## Prayer-Combat HUD:
+\\\
+💫  🔷 🔷  💫
+🔷    ⛪    🔷
+🔷         🔷
+🔷     🔷
+
+FAITH INVESTED: 75→60→45...
+RING SIZE: ████████░░░░░░ (75%)
+🟢 WINDOW OPEN – RELEASE NOW!
+\\\
+
+## Akzeptanzkriterien:
+- [ ] Resource-Bars korrekt angezeigt
+- [ ] Prayer-Ring flüssig
+- [ ] Optimal-Fenster sichtbar
+- [ ] Buttons klar
 
 ---
 
-## ☕ ✨ #5: feat: NPC-System & Einfache Missionen [prio: 3, feature] 🏁 [Release 1]
+## ⚡ ✨ #15: chore: Global Error Handling & Logging [enhancement, prio: 2] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Basis-Klasse für NPCs mit geistlichem Zustand (-100 bis +100). Prozedurale Bewohner und erste Dialogmissionen. Kap. 5.3 & 8.2.
+Implementierung eines robusten Error Handlings (try-catch Blocks) und Logging (z.B. mit logger package) laut rules.md.
 
 ---
 
@@ -189,6 +181,14 @@ Basis-Klasse für NPCs mit geistlichem Zustand (-100 bis +100). Prozedurale Bewo
 **Status / Description:**
 
 Implementierung von Flame_Audio. Integration von Ambient-Pads und Stadtgeräuschen gemäß Kap. 9 Lastenheft.
+
+---
+
+## ☕ ✨ #5: feat: NPC-System & Einfache Missionen [prio: 3, feature] 🏁 [Release 1]
+---
+**Status / Description:**
+
+Basis-Klasse für NPCs mit geistlichem Zustand (-100 bis +100). Prozedurale Bewohner und erste Dialogmissionen. Kap. 5.3 & 8.2.
 
 ---
 
@@ -208,15 +208,14 @@ Automatisierte Tests und Linting bei jedem Push/PR sicherstellen (Analyze & Test
 
 ---
 
-## ⚡ ✨ #20: feat: Navigation & Collision System [prio: 2, feature]
+## ⚡ ✨ #23: feat: Deterministic Building Interiors [prio: 2, feature]
 ---
 **Status / Description:**
 
-Implementierung der Kollisionslogik für den Pastor. 
-- Erlaubte Zonen: Straßen (Roads), Parks, Gehwege und Naturzellen.
-- Hindernisse: Gebäude (Buildings) und tiefes Wasser (Water).
-- Ziel: Der Spieler soll sich organisch durch die Stadt bewegen, aber nicht durch Wände gehen können.
-Blocks #2
+Jedes Gebäude im Grid erhält basierend auf seinen Welt-Koordinaten einen eindeutigen Seed. 
+- Beim Betreten eines Hauses wird ein Innenraum generiert, der bei jedem Besuch identisch bleibt.
+- Verknüpfung der Außen-Zelle mit der Innenraum-Logik.
+Blocks #8
 
 ---
 
@@ -239,14 +238,31 @@ Ersetzt die Canvas-Zeichnungen durch Pixel-Art Sprites. Nutzt SpriteBatch für P
 
 ---
 
-## ⚡ ✨ #23: feat: Deterministic Building Interiors [prio: 2, feature]
+## ⚡ ✨ #25: feat: Initial Loading Screen & Progress Indicator [enhancement, prio: 2]
 ---
 **Status / Description:**
 
-Jedes Gebäude im Grid erhält basierend auf seinen Welt-Koordinaten einen eindeutigen Seed. 
-- Beim Betreten eines Hauses wird ein Innenraum generiert, der bei jedem Besuch identisch bleibt.
-- Verknüpfung der Außen-Zelle mit der Innenraum-Logik.
-Blocks #8
+Zeigt einen Ladebildschirm an, während die ersten Stadt-Chunks generiert werden. Verhindert das 'Springen' der Welt beim Start.
+
+---
+
+## ⚡ ✨ #20: feat: Navigation & Collision System [prio: 2, feature]
+---
+**Status / Description:**
+
+Implementierung der Kollisionslogik für den Pastor. 
+- Erlaubte Zonen: Straßen (Roads), Parks, Gehwege und Naturzellen.
+- Hindernisse: Gebäude (Buildings) und tiefes Wasser (Water).
+- Ziel: Der Spieler soll sich organisch durch die Stadt bewegen, aber nicht durch Wände gehen können.
+Blocks #2
+
+---
+
+## ☕ ✨ #19: feat: Stadt-Grenzen & Biom-Fading [enhancement, prio: 3]
+---
+**Status / Description:**
+
+Implementierung eines Übergangs von Stadt zu unendlicher Natur am Rand der Welt.
 
 ---
 
@@ -258,14 +274,6 @@ NPCs (Bewohner) sollen sich entlang des Straßennetzes und in Parks bewegen.
 - Pathfinding-Logik für einfache Patrouillen oder Wege von A nach B.
 - NPCs reagieren auf den geistlichen Zustand der Zelle, in der sie sich befinden.
 Blocks #5
-
----
-
-## ☕ ✨ #19: feat: Stadt-Grenzen & Biom-Fading [enhancement, prio: 3]
----
-**Status / Description:**
-
-Implementierung eines Übergangs von Stadt zu unendlicher Natur am Rand der Welt.
 
 ---
 
