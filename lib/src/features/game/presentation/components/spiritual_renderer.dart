@@ -21,9 +21,6 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
   void update(double dt) {
     super.update(dt);
     _lastTime += dt;
-    // Wir invalidieren den Cache regelmäßig für den "Lavalampen"-Effekt (Perlin Noise Animation)
-    // In einer echten Implementierung würden wir hier Shader nutzen, 
-    // aber für "Simple but Elegant" reicht ein Repaint-Interval.
     if (_lastTime > 0.1) {
       _cachedPicture = null;
       _lastTime = 0;
@@ -49,7 +46,6 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
   void _renderSpiritualCell(Canvas canvas, CityCell cell, Offset offset) {
     final state = cell.spiritualState; // -1.0 bis +1.0
     
-    // Farbskala laut Lastenheft 5.1: Rot (Negativ) <-> Beige (Neutral) <-> Grün (Positiv)
     Color color;
     if (state < -0.3) {
       // Rot-Töne
@@ -58,13 +54,13 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
       // Grün-Töne
       color = Color.lerp(Colors.lightGreen[200]!, Colors.green[900]!, (state - 0.3) / 0.7)!;
     } else {
-      // Neutraler Bereich (Beige/Weiß)
-      color = Colors.wheat.withValues(alpha: 0.3);
+      // Neutraler Bereich
+      color = const Color(0xFFF5DEB3).withValues(alpha: 0.3); // Wheat hex
     }
 
     final paint = Paint()
       ..color = color.withValues(alpha: 0.6)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8); // Gaussian Blur Effekt laut #30
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
 
     canvas.drawRect(Rect.fromLTWH(offset.dx, offset.dy, cellSize, cellSize), paint);
   }
