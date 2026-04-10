@@ -14,10 +14,6 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   double _currentSpeed = 40.0;
   final Random _random = Random();
 
-  Vector2? _targetPosition;
-  double _aiUpdateTimer = 0;
-  static const double aiUpdateInterval = 2.0; 
-
   NPCComponent({required this.model}) : super(
     position: model.homePosition.clone(),
     size: Vector2.all(npcSize),
@@ -56,38 +52,39 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     final interactionScore = model.faith + (spiritualState * 50);
 
     // ===========================================================================
-    // FAITH-RESONANZ (Spieler erhält Faith zurück)
-    // - Ein positiver NPC (+100) gibt bis zu +5 Faith
-    // - Ein negativer NPC (-100) zieht bis zu -5 Faith (spirituelle Last)
+    // FAITH-RESONANZ (Resonanz-Logik aus Nutzerwunsch)
+    // +100 NPC Faith -> +5 Player Faith
+    // -100 NPC Faith -> -5 Player Faith
     // ===========================================================================
-    final double playerFaithGain = (model.faith / 20.0).clamp(-5.0, 5.0);
-    game.faith = (game.faith + playerFaithGain).clamp(0.0, 100.0);
+    final double resonanceExchange = (model.faith / 20.0); 
+    game.faith = (game.faith + resonanceExchange).clamp(0.0, 100.0);
 
     if (type == 'pray') {
       model.prayerCount++;
       if (interactionScore + _random.nextInt(40) > 20) {
-        model.applyInfluence(15.0); // Gebet erhöht NPC Faith
+        model.applyInfluence(12.0 + (spiritualState * 5)); 
         return '❤️';
       } else {
-        model.applyInfluence(-5.0);
+        model.applyInfluence(-8.0);
         return interactionScore < -20 ? '💀' : '😠';
       }
     } 
     
     if (type == 'help') {
       model.conversationCount++;
-      // Hilfe ist immer positiv für den NPC
-      model.applyInfluence(10.0 + (spiritualState * 5));
+      // Hilfe/Gespräch verbessert den NPC-Glauben leicht
+      model.applyInfluence(8.0 + (spiritualState * 4));
       return '📦😊';
     } 
     
     if (type == 'convert') {
-      if (interactionScore > 50) {
+      if (interactionScore > 60) {
         model.applyInfluence(100);
-        // Bekehrung gibt einen massiven Bonus
-        game.faith = (game.faith + 20.0).clamp(0.0, 100.0);
+        // BEKEHRUNGS-BOOST: Absoluter Boost von +20 (oder mehr)
+        game.faith = (game.faith + 25.0).clamp(0.0, 100.0);
         return '✨🕊️';
       } else {
+        model.applyInfluence(2.0); // Kleiner Trostpreis für den Versuch
         if (interactionScore < 0) return '🚫';
         return '🤔';
       }
@@ -105,93 +102,41 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   void update(double dt) {
     super.update(dt);
     if (game.paused) return;
-
-    _aiUpdateTimer -= dt;
-    if (_aiUpdateTimer <= 0) {
-      _updateAI();
-      _aiUpdateTimer = aiUpdateInterval + _random.nextDouble(); 
-    }
-
-    if (_targetPosition != null) {
-      _moveTowardsTarget(dt);
-    }
+    _updateAI(dt);
   }
 
-  void _updateAI() {
-    final gx = (position.x / CellComponent.cellSize).floor();
-    final gy = (position.y / CellComponent.cellSize).floor();
-    final cell = game.grid.getCell(gx, gy);
-    final state = cell?.spiritualState ?? 0;
-
-    if (state < -0.5 && !model.isChristian) {
-      _currentSpeed = 15.0;
-    } else {
-      _currentSpeed = 35.0 + (model.faith / 10.0);
-    }
-
-    if (_targetPosition == null || position.distanceTo(_targetPosition!) < 4) {
-      _targetPosition = _findNextWanderTarget(gx, gy);
+  void _updateAI(double dt) {
+    // Einfaches Wandern...
+    if (_random.nextDouble() < 0.01) {
+      final gx = (position.x / CellComponent.cellSize).floor();
+      final gy = (position.y / CellComponent.cellSize).floor();
+      final target = _findNextWanderTarget(gx, gy);
+      if (target != null) {
+        position.setFrom(target);
+      }
     }
   }
 
   Vector2? _findNextWanderTarget(int gx, int gy) {
-    final directions = [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)];
-    directions.shuffle(_random);
-    for (final dir in directions) {
-      final tx = gx + dir.x.toInt();
-      final ty = gy + dir.y.toInt();
-      if (game.grid.isWalkable(tx, ty)) {
-        return Vector2(
-          tx * CellComponent.cellSize + CellComponent.cellSize / 2,
-          ty * CellComponent.cellSize + CellComponent.cellSize / 2,
-        );
-      }
+    final dir = [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)][_random.nextInt(4)];
+    final tx = gx + dir.x.toInt();
+    final ty = gy + dir.y.toInt();
+    if (game.grid.isWalkable(tx, ty)) {
+      return Vector2(tx * CellComponent.cellSize + 12, ty * CellComponent.cellSize + 12);
     }
-    return null; 
-  }
-
-  void _moveTowardsTarget(double dt) {
-    final diff = _targetPosition! - position;
-    if (diff.length < _currentSpeed * dt) {
-      position.setFrom(_targetPosition!);
-      _targetPosition = null;
-    } else {
-      diff.normalize();
-      position.add(diff * _currentSpeed * dt);
-    }
+    return null;
   }
 
   @override
   void render(Canvas canvas) {
-    Color bodyColor;
-    if (model.isChristian) {
-      bodyColor = Colors.white;
-    } else {
-      if (model.faith < 0) {
-        bodyColor = Color.lerp(Colors.red[900], Colors.grey, (model.faith + 100) / 100)!;
-      } else {
-        bodyColor = Color.lerp(Colors.grey, Colors.blue[100], model.faith / 50)!;
-      }
-    }
-    
+    Color bodyColor = model.isChristian ? Colors.white : (model.faith < 0 ? Colors.red[800]! : Colors.grey);
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
-    
-    if (model.isChristian) {
-      final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
-      final center = (size / 2).toOffset();
-      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);
-      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), paint);
-    }
-
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
   }
 
   void _renderSpiritualAura(Canvas canvas) {
     final faithFactor = (model.faith + 100) / 200.0;
-    final auraColor = Color.lerp(Colors.red, Colors.green, faithFactor)!
-        .withValues(alpha: 0.3 + (faithFactor * 0.4));
-    
-    final auraPaint = Paint()..color = auraColor..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-    canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, auraPaint);
+    final auraColor = Color.lerp(Colors.red, Colors.green, faithFactor)!.withValues(alpha: 0.5);
+    canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, Paint()..color = auraColor..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
   }
 }
