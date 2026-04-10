@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:logging/logging.dart';
+import '../../../../core/utils/game_time.dart';
 import '../spirit_world_game.dart';
 import '../../domain/models/city_chunk.dart';
 import '../../domain/models/city_cell.dart';
@@ -22,8 +23,8 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   static final _log = Logger('SpiritualDynamicsSystem');
 
   /// How often (in real seconds) the spiritual world updates.
-  /// 60 s = one "game day" – matches the NPC influence interval.
-  static const double tickInterval = 60.0;
+  /// 60 s = one "game day" – matches [GameTime.gameDaySeconds].
+  static const double tickInterval = GameTime.gameDaySeconds;
 
   /// Spread strength: how much a cell's state bleeds into neighbours per tick.
   static const double spreadFactor = 0.04;

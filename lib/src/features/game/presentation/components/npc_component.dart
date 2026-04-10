@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/utils/game_time.dart';
 import '../../domain/models/npc_model.dart';
 import '../../domain/models/interactions.dart';
 import '../spirit_world_game.dart';
@@ -15,7 +16,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   
   // Timer for daily NPC spiritual influence on cells (Lastenheft §6.3)
   double _spiritualInfluenceTimer = 0.0;
-  static const double _spiritualInfluenceInterval = 60.0; // every 60 seconds = 1 "game day"
+  /// One in-game day = [GameTime.gameDaySeconds] real seconds.
+  static const double _spiritualInfluenceInterval = GameTime.gameDaySeconds;
 
   NPCComponent({required this.model}) : super(
     position: model.homePosition.clone(),
