@@ -38,19 +38,37 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
-class DialogOverlay extends StatelessWidget {
+class DialogOverlay extends StatefulWidget {
   final SpiritWorldGame game;
   const DialogOverlay({super.key, required this.game});
 
   @override
+  State<DialogOverlay> createState() => _DialogOverlayState();
+}
+
+class _DialogOverlayState extends State<DialogOverlay> {
+  String? _reactionEmoji;
+
+  void _handleInteraction(String type) {
+    setState(() {
+      _reactionEmoji = widget.game.handleInteraction(type);
+    });
+    
+    // Kurze Verzögerung bevor der Dialog schließt, damit man die Reaktion sieht
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) widget.game.closeDialog();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final dialog = game.activeDialog;
+    final dialog = widget.game.activeDialog;
     if (dialog == null) return const SizedBox.shrink();
 
     return Center(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 50),
-        padding: const EdgeInsets.all(15),
+        width: 200,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.8),
           borderRadius: BorderRadius.circular(20),
@@ -59,28 +77,35 @@ class DialogOverlay extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                Text(dialog.emoji, style: const TextStyle(fontSize: 32)),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Text(
-                    dialog.title,
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
+            // Nur der Name als Header
+            Text(
+              dialog.npcName,
+              style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
             ),
-            const Divider(color: Colors.white10, height: 20),
-            // Chat-ähnliche Emojis als Antwortmöglichkeiten
-            Wrap(
-              spacing: 15,
-              children: [
-                _InteractionOption(emoji: '🙏', label: 'Bete', onTap: () => game.closeDialog()),
-                _InteractionOption(emoji: '📦', label: 'Hilf', onTap: () => game.closeDialog()),
-                _InteractionOption(emoji: '👋', label: 'Ciao', onTap: () => game.closeDialog()),
-              ],
+            const SizedBox(height: 12),
+            
+            // NPC Emoji oder Reaktion
+            Container(
+              height: 60,
+              alignment: Alignment.center,
+              child: Text(
+                _reactionEmoji ?? dialog.npcEmoji, 
+                style: const TextStyle(fontSize: 40)
+              ),
             ),
+            
+            const SizedBox(height: 12),
+            
+            // Interaktions-Buttons (nur wenn keine Reaktion aktiv ist)
+            if (_reactionEmoji == null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _InteractionButton(emoji: '🙏', onTap: () => _handleInteraction('pray')),
+                  _InteractionButton(emoji: '📦', onTap: () => _handleInteraction('help')),
+                  _InteractionButton(emoji: '👋', onTap: () => widget.game.closeDialog()),
+                ],
+              ),
           ],
         ),
       ),
@@ -88,36 +113,29 @@ class DialogOverlay extends StatelessWidget {
   }
 }
 
-class _InteractionOption extends StatelessWidget {
+class _InteractionButton extends StatelessWidget {
   final String emoji;
-  final String label;
   final VoidCallback onTap;
-  const _InteractionOption({required this.emoji, required this.label, required this.onTap});
+  const _InteractionButton({required this.emoji, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Text(emoji, style: const TextStyle(fontSize: 24)),
-          ),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
-        ],
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          shape: BoxShape.circle,
+        ),
+        child: Text(emoji, style: const TextStyle(fontSize: 22)),
       ),
     );
   }
 }
 
 class GameDialogData {
-  final String title;
-  final String emoji;
-  GameDialogData({required this.title, required this.emoji});
+  final String npcName;
+  final String npcEmoji;
+  GameDialogData({required this.npcName, required this.npcEmoji});
 }

@@ -28,22 +28,43 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   String get interactionLabel => model.name;
+  
+  @override
+  String get interactionEmoji => _getNPCEmoji();
 
   @override
   Vector2 get interactionPosition => position;
 
+  String _getNPCEmoji() {
+    switch (model.type) {
+      case NPCType.citizen: return '👤';
+      case NPCType.merchant: return '🏪';
+      case NPCType.priest: return '⛪';
+      case NPCType.officer: return '👮';
+    }
+  }
+
   @override
   void onInteract() {
-    // Mission Logik: Belohnung beim ersten Mal
-    String message = model.currentMessage ?? 'Hallo! Ich bin ${model.name}. Schön dich zu sehen.';
-    
-    if (!model.hasTalkedTo) {
-      model.hasTalkedTo = true;
-      message += '\n\n(Du hast +5 Faith erhalten!)';
-      // Hier würde man später den globalen Game-State/Player-State aktualisieren
-    }
+    game.showDialog(model.name, _getNPCEmoji());
+  }
 
-    game.showDialog(model.name, message);
+  @override
+  String handleInteraction(String type) {
+    if (type == 'pray') {
+      // Gebet erhöht Faith, kann aber auch abgelehnt werden
+      final success = _random.nextDouble() > (model.faith < 0 ? 0.6 : 0.2);
+      if (success) {
+        model.faith = (model.faith + 0.1).clamp(-1.0, 1.0);
+        return '❤️'; // Positive Reaktion
+      } else {
+        return '😠'; // Negative Reaktion
+      }
+    } else if (type == 'help') {
+      model.faith = (model.faith + 0.05).clamp(-1.0, 1.0);
+      return '😊'; // Immer positiv
+    }
+    return '❓';
   }
 
   @override
@@ -54,8 +75,6 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   @override
   void update(double dt) {
     super.update(dt);
-    
-    // Wenn pausiert (z.B. durch Dialog), keine Bewegung
     if (game.paused) return;
 
     _aiUpdateTimer -= dt;
@@ -143,7 +162,6 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, paint);
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
-    _renderTypeSymbol(canvas);
   }
 
   Color _getColorForType(NPCType type) {
@@ -163,14 +181,5 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     
     final auraPaint = Paint()..color = auraColor..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
     canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, auraPaint);
-  }
-
-  void _renderTypeSymbol(Canvas canvas) {
-    final symbolPaint = Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 1.5;
-    final center = (size / 2).toOffset();
-    if (model.type == NPCType.priest) {
-      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), symbolPaint);
-      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), symbolPaint);
-    }
   }
 }

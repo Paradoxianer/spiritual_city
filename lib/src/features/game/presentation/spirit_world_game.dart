@@ -74,7 +74,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (activeDialog != null) { closeDialog(); return; }
     if (_currentMenu != null) { closeMenu(); return; }
     
-    // Radial Menu immer öffnen
     _openRadialMenu();
   }
 
@@ -95,10 +94,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     world.add(_currentMenu!);
   }
 
-  void showDialog(String title, String emoji) {
-    activeDialog = GameDialogData(title: title, emoji: emoji);
+  void showDialog(String name, String emoji) {
+    activeDialog = GameDialogData(npcName: name, npcEmoji: emoji);
     overlays.add('DialogOverlay');
     paused = true; 
+  }
+
+  String handleInteraction(String type) {
+    if (_nearestInteractable != null) {
+      return _nearestInteractable!.handleInteraction(type);
+    }
+    return '❓';
   }
 
   void closeDialog() {
