@@ -22,7 +22,7 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   static final _log = Logger('SpiritualDynamicsSystem');
 
   /// How often (in real seconds) the spiritual world updates.
-  /// 60 s ≈ one "game hour" – fast enough to feel alive, not so fast it's jarring.
+  /// 60 s = one "game day" – matches the NPC influence interval.
   static const double tickInterval = 60.0;
 
   /// Spread strength: how much a cell's state bleeds into neighbours per tick.

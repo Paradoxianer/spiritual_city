@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'spirit_world_game.dart';
@@ -64,6 +65,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
   ];
 
   int _verseIndex = 0;
+  Timer? _verseTimer;
 
   @override
   void initState() {
@@ -73,17 +75,17 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    // Cycle through Bible verses every 2.5 s
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(milliseconds: 2500));
-      if (!mounted) return false;
-      setState(() => _verseIndex = (_verseIndex + 1) % _verses.length);
-      return true;
+    // Cycle through Bible verses every 2.5 s – use a cancellable Timer
+    _verseTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+      if (mounted) {
+        setState(() => _verseIndex = (_verseIndex + 1) % _verses.length);
+      }
     });
   }
 
   @override
   void dispose() {
+    _verseTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }

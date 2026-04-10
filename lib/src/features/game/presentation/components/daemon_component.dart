@@ -96,25 +96,25 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   void _applyEffect(CityCell cell) {
     // Determine cell type (negative / neutral / positive)
     double cellDrain;
-    double energyCost;
+    double energyDrain;
 
     if (cell.spiritualState < -0.5) {
       // Strongly negative: daemon thrives, costs little energy
-      cellDrain = 1.0 * _energyToCellRatio;
-      energyCost = 1.0;
+      cellDrain  = 1.0 * _energyToCellRatio;
+      energyDrain = 1.0;
     } else if (cell.spiritualState.abs() < 0.3) {
       // Neutral: moderate drain
-      cellDrain = 2.0 * _energyToCellRatio;
-      energyCost = 2.0;
+      cellDrain  = 2.0 * _energyToCellRatio;
+      energyDrain = 2.0;
     } else {
       // Positive territory: daemon is weakened rapidly
-      cellDrain = 3.0 * _energyToCellRatio;
-      energyCost = 6.0;
+      cellDrain  = 3.0 * _energyToCellRatio;
+      energyDrain = 6.0;
     }
 
     cell.spiritualState = (cell.spiritualState - cellDrain).clamp(-1.0, 1.0);
 
-    model.energy += energyCost; // energy tracks toward 0 (starts negative, approaches 0)
+    model.energy += energyDrain; // energy drains toward 0 (starts negative, approaches 0)
     if (model.energy >= 0) {
       _dissolve(cell);
     }

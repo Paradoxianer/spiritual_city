@@ -53,13 +53,13 @@ class ModifierManager {
   late final Modifier wachstum;
 
   ModifierManager({required this.progress}) {
-    inbrunst     = Modifier(id: 'inbrunst',     name: 'Inbrunst',     description: 'Timing-Fenster +5% breiter');
-    ausdauer     = Modifier(id: 'ausdauer',     name: 'Ausdauer',     description: 'Gebets-Zone wächst 20% schneller');
-    konzentration= Modifier(id: 'konzentration',name: 'Konzentration',description: 'Faith-Pulse 15% langsamer');
-    kraft        = Modifier(id: 'kraft',        name: 'Kraft',        description: 'Impact-Power +20%');
-    weisheit     = Modifier(id: 'weisheit',     name: 'Weisheit',     description: 'Faith-Kosten pro Combat -10%');
-    bewahrung    = Modifier(id: 'bewahrung',    name: 'Bewahrung',    description: 'Rückfall-Rate -15% für grüne Zellen');
-    wachstum     = Modifier(id: 'wachstum',     name: 'Wachstum',     description: 'Grüne Zellen beeinflussen Nachbarn +10%');
+    inbrunst      = Modifier(id: 'inbrunst',      name: 'Inbrunst',      description: 'Timing-Fenster +5% breiter');
+    ausdauer      = Modifier(id: 'ausdauer',      name: 'Ausdauer',      description: 'Gebets-Zone wächst 20% schneller');
+    konzentration = Modifier(id: 'konzentration', name: 'Konzentration', description: 'Faith-Pulse 15% langsamer');
+    kraft         = Modifier(id: 'kraft',         name: 'Kraft',         description: 'Impact-Power +20%');
+    weisheit      = Modifier(id: 'weisheit',      name: 'Weisheit',      description: 'Faith-Kosten pro Combat -10%');
+    bewahrung     = Modifier(id: 'bewahrung',     name: 'Bewahrung',     description: 'Rückfall-Rate -15% für grüne Zellen');
+    wachstum      = Modifier(id: 'wachstum',      name: 'Wachstum',      description: 'Grüne Zellen beeinflussen Nachbarn +10%');
   }
 
   /// Check all unlock conditions and unlock modifiers as appropriate.

@@ -84,8 +84,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (type == 'help') {
       model.conversationCount++;
       model.applyInfluence(8.0 + (spiritualState * 4));
-      game.gainFaith(5.0);      // +5 Faith for helping
-      game.gainMaterials(-8.0); // costs 8 MP to help
+      game.gainFaith(5.0);       // +5 Faith for helping
+      game.spendMaterials(8.0);  // costs 8 MP (silently fails if not enough)
       return '📦😊';
     } 
     
