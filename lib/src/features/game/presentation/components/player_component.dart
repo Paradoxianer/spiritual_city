@@ -1,19 +1,23 @@
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
-class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
+class PlayerComponent extends PositionComponent 
+    with HasGameReference<SpiritWorldGame>, KeyboardHandler {
   static const double playerSize = 24.0;
   final JoystickComponent joystick;
-  final double speed = 200.0;
+  
+  // Reduced speed for more "game-like" feel
+  final double speed = 150.0;
 
   PlayerComponent({required this.joystick})
       : super(
           size: Vector2.all(playerSize),
           anchor: Anchor.center,
-          priority: 100, // Ensure player is rendered on top of the city
+          priority: 100,
         );
 
   @override
@@ -45,25 +49,62 @@ class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorl
     );
   }
 
+  final Vector2 _keyboardDelta = Vector2.zero();
+
+  @override
+  bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    _keyboardDelta.setZero();
+    if (keysPressed.contains(LogicalKeyboardKey.keyW) ||
+        keysPressed.contains(LogicalKeyboardKey.arrowUp)) {
+      _keyboardDelta.y -= 1;
+    }
+    if (keysPressed.contains(LogicalKeyboardKey.keyS) ||
+        keysPressed.contains(LogicalKeyboardKey.arrowDown)) {
+      _keyboardDelta.y += 1;
+    }
+    if (keysPressed.contains(LogicalKeyboardKey.keyA) ||
+        keysPressed.contains(LogicalKeyboardKey.arrowLeft)) {
+      _keyboardDelta.x -= 1;
+    }
+    if (keysPressed.contains(LogicalKeyboardKey.keyD) ||
+        keysPressed.contains(LogicalKeyboardKey.arrowRight)) {
+      _keyboardDelta.x += 1;
+    }
+
+    if (_keyboardDelta.length > 0) {
+      _keyboardDelta.normalize();
+    }
+    return true;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
+    
+    Vector2 delta = Vector2.zero();
+    
+    // Joystick input
     if (!joystick.delta.isZero()) {
-      final Vector2 delta = joystick.relativeDelta * speed * dt;
-      final Vector2 nextPosition = position + delta;
+      delta = joystick.relativeDelta;
+    } 
+    // Keyboard input (if no joystick delta)
+    else if (!_keyboardDelta.isZero()) {
+      delta = _keyboardDelta;
+    }
 
-      // Simple collision check:
-      // Convert pixel position to grid coordinates
+    if (!delta.isZero()) {
+      final Vector2 movement = delta * speed * dt;
+      final Vector2 nextPosition = position + movement;
+
       final int gridX = (nextPosition.x / CellComponent.cellSize).floor();
       final int gridY = (nextPosition.y / CellComponent.cellSize).floor();
 
       if (game.grid.isWalkable(gridX, gridY)) {
         position.setFrom(nextPosition);
-        // If the player moves, close the menu to avoid "menu trailing"
         game.closeMenu();
       } else {
-        // Try sliding (only X or only Y)
-        final Vector2 nextX = position + Vector2(delta.x, 0);
+        // Sliding logic
+        final Vector2 nextX = position + Vector2(movement.x, 0);
         final int gridXonly = (nextX.x / CellComponent.cellSize).floor();
         final int currentGridY = (position.y / CellComponent.cellSize).floor();
         
@@ -71,7 +112,7 @@ class PlayerComponent extends PositionComponent with HasGameReference<SpiritWorl
           position.setFrom(nextX);
           game.closeMenu();
         } else {
-          final Vector2 nextY = position + Vector2(0, delta.y);
+          final Vector2 nextY = position + Vector2(0, movement.y);
           final int currentGridX = (position.x / CellComponent.cellSize).floor();
           final int gridYonly = (nextY.y / CellComponent.cellSize).floor();
           
