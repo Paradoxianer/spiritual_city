@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flame/components.dart';
+import 'package:flame_noise/flame_noise.dart';
 import 'package:flutter/material.dart' hide Image;
 import '../../domain/models/city_chunk.dart';
 import '../../domain/models/city_cell.dart';
@@ -11,20 +13,22 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
   static const double cellSize = CellComponent.cellSize;
 
   Picture? _cachedPicture;
-  double _lastTime = 0;
+  double _animationTime = 0;
+  final PerlinNoise _lavaNoise;
 
-  SpiritualRenderer(this.chunk) {
+  SpiritualRenderer(this.chunk) : _lavaNoise = PerlinNoise(seed: chunk.chunkX * 31 + chunk.chunkY * 7) {
     size = Vector2.all(CityChunk.chunkSize * cellSize);
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    _lastTime += dt;
-    if (_lastTime > 0.1) {
-      _cachedPicture = null;
-      _lastTime = 0;
-    }
+    if (!game.isSpiritualWorld) return;
+
+    _animationTime += dt * 0.5; // Geschwindigkeit der "Lavalampen"-Bewegung
+    
+    // Wir invalidieren den Cache regelmäßig für die fließende Optik
+    _cachedPicture = null;
   }
 
   void _createCache() {
@@ -36,31 +40,44 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
         final cell = chunk.cells['$x,$y'];
         if (cell == null) continue;
         
+        final worldX = chunk.getWorldX(x);
+        final worldY = chunk.getWorldY(y);
+        
+        // Organisches Rauschen für Hotspots hinzufügen
+        final noise = _lavaNoise.getNoise3(
+          worldX * 0.1, 
+          worldY * 0.1, 
+          _animationTime
+        );
+
         final offset = Offset(x * cellSize, y * cellSize);
-        _renderSpiritualCell(canvas, cell, offset);
+        _renderSpiritualCell(canvas, cell, offset, noise);
       }
     }
     _cachedPicture = recorder.endRecording();
   }
 
-  void _renderSpiritualCell(Canvas canvas, CityCell cell, Offset offset) {
-    final state = cell.spiritualState; // -1.0 bis +1.0
+  void _renderSpiritualCell(Canvas canvas, CityCell cell, Offset offset, double noise) {
+    // Basis-State kombiniert mit fließendem Noise (-1.0 bis 1.0)
+    final state = (cell.spiritualState + (noise * 0.3)).clamp(-1.0, 1.0);
     
     Color color;
-    if (state < -0.3) {
-      // Rot-Töne
-      color = Color.lerp(Colors.black, Colors.red[900]!, (state + 1.0) / 0.7)!;
-    } else if (state > 0.3) {
-      // Grün-Töne
-      color = Color.lerp(Colors.lightGreen[200]!, Colors.green[900]!, (state - 0.3) / 0.7)!;
+    if (state < -0.2) {
+      // Dunkle Macht: Tiefrot bis Schwarz
+      final factor = (state.abs() - 0.2) / 0.8;
+      color = Color.lerp(Colors.red[900]!, Colors.black, factor)!;
+    } else if (state > 0.2) {
+      // Licht: Hellgrün bis Gold/Dunkelgrün
+      final factor = (state - 0.2) / 0.8;
+      color = Color.lerp(Colors.lightGreenAccent[100]!, Colors.green[900]!, factor)!;
     } else {
       // Neutraler Bereich
-      color = const Color(0xFFF5DEB3).withValues(alpha: 0.3); // Wheat hex
+      color = const Color(0xFFF5DEB3).withValues(alpha: 0.2); 
     }
 
     final paint = Paint()
-      ..color = color.withValues(alpha: 0.6)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      ..color = color.withValues(alpha: 0.5 + (noise.abs() * 0.2))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12); // Weicherer Übergang
 
     canvas.drawRect(Rect.fromLTWH(offset.dx, offset.dy, cellSize, cellSize), paint);
   }
