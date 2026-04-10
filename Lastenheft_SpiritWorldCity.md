@@ -161,7 +161,7 @@ Während der Gebets-Aktion in der unsichtbaren Welt gilt:
 
 ```
 // Sobald der Faith-Button aktiv gedrückt wird:
-daemon_attraction_multiplier *= 2.5   // Dämonen werden stärker angezogen
+daemon_attraction_multiplier = 2.5    // Dämonen-Anziehung auf diesen Faktor gesetzt (nicht kumulativ)
 spawn_chance_increase = +40%          // Erhöhte Spawn-Wahrscheinlichkeit
 attraction_duration = 30 Sekunden    // Effekt klingt nach 30s ab
 
@@ -271,7 +271,7 @@ cell_influence = (
     (nearby_churches * 15) +        // Kirchen strahlen +15 pro Kirche
     (gol_neighbor_influence * 0.4)  // Game of Life Nachbar-Effekt
     - (crime_reports * 0.3)        // Kriminalität
-    - (daemon_residuum * 0.5)      // Daemon-Residuum-Marker (nach Daemon-Auflösung)
+    - daemon_residuum_strength * 0.5   // Daemon-Residuum-Stärke (0..10 nach Auflösung, klingt ab)
 )
 
 // Zelle zwischen -100 und +100 clamped
@@ -335,7 +335,7 @@ Beide Aktionsbuttons (Beten / Einsatz für Gott) erhalten **unabhängige Pulsier
 prayer_button_pulse_speed   = 1.0   // Basisgeschwindigkeit (sehr schnell)
 deployment_button_pulse_speed = 1.0 // Basisgeschwindigkeit (sehr schnell)
 
-// Jeder erspielter Modifier reduziert die Geschwindigkeit:
+// Jeder erspielte Modifier reduziert die Geschwindigkeit:
 // prayer_button_pulse_speed   -= prayer_speed_modifier
 // deployment_button_pulse_speed -= deploy_speed_modifier
 
@@ -419,7 +419,8 @@ AUFLÖSUNG:
 
 ```python
 class DaemonNPC:
-    kraft: -1 bis -100   # Finsternis-Kraft (entspricht "Anti Faith")
+    kraft: 1 bis 100     # Finsternis-Kraft (positiver Wert, läuft gegen 0 = Auflösung)
+                         # Entspricht "Anti Faith" – Stärke des Dämons
     position: Vector2
 
     # Bewegung pro Tick:
@@ -439,12 +440,12 @@ class DaemonNPC:
             # Widerstandswert der Zelle erhöht den Kraft-Verlust zusätzlich:
             self.kraft -= cell.cell_resistance * 0.05
 
-        if self.kraft <= 0:
+        if self.kraft <= 0:             # Kraft erschöpft → Auflösung
             self.dissolve()
 
     def dissolve(self):
-        current_cell.daemon_residuum = True   # Marker setzen
-        current_cell.value -= 5               # Residuum-Dunkelheit
+        current_cell.daemon_residuum_strength = RESIDUUM_INITIAL_STRENGTH  # Stärke 0..10
+        current_cell.value -= RESIDUUM_DARKNESS                             # Residuum-Dunkelheit
         self.destroy()
 ```
 
@@ -452,7 +453,7 @@ class DaemonNPC:
 
 Nach der Auflösung eines Daemons:
 - Die Zelle erhält einen **Daemon-Residuum-Marker** (visuell: spezielle Dunkelrot-Tönung, Perlin-Asche-Partikel)
-- `daemon_residuum`-Wert fließt in die `cell_influence`-Berechnung ein (Kap. 5.2): `- (daemon_residuum * 0.5)`
+- `daemon_residuum_strength` (Wert 0–10) fließt in die `cell_influence`-Berechnung ein (Kap. 5.2): `- daemon_residuum_strength * 0.5`
 - Marker klingt mit der Zeit ab (nach ~5 Spielminuten ohne negativen Einfluss)
 - Kann durch gezieltes Prayer-Combat schneller beseitigt werden
 
@@ -484,6 +485,8 @@ BASE_SPAWN_INTERVAL_SEC     = 60     // Basis-Spawn-Intervall
 PRAYER_SPAWN_INCREASE_PCT   = 40     // % erhöhte Spawn-Rate beim Beten
 PRAYER_ATTRACTION_MULT      = 2.5    // Anziehungsmultiplikator
 ATTRACTION_DURATION_SEC     = 30     // Sekunden bis Attraktion abklingt
+RESIDUUM_INITIAL_STRENGTH   = 10     // Startstärke des Residuum-Markers (0..10)
+RESIDUUM_DARKNESS           = 5      // Zell-Wert-Abzug bei Daemon-Auflösung
 RESIDUUM_DECAY_MIN          = 5      // Minuten bis Residuum-Marker verblasst
 ```
 
