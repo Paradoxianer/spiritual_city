@@ -12,6 +12,7 @@ import 'components/player_component.dart';
 import 'components/cell_component.dart';
 import 'components/chunk_component.dart';
 import 'components/radial_menu.dart';
+import 'components/prayer_hud_component.dart';
 import 'game_screen.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
@@ -25,12 +26,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final ChunkManager chunkManager;
   late final ActionButton actionButton;
   late final PrayerButton prayerButton;
+  late final PrayerHudComponent prayerHud;
 
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
 
-  // Interaction State
   Interactable? _nearestInteractable;
   Interactable? get nearestInteractable => _nearestInteractable;
   static const double interactionRange = 60.0;
@@ -56,6 +57,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     await camera.viewport.add(joystick);
     await _addHudButtons();
+    
+    prayerHud = PrayerHudComponent();
+    await camera.viewport.add(prayerHud);
 
     camera.viewfinder.anchor = Anchor.center;
     camera.viewfinder.position = player.position.clone();
@@ -70,10 +74,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     _log.info('Switched World: $isSpiritualWorld');
   }
 
-  // Dual Control Handler
   void handleActionDown() {
     if (isSpiritualWorld) {
-      player.startCharging();
+      player.startChargingIntensity();
     }
   }
 
