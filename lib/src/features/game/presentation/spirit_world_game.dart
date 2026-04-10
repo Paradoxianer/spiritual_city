@@ -26,8 +26,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
-
-  /// Notifier to signal when the initial world generation is complete
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
 
   @override
@@ -35,99 +33,52 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   @override
   Future<void> onLoad() async {
-    _log.info('Loading SpiritWorldGame...');
-
-    // 1. Initialize logic
+    _log.info('--- INITIALIZING GAME ---');
     seedManager = SeedManager(42);
     generator = CityGenerator(seedManager);
     grid = CityGrid();
 
-    // 2. Add Player
     player = PlayerComponent(joystick: _createJoystick());
     player.position = Vector2(256, 256); 
     await world.add(player);
 
-    // 3. Add ChunkManager
-    chunkManager = ChunkManager(
-      grid: grid,
-      generator: generator,
-      target: player,
-    );
+    chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
     await world.add(chunkManager);
 
-    // 4. HUD elements
     await camera.viewport.add(joystick);
     await _addHudButtons();
 
-    // 5. Camera Initial Position
     camera.viewfinder.anchor = Anchor.center;
-    camera.viewfinder.position = player.position;
+    camera.viewfinder.position = player.position.clone();
 
-    // Wait for initial chunks to settle
     await Future.delayed(const Duration(milliseconds: 1000));
     isWorldReady.value = true;
-    _log.info('SpiritWorldGame loaded.');
+    _log.info('--- GAME READY ---');
   }
 
   void toggleWorld() {
     isSpiritualWorld = !isSpiritualWorld;
-    _log.info('Switched to ${isSpiritualWorld ? "Spiritual" : "Physical"} world');
+    _log.info('Switched World: $isSpiritualWorld');
   }
 
   void handleAction() {
-    if (_currentMenu != null) {
-      closeMenu();
-      return;
-    }
-
-    final int gridX = (player.position.x / CellComponent.cellSize).floor();
-    final int gridY = (player.position.y / CellComponent.cellSize).floor();
-    
-    final cell = grid.getCell(gridX, gridY);
-    final actions = <RadialAction>[];
-
-    if (cell?.data is BuildingData) {
-      final building = cell!.data as BuildingData;
-      actions.add(RadialAction(
-        label: 'Betreten',
-        icon: Icons.door_front_door,
-        onSelect: () => _log.info('Entering ${building.type}...'),
-      ));
-    }
-
-    actions.add(RadialAction(
-      label: 'Umsehen',
-      icon: Icons.search,
-      onSelect: () => _log.info('Looking around...'),
-    ));
-
-    if (actions.isNotEmpty) {
-      _currentMenu = RadialMenu(
-        actions: actions,
-        position: player.position,
-      );
-      world.add(_currentMenu!);
-    }
+    if (_currentMenu != null) { closeMenu(); return; }
+    final actions = [RadialAction(label: 'Umsehen', icon: Icons.search, onSelect: () => _log.info('Looking around'))];
+    _currentMenu = RadialMenu(actions: actions, position: player.position);
+    world.add(_currentMenu!);
   }
 
-  void closeMenu() {
-    _currentMenu?.removeFromParent();
-    _currentMenu = null;
-  }
+  void closeMenu() { _currentMenu?.removeFromParent(); _currentMenu = null; }
 
   @override
   void update(double dt) {
     super.update(dt);
-    if (_currentMenu != null) {
-      _currentMenu!.position = player.position;
-    }
-
+    if (_currentMenu != null) _currentMenu!.position = player.position;
     if (isWorldReady.value) {
       _updateCamera(dt);
     }
   }
 
-  /// Implements smooth scrolling with 75/25 deadzone.
   void _updateCamera(double dt) {
     final viewportSize = camera.viewport.size;
     if (viewportSize.x <= 0) return;
@@ -135,62 +86,57 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final camPos = camera.viewfinder.position;
     final pPos = player.position;
 
-    // Define the deadzone (75% of the screen)
-    final deadzoneX = viewportSize.x * 0.75;
-    final deadzoneY = viewportSize.y * 0.75;
+    // 75% Zone Calculation
+    final limitX = viewportSize.x * 0.375; 
+    final limitY = viewportSize.y * 0.375;
 
-    // Distance from camera center to player
     final dx = pPos.x - camPos.x;
     final dy = pPos.y - camPos.y;
 
-    double moveX = 0;
-    double moveY = 0;
+    double pushX = 0;
+    double pushY = 0;
 
-    // Calculate how much we need to move the camera to keep player inside deadzone
-    if (dx.abs() > deadzoneX / 2) {
-      moveX = dx - (deadzoneX / 2 * dx.sign);
-    }
-    if (dy.abs() > deadzoneY / 2) {
-      moveY = dy - (deadzoneY / 2 * dy.sign);
-    }
+    if (dx.abs() > limitX) pushX = dx - (limitX * dx.sign);
+    if (dy.abs() > limitY) pushY = dy - (limitY * dy.sign);
 
-    if (moveX != 0 || moveY != 0) {
-      // Apply smoothing (lerp-like) for the camera movement
-      // Multiply by a factor (e.g., 5.0) for a snappy but smooth catch-up
-      camera.viewfinder.position.add(Vector2(moveX, moveY) * 5.0 * dt);
+    if (pushX != 0 || pushY != 0) {
+      // PRINT LOGS TO CONSOLE
+      print('DEBUG: Player at ${pPos.x.toInt()},${pPos.y.toInt()} | Cam at ${camPos.x.toInt()},${camPos.y.toInt()} | Pushing: $pushX, $pushY');
+      
+      // Move the camera
+      camera.viewfinder.position.translate(pushX, pushY);
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (isWorldReady.value) {
+      final viewportSize = camera.viewport.size;
+      final paint = Paint()..color = Colors.red.withOpacity(0.3)..style = PaintingStyle.stroke..strokeWidth = 4;
+      canvas.drawRect(Rect.fromCenter(center: (viewportSize / 2).toOffset(), width: viewportSize.x * 0.75, height: viewportSize.y * 0.75), paint);
     }
   }
 
   JoystickComponent _createJoystick() {
-    final knobPaint = Paint()..color = const Color(0xFFFFFFFF).withOpacity(0.5);
-    final backgroundPaint = Paint()..color = const Color(0xFFFFFFFF).withOpacity(0.2);
-    
-    joystick = JoystickComponent(
-      knob: CircleComponent(radius: 20, paint: knobPaint),
-      background: CircleComponent(radius: 50, paint: backgroundPaint),
+    return joystick = JoystickComponent(
+      knob: CircleComponent(radius: 20, paint: Paint()..color = Colors.white.withOpacity(0.5)),
+      background: CircleComponent(radius: 50, paint: Paint()..color = Colors.white.withOpacity(0.2)),
       margin: const EdgeInsets.only(left: 40, bottom: 40),
     );
-    return joystick;
   }
 
   Future<void> _addHudButtons() async {
-    actionButton = ActionButton(
-      onPressed: handleAction,
-      position: Vector2(size.x - 80, size.y - 80),
-    );
+    actionButton = ActionButton(onPressed: handleAction, position: Vector2(size.x - 80, size.y - 80));
     await camera.viewport.add(actionButton);
-
-    prayerButton = PrayerButton(
-      onPressed: toggleWorld,
-      position: Vector2(size.x - 170, size.y - 80),
-    );
+    prayerButton = PrayerButton(onPressed: toggleWorld, position: Vector2(size.x - 170, size.y - 80));
     await camera.viewport.add(prayerButton);
   }
 
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    if (this.isLoaded) {
+    if (isLoaded) {
       actionButton.position = Vector2(size.x - 80, size.y - 80);
       prayerButton.position = Vector2(size.x - 170, size.y - 80);
     }
@@ -202,10 +148,8 @@ class ActionButton extends PositionComponent with TapCallbacks {
   ActionButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(80));
   @override
   void render(Canvas canvas) {
-    final paint = Paint()..color = Colors.blue.withOpacity(0.6);
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
-    final textPainter = TextPainter(text: const TextSpan(text: 'A', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
-    textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, size.y / 2 - textPainter.height / 2));
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.blue.withOpacity(0.6));
+    TextPainter(text: const TextSpan(text: 'A', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(size.x / 2 - 12, size.y / 2 - 20));
   }
   @override
   void onTapDown(TapDownEvent event) => onPressed();
@@ -216,10 +160,8 @@ class PrayerButton extends PositionComponent with TapCallbacks {
   PrayerButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(70));
   @override
   void render(Canvas canvas) {
-    final paint = Paint()..color = Colors.purple.withOpacity(0.6);
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
-    final textPainter = TextPainter(text: const TextSpan(text: 'B', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
-    textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, size.y / 2 - textPainter.height / 2));
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.purple.withOpacity(0.6));
+    TextPainter(text: const TextSpan(text: 'B', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(size.x / 2 - 10, size.y / 2 - 18));
   }
   @override
   void onTapDown(TapDownEvent event) => onPressed();
