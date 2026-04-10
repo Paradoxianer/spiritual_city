@@ -1,12 +1,14 @@
 ﻿# 📋 GitHub Issues Roadmap
-_Last updated: 09.04.2026 22:51_
+_Last updated: 10.04.2026 08:59_
 _Sorted by Release and Priority (High > Medium > Low)_
 
 ## 🔥 ✨ #3: feat: Die Geistliche Welt (The Invisible Realm) [prio: 1, feature] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Toggle-Mechanik für Weltenwechsel. Visuelle Überlagerung (Blau/Gold vs. Grau/Rot) und Game-of-Life Dynamik. Kap. 2.2 Lastenheft.
+Toggle-Mechanik für Weltenwechsel. Visuelle Überlagerung (Blau/Gold vs. Grau/Rot) und Game-of-Life Dynamik. 
+die geistliche Welt sollte im Vergelich zur "realen" Welt organischer sein (reale Welt ist ja pixel look) geistliche welt (Transparenter overlay über die Reale WElt" mit permanent verändernderder "lebender" "weichgezeichnetem" look .. so wie eine Lavalampe nur mit einem eigenen Prinzip vergleichbar dem "game of life"
+Kap. 2.2 Lastenheft.
 
 ---
 

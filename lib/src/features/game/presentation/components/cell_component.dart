@@ -15,6 +15,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
   CellComponent(this.cell) {
     position = Vector2(cell.x * cellSize, cell.y * cellSize);
     size = Vector2.all(cellSize);
+    priority = 0;
   }
 
   // ---- Cached paints (static = allocated once) ----------------------------
@@ -55,6 +56,22 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
   static final Paint _fillCemetery    = Paint()..color = const Color(0xFF424242); // grey[800]
   static final Paint _fillPowerPlant  = Paint()..color = const Color(0xFF212121);
 
+  // Detail paints
+  static final Paint _domePaint = Paint()..color = Colors.blueGrey..style = PaintingStyle.fill;
+  static final Paint _pillarPaint = Paint()..color = Colors.grey;
+  static final Paint _badgePaint = Paint()..color = const Color(0xFFFFD700);
+  static final Paint _bellTowerPaint = Paint()..color = const Color(0xFFBF360C);
+  static final Paint _gothicArchPaint = Paint()..color = Colors.pink..style = PaintingStyle.stroke..strokeWidth = 2;
+  static final Paint _cathedralTowerPaint = Paint()..color = const Color(0xFFFFCC02);
+  static final Paint _libraryShelfPaint = Paint()..color = Colors.purple[300]!..strokeWidth = 2;
+  static final Paint _museumColumnPaint = Paint()..color = Colors.deepPurple[300]!;
+  static final Paint _museumPedimentPaint = Paint()..color = Colors.deepPurple[200]!;
+  static final Paint _stadiumPitchStroke = Paint()..color = const Color(0xFF2E7D32)..style = PaintingStyle.stroke..strokeWidth = 3;
+  static final Paint _stadiumPitchFill = Paint()..color = const Color(0xFF43A047);
+  static final Paint _cemeteryCrossPaint = Paint()..color = Colors.grey[500]!..strokeWidth = 1.5;
+  static final Paint _coolingTowerPaint = Paint()..color = const Color(0xFF37474F);
+  static final Paint _trainStationArch = Paint()..color = Colors.grey..style = PaintingStyle.stroke..strokeWidth = 3;
+
   // Accent / detail colours – stroke variants defined per use-case so that
   // no static Paint object is ever mutated at render time.
   static final Paint _accentRedStroke3  = Paint()
@@ -89,6 +106,9 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
     ..style = PaintingStyle.stroke
     ..color = Colors.white10;
 
+  // Shared paint for dynamic colors (spiritual world)
+  static final Paint _dynamicPaint = Paint();
+
   // ---- Render -------------------------------------------------------------
 
   @override
@@ -122,16 +142,17 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         ? Color.lerp(Colors.blue[900]!, Colors.amber[400]!, state)!
         : Color.lerp(Colors.grey[900]!, Colors.red[900]!, state.abs())!;
 
-    canvas.drawRect(size.toRect(), Paint()..color = col);
+    _dynamicPaint.color = col;
+    canvas.drawRect(size.toRect(), _dynamicPaint);
 
     if (state.abs() > 0.7) {
-      canvas.drawRect(
-        size.toRect().deflate(2),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = col.withValues(alpha: 0.5),
-      );
+      _dynamicPaint.style = PaintingStyle.stroke;
+      _dynamicPaint.strokeWidth = 2;
+      _dynamicPaint.color = col.withValues(alpha: 0.5);
+      canvas.drawRect(size.toRect().deflate(2), _dynamicPaint);
+      
+      // Reset for next use
+      _dynamicPaint.style = PaintingStyle.fill;
     }
   }
 
@@ -206,21 +227,19 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Dome symbol
         canvas.drawArc(
             Rect.fromLTWH(size.x * 0.2, size.y * 0.1, size.x * 0.6, size.y * 0.55),
-            3.14, 3.14, true,
-            Paint()..color = Colors.blueGrey..style = PaintingStyle.fill);
+            3.14, 3.14, true, _domePaint);
         // Pillars
         for (double px in [0.25, 0.4, 0.55, 0.7]) {
           canvas.drawRect(
               Rect.fromLTWH(size.x * px, size.y * 0.55, size.x * 0.04, size.y * 0.4),
-              Paint()..color = Colors.grey);
+              _pillarPaint);
         }
         break;
       case BuildingType.policeStation:
         canvas.drawRect(size.toRect(), _fillPolice);
         // Star badge
         canvas.drawCircle(
-            Offset(size.x * 0.5, size.y * 0.4), size.x * 0.2,
-            Paint()..color = const Color(0xFFFFD700));
+            Offset(size.x * 0.5, size.y * 0.4), size.x * 0.2, _badgePaint);
         break;
       case BuildingType.fireStation:
         canvas.drawRect(size.toRect(), _fillFire);
@@ -245,8 +264,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Arch roof
         canvas.drawArc(
             Rect.fromLTWH(size.x * 0.05, size.y * 0.1, size.x * 0.9, size.y * 0.6),
-            3.14, 3.14, false,
-            Paint()..color = Colors.grey..style = PaintingStyle.stroke..strokeWidth = 3);
+            3.14, 3.14, false, _trainStationArch);
         // Track lines
         canvas.drawLine(
             Offset(size.x * 0.3, size.y * 0.7), Offset(size.x * 0.3, size.y),
@@ -269,7 +287,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Bell tower hint
         canvas.drawRect(
             Rect.fromLTWH(size.x * 0.35, size.y * 0.05, size.x * 0.3, size.y * 0.3),
-            Paint()..color = const Color(0xFFBF360C));
+            _bellTowerPaint);
         _drawWindows(canvas, 2);
         break;
       case BuildingType.university:
@@ -278,8 +296,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Gothic arch
         canvas.drawArc(
             Rect.fromLTWH(size.x * 0.3, size.y * 0.1, size.x * 0.4, size.y * 0.4),
-            3.14, 3.14, false,
-            Paint()..color = Colors.pink..style = PaintingStyle.stroke..strokeWidth = 2);
+            3.14, 3.14, false, _gothicArchPaint);
         break;
 
       // ---- Culture / Religion -------------------------------------------
@@ -301,18 +318,17 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Side towers
         canvas.drawRect(
             Rect.fromLTWH(size.x * 0.05, size.y * 0.25, size.x * 0.18, size.y * 0.7),
-            Paint()..color = const Color(0xFFFFCC02));
+            _cathedralTowerPaint);
         canvas.drawRect(
             Rect.fromLTWH(size.x * 0.77, size.y * 0.25, size.x * 0.18, size.y * 0.7),
-            Paint()..color = const Color(0xFFFFCC02));
+            _cathedralTowerPaint);
         break;
       case BuildingType.library:
         canvas.drawRect(size.toRect(), _fillLibrary);
         // Book shelves hint
         for (double ly in [0.3, 0.5, 0.7]) {
           canvas.drawLine(Offset(size.x * 0.15, size.y * ly),
-              Offset(size.x * 0.85, size.y * ly),
-              Paint()..color = Colors.purple[300]!..strokeWidth = 2);
+              Offset(size.x * 0.85, size.y * ly), _libraryShelfPaint);
         }
         break;
       case BuildingType.museum:
@@ -322,7 +338,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
           canvas.drawRect(
               Rect.fromLTWH(size.x * px - 0.02 * size.x, size.y * 0.4,
                   size.x * 0.04, size.y * 0.55),
-              Paint()..color = Colors.deepPurple[300]!);
+              _museumColumnPaint);
         }
         // Pediment triangle
         final path = Path()
@@ -330,29 +346,26 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
           ..lineTo(size.x * 0.5, size.y * 0.1)
           ..lineTo(size.x * 0.9, size.y * 0.4)
           ..close();
-        canvas.drawPath(
-            path, Paint()..color = Colors.deepPurple[200]!);
+        canvas.drawPath(path, _museumPedimentPaint);
         break;
       case BuildingType.stadium:
         canvas.drawRect(size.toRect(), _fillStadium);
         // Oval pitch
         canvas.drawOval(
             Rect.fromLTWH(size.x * 0.1, size.y * 0.15, size.x * 0.8, size.y * 0.7),
-            Paint()..color = const Color(0xFF2E7D32)..style = PaintingStyle.stroke..strokeWidth = 3);
+            _stadiumPitchStroke);
         canvas.drawOval(
             Rect.fromLTWH(size.x * 0.2, size.y * 0.25, size.x * 0.6, size.y * 0.5),
-            Paint()..color = const Color(0xFF43A047));
+            _stadiumPitchFill);
         break;
       case BuildingType.cemetery:
         canvas.drawRect(size.toRect(), _fillCemetery);
         // Cross markers
         for (int i = 0; i < 3; i++) {
           final cx = size.x * (0.25 + i * 0.25);
-          canvas.drawLine(Offset(cx, size.y * 0.2), Offset(cx, size.y * 0.7),
-              Paint()..color = Colors.grey[500]!..strokeWidth = 1.5);
+          canvas.drawLine(Offset(cx, size.y * 0.2), Offset(cx, size.y * 0.7), _cemeteryCrossPaint);
           canvas.drawLine(Offset(cx - size.x * 0.08, size.y * 0.35),
-              Offset(cx + size.x * 0.08, size.y * 0.35),
-              Paint()..color = Colors.grey[500]!..strokeWidth = 1.5);
+              Offset(cx + size.x * 0.08, size.y * 0.35), _cemeteryCrossPaint);
         }
         break;
       case BuildingType.powerPlant:
@@ -360,10 +373,10 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         // Cooling towers
         canvas.drawRect(
             Rect.fromLTWH(size.x * 0.1, size.y * 0.3, size.x * 0.3, size.y * 0.65),
-            Paint()..color = const Color(0xFF37474F));
+            _coolingTowerPaint);
         canvas.drawRect(
             Rect.fromLTWH(size.x * 0.6, size.y * 0.3, size.x * 0.3, size.y * 0.65),
-            Paint()..color = const Color(0xFF37474F));
+            _coolingTowerPaint);
         break;
     }
   }

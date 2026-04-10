@@ -11,6 +11,7 @@ class PlayerComponent extends PositionComponent with HasGameRef {
       : super(
           size: Vector2.all(playerSize),
           anchor: Anchor.center,
+          priority: 100, // Ensure player is rendered on top of the city
         );
 
   @override
