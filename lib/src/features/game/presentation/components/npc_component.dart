@@ -48,43 +48,46 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   String handleInteraction(String type) {
-    // 1. Hole den Wert der unsichtbaren Welt (-1.0 bis +1.0)
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
     final spiritualState = cell?.spiritualState ?? 0.0; 
 
-    // 2. Berechne den Interaktions-Score
-    // Glaube des NPC + Einfluss der Umgebung
-    // Ein Wert > 0 ist tendenziell positiv.
     final interactionScore = model.faith + (spiritualState * 50);
+
+    // ===========================================================================
+    // FAITH-RESONANZ (Spieler erhält Faith zurück)
+    // - Ein positiver NPC (+100) gibt bis zu +5 Faith
+    // - Ein negativer NPC (-100) zieht bis zu -5 Faith (spirituelle Last)
+    // ===========================================================================
+    final double playerFaithGain = (model.faith / 20.0).clamp(-5.0, 5.0);
+    game.faith = (game.faith + playerFaithGain).clamp(0.0, 100.0);
 
     if (type == 'pray') {
       model.prayerCount++;
-      // Erfolgswahrscheinlichkeit steigt mit positivem Score
       if (interactionScore + _random.nextInt(40) > 20) {
-        model.applyInfluence(15.0); // Gebet erhöht Faith
+        model.applyInfluence(15.0); // Gebet erhöht NPC Faith
         return '❤️';
       } else {
-        model.applyInfluence(-5.0); // Ablehnung senkt Faith leicht
+        model.applyInfluence(-5.0);
         return interactionScore < -20 ? '💀' : '😠';
       }
     } 
     
     if (type == 'help') {
       model.conversationCount++;
-      // Hilfe ist immer positiv, aber stärker in "hellen" Gebieten
+      // Hilfe ist immer positiv für den NPC
       model.applyInfluence(10.0 + (spiritualState * 5));
       return '📦😊';
     } 
     
     if (type == 'convert') {
-      // Bekehrung erfordert einen hohen Score (> 50)
       if (interactionScore > 50) {
-        model.applyInfluence(100); // Voller Glaube
+        model.applyInfluence(100);
+        // Bekehrung gibt einen massiven Bonus
+        game.faith = (game.faith + 20.0).clamp(0.0, 100.0);
         return '✨🕊️';
       } else {
-        // Reaktion zeigt, wie weit man noch entfernt ist
         if (interactionScore < 0) return '🚫';
         return '🤔';
       }
