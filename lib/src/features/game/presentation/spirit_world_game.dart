@@ -70,11 +70,21 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     _log.info('Switched World: $isSpiritualWorld');
   }
 
-  void handleAction() {
-    if (activeDialog != null) { closeDialog(); return; }
-    if (_currentMenu != null) { closeMenu(); return; }
-    
-    _openRadialMenu();
+  // Dual Control Handler
+  void handleActionDown() {
+    if (isSpiritualWorld) {
+      player.startCharging();
+    }
+  }
+
+  void handleActionUp() {
+    if (isSpiritualWorld) {
+      player.releasePrayer();
+    } else {
+      if (activeDialog != null) { closeDialog(); return; }
+      if (_currentMenu != null) { closeMenu(); return; }
+      _openRadialMenu();
+    }
   }
 
   void _openRadialMenu() {
@@ -175,7 +185,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   Future<void> _addHudButtons() async {
-    actionButton = ActionButton(onPressed: handleAction, position: Vector2(size.x - 80, size.y - 80));
+    actionButton = ActionButton(
+      onDown: handleActionDown, 
+      onUp: handleActionUp, 
+      position: Vector2(size.x - 80, size.y - 80)
+    );
     await camera.viewport.add(actionButton);
     prayerButton = PrayerButton(onPressed: toggleWorld, position: Vector2(size.x - 170, size.y - 80));
     await camera.viewport.add(prayerButton);
@@ -192,8 +206,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 }
 
 class ActionButton extends PositionComponent with TapCallbacks {
-  final VoidCallback onPressed;
-  ActionButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(80));
+  final VoidCallback onDown;
+  final VoidCallback onUp;
+  
+  ActionButton({required this.onDown, required this.onUp, required super.position}) 
+      : super(anchor: Anchor.center, size: Vector2.all(80));
 
   @override
   void render(Canvas canvas) {
@@ -203,8 +220,15 @@ class ActionButton extends PositionComponent with TapCallbacks {
       textDirection: TextDirection.ltr
     )..layout()..paint(canvas, Offset(size.x / 2 - 16, size.y / 2 - 20));
   }
+
   @override
-  void onTapDown(TapDownEvent event) => onPressed();
+  void onTapDown(TapDownEvent event) => onDown();
+
+  @override
+  void onTapUp(TapUpEvent event) => onUp();
+
+  @override
+  void onTapCancel(TapCancelEvent event) => onUp();
 }
 
 class PrayerButton extends PositionComponent with TapCallbacks {
