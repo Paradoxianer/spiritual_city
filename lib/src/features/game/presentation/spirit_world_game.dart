@@ -24,13 +24,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final PlayerComponent player;
   late final JoystickComponent joystick;
   late final ChunkManager chunkManager;
-  late final ActionButton actionButton;
-  late final PrayerButton prayerButton;
+  late final HudButton actionButton;
+  late final HudButton worldToggleButton;
   late final PrayerHudComponent prayerHud;
 
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
+
+  // Ressourcen
+  double faith = 100.0;
+  static const double maxFaith = 100.0;
+  static const double worldToggleCost = 10.0;
 
   Interactable? _nearestInteractable;
   Interactable? get nearestInteractable => _nearestInteractable;
@@ -70,7 +75,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   void toggleWorld() {
+    if (!isSpiritualWorld && faith < worldToggleCost) {
+      _log.warning('Not enough faith to enter spiritual world');
+      return;
+    }
+    
+    if (!isSpiritualWorld) {
+      faith -= worldToggleCost;
+    }
+    
     isSpiritualWorld = !isSpiritualWorld;
+    _updateButtonStyles();
     _log.info('Switched World: $isSpiritualWorld');
   }
 
@@ -88,6 +103,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       if (_currentMenu != null) { closeMenu(); return; }
       _openRadialMenu();
     }
+  }
+
+  void _updateButtonStyles() {
+    actionButton.updateContent(
+      isSpiritualWorld ? '✨' : '🖐️',
+      isSpiritualWorld ? Colors.amber.withValues(alpha: 0.7) : Colors.blue.withValues(alpha: 0.6)
+    );
+    worldToggleButton.updateContent(
+      isSpiritualWorld ? '🏙️' : '🙏',
+      isSpiritualWorld ? Colors.grey.withValues(alpha: 0.7) : Colors.purple.withValues(alpha: 0.6)
+    );
   }
 
   void _openRadialMenu() {
@@ -188,14 +214,22 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   Future<void> _addHudButtons() async {
-    actionButton = ActionButton(
+    actionButton = HudButton(
+      icon: '🖐️',
+      color: Colors.blue.withValues(alpha: 0.6),
       onDown: handleActionDown, 
       onUp: handleActionUp, 
       position: Vector2(size.x - 80, size.y - 80)
     );
     await camera.viewport.add(actionButton);
-    prayerButton = PrayerButton(onPressed: toggleWorld, position: Vector2(size.x - 170, size.y - 80));
-    await camera.viewport.add(prayerButton);
+
+    worldToggleButton = HudButton(
+      icon: '🙏',
+      color: Colors.purple.withValues(alpha: 0.6),
+      onDown: toggleWorld,
+      position: Vector2(size.x - 170, size.y - 80)
+    );
+    await camera.viewport.add(worldToggleButton);
   }
 
   @override
@@ -203,48 +237,63 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     super.onGameResize(size);
     if (isLoaded) {
       actionButton.position = Vector2(size.x - 80, size.y - 80);
-      prayerButton.position = Vector2(size.x - 170, size.y - 80);
+      worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
     }
   }
 }
 
-class ActionButton extends PositionComponent with TapCallbacks {
-  final VoidCallback onDown;
-  final VoidCallback onUp;
+class HudButton extends PositionComponent with TapCallbacks {
+  final VoidCallback? onDown;
+  final VoidCallback? onUp;
+  String icon;
+  Color color;
   
-  ActionButton({required this.onDown, required this.onUp, required super.position}) 
-      : super(anchor: Anchor.center, size: Vector2.all(80));
+  HudButton({
+    required this.icon,
+    required this.color,
+    this.onDown, 
+    this.onUp, 
+    required super.position
+  }) : super(anchor: Anchor.center, size: Vector2.all(75)); // Einheitliche Größe
 
-  @override
-  void render(Canvas canvas) {
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.blue.withValues(alpha: 0.6));
-    TextPainter(
-      text: const TextSpan(text: '🖐️', style: TextStyle(fontSize: 32)),
-      textDirection: TextDirection.ltr
-    )..layout()..paint(canvas, Offset(size.x / 2 - 16, size.y / 2 - 20));
+  void updateContent(String newIcon, Color newColor) {
+    icon = newIcon;
+    color = newColor;
   }
 
   @override
-  void onTapDown(TapDownEvent event) => onDown();
-
-  @override
-  void onTapUp(TapUpEvent event) => onUp();
-
-  @override
-  void onTapCancel(TapCancelEvent event) => onUp();
-}
-
-class PrayerButton extends PositionComponent with TapCallbacks {
-  final VoidCallback onPressed;
-  PrayerButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(70));
-  @override
   void render(Canvas canvas) {
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.purple.withValues(alpha: 0.6));
+    final center = Offset(size.x / 2, size.y / 2);
+    final radius = size.x / 2;
+
+    // 1. Schwarzer Rand / Schatten
+    canvas.drawCircle(center, radius + 2, Paint()..color = Colors.black.withValues(alpha: 0.5));
+    
+    // 2. Haupt-Button
+    canvas.drawCircle(center, radius, Paint()..color = color);
+
+    // 3. Glanz-Effekt oben
+    final shinePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.white.withValues(alpha: 0.3), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, shinePaint);
+
+    // 4. Icon
     TextPainter(
-      text: const TextSpan(text: '🙏', style: TextStyle(fontSize: 28)), 
+      text: TextSpan(text: icon, style: const TextStyle(fontSize: 30)),
       textDirection: TextDirection.ltr
-    )..layout()..paint(canvas, Offset(size.x / 2 - 14, size.y / 2 - 18));
+    )..layout()..paint(canvas, Offset(size.x / 2 - 15, size.y / 2 - 19));
   }
+
   @override
-  void onTapDown(TapDownEvent event) => onPressed();
+  void onTapDown(TapDownEvent event) => onDown?.call();
+
+  @override
+  void onTapUp(TapUpEvent event) => onUp?.call();
+
+  @override
+  void onTapCancel(TapCancelEvent event) => onUp?.call();
 }

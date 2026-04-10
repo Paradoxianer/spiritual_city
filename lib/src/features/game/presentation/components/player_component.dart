@@ -23,11 +23,11 @@ class PlayerComponent extends PositionComponent
   double _sizePulseTime = 0.0;
   double _intensityPulseTime = 0.0;
 
-  // MODIFIER (Vorbereitung für Missionen/Upgrades)
-  double modifierSizeSpeed = 3.0;      // Geschwindigkeit des Radius-Pulses
-  double modifierIntensitySpeed = 5.0; // Geschwindigkeit des Kraft-Pulses
-  double modifierBasePower = 80.0;     // Grundstärke der Gebetsenergie
-  double modifierResistanceFactor = 1.0; // Multiplikator für Zell-Widerstand
+  // MODIFIER
+  double modifierSizeSpeed = 3.0;
+  double modifierIntensitySpeed = 5.0;
+  double modifierBasePower = 80.0;
+  double modifierResistanceFactor = 1.0;
 
   // Getters für das HUD
   double get faithPulse => prayerZone.pulseValue;
@@ -60,7 +60,7 @@ class PlayerComponent extends PositionComponent
       canvas.drawCircle((size / 2).toOffset(), SpiritWorldGame.interactionRange * pulse, auraPaint);
     }
 
-    final paint = Paint()..color = Colors.blueAccent;
+    final paint = Paint()..color = game.isSpiritualWorld ? Colors.amberAccent : Colors.blueAccent;
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, paint);
     
     paint.color = Colors.white;
@@ -73,14 +73,12 @@ class PlayerComponent extends PositionComponent
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
-    if (!game.isSpiritualWorld) {
-      _keyboardDirection.setZero();
-      if (keysPressed.contains(LogicalKeyboardKey.keyW) || keysPressed.contains(LogicalKeyboardKey.arrowUp)) _keyboardDirection.y -= 1;
-      if (keysPressed.contains(LogicalKeyboardKey.keyS) || keysPressed.contains(LogicalKeyboardKey.arrowDown)) _keyboardDirection.y += 1;
-      if (keysPressed.contains(LogicalKeyboardKey.keyA) || keysPressed.contains(LogicalKeyboardKey.arrowLeft)) _keyboardDirection.x -= 1;
-      if (keysPressed.contains(LogicalKeyboardKey.keyD) || keysPressed.contains(LogicalKeyboardKey.arrowRight)) _keyboardDirection.x += 1;
-      if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
-    }
+    _keyboardDirection.setZero();
+    if (keysPressed.contains(LogicalKeyboardKey.keyW) || keysPressed.contains(LogicalKeyboardKey.arrowUp)) _keyboardDirection.y -= 1;
+    if (keysPressed.contains(LogicalKeyboardKey.keyS) || keysPressed.contains(LogicalKeyboardKey.arrowDown)) _keyboardDirection.y += 1;
+    if (keysPressed.contains(LogicalKeyboardKey.keyA) || keysPressed.contains(LogicalKeyboardKey.arrowLeft)) _keyboardDirection.x -= 1;
+    if (keysPressed.contains(LogicalKeyboardKey.keyD) || keysPressed.contains(LogicalKeyboardKey.arrowRight)) _keyboardDirection.x += 1;
+    if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
 
     if (keysPressed.contains(LogicalKeyboardKey.space)) {
       game.handleActionDown();
@@ -88,13 +86,22 @@ class PlayerComponent extends PositionComponent
       game.handleActionUp();
     }
 
-    // Shift als Joystick-Ersatz für den Größen-Puls
+    // Shift gesteuertes Pulsieren
     _isChargingSize = keysPressed.contains(LogicalKeyboardKey.shiftLeft) || !joystick.delta.isZero();
+    
+    // In der geistlichen Welt dient WASD auch als Richtungsgeber für die Zone
+    if (game.isSpiritualWorld && !_keyboardDirection.isZero()) {
+      _isChargingSize = true;
+    }
 
     return true;
   }
 
-  void startChargingIntensity() => _isChargingIntensity = true;
+  void startChargingIntensity() {
+    if (game.faith > 0) {
+      _isChargingIntensity = true;
+    }
+  }
 
   void releasePrayer() {
     if (!_isChargingIntensity) return;
@@ -104,26 +111,25 @@ class PlayerComponent extends PositionComponent
   }
 
   void _executePrayerImpact() {
-    // Timing Werte abfragen (0.1 bis 1.0)
-    final intensity = (math.sin(_intensityPulseTime * modifierIntensitySpeed).abs()).clamp(0.1, 1.0);
+    final intensityFactor = (math.sin(_intensityPulseTime * modifierIntensitySpeed).abs()).clamp(0.1, 1.0);
     final radiusFactor = (math.sin(_sizePulseTime * modifierSizeSpeed).abs()).clamp(0.05, 1.0);
+    
+    // FAITH VERBRAUCH:
+    // Wir nehmen einen Teil des aktuellen Faith (max 30% pro Stoßgebett)
+    double faithToSpend = game.faith * intensityFactor * 0.3;
+    if (faithToSpend < 1.0 && game.faith >= 1.0) faithToSpend = 1.0;
+    
+    game.faith -= faithToSpend;
     
     final radius = radiusFactor * PrayerZoneComponent.maxRadius;
     
-    // ENERGIE-VERTEILUNG:
-    // Gesamte Gebetsenergie basierend auf dem Stärke-Timing
-    final totalEnergy = modifierBasePower * intensity;
-    
-    // Impact pro Zelle ist umgekehrt proportional zur Fläche
-    // Kleine Fläche (radiusFactor nah 0) -> Extrem hoher Impact pro Zelle
-    // Große Fläche (radiusFactor nah 1) -> Schwacher Impact verteilt auf viele Zellen
+    // Energieverteilung: Kraft pro Zelle sinkt mit der Fläche
     final areaEffectScale = 1.0 / (radiusFactor * radiusFactor * 10.0).clamp(1.0, 100.0);
-    final impactPower = totalEnergy * areaEffectScale;
+    final impactPower = faithToSpend * modifierBasePower * areaEffectScale;
 
     final center = position;
     final gridX = (center.x / CellComponent.cellSize).floor();
     final gridY = (center.y / CellComponent.cellSize).floor();
-    // Sicherheitsmarge beim Scannen der Zellen
     final cellRange = (radius / CellComponent.cellSize).ceil() + 2;
 
     for (int dy = -cellRange; dy <= cellRange; dy++) {
@@ -151,7 +157,6 @@ class PlayerComponent extends PositionComponent
             final dist = center.distanceTo(cellPos);
             final falloff = 1.0 - (dist / (radius * 1.5)).clamp(0.0, 1.0);
             
-            // Jeder Zelle kann einen individuellen Widerstand haben
             double cellResistance = 1.0; 
             final finalImpact = (impactPower / 100.0) * falloff / (cellResistance * modifierResistanceFactor);
             
@@ -173,44 +178,36 @@ class PlayerComponent extends PositionComponent
   }
 
   void _updateMovement(double dt) {
-    Vector2 direction = Vector2.zero();
-    if (!joystick.delta.isZero()) {
-      direction = joystick.relativeDelta;
-    } else if (!_keyboardDirection.isZero()) {
-      direction = _keyboardDirection;
-    }
-
-    if (!direction.isZero()) {
-      position.add(direction * speed * dt);
-    }
+    if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
+    
+    Vector2 moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
+    position.add(moveDir * speed * dt);
   }
 
   void _updatePrayerMechanics(double dt) {
-    // 1. Größe & Form (Joystick / Shift)
-    // Wenn gedrückt, pulsiert die Größe von Mini bis Super-Groß
-    _isChargingSize = !joystick.delta.isZero() || RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.shiftLeft);
-    
+    // 1. Größe & Form
     if (_isChargingSize) {
       _sizePulseTime += dt;
       prayerZone.sizeFactor = math.sin(_sizePulseTime * modifierSizeSpeed).abs();
+      
       if (!joystick.delta.isZero()) {
         prayerZone.direction = joystick.relativeDelta;
-      } else {
-        prayerZone.direction = Vector2.zero();
+      } else if (!_keyboardDirection.isZero()) {
+        prayerZone.direction = _keyboardDirection;
       }
     } else {
-      // Beim Loslassen schrumpft die Zone schnell auf ein Minimum
       _sizePulseTime = 0;
       prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 3.0).clamp(0.01, 1.0);
     }
 
-    // 2. Stärke (Aktionsbutton)
-    if (_isChargingIntensity) {
+    // 2. Stärke
+    if (_isChargingIntensity && game.faith > 0) {
       _intensityPulseTime += dt;
       prayerZone.pulseValue = math.sin(_intensityPulseTime * modifierIntensitySpeed).abs();
     } else {
+      _isChargingIntensity = false; // Stop charging if faith runs out
       _intensityPulseTime = 0;
-      prayerZone.pulseValue = 0.1; // Grundleuchten
+      prayerZone.pulseValue = 0.1;
     }
 
     prayerZone.isActive = true; 
