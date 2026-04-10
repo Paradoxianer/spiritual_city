@@ -23,11 +23,27 @@ class PlayerComponent extends PositionComponent
   double _sizePulseTime = 0.0;
   double _intensityPulseTime = 0.0;
 
-  // MODIFIER
-  double modifierSizeSpeed = 3.0;
-  double modifierIntensitySpeed = 5.0;
-  double modifierBasePower = 80.0;
-  double modifierResistanceFactor = 1.0;
+  // ===========================================================================
+  // MODIFIER VORBEREITUNG (Für Issue #29 / #32)
+  // ===========================================================================
+  
+  /// Geschwindigkeit des Flächen-Pulses (Joystick/Shift)
+  double modifierSizeSpeed = 2.2;      
+  
+  /// Geschwindigkeit des Kraft-Pulses (Aktionsbutton)
+  double modifierIntensitySpeed = 3.5; 
+  
+  /// Basis-Stärke des Gebets (Faktor für die Umwandlung von Faith in Impact)
+  /// HINWEIS: Dies ist der Wert, der später durch Missionen/Upgrades erhöht wird!
+  double modifierBasePower = 15.0;     
+  
+  /// Maximaler Radius der Gebetszone.
+  double modifierMaxRadius = 450.0; 
+
+  /// Globaler Widerstand-Multiplikator (Kann durch Missionen gesenkt werden)
+  double modifierResistanceFactor = 1.0; 
+
+  // ===========================================================================
 
   // Getters für das HUD
   double get faithPulse => prayerZone.pulseValue;
@@ -86,10 +102,8 @@ class PlayerComponent extends PositionComponent
       game.handleActionUp();
     }
 
-    // Shift gesteuertes Pulsieren
     _isChargingSize = keysPressed.contains(LogicalKeyboardKey.shiftLeft) || !joystick.delta.isZero();
     
-    // In der geistlichen Welt dient WASD auch als Richtungsgeber für die Zone
     if (game.isSpiritualWorld && !_keyboardDirection.isZero()) {
       _isChargingSize = true;
     }
@@ -98,7 +112,7 @@ class PlayerComponent extends PositionComponent
   }
 
   void startChargingIntensity() {
-    if (game.faith > 0) {
+    if (game.faith > 0.1) {
       _isChargingIntensity = true;
     }
   }
@@ -111,21 +125,24 @@ class PlayerComponent extends PositionComponent
   }
 
   void _executePrayerImpact() {
-    final intensityFactor = (math.sin(_intensityPulseTime * modifierIntensitySpeed).abs()).clamp(0.1, 1.0);
-    final radiusFactor = (math.sin(_sizePulseTime * modifierSizeSpeed).abs()).clamp(0.05, 1.0);
+    // rawIntensity bestimmt NUR, wie viel % des Faiths eingesetzt werden (0.0 bis 1.0).
+    final rawIntensity = (math.sin(_intensityPulseTime * modifierIntensitySpeed).abs());
+    final radiusFactor = (math.sin(_sizePulseTime * modifierSizeSpeed).abs()).clamp(0.001, 1.0);
     
-    // FAITH VERBRAUCH:
-    // Wir nehmen einen Teil des aktuellen Faith (max 30% pro Stoßgebett)
-    double faithToSpend = game.faith * intensityFactor * 0.3;
-    if (faithToSpend < 1.0 && game.faith >= 1.0) faithToSpend = 1.0;
+    // FAITH EINSATZ:
+    // Die Nadel (rawIntensity) fungiert als Volumenregler für den Faith-Vorrat.
+    double faithToSpend = game.faith * rawIntensity; 
     
+    // Wir setzen den gewählten Betrag ein und ziehen ihn vom Vorrat ab.
     game.faith -= faithToSpend;
     
-    final radius = radiusFactor * PrayerZoneComponent.maxRadius;
+    final radius = radiusFactor * modifierMaxRadius;
     
-    // Energieverteilung: Kraft pro Zelle sinkt mit der Fläche
-    final areaEffectScale = 1.0 / (radiusFactor * radiusFactor * 10.0).clamp(1.0, 100.0);
-    final impactPower = faithToSpend * modifierBasePower * areaEffectScale;
+    // IMPACT BERECHNUNG:
+    // Die Kraft resultiert aus (Investierter Glaube / Fläche) * BasisPower.
+    // Keine zusätzlichen Timing-Multiplikatoren (diese kommen später durch Modifier).
+    final areaUnits = math.pi * math.pow(radius / CellComponent.cellSize, 2.0);
+    final impactPower = (faithToSpend * modifierBasePower) / areaUnits.clamp(0.1, 1000.0);
 
     final center = position;
     final gridX = (center.x / CellComponent.cellSize).floor();
@@ -147,18 +164,18 @@ class PlayerComponent extends PositionComponent
           } else {
             final toCell = cellPos - center;
             final dist = toCell.length;
-            if (dist <= radius * 1.5) {
+            if (dist <= radius * 1.8) {
               final angle = toCell.angleTo(prayerZone.direction);
-              if (angle.abs() < math.pi / 4) inZone = true;
+              if (angle.abs() < math.pi / 4.5) inZone = true;
             }
           }
 
           if (inZone) {
             final dist = center.distanceTo(cellPos);
-            final falloff = 1.0 - (dist / (radius * 1.5)).clamp(0.0, 1.0);
+            final falloff = 1.0 - (dist / (radius * 1.8)).clamp(0.0, 1.0);
             
-            double cellResistance = 1.0; 
-            final finalImpact = (impactPower / 100.0) * falloff / (cellResistance * modifierResistanceFactor);
+            // finalImpact nutzt nur den eingesetzten Faith und die Fläche.
+            final finalImpact = (impactPower / 100.0) * falloff / modifierResistanceFactor;
             
             cell.spiritualState = (cell.spiritualState + finalImpact).clamp(-1.0, 1.0);
           }
@@ -179,13 +196,13 @@ class PlayerComponent extends PositionComponent
 
   void _updateMovement(double dt) {
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
-    
     Vector2 moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
     position.add(moveDir * speed * dt);
   }
 
   void _updatePrayerMechanics(double dt) {
-    // 1. Größe & Form
+    _isChargingSize = !joystick.delta.isZero() || RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.shiftLeft);
+    
     if (_isChargingSize) {
       _sizePulseTime += dt;
       prayerZone.sizeFactor = math.sin(_sizePulseTime * modifierSizeSpeed).abs();
@@ -197,17 +214,16 @@ class PlayerComponent extends PositionComponent
       }
     } else {
       _sizePulseTime = 0;
-      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 3.0).clamp(0.01, 1.0);
+      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 2.5).clamp(0.001, 1.0);
     }
 
-    // 2. Stärke
-    if (_isChargingIntensity && game.faith > 0) {
+    if (_isChargingIntensity && game.faith > 0.05) {
       _intensityPulseTime += dt;
       prayerZone.pulseValue = math.sin(_intensityPulseTime * modifierIntensitySpeed).abs();
     } else {
-      _isChargingIntensity = false; // Stop charging if faith runs out
+      _isChargingIntensity = false;
       _intensityPulseTime = 0;
-      prayerZone.pulseValue = 0.1;
+      prayerZone.pulseValue = 0.05;
     }
 
     prayerZone.isActive = true; 
