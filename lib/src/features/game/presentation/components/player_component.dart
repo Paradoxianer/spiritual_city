@@ -14,10 +14,15 @@ class PlayerComponent extends PositionComponent
   
   final double speed = 100.0;
   
-  // Prayer Combat State (Lastenheft 2.3)
+  // Prayer Combat State
   late final PrayerZoneComponent prayerZone;
   double _faithPulseTime = 0.0;
   bool _isChargingFaith = false;
+  
+  // Getters für das HUD
+  bool get isChargingFaith => _isChargingFaith;
+  double get faithPulse => prayerZone.pulseValue;
+  double get zoneSize => prayerZone.sizeFactor;
 
   PlayerComponent({required this.joystick})
       : super(
@@ -69,29 +74,17 @@ class PlayerComponent extends PositionComponent
       if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
     }
 
-    // Leertaste als Aktions-Trigger (Web-kompatibel)
     if (keysPressed.contains(LogicalKeyboardKey.space)) {
       game.handleActionDown();
     } else if (event is KeyUpEvent && event.logicalKey == LogicalKeyboardKey.space) {
       game.handleActionUp();
     }
 
-    // Zusätzliche Web-Steuerung für Joystick-Ersatz in der geistlichen Welt
-    // Falls man keine Touch-Steuerung/Joystick hat
-    if (game.isSpiritualWorld) {
-      if (keysPressed.contains(LogicalKeyboardKey.shiftLeft) || keysPressed.contains(LogicalKeyboardKey.shiftRight)) {
-        // Shift gedrückt halten = Zone vergrößern (Joystick-Sim)
-        if (!_isChargingFaith) startCharging();
-      }
-    }
-
     return true;
   }
 
   void startCharging() {
-    if (_isChargingFaith) return;
     _isChargingFaith = true;
-    prayerZone.isActive = true;
   }
 
   void releasePrayer() {
@@ -99,23 +92,24 @@ class PlayerComponent extends PositionComponent
     _executePrayerImpact();
     _isChargingFaith = false;
     _faithPulseTime = 0;
-    prayerZone.isActive = false;
-    prayerZone.sizeFactor = 0;
+    // Die Zone bleibt bestehen, schrumpft aber via update()
   }
 
   void _executePrayerImpact() {
-    final pulse = (math.sin(_faithPulseTime * 5).abs());
+    // Timing Check: pulseValue ist math.sin(...).abs()
+    final pulse = prayerZone.pulseValue;
     double multiplier = 0.4;
-    if (pulse >= 0.7) multiplier = 1.0;
-    else if (pulse >= 0.5) multiplier = 0.6;
-
-    final impactPower = 50.0 * multiplier;
+    if (pulse >= 0.8) multiplier = 1.0; // Perfect Timing
+    else if (pulse >= 0.5) multiplier = 0.7; // Good
+    
+    final impactPower = 60.0 * multiplier;
     final radius = prayerZone.sizeFactor * PrayerZoneComponent.maxRadius;
+    if (radius <= 5) return; // Zu klein zum Auslösen
 
     final center = position;
     final gridX = (center.x / CellComponent.cellSize).floor();
     final gridY = (center.y / CellComponent.cellSize).floor();
-    final cellRange = (radius / CellComponent.cellSize).ceil();
+    final cellRange = (radius / CellComponent.cellSize).ceil() + 1;
 
     for (int dy = -cellRange; dy <= cellRange; dy++) {
       for (int dx = -cellRange; dx <= cellRange; dx++) {
@@ -140,7 +134,7 @@ class PlayerComponent extends PositionComponent
 
           if (inZone) {
             final dist = center.distanceTo(cellPos);
-            final falloff = 1.0 - (dist / (radius * 1.5));
+            final falloff = 1.0 - (dist / (radius * 1.6)).clamp(0.0, 1.0);
             cell.spiritualState = (cell.spiritualState + (impactPower / 100.0) * falloff).clamp(-1.0, 1.0);
           }
         }
@@ -153,11 +147,7 @@ class PlayerComponent extends PositionComponent
     super.update(dt);
     
     if (game.isSpiritualWorld) {
-      if (_isChargingFaith) {
-        _updatePrayerMechanics(dt);
-      } else if (!joystick.delta.isZero()) {
-        startCharging();
-      }
+      _updatePrayerMechanics(dt);
     } else {
       _updateMovement(dt);
     }
@@ -182,22 +172,27 @@ class PlayerComponent extends PositionComponent
   }
 
   void _updatePrayerMechanics(double dt) {
-    _faithPulseTime += dt;
-    prayerZone.pulseValue = math.sin(_faithPulseTime * 5).abs();
-
-    // Tastatur-Alternative für Joystick (Shift)
-    final isShiftPressed = RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.shiftLeft);
-
+    // 1. Zone Größe (Nur durch Joystick gesteuert)
     if (!joystick.delta.isZero()) {
-      prayerZone.sizeFactor = (prayerZone.sizeFactor + dt * 0.5).clamp(0.0, 1.0);
+      prayerZone.sizeFactor = (prayerZone.sizeFactor + dt * 0.7).clamp(0.0, 1.0);
       prayerZone.direction = joystick.relativeDelta;
-    } else if (isShiftPressed) {
-      prayerZone.sizeFactor = (prayerZone.sizeFactor + dt * 0.5).clamp(0.0, 1.0);
-      prayerZone.direction = Vector2.zero();
     } else {
-      prayerZone.sizeFactor = (prayerZone.sizeFactor + dt * 0.3).clamp(0.0, 1.0);
-      prayerZone.direction = Vector2.zero();
+      // Schrumpft langsam, wenn der Joystick losgelassen wird
+      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 0.3).clamp(0.0, 1.0);
     }
+
+    // 2. Glaubens-Puls (Nur wenn Aktionsbutton gedrückt)
+    if (_isChargingFaith) {
+      _faithPulseTime += dt;
+      // Pulsieren: 0.0 -> 1.0 -> 0.0 mit math.sin
+      prayerZone.pulseValue = (math.sin(_faithPulseTime * 6.0).abs());
+    } else {
+      _faithPulseTime = 0;
+      prayerZone.pulseValue = 0.15; // Grund-Glimmen
+    }
+
+    prayerZone.isActive = prayerZone.sizeFactor > 0.01;
+    prayerZone.position = position;
   }
 
   void _applySubStep(Vector2 delta) {

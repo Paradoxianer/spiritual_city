@@ -3,54 +3,62 @@ import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
 
 class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
-  PrayerHudComponent() : super(priority: 100);
+  PrayerHudComponent() : super(priority: 200); // Höchste Priorität im HUD
 
   @override
   void render(Canvas canvas) {
-    if (!game.isSpiritualWorld || !game.player.isChargingFaith) return;
+    if (!game.isSpiritualWorld) return;
 
     final player = game.player;
     final size = game.size;
     
-    // Positionierung im unteren Drittel, über den Buttons
-    final hudWidth = 250.0;
-    final hudHeight = 80.0;
+    // Positionierung im unteren Bereich
+    final hudWidth = 220.0;
+    final hudHeight = 70.0;
     final x = (size.x - hudWidth) / 2;
-    final y = size.y - 200;
+    final y = size.y - 180;
 
     final rect = Rect.fromLTWH(x, y, hudWidth, hudHeight);
     
-    // Hintergrund
+    // Hintergrund mit Glas-Effekt
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, const Radius.circular(15)),
-      Paint()..color = Colors.black.withValues(alpha: 0.6),
+      Paint()..color = Colors.black.withValues(alpha: 0.7),
     );
+
+    // 1. POWER BAR (Faith Pulse)
+    final pulse = player.faithPulse;
+    Color pulseColor = Colors.cyanAccent;
+    if (pulse > 0.8) pulseColor = Colors.white;
+    else if (pulse > 0.6) pulseColor = Colors.amberAccent;
 
     _drawBar(
       canvas, 
       x + 20, y + 15, 
-      hudWidth - 40, 20, 
-      'POWER', 
-      player.faithPulse, 
-      player.faithPulse >= 0.7 ? Colors.greenAccent : Colors.amberAccent
+      hudWidth - 40, 12, 
+      'FAITH POWER', 
+      pulse, 
+      pulseColor,
+      hasMarker: true,
     );
 
+    // 2. ZONE BAR (Radius)
     _drawBar(
       canvas, 
-      x + 20, y + 45, 
-      hudWidth - 40, 20, 
-      'ZONE', 
+      x + 20, y + 40, 
+      hudWidth - 40, 12, 
+      'ZONE RADIUS', 
       player.zoneSize, 
-      Colors.blueAccent
+      Colors.blueAccent,
     );
   }
 
-  void _drawBar(Canvas canvas, double x, double y, double w, double h, String label, double progress, Color color) {
+  void _drawBar(Canvas canvas, double x, double y, double w, double h, String label, double progress, Color color, {bool hasMarker = false}) {
     // Label
     final textPainter = TextPainter(
       text: TextSpan(
         text: label,
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+        style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -58,26 +66,32 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
 
     // Bar Background
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), const Radius.circular(5)),
-      Paint()..color = Colors.white24,
+      RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), const Radius.circular(4)),
+      Paint()..color = Colors.white10,
     );
 
     // Progress
-    if (progress > 0) {
+    if (progress > 0.02) {
       canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w * progress, h), const Radius.circular(5)),
+        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w * progress, h), const Radius.circular(4)),
         Paint()..color = color,
       );
+      
+      // Glanz-Effekt auf dem Balken
+      canvas.drawRect(
+        Rect.fromLTWH(x, y, w * progress, h * 0.3),
+        Paint()..color = Colors.white.withValues(alpha: 0.2),
+      );
     }
-    
-    // Percent Text
-    final percentPainter = TextPainter(
-      text: TextSpan(
-        text: '${(progress * 100).toInt()}%',
-        style: const TextStyle(color: Colors.white, fontSize: 10),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    percentPainter.paint(canvas, Offset(x + w - 30, y - 12));
+
+    // "Perfect" Marker für den Power-Balken
+    if (hasMarker) {
+      final markerX = x + (w * 0.8);
+      canvas.drawLine(
+        Offset(markerX, y - 2),
+        Offset(markerX, y + h + 2),
+        Paint()..color = Colors.greenAccent.withValues(alpha: 0.5)..strokeWidth = 2,
+      );
+    }
   }
 }

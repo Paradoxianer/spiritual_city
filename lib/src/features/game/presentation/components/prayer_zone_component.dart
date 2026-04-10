@@ -6,7 +6,7 @@ import '../spirit_world_game.dart';
 class PrayerZoneComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
   double sizeFactor = 0.0;
   Vector2 direction = Vector2.zero();
-  double pulseValue = 0.0;
+  double pulseValue = 0.0; // 0.0 bis 1.0 (wird vom PlayerComponent gesteuert)
   bool isActive = false;
 
   static const double maxRadius = 150.0;
@@ -18,56 +18,85 @@ class PrayerZoneComponent extends PositionComponent with HasGameReference<Spirit
     super.update(dt);
     if (!isActive) return;
     
-    // Position immer auf den Spieler zentrieren
-    position = game.player.position;
+    // Position wird vom PlayerComponent gesetzt, aber wir stellen sicher, 
+    // dass sie synchron bleibt falls nötig.
   }
 
   @override
   void render(Canvas canvas) {
-    if (!isActive || sizeFactor <= 0) return;
+    if (!isActive || sizeFactor <= 0.05) return;
 
     final radius = sizeFactor * maxRadius;
-    final paint = Paint()
-      ..style = PaintingStyle.fill;
-
-    // Farbe basierend auf dem Pulsing-Value (Faith Intensity)
-    // Von zartem Blau zu intensivem Gold
-    final color = Color.lerp(
-      Colors.blueAccent.withValues(alpha: 0.3),
-      Colors.amber.withValues(alpha: 0.7),
+    
+    // Pulsing Effekt: Wir zeichnen mehrere Layer für ein "Glühen"
+    // Je nach pulseValue wird die Farbe intensiver (Goldener)
+    
+    // Hintergrund-Aura (sanftes Blau/Cyan)
+    final auraPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = Colors.blueAccent.withValues(alpha: 0.15 + (pulseValue * 0.1));
+    
+    // Kern-Farbe (wird bei hohem Puls goldener/weißer)
+    final coreColor = Color.lerp(
+      Colors.cyanAccent.withValues(alpha: 0.4),
+      Colors.amberAccent.withValues(alpha: 0.8),
       pulseValue,
     )!;
 
-    paint.color = color;
-    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 10 + (pulseValue * 10));
+    final corePaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = coreColor
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5 + (pulseValue * 15));
 
     if (direction.isZero()) {
-      // Gleichmäßiger Ring
-      canvas.drawCircle(Offset.zero, radius, paint);
+      // Gleichmäßiger Ring um den Pastor
+      canvas.drawCircle(Offset.zero, radius * 1.1, auraPaint);
+      canvas.drawCircle(Offset.zero, radius, corePaint);
+      
+      // Optionaler "Timing-Ring" bei hohem Puls
+      if (pulseValue > 0.7) {
+        final timingPaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = Colors.white.withValues(alpha: (pulseValue - 0.7) * 3);
+        canvas.drawCircle(Offset.zero, radius, timingPaint);
+      }
     } else {
       // "Flammige" Zone in Richtung Joystick
-      _drawFlamingZone(canvas, radius, direction, paint);
+      _drawFlamingZone(canvas, radius, direction, corePaint, auraPaint);
     }
   }
 
-  void _drawFlamingZone(Canvas canvas, double radius, Vector2 dir, Paint paint) {
-    final path = Path();
+  void _drawFlamingZone(Canvas canvas, double radius, Vector2 dir, Paint corePaint, Paint auraPaint) {
     final angle = atan2(dir.y, dir.x);
-    
-    // Wir zeichnen eine Tropfenform/Flamme, die sich in die Richtung streckt
-    // Einfache Implementierung: Ein Oval, das in Richtung verschoben ist
-    final center = Offset(dir.x * radius * 0.5, dir.y * radius * 0.5);
     
     canvas.save();
     canvas.rotate(angle);
     
-    // Zeichne eine Ellipse, die in X-Richtung (lokal) gestreckt ist
-    final rect = Rect.fromCenter(
-      center: Offset(radius * 0.4, 0), 
-      width: radius * 1.5, 
+    // Aura
+    final auraRect = Rect.fromCenter(
+      center: Offset(radius * 0.5, 0), 
+      width: radius * 1.8, 
+      height: radius * 1.1,
+    );
+    canvas.drawOval(auraRect, auraPaint);
+
+    // Kern (Die "Zunge")
+    // Die Länge der Zunge kann leicht mit dem Puls variieren
+    final pulseLength = radius * (0.4 + (pulseValue * 0.2));
+    final coreRect = Rect.fromCenter(
+      center: Offset(pulseLength, 0), 
+      width: radius * 1.6, 
       height: radius * 0.8,
     );
-    canvas.drawOval(rect, paint);
+    canvas.drawOval(coreRect, corePaint);
+    
+    // "Licht-Spitze" bei hohem Puls
+    if (pulseValue > 0.7) {
+      final tipPaint = Paint()
+        ..color = Colors.white.withValues(alpha: (pulseValue - 0.7) * 2);
+      canvas.drawCircle(Offset(radius * 1.2, 0), radius * 0.2 * pulseValue, tipPaint);
+    }
     
     canvas.restore();
   }
