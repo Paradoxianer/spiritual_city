@@ -155,6 +155,24 @@ for each cell in zone_area:
 - Größere Zone → mehr Fläche, aber Kraft pro Zelle sinkt (Verteilung)
 - Timing + Richtung = Skill-Element; Faith-Menge = Fortschritts-Element
 
+#### ⚠️ GEBETS-ATTRAKTION – Strategisches Risiko (Verbindung mit Kapitel 5.5)
+
+Während der Gebets-Aktion in der unsichtbaren Welt gilt:
+
+```
+// Sobald der Faith-Button aktiv gedrückt wird:
+daemon_attraction_multiplier = 2.5    // Dämonen-Anziehung auf diesen Faktor gesetzt (nicht kumulativ)
+spawn_chance_increase = +40%          // Erhöhte Spawn-Wahrscheinlichkeit
+attraction_duration = 30 Sekunden    // Effekt klingt nach 30s ab
+
+// Strategisches Element:
+// Langes Beten = stärkerer Gebetseffekt
+// ABER: zieht Daemon-NPCs stärker in die Nähe!
+// → Risiko-Reward-Entscheidung für den Spieler
+```
+
+**Biblische Basis:** Gebet zieht geistliche Aufmerksamkeit an (1. Petrus 5,8; Epheser 6,12) – strategisches Risiko beim langen Beten.
+
 ---
 
 ## 3. SPIELFIGUR: PASTOR
@@ -253,11 +271,33 @@ cell_influence = (
     (nearby_churches * 15) +        // Kirchen strahlen +15 pro Kirche
     (gol_neighbor_influence * 0.4)  // Game of Life Nachbar-Effekt
     - (crime_reports * 0.3)        // Kriminalität
+    - daemon_residuum_strength * 0.5   // Daemon-Residuum-Stärke (0..10 nach Auflösung, klingt ab)
 )
 
 // Zelle zwischen -100 und +100 clamped
 // Farbe basiert auf Intensität: Grün (positiv) ↔ Rot (negativ)
 ```
+
+#### Widerstandswert (Resistance) pro Zelle
+
+Jede Zelle besitzt zusätzlich einen **Widerstandswert gegen Negativität** (`cell_resistance`):
+
+```
+cell_resistance = (
+    base_resistance +               // Standard: 0
+    (nearby_churches * 10) +        // Kirchen erhöhen Widerstand
+    (converted_christians_in_cell * 5) + // Christen stärken Widerstand
+    resistance_modifier             // Aus Modifier-System (Kap. 5.4)
+)
+// Wertebereich: 0 (kein Widerstand) bis 100 (maximaler Widerstand)
+
+// Widerstand reduziert dämonischen Einfluss:
+effective_daemon_impact = daemon_impact * (1 - cell_resistance / 100)
+```
+
+**Effekt des Widerstands auf Daemon-NPCs (Kap. 5.5):**
+- Zellen mit hohem Widerstand verursachen dem Daemon zusätzlichen Kraftverlust
+- Grüne Zellen mit Widerstand = sehr feindliches Terrain für Dämonen
 
 ### 5.4 MODIFIER-SYSTEM – PROGRESSIVER KAMPFVERSTÄRKER
 
@@ -285,6 +325,170 @@ cell_influence = (
 | **Fundament** | Kirche in eingenommenem Gebiet | Zellen um Kirche sind resistent gegen Rückfall |
 
 **Wichtig:** Modifier sind dauerhaft aktiv sobald freigeschaltet – kein Ausrüsten nötig. Einfach und managebar.
+
+#### AKTIONSBUTTON-GESCHWINDIGKEIT-MODIFIER (Neu – Issue #32)
+
+Beide Aktionsbuttons (Beten / Einsatz für Gott) erhalten **unabhängige Pulsier-Geschwindigkeits-Modifier**:
+
+```
+// Startzustand: Extrem schnelles Pulsieren (kaum Kontrolle)
+prayer_button_pulse_speed   = 1.0   // Basisgeschwindigkeit (sehr schnell)
+deployment_button_pulse_speed = 1.0 // Basisgeschwindigkeit (sehr schnell)
+
+// Jeder erspielte Modifier reduziert die Geschwindigkeit:
+// prayer_button_pulse_speed   -= prayer_speed_modifier
+// deployment_button_pulse_speed -= deploy_speed_modifier
+
+// Formel (beim Pulsieren):
+pulse_cycle_duration = base_pulse_duration / current_pulse_speed_multiplier
+// Je kleiner der Multiplikator, desto langsamer und kontrollierbarer
+```
+
+**Freischaltung per Mission-Reward:**
+
+| Modifier-Stufe | Unlock-Bedingung | Effekt |
+|---|---|---|
+| **Gebets-Fokus I** | Mission "Stilles Gebet" 3× abgeschlossen | Gebets-Button pulsiert 20 % langsamer |
+| **Gebets-Fokus II** | 5 Territorien mit Gebet beeinflusst | Gebets-Button pulsiert 40 % langsamer |
+| **Gebets-Fokus III** | 1 Territorium vollständig befreit | Gebets-Button pulsiert 60 % langsamer |
+| **Einsatz-Fokus I** | Mission "Dienst an NPC" 5× abgeschlossen | Einsatz-Button pulsiert 20 % langsamer |
+| **Einsatz-Fokus II** | 3 NPCs konvertiert | Einsatz-Button pulsiert 40 % langsamer |
+| **Einsatz-Fokus III** | Gemeinde-Projekt abgeschlossen | Einsatz-Button pulsiert 60 % langsamer |
+
+**Strategischer Effekt:** Langsames Pulsieren = präzisere Timing-Kontrolle = gezielterer Gebietsausbau für Gott.
+
+#### EINFLUSS/MISSION-MODIFIER (Neu – Issue #32)
+
+Modifier verändern die Einfluss-Stärke des in der unsichtbaren Welt platzierten Glaubens:
+
+```
+// Grundformel mit aktiven Modifiern:
+impact_power = faith_spent * timing_multiplier * influence_modifier
+
+// Spezielle Modifier-Typen:
+influence_modifier_types = {
+  "Verstärkung":    // Grüne Zellen extra verstärken
+    if cell.value >= 50:
+      cell_influence *= positive_amplifier_factor  // z.B. x1.5
+
+  "Widerstand":     // Zellenresistenz gegen Negativität erhöhen
+    cell_resistance += resistance_bonus            // Kap. 5.2
+
+  "Vorzeichen":     // Spezial: Negative Zelle direkt umkehren
+    if cell.value < 0:
+      cell.value = abs(cell.value) * sign_flip_factor  // Rot → Grün direkt
+}
+```
+
+**Freischaltbare Einfluss-Modifier:**
+
+| Modifier | Unlock-Bedingung | Effekt |
+|---|---|---|
+| **Licht-Verstärker** | 20 grüne Zellen erreicht | Bereits positive Zellen erhalten x1.5 Einfluss |
+| **Schutzwall** | Mission "Territorium verteidigen" | Zellen erhalten +20 Widerstand gegen Negativität |
+| **Umkehr-Kraft** | 3 Dämonen aufgelöst (Kap. 5.5) | Einmal nutzbar: Rote Zelle direkt ins Positive umkehren |
+| **Tiefenwirkung** | 50 Prayer-Combats gesamt | Einfluss wirkt 30 % tiefer in negative Zellen |
+
+### 5.5 DAEMON NPC SYSTEM – WANDERNDE BÖSE MÄCHTE (Issue #31)
+
+**Konzept:** Dämonen/böse Mächte als wandernde, negativ beeinflussende NPCs in der unsichtbaren Welt. Sie entstehen in dunkelroten Bereichen, wandern durch die Welt und hinterlassen überall dort Dunkelheit, wo sie durchziehen – bis ihre Kraft erschöpft ist.
+
+**Biblische Basis:**
+- Mt 12,43–45: *„Wenn der unreine Geist vom Menschen ausgefahren ist, durchwandert er wasserlose Stätten"* → Daemon-Bewegung als „ruhelos Wandern"
+- Dämonen schwächen sich in gottgeweihten Bereichen: Lukas 10,17–19 (Jesu Autorität über böse Geister)
+- Gebet zieht geistliche Aufmerksamkeit an: 1. Petrus 5,8; Daniel 10,12–13
+
+#### Daemon-Lebenszyklus
+
+```
+SPAWN:
+  - Nur in stark negativen Zonen (cell.value <= -70)
+  - Basis-Spawn-Rate: 1 Daemon pro 60 Sekunden bei genug roten Zellen
+  - Erhöhte Spawn-Rate durch aktive Gebets-Aktion (Kap. 2.3): +40%
+
+BEWEGUNG:
+  - Wandert "random-walk" (zufällig + leichte Tendenz zu positiven Zellen)
+  - Geschwindigkeit: ~1 Zelle pro Tick
+
+AUFLÖSUNG:
+  - Wenn ihre_kraft <= 0: dissolve()
+  - Hinterlässt "Daemon-Residuum"-Marker auf der Auflösungs-Zelle
+```
+
+#### Daemon-Mechanik (Pseudocode)
+
+```python
+class DaemonNPC:
+    kraft: 1 bis 100     # Finsternis-Kraft (positiver Wert, läuft gegen 0 = Auflösung)
+                         # Entspricht "Anti Faith" – Stärke des Dämons
+    position: Vector2
+
+    # Bewegung pro Tick:
+    def on_enter_cell(self, cell):
+
+        if cell.value <= -50:           # ROTE Zone
+            cell.value -= 1             # Zelle minimal eindunkeln
+            # (kein Kraft-Verlust: der Dämon ist in "heimischem Terrain")
+
+        elif -30 <= cell.value <= 30:   # NEUTRALE Zone
+            cell.value -= 2             # Zelle eindunkeln
+            self.kraft -= 2             # Gegenwind kostet Kraft
+
+        elif cell.value >= 50:          # GRÜNE Zone
+            cell.value -= 3             # Höherer Widerstand!
+            self.kraft -= 6             # 2× Verlust im "heiligen" Bereich!
+            # Widerstandswert der Zelle erhöht den Kraft-Verlust zusätzlich:
+            self.kraft -= cell.cell_resistance * 0.05
+
+        if self.kraft <= 0:             # Kraft erschöpft → Auflösung
+            self.dissolve()
+
+    def dissolve(self):
+        current_cell.daemon_residuum_strength = RESIDUUM_INITIAL_STRENGTH  # Stärke 0..10
+        current_cell.value -= RESIDUUM_DARKNESS                             # Residuum-Dunkelheit
+        self.destroy()
+```
+
+#### Daemon-Residuum-Marker
+
+Nach der Auflösung eines Daemons:
+- Die Zelle erhält einen **Daemon-Residuum-Marker** (visuell: spezielle Dunkelrot-Tönung, Perlin-Asche-Partikel)
+- `daemon_residuum_strength` (Wert 0–10) fließt in die `cell_influence`-Berechnung ein (Kap. 5.2): `- daemon_residuum_strength * 0.5`
+- Marker klingt mit der Zeit ab (nach ~5 Spielminuten ohne negativen Einfluss)
+- Kann durch gezieltes Prayer-Combat schneller beseitigt werden
+
+#### Visuelle Darstellung der Daemon-NPCs
+
+```
+- Daemon-Gestalt:     Pulsierendes Dunkelrot mit düsterer Aura
+- Bewegungsspur:      Schweif-Effekt (wie zähflüssige Tinte)
+- Auf grüner Fläche:  Sichtbarer "Kampf" – Daemon flackert, schrumpft
+- Auflösung:          Zerfalls-Partikel → hinterlässt "Asche" (Residuum-Marker)
+- HUD-Warnung:        Kleines Symbol erscheint wenn Daemon in Nähe des Pastors
+```
+
+#### Gebets-Attraktion & Strategisches Risiko-Reward
+
+| Spieler-Aktion | Konsequenz |
+|---|---|
+| **Kurz beten** | ✅ Sicherer; ❌ Weniger Gebets-Kraft |
+| **Lang beten** | ✅ Stärkerer Gebets-Effekt; ❌ Daemon-Attraction +40 %, Spawn-Rate steigt |
+| **Grüne Bereiche ausbauen** | ✅ Dämonen lösen sich schnell auf; ❌ Hohe Faith-Kosten |
+| **Rote Zonen ignorieren** | ✅ Sicher; ❌ Mehr Daemon-Spawns dort |
+| **Kirchen-Nähe nutzen** | ✅ Dämonen haben höheren Kraft-Verlust; ❌ Begrenzter Radius |
+
+#### Balance-Parameter
+
+```
+DAEMON_SPAWN_THRESHOLD      = -70    // Zell-Mindestwert für Spawn
+BASE_SPAWN_INTERVAL_SEC     = 60     // Basis-Spawn-Intervall
+PRAYER_SPAWN_INCREASE_PCT   = 40     // % erhöhte Spawn-Rate beim Beten
+PRAYER_ATTRACTION_MULT      = 2.5    // Anziehungsmultiplikator
+ATTRACTION_DURATION_SEC     = 30     // Sekunden bis Attraktion abklingt
+RESIDUUM_INITIAL_STRENGTH   = 10     // Startstärke des Residuum-Markers (0..10)
+RESIDUUM_DARKNESS           = 5      // Zell-Wert-Abzug bei Daemon-Auflösung
+RESIDUUM_DECAY_MIN          = 5      // Minuten bis Residuum-Marker verblasst
+```
 
 ### 5.3 Initiale Stadt-State
 
