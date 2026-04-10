@@ -74,18 +74,29 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (activeDialog != null) { closeDialog(); return; }
     if (_currentMenu != null) { closeMenu(); return; }
     
+    // Radial Menu immer öffnen
+    _openRadialMenu();
+  }
+
+  void _openRadialMenu() {
+    final actions = <RadialAction>[
+      RadialAction(label: '👀', icon: Icons.search, onSelect: () => _log.info('Looking around')),
+    ];
+
     if (_nearestInteractable != null) {
-      _nearestInteractable!.onInteract();
-      return;
+      actions.add(RadialAction(
+        label: '💬', 
+        icon: Icons.chat_bubble, 
+        onSelect: () => _nearestInteractable!.onInteract()
+      ));
     }
 
-    final actions = [RadialAction(label: '👀', icon: Icons.search, onSelect: () => _log.info('Looking around'))];
     _currentMenu = RadialMenu(actions: actions, position: player.position);
     world.add(_currentMenu!);
   }
 
-  void showDialog(String title, String emoji, {String? rewardEmoji}) {
-    activeDialog = GameDialogData(title: title, emoji: emoji, rewardEmoji: rewardEmoji);
+  void showDialog(String title, String emoji) {
+    activeDialog = GameDialogData(title: title, emoji: emoji);
     overlays.add('DialogOverlay');
     paused = true; 
   }
@@ -122,7 +133,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     if (_nearestInteractable != nearest) {
       _nearestInteractable = nearest;
-      actionButton.setActive(nearest != null);
     }
   }
 
@@ -177,22 +187,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
 class ActionButton extends PositionComponent with TapCallbacks {
   final VoidCallback onPressed;
-  bool _isActive = false;
-
   ActionButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(80));
-
-  void setActive(bool active) => _isActive = active;
 
   @override
   void render(Canvas canvas) {
-    final paint = Paint()..color = _isActive ? Colors.yellow.withOpacity(0.8) : Colors.blue.withOpacity(0.6);
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
-    
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.blue.withOpacity(0.6));
     TextPainter(
-      text: TextSpan(
-        text: _isActive ? '💬' : '🖐️', 
-        style: const TextStyle(fontSize: 32)
-      ), 
+      text: const TextSpan(text: '🖐️', style: TextStyle(fontSize: 32)),
       textDirection: TextDirection.ltr
     )..layout()..paint(canvas, Offset(size.x / 2 - 16, size.y / 2 - 20));
   }
