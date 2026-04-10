@@ -57,8 +57,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     final interactionScore = model.faith + (spiritualState * 50);
 
-    final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0); 
-    game.faith = (game.faith + resonanceExchange).clamp(0.0, 100.0);
+    final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0);
+    game.gainFaith(resonanceExchange);
 
     if (type == 'talk') {
       model.applyInfluence(1.0);
@@ -69,6 +69,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.prayerCount++;
       if (interactionScore + _random.nextInt(40) > 20) {
         model.applyInfluence(12.0 + (spiritualState * 5)); 
+        game.gainFaith(3.0);
         return '❤️';
       } else {
         model.applyInfluence(-8.0);
@@ -79,6 +80,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (type == 'help') {
       model.conversationCount++;
       model.applyInfluence(8.0 + (spiritualState * 4));
+      game.gainFaith(5.0);      // +5 Faith for helping
+      game.gainMaterials(-8.0); // costs 8 MP to help
       return '📦😊';
     } 
     
@@ -87,8 +90,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       
       if (interactionScore > 60) {
         model.applyInfluence(100);
-        game.faith = (game.faith + 25.0).clamp(0.0, 100.0);
-        return '✝️🕊️'; // Kreuz statt Stern
+        game.gainFaith(25.0);
+        return '✝️🕊️';
       } else {
         model.applyInfluence(3.0); 
         if (interactionScore < 0) return '🚫';

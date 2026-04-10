@@ -34,8 +34,21 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   // Ressourcen
   double faith = 100.0;
+  double health = 100.0;
+  double hunger = 80.0;
+  double materials = 40.0;
+
   static const double maxFaith = 100.0;
+  static const double maxHealth = 100.0;
+  static const double maxHunger = 100.0;
+  static const double maxMaterials = 100.0;
   static const double worldToggleCost = 10.0;
+
+  // Passive resource timers
+  double _hungerDrainTimer = 0.0;
+  static const double hungerDrainInterval = 30.0; // drain 1 hunger every 30 seconds
+  static const double hungerDrainAmount = 1.0;
+  static const double healthFromHungerThreshold = 20.0;
 
   Interactable? _nearestInteractable;
   Interactable? get nearestInteractable => _nearestInteractable;
@@ -161,8 +174,35 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (isWorldReady.value && !paused) {
       _updateCamera(dt);
       _updateNearestInteractable();
+      _updatePassiveResources(dt);
     }
   }
+
+  void _updatePassiveResources(double dt) {
+    // Hunger drains slowly over time
+    _hungerDrainTimer += dt;
+    if (_hungerDrainTimer >= hungerDrainInterval) {
+      _hungerDrainTimer = 0.0;
+      hunger = (hunger - hungerDrainAmount).clamp(0.0, maxHunger);
+      // If starving, health starts draining
+      if (hunger < healthFromHungerThreshold) {
+        health = (health - 0.5).clamp(0.0, maxHealth);
+      }
+    }
+  }
+
+  /// Spend materials (returns false if not enough)
+  bool spendMaterials(double amount) {
+    if (materials < amount) return false;
+    materials = (materials - amount).clamp(0.0, maxMaterials);
+    return true;
+  }
+
+  /// Gain resources (clamped to max)
+  void gainFaith(double amount) => faith = (faith + amount).clamp(0.0, maxFaith);
+  void gainHealth(double amount) => health = (health + amount).clamp(0.0, maxHealth);
+  void gainHunger(double amount) => hunger = (hunger + amount).clamp(0.0, maxHunger);
+  void gainMaterials(double amount) => materials = (materials + amount).clamp(0.0, maxMaterials);
 
   void _updateNearestInteractable() {
     Interactable? nearest;

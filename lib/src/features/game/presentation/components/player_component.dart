@@ -86,6 +86,7 @@ class PlayerComponent extends PositionComponent
   }
 
   final Vector2 _keyboardDirection = Vector2.zero();
+  bool _pressedShift = false;
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
@@ -96,13 +97,16 @@ class PlayerComponent extends PositionComponent
     if (keysPressed.contains(LogicalKeyboardKey.keyD) || keysPressed.contains(LogicalKeyboardKey.arrowRight)) _keyboardDirection.x += 1;
     if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
 
+    _pressedShift = keysPressed.contains(LogicalKeyboardKey.shiftLeft) ||
+        keysPressed.contains(LogicalKeyboardKey.shiftRight);
+
     if (keysPressed.contains(LogicalKeyboardKey.space)) {
       game.handleActionDown();
     } else if (event is KeyUpEvent && event.logicalKey == LogicalKeyboardKey.space) {
       game.handleActionUp();
     }
 
-    _isChargingSize = keysPressed.contains(LogicalKeyboardKey.shiftLeft) || !joystick.delta.isZero();
+    _isChargingSize = _pressedShift || !joystick.delta.isZero();
     
     if (game.isSpiritualWorld && !_keyboardDirection.isZero()) {
       _isChargingSize = true;
@@ -125,24 +129,32 @@ class PlayerComponent extends PositionComponent
   }
 
   void _executePrayerImpact() {
-    // rawIntensity bestimmt NUR, wie viel % des Faiths eingesetzt werden (0.0 bis 1.0).
-    final rawIntensity = (math.sin(_intensityPulseTime * modifierIntensitySpeed).abs());
-    final radiusFactor = (math.sin(_sizePulseTime * modifierSizeSpeed).abs()).clamp(0.001, 1.0);
-    
-    // FAITH EINSATZ:
-    // Die Nadel (rawIntensity) fungiert als Volumenregler für den Faith-Vorrat.
-    double faithToSpend = game.faith * rawIntensity; 
-    
-    // Wir setzen den gewählten Betrag ein und ziehen ihn vom Vorrat ab.
+    // rawIntensity determines what % of faith is spent (0.0 to 1.0).
+    final rawIntensity = math.sin(_intensityPulseTime * modifierIntensitySpeed).abs();
+    final radiusFactor = math.sin(_sizePulseTime * modifierSizeSpeed).abs().clamp(0.001, 1.0);
+
+    // TIMING MULTIPLIER (Lastenheft 2.3)
+    final double timingMultiplier;
+    if (rawIntensity >= 0.7) {
+      timingMultiplier = 1.0; // OPTIMAL
+    } else if (rawIntensity >= 0.5) {
+      timingMultiplier = 0.8; // GOOD
+    } else if (rawIntensity >= 0.3) {
+      timingMultiplier = 0.6; // EARLY
+    } else {
+      timingMultiplier = 0.4; // TOO LATE
+    }
+
+    // FAITH EINSATZ: Nadel als Volumenregler für den Faith-Vorrat
+    final double faithToSpend = game.faith * rawIntensity;
     game.faith -= faithToSpend;
-    
+
     final radius = radiusFactor * modifierMaxRadius;
-    
-    // IMPACT BERECHNUNG:
-    // Die Kraft resultiert aus (Investierter Glaube / Fläche) * BasisPower.
-    // Keine zusätzlichen Timing-Multiplikatoren (diese kommen später durch Modifier).
+
+    // IMPACT BERECHNUNG: (investierter Glaube / Fläche) × BasisPower × Timing
     final areaUnits = math.pi * math.pow(radius / CellComponent.cellSize, 2.0);
-    final impactPower = (faithToSpend * modifierBasePower) / areaUnits.clamp(0.1, 1000.0);
+    final impactPower = (faithToSpend * modifierBasePower * timingMultiplier) /
+        areaUnits.clamp(0.1, 1000.0);
 
     final center = position;
     final gridX = (center.x / CellComponent.cellSize).floor();
@@ -157,7 +169,7 @@ class PlayerComponent extends PositionComponent
             (gridX + dx) * CellComponent.cellSize + CellComponent.cellSize / 2,
             (gridY + dy) * CellComponent.cellSize + CellComponent.cellSize / 2,
           );
-          
+
           bool inZone = false;
           if (prayerZone.direction.isZero()) {
             inZone = center.distanceTo(cellPos) <= radius;
@@ -173,10 +185,7 @@ class PlayerComponent extends PositionComponent
           if (inZone) {
             final dist = center.distanceTo(cellPos);
             final falloff = 1.0 - (dist / (radius * 1.8)).clamp(0.0, 1.0);
-            
-            // finalImpact nutzt nur den eingesetzten Faith und die Fläche.
             final finalImpact = (impactPower / 100.0) * falloff / modifierResistanceFactor;
-            
             cell.spiritualState = (cell.spiritualState + finalImpact).clamp(-1.0, 1.0);
           }
         }
@@ -196,12 +205,40 @@ class PlayerComponent extends PositionComponent
 
   void _updateMovement(double dt) {
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
-    Vector2 moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
-    position.add(moveDir * speed * dt);
+    final moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
+    final delta = moveDir * speed * dt;
+    final newPos = position + delta;
+
+    // Grid coordinates for target position
+    final gx = (newPos.x / CellComponent.cellSize).floor();
+    final gy = (newPos.y / CellComponent.cellSize).floor();
+
+    if (game.grid.isWalkable(gx, gy)) {
+      position.setFrom(newPos);
+    } else {
+      // Try horizontal slide (move only on X)
+      final newPosX = Vector2(newPos.x, position.y);
+      final gxSlide = (newPosX.x / CellComponent.cellSize).floor();
+      final gySlide = (newPosX.y / CellComponent.cellSize).floor();
+      if (game.grid.isWalkable(gxSlide, gySlide)) {
+        position.setFrom(newPosX);
+      } else {
+        // Try vertical slide (move only on Y)
+        final newPosY = Vector2(position.x, newPos.y);
+        final gxSlide2 = (newPosY.x / CellComponent.cellSize).floor();
+        final gySlide2 = (newPosY.y / CellComponent.cellSize).floor();
+        if (game.grid.isWalkable(gxSlide2, gySlide2)) {
+          position.setFrom(newPosY);
+        }
+        // Both axes blocked – don't move
+      }
+    }
   }
 
   void _updatePrayerMechanics(double dt) {
-    _isChargingSize = !joystick.delta.isZero() || RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.shiftLeft);
+    _isChargingSize = !joystick.delta.isZero() ||
+        _keyboardDirection.x != 0 || _keyboardDirection.y != 0 ||
+        _pressedShift;
     
     if (_isChargingSize) {
       _sizePulseTime += dt;
