@@ -72,15 +72,15 @@ class _DialogOverlayState extends State<DialogOverlay> {
       // Check for session end (👋)
       if (reaction == '👋') {
         setState(() => _isSessionOver = true);
-        Future.delayed(const Duration(milliseconds: 1200), () {
+        Future.delayed(const Duration(seconds: 5), () {
           if (mounted) widget.game.closeDialog();
         });
       }
 
-      // Wenn Bekehrung erfolgreich, nach kurzer Zeit schließen
+      // Wenn Bekehrung erfolgreich
       if (reaction == '✨🕊️') {
         setState(() => _isSessionOver = true);
-        Future.delayed(const Duration(milliseconds: 1500), () {
+        Future.delayed(const Duration(seconds: 5), () {
           if (mounted) widget.game.closeDialog();
         });
       }
