@@ -22,6 +22,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final JoystickComponent joystick;
   late final ChunkManager chunkManager;
   late final ActionButton actionButton;
+  late final PrayerButton prayerButton;
 
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
@@ -69,8 +70,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   void handleAction() {
     if (_currentMenu != null) {
-      _currentMenu?.removeFromParent();
-      _currentMenu = null;
+      closeMenu();
       return;
     }
 
@@ -114,10 +114,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
   }
 
+  void closeMenu() {
+    _currentMenu?.removeFromParent();
+    _currentMenu = null;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
-    // Move menu with player if open
     if (_currentMenu != null) {
       _currentMenu!.position = player.position;
     }
@@ -136,17 +140,19 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   Future<void> _addHudButtons() async {
-    final toggleButton = WorldToggleButton(
-      onPressed: toggleWorld,
-      position: Vector2(size.x - 80, 80),
-    );
-    await camera.viewport.add(toggleButton);
-
+    // Action Button [A]
     actionButton = ActionButton(
       onPressed: handleAction,
       position: Vector2(size.x - 80, size.y - 80),
     );
     await camera.viewport.add(actionButton);
+
+    // Prayer Button [B] - Now next to Action Button
+    prayerButton = PrayerButton(
+      onPressed: toggleWorld,
+      position: Vector2(size.x - 170, size.y - 80),
+    );
+    await camera.viewport.add(prayerButton);
   }
 
   @override
@@ -154,32 +160,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     super.onGameResize(size);
     if (this.isLoaded) {
       actionButton.position = Vector2(size.x - 80, size.y - 80);
+      prayerButton.position = Vector2(size.x - 170, size.y - 80);
     }
-  }
-}
-
-class WorldToggleButton extends PositionComponent with TapCallbacks {
-  final VoidCallback onPressed;
-
-  WorldToggleButton({
-    required this.onPressed,
-    required super.position,
-  }) : super(anchor: Anchor.center, size: Vector2.all(60));
-
-  @override
-  void render(Canvas canvas) {
-    final paint = Paint()..color = Colors.purple.withOpacity(0.5);
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
-    
-    paint.color = Colors.white;
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 2;
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.3, paint);
-  }
-
-  @override
-  void onTapDown(TapDownEvent event) {
-    onPressed();
   }
 }
 
@@ -193,7 +175,7 @@ class ActionButton extends PositionComponent with TapCallbacks {
 
   @override
   void render(Canvas canvas) {
-    final paint = Paint()..color = Colors.blue.withOpacity(0.5);
+    final paint = Paint()..color = Colors.blue.withOpacity(0.6);
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
     
     paint.color = Colors.white;
@@ -205,6 +187,41 @@ class ActionButton extends PositionComponent with TapCallbacks {
       text: const TextSpan(
         text: 'A',
         style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, size.y / 2 - textPainter.height / 2));
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    onPressed();
+  }
+}
+
+class PrayerButton extends PositionComponent with TapCallbacks {
+  final VoidCallback onPressed;
+
+  PrayerButton({
+    required this.onPressed,
+    required super.position,
+  }) : super(anchor: Anchor.center, size: Vector2.all(70));
+
+  @override
+  void render(Canvas canvas) {
+    final paint = Paint()..color = Colors.purple.withOpacity(0.6);
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
+    
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 3;
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.35, paint);
+    
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: 'B',
+        style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
       ),
       textDirection: TextDirection.ltr,
     );
