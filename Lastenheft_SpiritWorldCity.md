@@ -12,7 +12,7 @@ Ein spirituelles Sandbox-Simulationsspiel, wo ein Pastor eine prozedural generie
   - Pastor läuft herum, spricht mit Menschen, dient, sammelt Ressourcen
   - **Zweck:** Faith & Materials (Ressourcen) akkumulieren
   
-- **Unsichtbare Welt:** Spirituelles Overlay mit dynamischer Zell-Farbe (Rot = Dunkel, Blau = Licht)
+- **Unsichtbare Welt:** Spirituelles Overlay mit dynamischer Zell-Farbe (Rot = Dunkel, Grün = Licht)
   - Pastor betritt diese durch Gebets-Button
   - **Zweck:** Mit gesammeltem Faith "Territorium für Jesus gewinnen"
   - **Mechanik:** Pulsing-Ring-Combat mit Skill-Element
@@ -21,7 +21,7 @@ Ein spirituelles Sandbox-Simulationsspiel, wo ein Pastor eine prozedural generie
 1. In realer Welt umherlaufen → Faith & Materials sammeln
 2. Zu Kirche/Pastorat gehen → Faith durch Bibellesen + Gebet regenerieren
 3. In unsichtbare Welt wechseln → Gesamten Faith im Ring-Combat "ausgeben"
-4. Territorium wird Blau/Gold → NPCs werden empfänglicher → mehr Ressourcen
+4. Territorium wird Grün/Gold → NPCs werden empfänglicher → mehr Ressourcen
 5. Zurück zu Schritt 1
 
 ---
@@ -72,7 +72,7 @@ FAITH: [████████░░] 85/100
 - Gemeinde-Projekte (Obdach-Hilfe, Essen für Arme): -30-50 MP, +20-30 Faith
 
 **Effekt auf unsichtbare Welt:**
-- Zellen wo Materialien verteilt wurden: +3 Blau (sanfter Effekt)
+- Zellen wo Materialien verteilt wurden: +3 Grün (sanfter Effekt)
 - Symbolisiert: "praktischer Glaube reinigt Territorium"
 
 **Darstellung im HUD:**
@@ -83,74 +83,77 @@ MATERIALS: [██████░░░░] 42/100 MP
 
 ---
 
-### 2.3 GLAUBE IN DER UNSICHTBAREN WELT – DETAILLIERT
+### 2.3 GLAUBE IN DER UNSICHTBAREN WELT – DUAL-CONTROL-COMBAT
 
-**Szenario:**
-1. Pastor befindet sich in **unsichtbarer Welt** (Ring-Combat-Modus)
-2. Pastor hat z.B. **75 Faith** in HUD-Anzeige
-3. Pastor drückt **"BEGIN PRAYER"**
-4. **Pulsing-Ring beginnt zu wachsen:**
-   - Ring wächst langsam: 0 → 75 (max Faith-Größe)
-   - Gleichzeitig: **Faith-Counter läuft herunter: 75 → 74 → 73...**
-   - Wenn Ring seine max-Größe erreicht (bei 0 Faith übrig): **Ring schrumpft zurück zu minimal**
-   - Dann wieder: Ring wächst von 0 → 75
+**Zwei unabhängige Eingaben steuern den Gebetkampf:**
+
+#### INPUT A – Faith-Button (rechter Daumen / Taste)
+- Gedrückt halten → Faith-Ladebalken pulsiert zyklisch von 0 % → 100 % → 0 % → …
+- Beim **Loslassen** wird der aktuelle %-Wert als Timing-Multiplikator eingefroren und der Angriff ausgelöst
+- Biblische Basis: Jakobus 5,16 *„Das inbrünstige Gebet eines Gerechten vermag viel"* – Intensität ist steuerbar
+
+#### INPUT B – Joystick (linker Daumen)
+- **Nur gedrückt (ohne Richtung):** Ringförmige Zone wächst gleichmäßig um den Pastor
+- **In Richtung gedrückt:** Ring beugt sich flammig in die gewählte Richtung aus (Apostelgeschichte 2,3: *„Zungen wie von Feuer, die sich verteilten"*)
+- Zone wächst kontinuierlich solange der Joystick gedrückt bleibt
+- Beim Loslassen: Zone schrumpft langsam zurück auf 0
+- **Visuelle Stärke:** Farbintensität der Zone zeigt Größe/Kraft
+- **Wichtig:** Die Zone wird **erst** beim Loslassen von INPUT A aktiviert (beide Eingaben kombiniert)
+- Josua 1,3: *„Jede Stätte, worauf eure Fußsohle tritt, habe ich euch gegeben"* – du wählst Richtung und Ausdehnung aktiv
+
+**Szenario (Ablauf):**
+1. Pastor in unsichtbarer Welt, z.B. **75 Faith**
+2. Spieler drückt **Joystick** in Richtung Nordosten → Zone wächst flammig in diese Richtung
+3. Gleichzeitig hält Spieler **Faith-Button** gedrückt → Ladebalken pulsiert
+4. Beim **optimalen Moment** (z.B. 85 %) lässt Spieler den Faith-Button los → Angriff auf die geformte Zone
 
 **Visuelle Darstellung:**
 ```
-╔════════════════════════════════════╗
-║     PRAYER COMBAT MODE             ║
-╠════════════════════════════════════╣
-║                                    ║
-║         💫  🔷 🔷  💫            ║
-║       🔷    ⛪    🔷            ║  ← Ring wächst/schrumpft
-║       🔷   Pastor 🔷            ║
-║         🔷     🔷               ║
-║                                    ║
-║ FAITH INVESTED: 75 → 60 → 45 ... ║ ← Herunter-Zähler
-║ RING SIZE: ████████░░░░░░░░     ║ ← Visuelle Größe
-║                                    ║
-║ [⚡ OPTIMAL WINDOW: 50-75 Range]  ║ ← Grün wenn im Fenster
-║                                    ║
-║ [A] RELEASE PRAYER NOW             ║
-╚════════════════════════════════════╝
+╔════════════════════════════════════════╗
+║       PRAYER COMBAT MODE               ║
+╠════════════════════════════════════════╣
+║                                        ║
+║             🔥🔥                       ║
+║           🔥    🔥                    ║  ← Flamme beugt sich
+║         🔥  Pastor  ○                 ║     nach Joystick-Richtung
+║           ○        ○                  ║
+║                                        ║
+║ FAITH POWER: [████████░░░░░░] 65 %   ║  ← Pulst 0→100→0
+║ ZONE SIZE:   [██████░░░░░░░░] 45 %   ║  ← Wächst mit Joystick
+║                                        ║
+║ 🟢 OPTIMAL WINDOW: 70-100%            ║
+║ [A] LOSLASSEN → ANGRIFF AUSLÖSEN      ║
+╚════════════════════════════════════════╝
 ```
 
-**Timing-Fenster:**
-- **Optimal:** Ring ist bei 70-100% seiner max-Größe
-  - Timing Multiplier: **1.0x (100% Effekt)**
-  - Dauer: ~0.5 Sek pro Zyklus
-  
-- **Früh:** Ring <50% der Größe
-  - Multiplier: **0.6x (60% Effekt)**
-  
-- **Zu spät:** Ring zwischen 0-30%
-  - Multiplier: **0.4x (40% Effekt)**
+**Timing-Fenster (Faith-Button):**
+- **Optimal (70–100 %):** Timing-Multiplikator **1.0x**
+- **Früh (<50 %):** Multiplikator **0.6x**
+- **Zu spät (0–30 %):** Multiplikator **0.4x**
 
-**Bei RELEASE:**
-
+**Berechnungsformel bei Release:**
 ```
-faith_spent = faith_at_start - faith_remaining
-// Z.B. 75 - 25 = 50 Faith ausgegeben
-
 timing_multiplier = {
-  1.0 if ring_size in [70%, 100%],    // OPTIMAL
-  0.6 if ring_size < 50%,             // EARLY
-  0.4 if ring_size in [0%, 30%]       // LATE
+  1.0 if faith_pulse in [70%, 100%],   // OPTIMAL
+  0.6 if faith_pulse < 50%,            // EARLY
+  0.4 if faith_pulse in [0%, 30%]      // LATE
 }
 
-impact_radius = faith_spent * 3       // Z.B. 50 * 3 = 150 Pixel Radius
-impact_power = faith_spent * timing_multiplier * 0.5
-// Z.B. 50 * 1.0 * 0.5 = 25 Power
+zone_area   = joystick_held_duration * growth_rate    // Fläche der Zone
+zone_shape  = ring | flame(direction)                 // je nach Joystick
 
-// Alle Zellen im Radius werden beeinflusst:
-for each cell in radius:
+faith_spent = faith_at_start * faith_pulse_percentage
+impact_power = faith_spent * timing_multiplier * active_modifiers
+
+// Alle Zellen in der Zone werden beeinflusst:
+for each cell in zone_area:
   cell_influence += impact_power * (1 - distance_from_center)
 ```
 
-**Wichtig:** 
-- Je mehr Faith man investiert, desto größer der Effekt
-- Aber: Optimal-Timing muss noch getroffen werden
-- **Neue Spieler:** Vielleicht mit weniger Faith anfangen (20-30) um Timing zu lernen
+**Hinweis:**
+- Mehr Faith → stärkerer Effekt
+- Größere Zone → mehr Fläche, aber Kraft pro Zelle sinkt (Verteilung)
+- Timing + Richtung = Skill-Element; Faith-Menge = Fortschritts-Element
 
 ---
 
@@ -211,16 +214,27 @@ MATERIALS: [██████░░░░] 42/100    ← Sekundär-Ressource
 **Transparenter Overlay über reale Welt:**
 
 ```
-POSITIVE ZONEN (Blau/Gold):
-- Blau: Milde Präsenz Gottes (50% Sättigung)
-- Gold: Starke Präsenz Gottes (90-100% Sättigung)
+POSITIVE ZONEN (Grün):
+- Hellgrün, funkelnd:    Milde Präsenz Gottes (+30..+60)
+- Mittelgrün, leuchtend: Starke Präsenz Gottes (+60..+80)
+- Dunkelgrün, satt:      Sehr stark für Gott eingenommen (+80..+100)
+  → Dunkelgrün = maximale Einnahme, Psalm 23,2; Offb 22,1-2
 
-NEGATIVE ZONEN (Grau/Rot):
-- Grau: Milde Dunkelheit (50%)
-- Dunkelrot/Purpur: Starke Dunkelheit (90-100%)
+NEGATIVE ZONEN (Rot):
+- Dunkelrot, pulsend:    Milde Dunkelheit (-30..-60)
+- Tiefrot, zähflüssig:   Starke dämonische Präsenz (-60..-80)
+- Dunkelrot-Schwarz:     Dämonische Bastion (-80..-100)
+  → Bewegt sich wie Lavalampe, Jes 1,18; Dan 10,13
 
-NEUTRAL: Braun/Weiß (Unentschieden)
+NEUTRAL: Beige/Weiß (-30..+30, Unentschieden)
 ```
+
+**Visueller Stil (organisch, Gaußisch):**
+- **Kein harter Pixel-Look** – die unsichtbare Welt ist das Gegenteil der realen Welt
+- Zell-Farbwerte werden mit **Gaussian Blur** weichgezeichnet (organisch, fließend)
+- Dunkle Zonen bekommen **animierte Perlin-Noise-Verschiebung** → Lavalampen-Effekt
+- Positive Zonen können **funkelnde Partikel** oder leichtes Pulsieren haben
+- Johannes 3,8: *„Der Wind bläst, wo er will"* – das Geistliche folgt keinen geraden Linien
 
 **Game-of-Life Dynamik:**
 - Jede Spielstunde: Zellen beeinflussen ihre Nachbarn
@@ -242,18 +256,51 @@ cell_influence = (
 )
 
 // Zelle zwischen -100 und +100 clamped
-// Farbe basiert auf Intensität
+// Farbe basiert auf Intensität: Grün (positiv) ↔ Rot (negativ)
 ```
+
+### 5.4 MODIFIER-SYSTEM – PROGRESSIVER KAMPFVERSTÄRKER
+
+**Konzept:** Einfache, passive Modifier die durch Spielfortschritt freigeschaltet werden. Wirken auf zwei Bereiche:
+1. **Combat-Modifier** → verstärken den Dual-Control-Gebetkampf direkt
+2. **Territoriums-Modifier** → verlangsamen den Rückfall bereits eingenommener Bereiche
+
+**Design-Prinzip:** Keine komplexen Systeme – jeder Modifier ist ein einzelner Zahlen-Multiplikator. Epheser 6 dient als Namens-Inspiration, nicht als Mechanik-Vorgabe.
+
+#### COMBAT-MODIFIER (Kampfring)
+| Modifier | Unlock-Bedingung | Effekt |
+|---|---|---|
+| **Inbrunst** | 10× Prayer Combat durchgeführt | Timing-Optimal-Fenster +5 % breiter |
+| **Ausdauer** | 5 Territorien teilweise eingenommen | Joystick-Zone wächst 20 % schneller |
+| **Konzentration** | Bibellesen 10× abgeschlossen | Faith-Pulse verlangsamt sich um 15 % |
+| **Kraft** | 3 NPCs konvertiert | Impact-Power +20 % |
+| **Weisheit** | 20 Gespräche geführt | Faith-Kosten pro Combat −10 % |
+
+#### TERRITORIUMS-MODIFIER (Eingenommene Bereiche)
+| Modifier | Unlock-Bedingung | Effekt |
+|---|---|---|
+| **Bewahrung** | 1 Territorium vollständig eingenommen | Game-of-Life Rückfall-Rate −15 % für grüne Zellen |
+| **Gemeinde** | 5 Christen in einer Zelle | Zelle verliert pro Tag weniger Einfluss |
+| **Wachstum** | 30 Gespräche mit NPCs | Grüne Zellen beeinflussen Nachbarn +10 % stärker |
+| **Fundament** | Kirche in eingenommenem Gebiet | Zellen um Kirche sind resistent gegen Rückfall |
+
+**Wichtig:** Modifier sind dauerhaft aktiv sobald freigeschaltet – kein Ausrüsten nötig. Einfach und managebar.
 
 ### 5.3 Initiale Stadt-State
 
-**Bei Spielstart:**
-- 80% der Stadt: ROT/Grau (Dunkelheit dominiert)
-- Kirchen-Zellen: +50 Blau (isolierte positive Inseln)
-- Pastorat: +20 Blau (schwach)
+**Bei Spielstart – bewusst ungleichmäßig:**
+- 80% der Stadt: ROT/Dunkelrot (Dunkelheit dominiert)
+- **Verteilung ist absichtlich unregelmäßig:** Einige Bereiche sehr dunkel (-90), andere nur leicht negativ (-20)
+- Dämonische Schwerpunkte (Bastion-Zellen) ziehen benachbarte Zellen stärker ins Negative
+- Kirchen-Zellen: +50 Grün (isolierte positive Inseln)
+- Pastorat: +20 Grün (schwach)
 - Parks: Neutral (0)
 - Arme Gegenden: etwas negativ (-20)
 - Reiche Gegenden: neutral bis schwach positiv (+10)
+
+**Startanimation (optional):**
+- Beim ersten Betreten der unsichtbaren Welt: langsames „Einblenden" der roten Lavalampen-Bereiche
+- Vermittelt dramatisch die Ausgangslage
 
 ---
 
@@ -312,7 +359,7 @@ class NPCProfile {
 
 **Effekte nach Konversion:**
 - NPC kann in Gottesdiensten teilnehmen
-- NPC regeneriert +2 Blau pro Tag in ihrer Zelle
+- NPC regeneriert +2 Grün pro Tag in ihrer Zelle
 - NPC wird "missionarisch" (spricht mit anderen NPCs)
 - +30 Faith Reward an Pastor
 
@@ -327,15 +374,15 @@ for each npc in city:
   cell = npc.position.toCell()
   
   if npc.isConvertedChristian:
-    cell.influence += npc.faithLevel * 0.3  // Z.B. +24
+    cell.influence += npc.faithLevel * 0.3  // Z.B. +24 (→ Grün)
   else if npc.faithLevel > 50:
-    cell.influence += 5  // Schwach positiv
+    cell.influence += 5  // Schwach positiv (hellgrün)
   else if npc.faithLevel < -50:
-    cell.influence -= npc.faithLevel * 0.2  // Negativ verstärken
+    cell.influence -= npc.faithLevel * 0.2  // Negativ verstärken (roter)
 ```
 
 **Effekt:** 
-- Ein konvertierter Christ in einer roten Zelle kann sie zu Blau kippen
+- Ein konvertierter Christ in einer roten Zelle kann sie zu Grün kippen
 - Viele Christen in Zelle = stark Gold
 
 ---
@@ -371,20 +418,20 @@ class Mission extends InteractionAction {
 - **Trigger:** "Diene" Button bei NPC oder an Ort
 - **Flow:** 2-3 Min Animation (helfen, reparieren, etc.)
 - **Reward:** +10 Faith, +10 MP, NPC-faithLevel +5
-- **Effekt:** Zelle +2 Blau-Einfluss
+- **Effekt:** Zelle +2 Grün-Einfluss
 
 #### C. Gebets-Missionen (In unsichtbarer Welt)
 - **Trigger:** Automatisch wenn Stadtteil >70% ROT
 - **Mission:** "Bete für dieses Territorium"
 - **Aufgabe:** Führe 3-5 Prayer-Combats in diesem Gebiet durch
-- **Reward:** +50 Faith, Gebiet kippt +30 Blau
+- **Reward:** +50 Faith, Gebiet kippt +30 Grün
 - **Beschreibung:** "Dieser Bereich braucht geistlichen Kampf"
 
 #### D. Sammelmissionen
 - **Beispiel:** "Sammle Lebensmittel für Bedürftige"
 - **Flow:** Gehe zu 3 Haushalten, "Spende"-Option wählen
 - **Reward:** +30 MP, +15 Faith
-- **Segen-Effekt:** Diese 3 Zellen +3 Blau
+- **Segen-Effekt:** Diese 3 Zellen +3 Grün
 
 #### E. Territoriums-Befreiung (Multi-Step)
 - **Trigger:** Stadtteil >75% ROT
@@ -392,7 +439,7 @@ class Mission extends InteractionAction {
   1. Bete 5x im Gebiet (Prayer-Combat)
   2. Sprich mit 3+ NPCs im Gebiet
   3. Drücke "Bete Segen über Bereich" Button
-- **Reward:** +100 Faith, +50 MP, Bereich wird +40 Blau, Missions unlocked
+- **Reward:** +100 Faith, +50 MP, Bereich wird +40 Grün, Missions unlocked
 - **Dauer:** ~30 Min Spielzeit
 
 ---
@@ -466,23 +513,22 @@ incidents = [
 ### 9.2 Prayer-Combat HUD (Unsichtbare Welt)
 
 ```
-╔═════════════════════════════════════╗
-║      PRAYER MODE – GEISTLICHER KAMPF║
-╠═════════════════════════════════════╣
-║                                     ║
-║       💫  🔷 🔷  💫  ← Ring        ║
-║     🔷    ⛪    🔷                 ║
-║     🔷         🔷                 ║
-║       🔷     🔷                   ║
-║                                     ║
-║ FAITH INVESTED: 75→60→45→30...    ║
-║ RING SIZE: ████████░░░░░░ (75%)  ║
-║ [OPTIMAL WINDOW: 70-100%]         ║
-║ 🟢 WINDOW OPEN – RELEASE NOW!     ║
-║                                     ║
-║ [A] RELEASE PRAYER                 ║
-║ [B] ABORT PRAYER (-5 Faith)        ║
-╚═════════════════════════════════════╝
+╔═══════════════════════════════════════════╗
+║       PRAYER MODE – GEISTLICHER KAMPF     ║
+╠═══════════════════════════════════════════╣
+║                                           ║
+║             🔥🔥🔥                        ║
+║           🔥       🔥                    ║  ← Zone wächst/verformt
+║         🔥   Pastor   ○                  ║    sich nach Joystick
+║           ○         ○                    ║
+║                                           ║
+║ FAITH POWER: [████████░░░░░░░░░] 65 %   ║  ← Pulsiert 0→100→0
+║ ZONE SIZE:   [██████░░░░░░░░░░░] 45 %   ║  ← Wächst mit Joystick
+║                                           ║
+║ 🟢 OPTIMAL WINDOW: 70-100 %             ║
+║ [A] LOSLASSEN → ANGRIFF                  ║
+║ [B] ABBRECHEN  (−5 Faith)               ║
+╚═══════════════════════════════════════════╝
 ```
 
 ---
@@ -491,18 +537,24 @@ incidents = [
 
 ### 10.1 Keine klassischen "Level"
 
-Stattdessen: Graduelle Unlock basierend auf Erfolge
+Stattdessen: Graduelle Modifier-Freischaltung basierend auf Spielfortschritt (siehe Kap. 5.4)
+
+**Prinzip:** Einfach und managebar – Modifier sind passive Boni, kein aktives Ausrüsten.
 
 ```
-Nach 5 Conversions:
-  → Unlock: "Protection Prayer" (andere Gebets-Art)
-  → Effect: Kann eine Zelle für 1h vor Dunkelheit schützen
+Nach 10 Prayer Combats:
+  → Unlock: Modifier "Inbrunst" (Timing-Fenster breiter)
 
-Nach 3 Territorien befreit:
-  → Unlock: Prayer-Combo (2x Gebet hintereinander = Bonus)
+Nach 5 Territorien teilweise eingenommen:
+  → Unlock: Modifier "Ausdauer" (Zone wächst schneller)
 
-Nach 20 Gesprächen mit unterschiedlichen NPCs:
-  → Unlock: "Mass Prayer" (Gebets-Event)
+Nach 1 vollständig eingenommenem Territorium:
+  → Unlock: Modifier "Bewahrung" (Rückfall-Rate sinkt)
+
+Nach 3 Konversionen:
+  → Unlock: Modifier "Kraft" (Impact-Power +20%)
+
+... (weitere Modifier aus Kap. 5.4)
 ```
 
 ### 10.2 Schwierigkeits-Anpassungen (Optional)
@@ -555,10 +607,10 @@ Nach 20 Gesprächen mit unterschiedlichen NPCs:
    ↓
 4. Gehe in UNSICHTBARE WELT
    ├─ Kosten: 10 Faith Eintritt
-   └─ Prayer-Combats: Investiere 20-80 Faith pro Combat
+   ├─ Dual-Control Prayer-Combats: Faith-Button + Joystick-Zone kombinieren
    ↓
-5. Territorium wird BLAU/GOLD
-   ├─ NPCs in Blau-Zonen werden empfänglicher
+5. Territorium wird GRÜN
+   ├─ NPCs in Grün-Zonen werden empfänglicher
    └─ Mehr Faith & MP in diesen Zellen verfügbar
    ↓
 6. Wiederhole → Core Loop
@@ -615,9 +667,10 @@ Nach 20 Gesprächen mit unterschiedlichen NPCs:
 
 **✅ IM SPIEL:**
 - Fahrzeug-Verkehr (einfach, ambient)
-- Gebets-Kampf-Mechanik (abstrakt, strategisch)
-- Territorium-Kontrolle (Rot ↔ Blau)
+- Dual-Control Gebets-Kampf-Mechanik (Button für Stärke + Joystick für Zone/Richtung)
+- Territorium-Kontrolle (Rot ↔ Grün, organisch-gaußisch)
 - Mission-System (flexibel, nicht-linear)
+- Modifier-System (passiv, progressiv, einfach)
 - Sandbox mit optionalen Zielen
 
 ---
