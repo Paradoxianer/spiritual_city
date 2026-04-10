@@ -37,10 +37,6 @@ class PlayerComponent extends PositionComponent
     final pulse = 1.0 + (isNear ? (DateTime.now().millisecondsSinceEpoch % 1000 / 5000) : 0);
     canvas.drawCircle((size / 2).toOffset(), SpiritWorldGame.interactionRange * pulse, auraPaint);
 
-    if (isNear) {
-      _renderSpeechBubbleHint(canvas);
-    }
-
     // Player Body
     final paint = Paint()..color = Colors.blueAccent;
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, paint);
@@ -50,19 +46,6 @@ class PlayerComponent extends PositionComponent
     paint.strokeWidth = 2;
     canvas.drawLine(Offset(size.x / 2, size.y * 0.2), Offset(size.x / 2, size.y * 0.8), paint);
     canvas.drawLine(Offset(size.x * 0.3, size.y * 0.4), Offset(size.x * 0.7, size.y * 0.4), paint);
-  }
-
-  void _renderSpeechBubbleHint(Canvas canvas) {
-    const bubbleSize = 20.0;
-    final offset = Offset(size.x * 0.8, -size.y * 0.5);
-    
-    final paint = Paint()..color = Colors.white;
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(offset.dx, offset.dy, bubbleSize, bubbleSize), const Radius.circular(5)), paint);
-    
-    TextPainter(
-      text: const TextSpan(text: '💬', style: TextStyle(fontSize: 12)),
-      textDirection: TextDirection.ltr,
-    )..layout()..paint(canvas, offset + const Offset(2, 2));
   }
 
   final Vector2 _keyboardDirection = Vector2.zero();

@@ -51,18 +51,17 @@ class RadialMenu extends PositionComponent with HasGameReference<SpiritWorldGame
 
   @override
   void render(Canvas canvas) {
-    // Optional: Draw a subtle background circle
     final paint = Paint()
-      ..color = Colors.black.withOpacity(0.3)
+      ..color = Colors.white.withOpacity(0.2)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+      ..strokeWidth = 2;
     canvas.drawCircle(Offset.zero, radius, paint);
   }
 }
 
 class RadialItem extends PositionComponent with TapCallbacks {
   final RadialAction action;
-  static const double itemSize = 40.0;
+  static const double itemSize = 44.0;
 
   RadialItem({
     required this.action,
@@ -76,19 +75,20 @@ class RadialItem extends PositionComponent with TapCallbacks {
   @override
   void render(Canvas canvas) {
     // Circle background
-    final paint = Paint()..color = Colors.blue.withOpacity(0.8);
+    final paint = Paint()..color = Colors.black.withOpacity(0.7);
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
+    
+    final borderPaint = Paint()
+      ..color = Colors.white.withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, borderPaint);
 
-    // Icon (using TextPainter since we don't have sprite icons yet)
+    // Label (Emoji)
     final textPainter = TextPainter(
       text: TextSpan(
-        text: String.fromCharCode(action.icon.codePoint),
-        style: TextStyle(
-          fontSize: 24,
-          fontFamily: action.icon.fontFamily,
-          package: action.icon.fontPackage,
-          color: Colors.white,
-        ),
+        text: action.label,
+        style: const TextStyle(fontSize: 24),
       ),
       textDirection: TextDirection.ltr,
     );
