@@ -49,12 +49,13 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     final cell = game.grid.getCell(gx, gy);
     final spiritualState = cell?.spiritualState ?? 0.0; 
 
+    // Der Score bestimmt den Erfolg von Aktionen (NPC Glaube + Umgebungs-Licht)
     final interactionScore = model.faith + (spiritualState * 50);
 
     // ===========================================================================
-    // FAITH-RESONANZ (Resonanz-Logik aus Nutzerwunsch)
-    // +100 NPC Faith -> +5 Player Faith
-    // -100 NPC Faith -> -5 Player Faith
+    // FAITH-RESONANZ (Geben und Nehmen)
+    // Jede Interaktion löst einen Energie-Austausch aus.
+    // +100 NPC Faith -> +5 Player Faith | -100 NPC Faith -> -5 Player Faith
     // ===========================================================================
     final double resonanceExchange = (model.faith / 20.0); 
     game.faith = (game.faith + resonanceExchange).clamp(0.0, 100.0);
@@ -65,27 +66,36 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         model.applyInfluence(12.0 + (spiritualState * 5)); 
         return '❤️';
       } else {
-        model.applyInfluence(-8.0);
+        model.applyInfluence(-8.0); // Ablehnung kostet NPC-Glauben
         return interactionScore < -20 ? '💀' : '😠';
       }
     } 
     
     if (type == 'help') {
       model.conversationCount++;
-      // Hilfe/Gespräch verbessert den NPC-Glauben leicht
+      // Ein Gespräch/Hilfe verbessert den NPC-Zustand immer ein wenig
       model.applyInfluence(8.0 + (spiritualState * 4));
       return '📦😊';
     } 
     
     if (type == 'convert') {
+      // 1. Check: Ist die Person bereits Christ?
+      if (model.isChristian) {
+        return '🙏✨'; // Bereits gläubig, keine Bekehrung nötig
+      }
+
+      // 2. Check: Ist das "Herz" bereit? (Score-Schwelle)
       if (interactionScore > 60) {
-        model.applyInfluence(100);
-        // BEKEHRUNGS-BOOST: Absoluter Boost von +20 (oder mehr)
+        model.applyInfluence(100); // NPC wird voll gläubig
+        
+        // MASSIVER FAITH-BOOST FÜR DEN SPIELER
         game.faith = (game.faith + 25.0).clamp(0.0, 100.0);
+        
         return '✨🕊️';
       } else {
-        model.applyInfluence(2.0); // Kleiner Trostpreis für den Versuch
-        if (interactionScore < 0) return '🚫';
+        // Bei Misserfolg: Kleiner Fortschritt, aber keine Bekehrung
+        model.applyInfluence(3.0); 
+        if (interactionScore < 0) return '🚫'; // Abblocken bei zu viel Dunkelheit
         return '🤔';
       }
     }
@@ -106,7 +116,6 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   }
 
   void _updateAI(double dt) {
-    // Einfaches Wandern...
     if (_random.nextDouble() < 0.01) {
       final gx = (position.x / CellComponent.cellSize).floor();
       final gy = (position.y / CellComponent.cellSize).floor();
@@ -122,7 +131,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     final tx = gx + dir.x.toInt();
     final ty = gy + dir.y.toInt();
     if (game.grid.isWalkable(tx, ty)) {
-      return Vector2(tx * CellComponent.cellSize + 12, ty * CellComponent.cellSize + 12);
+      return Vector2(tx * CellComponent.cellSize + 10, ty * CellComponent.cellSize + 10);
     }
     return null;
   }
@@ -131,6 +140,15 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   void render(Canvas canvas) {
     Color bodyColor = model.isChristian ? Colors.white : (model.faith < 0 ? Colors.red[800]! : Colors.grey);
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
+    
+    // Kreuz-Symbol für Christen
+    if (model.isChristian) {
+      final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
+      final center = (size / 2).toOffset();
+      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);
+      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), paint);
+    }
+
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
   }
 
