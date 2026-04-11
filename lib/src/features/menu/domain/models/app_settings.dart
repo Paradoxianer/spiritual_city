@@ -21,7 +21,7 @@ class AppSettings {
   factory AppSettings.fromMap(Map<dynamic, dynamic> map) => AppSettings(
         language: map['language'] as String? ?? 'de',
         lastDifficulty:
-            Difficulty.values[map['lastDifficulty'] as int? ?? Difficulty.normal.index],
+            Difficulty.values[map['lastDifficulty'] as int? ?? 1],
       );
 }
 

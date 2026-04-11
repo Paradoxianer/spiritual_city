@@ -32,7 +32,7 @@ class LanguageToggle extends StatelessWidget {
             const SizedBox(width: 8),
             _LangButton(
               flag: '🇬🇧',
-              code: 'EN',
+              code: 'en',
               selected: lang == 'en',
               onTap: () {
                 languageNotifier.setLanguage('en');

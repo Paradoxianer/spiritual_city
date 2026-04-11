@@ -57,7 +57,6 @@ class _MenuScreenState extends State<MenuScreen> {
                   const SizedBox(height: 32),
                   LanguageToggle(
                     languageNotifier: widget.menuService.languageNotifier,
-                    onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 16),
                 ],
