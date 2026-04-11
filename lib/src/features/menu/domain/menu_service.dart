@@ -7,6 +7,11 @@ import 'models/app_settings.dart';
 import 'models/difficulty.dart';
 import 'models/game_save.dart';
 
+// Re-export for convenience (Directives must appear before any declarations)
+export 'models/difficulty.dart';
+export 'models/game_save.dart';
+export 'models/app_settings.dart';
+
 /// Business logic for the main menu: language, difficulty and save/load.
 class MenuService {
   final MenuRepository _repository;
@@ -77,8 +82,3 @@ class MenuService {
 class ValueNotifierDifficulty extends ValueNotifier<Difficulty> {
   ValueNotifierDifficulty(super.value);
 }
-
-// Re-export for convenience
-export 'models/difficulty.dart';
-export 'models/game_save.dart';
-export 'models/app_settings.dart';
