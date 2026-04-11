@@ -7,10 +7,13 @@ import '../../../core/utils/seed_manager.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
+import '../domain/models/modifier_manager.dart';
+import '../domain/models/player_progress.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
-import 'components/cell_component.dart';
 import 'components/radial_menu.dart';
+import 'components/prayer_hud_component.dart';
+import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
@@ -22,14 +25,37 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final PlayerComponent player;
   late final JoystickComponent joystick;
   late final ChunkManager chunkManager;
-  late final ActionButton actionButton;
-  late final PrayerButton prayerButton;
+  late final SpiritualDynamicsSystem spiritualDynamics;
+  late final HudButton actionButton;
+  late final HudButton worldToggleButton;
+  late final PrayerHudComponent prayerHud;
 
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
 
-  // Interaction State
+  // Progress & Modifiers
+  late final PlayerProgress progress;
+  late final ModifierManager modifiers;
+
+  // Ressourcen
+  double faith = 100.0;
+  double health = 100.0;
+  double hunger = 80.0;
+  double materials = 40.0;
+
+  static const double maxFaith = 100.0;
+  static const double maxHealth = 100.0;
+  static const double maxHunger = 100.0;
+  static const double maxMaterials = 100.0;
+  static const double worldToggleCost = 10.0;
+
+  // Passive resource timers
+  double _hungerDrainTimer = 0.0;
+  static const double hungerDrainInterval = 30.0; // drain 1 hunger every 30 seconds
+  static const double hungerDrainAmount = 1.0;
+  static const double healthFromHungerThreshold = 20.0;
+
   Interactable? _nearestInteractable;
   Interactable? get nearestInteractable => _nearestInteractable;
   static const double interactionRange = 60.0;
@@ -46,6 +72,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     generator = CityGenerator(seedManager);
     grid = CityGrid();
 
+    // Progress & modifiers
+    progress = PlayerProgress();
+    modifiers = ModifierManager(progress: progress);
+
     player = PlayerComponent(joystick: _createJoystick());
     player.position = Vector2(256, 256); 
     await world.add(player);
@@ -53,8 +83,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
     await world.add(chunkManager);
 
+    spiritualDynamics = SpiritualDynamicsSystem();
+    await world.add(spiritualDynamics);
+
+    // Wire modifier values to the dynamics system
+    spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
+    spiritualDynamics.modifierDecayReduction = modifiers.decayReduction;
+
     await camera.viewport.add(joystick);
     await _addHudButtons();
+    
+    prayerHud = PrayerHudComponent();
+    await camera.viewport.add(prayerHud);
 
     camera.viewfinder.anchor = Anchor.center;
     camera.viewfinder.position = player.position.clone();
@@ -65,15 +105,45 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   void toggleWorld() {
+    if (!isSpiritualWorld && faith < worldToggleCost) {
+      _log.warning('Not enough faith to enter spiritual world');
+      return;
+    }
+    
+    if (!isSpiritualWorld) {
+      faith -= worldToggleCost;
+    }
+    
     isSpiritualWorld = !isSpiritualWorld;
+    _updateButtonStyles();
     _log.info('Switched World: $isSpiritualWorld');
   }
 
-  void handleAction() {
-    if (activeDialog != null) { closeDialog(); return; }
-    if (_currentMenu != null) { closeMenu(); return; }
-    
-    _openRadialMenu();
+  void handleActionDown() {
+    if (isSpiritualWorld) {
+      player.startChargingIntensity();
+    }
+  }
+
+  void handleActionUp() {
+    if (isSpiritualWorld) {
+      player.releasePrayer();
+    } else {
+      if (activeDialog != null) { closeDialog(); return; }
+      if (_currentMenu != null) { closeMenu(); return; }
+      _openRadialMenu();
+    }
+  }
+
+  void _updateButtonStyles() {
+    actionButton.updateContent(
+      isSpiritualWorld ? '✨' : '🖐️',
+      isSpiritualWorld ? Colors.amber.withValues(alpha: 0.7) : Colors.blue.withValues(alpha: 0.6)
+    );
+    worldToggleButton.updateContent(
+      isSpiritualWorld ? '🏙️' : '🙏',
+      isSpiritualWorld ? Colors.grey.withValues(alpha: 0.7) : Colors.purple.withValues(alpha: 0.6)
+    );
   }
 
   void _openRadialMenu() {
@@ -121,6 +191,61 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (isWorldReady.value && !paused) {
       _updateCamera(dt);
       _updateNearestInteractable();
+      _updatePassiveResources(dt);
+    }
+  }
+
+  void _updatePassiveResources(double dt) {
+    // Hunger drains slowly over time
+    _hungerDrainTimer += dt;
+    if (_hungerDrainTimer >= hungerDrainInterval) {
+      _hungerDrainTimer = 0.0;
+      hunger = (hunger - hungerDrainAmount).clamp(0.0, maxHunger);
+      // If starving, health starts draining
+      if (hunger < healthFromHungerThreshold) {
+        health = (health - 0.5).clamp(0.0, maxHealth);
+      }
+    }
+  }
+
+  /// Spend materials (returns false if not enough)
+  bool spendMaterials(double amount) {
+    if (materials < amount) return false;
+    materials = (materials - amount).clamp(0.0, maxMaterials);
+    return true;
+  }
+
+  /// Gain resources (clamped to max)
+  void gainFaith(double amount) => faith = (faith + amount).clamp(0.0, maxFaith);
+  void gainHealth(double amount) => health = (health + amount).clamp(0.0, maxHealth);
+  void gainHunger(double amount) => hunger = (hunger + amount).clamp(0.0, maxHunger);
+  void gainMaterials(double amount) => materials = (materials + amount).clamp(0.0, maxMaterials);
+
+  /// Record a completed prayer combat and check modifier unlocks
+  void recordPrayerCombat() {
+    progress.recordPrayerCombat();
+    _checkAndApplyModifiers();
+  }
+
+  /// Record a completed conversation
+  void recordConversation() {
+    progress.recordConversation();
+    _checkAndApplyModifiers();
+  }
+
+  /// Record an NPC conversion
+  void recordConversion() {
+    progress.recordConversion();
+    _checkAndApplyModifiers();
+  }
+
+  void _checkAndApplyModifiers() {
+    final unlocked = modifiers.checkUnlocks();
+    if (unlocked.isNotEmpty) {
+      // Re-wire modifier values after new unlocks
+      spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
+      spiritualDynamics.modifierDecayReduction = modifiers.decayReduction;
+      _log.info('New modifiers unlocked: $unlocked');
     }
   }
 
@@ -174,10 +299,22 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   Future<void> _addHudButtons() async {
-    actionButton = ActionButton(onPressed: handleAction, position: Vector2(size.x - 80, size.y - 80));
+    actionButton = HudButton(
+      icon: '🖐️',
+      color: Colors.blue.withValues(alpha: 0.6),
+      onDown: handleActionDown, 
+      onUp: handleActionUp, 
+      position: Vector2(size.x - 80, size.y - 80)
+    );
     await camera.viewport.add(actionButton);
-    prayerButton = PrayerButton(onPressed: toggleWorld, position: Vector2(size.x - 170, size.y - 80));
-    await camera.viewport.add(prayerButton);
+
+    worldToggleButton = HudButton(
+      icon: '🙏',
+      color: Colors.purple.withValues(alpha: 0.6),
+      onDown: toggleWorld,
+      position: Vector2(size.x - 170, size.y - 80)
+    );
+    await camera.viewport.add(worldToggleButton);
   }
 
   @override
@@ -185,38 +322,63 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     super.onGameResize(size);
     if (isLoaded) {
       actionButton.position = Vector2(size.x - 80, size.y - 80);
-      prayerButton.position = Vector2(size.x - 170, size.y - 80);
+      worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
     }
   }
 }
 
-class ActionButton extends PositionComponent with TapCallbacks {
-  final VoidCallback onPressed;
-  ActionButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(80));
+class HudButton extends PositionComponent with TapCallbacks {
+  final VoidCallback? onDown;
+  final VoidCallback? onUp;
+  String icon;
+  Color color;
+  
+  HudButton({
+    required this.icon,
+    required this.color,
+    this.onDown, 
+    this.onUp, 
+    required super.position
+  }) : super(anchor: Anchor.center, size: Vector2.all(75)); // Einheitliche Größe
+
+  void updateContent(String newIcon, Color newColor) {
+    icon = newIcon;
+    color = newColor;
+  }
 
   @override
   void render(Canvas canvas) {
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.blue.withValues(alpha: 0.6));
-    TextPainter(
-      text: const TextSpan(text: '🖐️', style: TextStyle(fontSize: 32)),
-      textDirection: TextDirection.ltr
-    )..layout()..paint(canvas, Offset(size.x / 2 - 16, size.y / 2 - 20));
-  }
-  @override
-  void onTapDown(TapDownEvent event) => onPressed();
-}
+    final center = Offset(size.x / 2, size.y / 2);
+    final radius = size.x / 2;
 
-class PrayerButton extends PositionComponent with TapCallbacks {
-  final VoidCallback onPressed;
-  PrayerButton({required this.onPressed, required super.position}) : super(anchor: Anchor.center, size: Vector2.all(70));
-  @override
-  void render(Canvas canvas) {
-    canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, Paint()..color = Colors.purple.withValues(alpha: 0.6));
+    // 1. Schwarzer Rand / Schatten
+    canvas.drawCircle(center, radius + 2, Paint()..color = Colors.black.withValues(alpha: 0.5));
+    
+    // 2. Haupt-Button
+    canvas.drawCircle(center, radius, Paint()..color = color);
+
+    // 3. Glanz-Effekt oben
+    final shinePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.white.withValues(alpha: 0.3), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, shinePaint);
+
+    // 4. Icon
     TextPainter(
-      text: const TextSpan(text: '🙏', style: TextStyle(fontSize: 28)), 
+      text: TextSpan(text: icon, style: const TextStyle(fontSize: 30)),
       textDirection: TextDirection.ltr
-    )..layout()..paint(canvas, Offset(size.x / 2 - 14, size.y / 2 - 18));
+    )..layout()..paint(canvas, Offset(size.x / 2 - 15, size.y / 2 - 19));
   }
+
   @override
-  void onTapDown(TapDownEvent event) => onPressed();
+  void onTapDown(TapDownEvent event) => onDown?.call();
+
+  @override
+  void onTapUp(TapUpEvent event) => onUp?.call();
+
+  @override
+  void onTapCancel(TapCancelEvent event) => onUp?.call();
 }

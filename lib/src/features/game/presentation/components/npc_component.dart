@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/utils/game_time.dart';
 import '../../domain/models/npc_model.dart';
 import '../../domain/models/interactions.dart';
 import '../spirit_world_game.dart';
@@ -9,14 +10,14 @@ import 'cell_component.dart';
 
 class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGame> implements Interactable {
   final NPCModel model;
-  
-  static const double npcSize = 20.0;
-  double _currentSpeed = 40.0;
-  final Random _random = Random();
 
-  Vector2? _targetPosition;
-  double _aiUpdateTimer = 0;
-  static const double aiUpdateInterval = 2.0; 
+  static const double npcSize = 20.0;
+  final Random _random = Random();
+  
+  // Timer for daily NPC spiritual influence on cells (Lastenheft §6.3)
+  double _spiritualInfluenceTimer = 0.0;
+  /// One in-game day = [GameTime.gameDaySeconds] real seconds.
+  static const double _spiritualInfluenceInterval = GameTime.gameDaySeconds;
 
   NPCComponent({required this.model}) : super(
     position: model.homePosition.clone(),
@@ -35,7 +36,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   Vector2 get interactionPosition => position;
 
   String _getNPCEmoji() {
-    if (model.isChristian) return '🕊️';
+    if (model.isChristian) return '✝️'; // Geändert von 🕊️ zu ✝️
     if (model.faith < -30) return '😠';
     if (model.faith < 30) return '👤';
     return '🤔';
@@ -43,48 +44,63 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   void onInteract() {
+    model.resetSession(); 
     game.showDialog(model.name, _getNPCEmoji());
   }
 
   @override
   String handleInteraction(String type) {
-    // 1. Hole den Wert der unsichtbaren Welt (-1.0 bis +1.0)
+    model.currentSessionInteractions++;
+    if (model.currentSessionInteractions > 3) {
+      return '👋'; 
+    }
+
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
     final spiritualState = cell?.spiritualState ?? 0.0; 
 
-    // 2. Berechne den Interaktions-Score
-    // Glaube des NPC + Einfluss der Umgebung
-    // Ein Wert > 0 ist tendenziell positiv.
     final interactionScore = model.faith + (spiritualState * 50);
+
+    final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0);
+    game.gainFaith(resonanceExchange);
+
+    if (type == 'talk') {
+      model.applyInfluence(1.0);
+      game.recordConversation();
+      return '💬😊';
+    }
 
     if (type == 'pray') {
       model.prayerCount++;
-      // Erfolgswahrscheinlichkeit steigt mit positivem Score
       if (interactionScore + _random.nextInt(40) > 20) {
-        model.applyInfluence(15.0); // Gebet erhöht Faith
+        model.applyInfluence(12.0 + (spiritualState * 5)); 
+        game.gainFaith(3.0);
         return '❤️';
       } else {
-        model.applyInfluence(-5.0); // Ablehnung senkt Faith leicht
+        model.applyInfluence(-8.0);
         return interactionScore < -20 ? '💀' : '😠';
       }
     } 
     
     if (type == 'help') {
       model.conversationCount++;
-      // Hilfe ist immer positiv, aber stärker in "hellen" Gebieten
-      model.applyInfluence(10.0 + (spiritualState * 5));
+      model.applyInfluence(8.0 + (spiritualState * 4));
+      game.gainFaith(5.0);       // +5 Faith for helping
+      game.spendMaterials(8.0);  // costs 8 MP (silently fails if not enough)
       return '📦😊';
     } 
     
     if (type == 'convert') {
-      // Bekehrung erfordert einen hohen Score (> 50)
-      if (interactionScore > 50) {
-        model.applyInfluence(100); // Voller Glaube
-        return '✨🕊️';
+      if (model.isChristian) return '✝️🙏'; // Kreuz statt Stern
+      
+      if (interactionScore > 60) {
+        model.applyInfluence(100);
+        game.gainFaith(25.0);
+        game.recordConversion();
+        return '✝️🕊️';
       } else {
-        // Reaktion zeigt, wie weit man noch entfernt ist
+        model.applyInfluence(3.0); 
         if (interactionScore < 0) return '🚫';
         return '🤔';
       }
@@ -102,82 +118,67 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   void update(double dt) {
     super.update(dt);
     if (game.paused) return;
-
-    _aiUpdateTimer -= dt;
-    if (_aiUpdateTimer <= 0) {
-      _updateAI();
-      _aiUpdateTimer = aiUpdateInterval + _random.nextDouble(); 
-    }
-
-    if (_targetPosition != null) {
-      _moveTowardsTarget(dt);
-    }
+    _updateAI(dt);
+    _updateSpiritualInfluence(dt);
   }
 
-  void _updateAI() {
+  /// Daily: NPC faith state influences the cell they are standing on (Lastenheft §6.3)
+  void _updateSpiritualInfluence(double dt) {
+    _spiritualInfluenceTimer += dt;
+    if (_spiritualInfluenceTimer < _spiritualInfluenceInterval) return;
+    _spiritualInfluenceTimer = 0.0;
+
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
-    final state = cell?.spiritualState ?? 0;
+    if (cell == null) return;
 
-    if (state < -0.5 && !model.isChristian) {
-      _currentSpeed = 15.0;
-    } else {
-      _currentSpeed = 35.0 + (model.faith / 10.0);
+    if (model.isChristian) {
+      // Converted Christians radiate positive influence
+      cell.spiritualState = (cell.spiritualState + model.faith * 0.003).clamp(-1.0, 1.0);
+    } else if (model.faith > 50) {
+      // Sympathetic NPCs provide a weak positive nudge
+      cell.spiritualState = (cell.spiritualState + 0.05).clamp(-1.0, 1.0);
+    } else if (model.faith < -50) {
+      // Very hostile NPCs reinforce darkness
+      cell.spiritualState = (cell.spiritualState - model.faith.abs() * 0.002).clamp(-1.0, 1.0);
     }
+  }
 
-    if (_targetPosition == null || position.distanceTo(_targetPosition!) < 4) {
-      _targetPosition = _findNextWanderTarget(gx, gy);
+  void _updateAI(double dt) {
+    if (_random.nextDouble() < 0.01) {
+      final gx = (position.x / CellComponent.cellSize).floor();
+      final gy = (position.y / CellComponent.cellSize).floor();
+      final target = _findNextWanderTarget(gx, gy);
+      if (target != null) {
+        position.setFrom(target);
+      }
     }
   }
 
   Vector2? _findNextWanderTarget(int gx, int gy) {
-    final directions = [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)];
-    directions.shuffle(_random);
-    for (final dir in directions) {
-      final tx = gx + dir.x.toInt();
-      final ty = gy + dir.y.toInt();
-      if (game.grid.isWalkable(tx, ty)) {
-        return Vector2(
-          tx * CellComponent.cellSize + CellComponent.cellSize / 2,
-          ty * CellComponent.cellSize + CellComponent.cellSize / 2,
-        );
-      }
+    final dir = [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)][_random.nextInt(4)];
+    final tx = gx + dir.x.toInt();
+    final ty = gy + dir.y.toInt();
+    if (game.grid.isWalkable(tx, ty)) {
+      return Vector2(tx * CellComponent.cellSize + 10, ty * CellComponent.cellSize + 10);
     }
-    return null; 
-  }
-
-  void _moveTowardsTarget(double dt) {
-    final diff = _targetPosition! - position;
-    if (diff.length < _currentSpeed * dt) {
-      position.setFrom(_targetPosition!);
-      _targetPosition = null;
-    } else {
-      diff.normalize();
-      position.add(diff * _currentSpeed * dt);
-    }
+    return null;
   }
 
   @override
   void render(Canvas canvas) {
-    Color bodyColor;
-    if (model.isChristian) {
-      bodyColor = Colors.white;
-    } else {
-      if (model.faith < 0) {
-        bodyColor = Color.lerp(Colors.red[900], Colors.grey, (model.faith + 100) / 100)!;
-      } else {
-        bodyColor = Color.lerp(Colors.grey, Colors.blue[100], model.faith / 50)!;
-      }
-    }
-    
+    Color bodyColor = model.isChristian ? Colors.white : (model.faith < 0 ? Colors.red[800]! : Colors.grey);
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
     
+    // Kreuz-Symbol Rendering auf dem NPC
     if (model.isChristian) {
-      final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
+      final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.5;
       final center = (size / 2).toOffset();
-      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);
-      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), paint);
+      // Vertikaler Balken
+      canvas.drawLine(center + const Offset(0, -5), center + const Offset(0, 5), paint);
+      // Horizontaler Balken
+      canvas.drawLine(center + const Offset(-3.5, -1.5), center + const Offset(3.5, -1.5), paint);
     }
 
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
@@ -185,10 +186,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   void _renderSpiritualAura(Canvas canvas) {
     final faithFactor = (model.faith + 100) / 200.0;
-    final auraColor = Color.lerp(Colors.red, Colors.green, faithFactor)!
-        .withValues(alpha: 0.3 + (faithFactor * 0.4));
-    
-    final auraPaint = Paint()..color = auraColor..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-    canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, auraPaint);
+    final auraColor = Color.lerp(Colors.red, Colors.green, faithFactor)!.withValues(alpha: 0.5);
+    canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, Paint()..color = auraColor..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
   }
 }

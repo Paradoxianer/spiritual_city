@@ -6,13 +6,14 @@ import '../../domain/models/city_cell.dart';
 import '../../domain/models/cell_object.dart';
 import 'cell_component.dart';
 import '../spirit_world_game.dart';
+import 'spiritual_renderer.dart';
 
 class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
   final CityChunk chunk;
   static const double cellSize = CellComponent.cellSize;
 
   Picture? _cachedPicture;
-  bool _isSpiritualCache = false;
+  late final SpiritualRenderer _spiritualRenderer;
 
   ChunkComponent(this.chunk) {
     position = Vector2(
@@ -20,23 +21,21 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
       chunk.chunkY * CityChunk.chunkSize * cellSize,
     );
     size = Vector2.all(CityChunk.chunkSize * cellSize);
+    
+    _spiritualRenderer = SpiritualRenderer(chunk);
+    add(_spiritualRenderer);
   }
 
   void _createCache() {
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
-    _isSpiritualCache = game.isSpiritualWorld;
 
     for (int y = 0; y < CityChunk.chunkSize; y++) {
       for (int x = 0; x < CityChunk.chunkSize; x++) {
         final cell = chunk.cells['$x,$y'];
         if (cell == null) continue;
         final offset = Offset(x * cellSize, y * cellSize);
-        if (_isSpiritualCache) {
-          _renderSpiritualCell(canvas, cell, offset);
-        } else {
-          _renderPhysicalCell(canvas, cell, offset);
-        }
+        _renderPhysicalCell(canvas, cell, offset);
         canvas.drawRect(Rect.fromLTWH(offset.dx, offset.dy, cellSize, cellSize), _borderPaint);
       }
     }
@@ -45,11 +44,15 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
 
   @override
   void render(Canvas canvas) {
-    if (_cachedPicture == null || _isSpiritualCache != game.isSpiritualWorld) {
-      _createCache();
-    }
-    if (_cachedPicture != null) {
-      canvas.drawPicture(_cachedPicture!);
+    // Wenn wir in der unsichtbaren Welt sind, rendert der SpiritualRenderer (als Child)
+    // Wir rendern hier nur die physische Welt, falls sichtbar oder transparent
+    if (!game.isSpiritualWorld) {
+      if (_cachedPicture == null) {
+        _createCache();
+      }
+      if (_cachedPicture != null) {
+        canvas.drawPicture(_cachedPicture!);
+      }
     }
   }
 
@@ -61,7 +64,7 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
   static final Paint _fillHouse = Paint()..color = const Color(0xFF795548);
   static final Paint _fillApartment = Paint()..color = const Color(0xFF5D4037);
   static final Paint _fillSkyscraper = Paint()..color = const Color(0xFF263238);
-  static final Paint _accentYellow = Paint()..color = Colors.yellow.withOpacity(0.5);
+  static final Paint _accentYellow = Paint()..color = Colors.yellow.withValues(alpha: 0.5);
   static final Paint _borderPaint = Paint()..style = PaintingStyle.stroke..color = Colors.white10;
 
   void _renderPhysicalCell(Canvas canvas, CityCell cell, Offset offset) {
@@ -77,11 +80,5 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
       canvas.drawRect(Rect.fromLTWH(offset.dx + cellSize * 0.2, offset.dy + cellSize * 0.3, cellSize * 0.2, cellSize * 0.2), _accentYellow);
       canvas.drawRect(Rect.fromLTWH(offset.dx + cellSize * 0.6, offset.dy + cellSize * 0.3, cellSize * 0.2, cellSize * 0.2), _accentYellow);
     } else if (data is NatureData) { canvas.drawRect(rect, data.type == NatureType.water ? _water : _tree); }
-  }
-
-  void _renderSpiritualCell(Canvas canvas, CityCell cell, Offset offset) {
-    final state = cell.spiritualState;
-    final c = state > 0 ? Color.lerp(Colors.blue[900]!, Colors.amber[400]!, state)! : Color.lerp(Colors.grey[900]!, Colors.red[900]!, state.abs())!;
-    canvas.drawRect(Rect.fromLTWH(offset.dx, offset.dy, cellSize, cellSize), Paint()..color = c);
   }
 }

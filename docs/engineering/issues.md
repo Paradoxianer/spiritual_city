@@ -1,5 +1,5 @@
 ﻿# 📋 GitHub Issues Roadmap
-_Last updated: 10.04.2026 20:40_
+_Last updated: 10.04.2026 23:36_
 _Sorted by Release and Priority (High > Medium > Low)_
 
 ## 🔥 ✨ #3: feat: Die Geistliche Welt (The Invisible Realm) [prio: 1, feature] 🏁 [Release 1]
@@ -72,14 +72,6 @@ Optimierung der Game-of-Life Parameter für die geistliche Welt. Validierung der
 
 ---
 
-## ⚡ ✨ #8: feat: Daten-Persistenz & Welt-Speicherung [prio: 2, feature] 🏁 [Release 1]
----
-**Status / Description:**
-
-Implementierung der Speicherlogik mit Hive. Speichern von Zellzuständen (geistlich/real) und NPC-Eigenschaften beim Verlassen des Spiels. Kap. 8 & 10.
-
----
-
 ## ⚡ ✨ #13: feat: Asset Management & Sprite Loading [prio: 2, feature] 🏁 [Release 1]
 ---
 **Status / Description:**
@@ -112,6 +104,14 @@ Implementierung der Speicherlogik mit Hive. Speichern von Zellzuständen (geistl
 **Status / Description:**
 
 Implementierung eines robusten Error Handlings (try-catch Blocks) und Logging (z.B. mit logger package) laut rules.md.
+
+---
+
+## ⚡ ✨ #8: feat: Daten-Persistenz & Welt-Speicherung [prio: 2, feature] 🏁 [Release 1]
+---
+**Status / Description:**
+
+Implementierung der Speicherlogik mit Hive. Speichern von Zellzuständen (geistlich/real) und NPC-Eigenschaften beim Verlassen des Spiels. Kap. 8 & 10.
 
 ---
 
@@ -174,19 +174,11 @@ Kap. 9 Lastenheft. Depends on #2, #4.
 
 ---
 
-## ☕ ✨ #10: feat: Audio Engine & Ambient Sound [prio: 3, feature] 🏁 [Release 1]
+## ☕ #14: task: Multi-Platform Compatibility Check [question, prio: 3] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Implementierung von Flame_Audio. Integration von Ambient-Pads und Stadtgeräuschen gemäß Kap. 9 Lastenheft.
-
----
-
-## ☕ ✨ #5: feat: NPC-System & Einfache Missionen [prio: 3, feature] 🏁 [Release 1]
----
-**Status / Description:**
-
-Basis-Klasse für NPCs mit geistlichem Zustand (-100 bis +100). Prozedurale Bewohner und erste Dialogmissionen. Kap. 5.3 & 8.2.
+Validierung der Performance und Steuerung auf Web, Android und iOS (Lastenheft Punkt 1).
 
 ---
 
@@ -198,11 +190,95 @@ Automatisierte Tests und Linting bei jedem Push/PR sicherstellen (Analyze & Test
 
 ---
 
-## ☕ #14: task: Multi-Platform Compatibility Check [question, prio: 3] 🏁 [Release 1]
+## ☕ ✨ #5: feat: NPC-System & Einfache Missionen [prio: 3, feature] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Validierung der Performance und Steuerung auf Web, Android und iOS (Lastenheft Punkt 1).
+Basis-Klasse für NPCs mit geistlichem Zustand (-100 bis +100). Prozedurale Bewohner und erste Dialogmissionen. Kap. 5.3 & 8.2.
+
+---
+
+## ☕ ✨ #10: feat: Audio Engine & Ambient Sound [prio: 3, feature] 🏁 [Release 1]
+---
+**Status / Description:**
+
+Implementierung von Flame_Audio. Integration von Ambient-Pads und Stadtgeräuschen gemäß Kap. 9 Lastenheft.
+
+---
+
+## ✨ #32: feat: Modifier-System für Aktionsbuttons und Einfluss-Logik [enhancement, feature] 🏁 [Release 1]
+---
+**Status / Description:**
+
+**Beschreibung:**
+Dieses Feature führt ein Modifier-System für Aktionsbuttons (Pulsieren) und Einfluss-Berechnung in der unsichtbaren Welt ein.
+
+---
+### Aktionsbutton-Geschwindigkeit
+- Beide Aktionsbuttons (Beten/Einsatz für Gott) erhalten unabhängige Modifier
+- Modifier können als Missions-Reward erspielt werden
+- Man startet mit extrem schnellem Pulsieren (kaum Kontrolle)
+- Mit Erfolgen/Missionen wird das Tempo verlangsamt und steuerbarer, sodass koordinierter Gebietsausbau für Gott möglich ist
+
+---
+### Einfluss/Mission-Modifier
+- Modifier verändern die Einfluss-Stärke des platzierten Glaubens in der unsichtbaren Welt
+- Es gibt Modifier, mit denen positive Bereiche (grüne Zellen) mit Faktor x verstärkt werden
+- Optional: Jede Zelle erhält einen Widerstandswert gegen Negativität
+- Specials: z.B. Modifier, die einen rot-Negativ-Bereich direkt mit neuem Vorzeichen versehen
+
+---
+**Synergie:**
+- Bildet Grundlage für individuelles Power-Ungleichgewicht in Gameplay (Strategie!)
+- Eng verbunden mit Daemon-NPCs & der Zellenlogik
+
+---
+**Verknüpfungen:**
+- Hat Überschneidungen mit Issue #28 (Dual-Control Prayer Combat), #5 (NPC-System)
+- Erweitert das geplante Modifier-System (Issue #29)
+
+---
+
+## ✨ #31: feat: Daemon NPC System in der Unsichtbaren Welt [feature] 🏁 [Release 1]
+---
+**Status / Description:**
+
+**Beschreibung:**
+Dieses Feature fügt Dämonen-NPCs als wandernde, negativ beeinflussende Kräfte zur unsichtbaren Welt hinzu (inspiriert von Mt 12,43-45 etc.).
+
+---
+### Daemon-Mechanik
+```python
+class DaemonNPC:
+    value: -1 bis -100  # Finsternis-Kraft / "Anti Faith"
+
+    # Bewegung pro Tick:
+    if auf_rote_Zelle(-50..-100):
+        target_value -= 1
+    elif auf_neutrale_Zelle(-30..+30):
+        target_value -= 2
+        ihre_kraft -= 2
+    elif auf_gruene_Zelle(+50..+100):
+        target_value -= 3
+        ihre_kraft -= 6  # Höherer Widerstand!
+
+    if ihre_kraft <= 0:
+        self.dissolve()
+        hinterlasse_daemon_residuum_marker()
+```
+
+---
+**Zusatz-Mechaniken:**
+- Gebets-Aktion zieht Dämonen-NPCs verstärkt an (attraction *= 2.5, spawn_chance_increase +40%, 30s duration)
+- Dämonen spawnen nur in stark negativen Bereichen
+- Lebensdauer begrenzt (value läuft gegen 0)
+- Bei Auflösung Spezial-Markierung "Residuum"
+
+---
+**Verknüpfungen:**
+- Abgestimmt mit Issue #3 (Die Geistliche Welt) und Issue #30 (Visual Renderer)
+- Künftige Erweiterung: Modifier für Daemon-Stärke, Resistenz, Spawns
+
 
 ---
 
@@ -253,14 +329,6 @@ Kap. 2.3 & 9.2 Lastenheft. Depends on #3, #6.
 
 ---
 
-## ⚡ ✨ #25: feat: Initial Loading Screen & Progress Indicator [enhancement, prio: 2]
----
-**Status / Description:**
-
-Zeigt einen Ladebildschirm an, während die ersten Stadt-Chunks generiert werden. Verhindert das 'Springen' der Welt beim Start.
-
----
-
 ## ⚡ ✨ #18: feat: Sprite-basiertes Tile-Rendering [prio: 2, feature]
 ---
 **Status / Description:**
@@ -293,17 +361,6 @@ Kap. 5.4 & 10.1 Lastenheft. Depends on #3, Prayer-Combat Issue.
 
 ---
 
-## ⚡ ✨ #23: feat: Deterministic Building Interiors [prio: 2, feature]
----
-**Status / Description:**
-
-Jedes Gebäude im Grid erhält basierend auf seinen Welt-Koordinaten einen eindeutigen Seed. 
-- Beim Betreten eines Hauses wird ein Innenraum generiert, der bei jedem Besuch identisch bleibt.
-- Verknüpfung der Außen-Zelle mit der Innenraum-Logik.
-Blocks #8
-
----
-
 ## ⚡ ✨ #20: feat: Navigation & Collision System [prio: 2, feature]
 ---
 **Status / Description:**
@@ -324,6 +381,25 @@ Ein kontextsensitiver Button im HUD, der erscheint, wenn der Spieler vor einem i
 - Ermöglicht das Betreten von Häusern oder das Handeln mit NPCs.
 - Erste Implementierung einer 'Interaktions-Range'.
 Blocks #4
+
+---
+
+## ⚡ ✨ #25: feat: Initial Loading Screen & Progress Indicator [enhancement, prio: 2]
+---
+**Status / Description:**
+
+Zeigt einen Ladebildschirm an, während die ersten Stadt-Chunks generiert werden. Verhindert das 'Springen' der Welt beim Start.
+
+---
+
+## ⚡ ✨ #23: feat: Deterministic Building Interiors [prio: 2, feature]
+---
+**Status / Description:**
+
+Jedes Gebäude im Grid erhält basierend auf seinen Welt-Koordinaten einen eindeutigen Seed. 
+- Beim Betreten eines Hauses wird ein Innenraum generiert, der bei jedem Besuch identisch bleibt.
+- Verknüpfung der Außen-Zelle mit der Innenraum-Logik.
+Blocks #8
 
 ---
 

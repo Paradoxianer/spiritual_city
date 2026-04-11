@@ -52,7 +52,7 @@ class RadialMenu extends PositionComponent with HasGameReference<SpiritWorldGame
   @override
   void render(Canvas canvas) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(Offset.zero, radius, paint);
@@ -75,11 +75,11 @@ class RadialItem extends PositionComponent with TapCallbacks {
   @override
   void render(Canvas canvas) {
     // Circle background
-    final paint = Paint()..color = Colors.black.withOpacity(0.7);
+    final paint = Paint()..color = Colors.black.withValues(alpha: 0.7);
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
     
     final borderPaint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
+      ..color = Colors.white.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, borderPaint);

@@ -1,0 +1,111 @@
+import 'package:logging/logging.dart';
+import 'player_progress.dart';
+
+/// Passive modifier that is permanently active once unlocked.
+class Modifier {
+  final String id;
+  final String name;
+  final String description;
+  bool unlocked;
+
+  Modifier({
+    required this.id,
+    required this.name,
+    required this.description,
+    this.unlocked = false,
+  });
+}
+
+/// Manages all game modifiers.
+///
+/// Modifiers are unlocked via [checkUnlocks] which is called after each
+/// progress counter update. Once unlocked they are applied automatically.
+///
+/// Lastenheft §5.4
+class ModifierManager {
+  static final _log = Logger('ModifierManager');
+
+  final PlayerProgress progress;
+
+  // ---- COMBAT MODIFIERS ---------------------------------------------------
+
+  /// Inbrunst: Timing-Fenster +5% breiter (unlocked after 10 prayer combats)
+  late final Modifier inbrunst;
+
+  /// Ausdauer: Zone grows 20% faster (unlocked after 5 territories partially taken)
+  late final Modifier ausdauer;
+
+  /// Konzentration: Faith-Pulse 15% slower (unlocked after 10 bible readings)
+  late final Modifier konzentration;
+
+  /// Kraft: Impact-Power +20% (unlocked after 3 NPCs converted)
+  late final Modifier kraft;
+
+  /// Weisheit: Faith cost -10% per combat (unlocked after 20 conversations)
+  late final Modifier weisheit;
+
+  // ---- TERRITORY MODIFIERS ------------------------------------------------
+
+  /// Bewahrung: Fallback rate -15% for green cells (1 full territory taken)
+  late final Modifier bewahrung;
+
+  /// Wachstum: Green cells influence neighbours +10% stronger (30 conversations)
+  late final Modifier wachstum;
+
+  ModifierManager({required this.progress}) {
+    inbrunst      = Modifier(id: 'inbrunst',      name: 'Inbrunst',      description: 'Timing-Fenster +5% breiter');
+    ausdauer      = Modifier(id: 'ausdauer',      name: 'Ausdauer',      description: 'Gebets-Zone wächst 20% schneller');
+    konzentration = Modifier(id: 'konzentration', name: 'Konzentration', description: 'Faith-Pulse 15% langsamer');
+    kraft         = Modifier(id: 'kraft',         name: 'Kraft',         description: 'Impact-Power +20%');
+    weisheit      = Modifier(id: 'weisheit',      name: 'Weisheit',      description: 'Faith-Kosten pro Combat -10%');
+    bewahrung     = Modifier(id: 'bewahrung',     name: 'Bewahrung',     description: 'Rückfall-Rate -15% für grüne Zellen');
+    wachstum      = Modifier(id: 'wachstum',      name: 'Wachstum',      description: 'Grüne Zellen beeinflussen Nachbarn +10%');
+  }
+
+  /// Check all unlock conditions and unlock modifiers as appropriate.
+  /// Returns a list of newly-unlocked modifier names (for showing notifications).
+  List<String> checkUnlocks() {
+    final newlyUnlocked = <String>[];
+
+    void tryUnlock(Modifier m, bool condition) {
+      if (!m.unlocked && condition) {
+        m.unlocked = true;
+        newlyUnlocked.add(m.name);
+        _log.info('Modifier unlocked: ${m.name}');
+      }
+    }
+
+    tryUnlock(inbrunst,      progress.prayerCombatsCompleted >= 10);
+    tryUnlock(ausdauer,      progress.territoriesPartiallyTaken >= 5);
+    tryUnlock(konzentration, progress.bibleReadingsCompleted >= 10);
+    tryUnlock(kraft,         progress.npcsConverted >= 3);
+    tryUnlock(weisheit,      progress.conversationsHeld >= 20);
+    tryUnlock(bewahrung,     progress.territoriesFullyTaken >= 1);
+    tryUnlock(wachstum,      progress.conversationsHeld >= 30);
+
+    return newlyUnlocked;
+  }
+
+  // ---- Computed multipliers -----------------------------------------------
+
+  /// Modifier for zone growth speed (applied to modifierSizeSpeed in PlayerComponent)
+  double get zoneSizeSpeedMultiplier => ausdauer.unlocked ? 1.2 : 1.0;
+
+  /// Modifier for faith pulse speed (applied to modifierIntensitySpeed) – slower = more control
+  double get faithPulseSpeedMultiplier => konzentration.unlocked ? 0.85 : 1.0;
+
+  /// Multiplier applied directly to impact power
+  double get impactPowerMultiplier => kraft.unlocked ? 1.2 : 1.0;
+
+  /// Faith cost multiplier per combat
+  double get faithCostMultiplier => weisheit.unlocked ? 0.9 : 1.0;
+
+  /// Optimal timing window extension (added to the 0.7 threshold)
+  double get optimalWindowExtension => inbrunst.unlocked ? 0.05 : 0.0;
+
+  /// Spread multiplier for green cells (wachstum)
+  double get greenSpreadMultiplier => wachstum.unlocked ? 1.1 : 1.0;
+
+  /// Decay reduction (bewahrung)
+  double get decayReduction => bewahrung.unlocked ? 0.15 : 0.0;
+}
