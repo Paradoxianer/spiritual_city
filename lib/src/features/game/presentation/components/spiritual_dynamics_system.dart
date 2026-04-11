@@ -38,6 +38,17 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   /// Fall-back rate (negative drift) for cells without neighbours or support.
   static const double fallbackRate = 0.005;
 
+  /// Extra negative pressure a strongly-dark cell (< [_darkBastion]) exerts
+  /// on each of its neighbours that is less negative than it (boundary seepage).
+  static const double darkSeepageFactor = 0.008;
+
+  /// Threshold below which a cell is considered a "dark bastion" that seeps.
+  static const double _darkBastion = -0.55;
+
+  /// How much of a positive delta a dark bastion absorbs (resistance to light).
+  /// 0.35 means only 35 % of the positive nudge is applied.
+  static const double darkResistanceFactor = 0.35;
+
   double _timer = 0.0;
 
   // Daemon spawning
@@ -77,11 +88,15 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
           // 1. Neighbour influence (4-directional)
           double neighborSum = 0.0;
           int neighborCount = 0;
+          int strongDarkNeighborCount = 0;
           for (final dir in _dirs) {
             final neighbor = game.grid.getCell(cell.x + dir[0], cell.y + dir[1]);
             if (neighbor != null) {
               neighborSum += neighbor.spiritualState;
               neighborCount++;
+              if (neighbor.spiritualState < _darkBastion) {
+                strongDarkNeighborCount++;
+              }
             }
           }
           if (neighborCount > 0) {
@@ -90,6 +105,13 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
             delta += (avgNeighbor - cell.spiritualState) *
                 spreadFactor *
                 modifierSpreadMultiplier;
+          }
+
+          // 1b. Dark seepage: each strongly-dark neighbour pushes the cell
+          //     a little more negative, regardless of the neighbour average.
+          //     This makes darkness slowly seep into border areas.
+          if (strongDarkNeighborCount > 0) {
+            delta -= strongDarkNeighborCount * darkSeepageFactor;
           }
 
           // 2. Church cells act as anchors of positivity
@@ -120,7 +142,15 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     // Apply all deltas at once
     int updates = 0;
     for (final entry in deltas.entries) {
-      final newState = (entry.key.spiritualState + entry.value).clamp(-1.0, 1.0);
+      var d = entry.value;
+
+      // Resistance: dark bastions are hard to push back toward the light.
+      // Only the positive component of the delta is reduced.
+      if (entry.key.spiritualState < _darkBastion && d > 0) {
+        d *= darkResistanceFactor;
+      }
+
+      final newState = (entry.key.spiritualState + d).clamp(-1.0, 1.0);
       if ((newState - entry.key.spiritualState).abs() > 1e-6) {
         entry.key.spiritualState = newState;
         updates++;
