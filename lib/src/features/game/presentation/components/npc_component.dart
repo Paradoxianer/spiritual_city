@@ -4,7 +4,6 @@ import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
 import '../../domain/models/npc_model.dart';
-import '../../domain/models/npc_reaction.dart';
 import '../../domain/models/interactions.dart';
 import '../../domain/services/faith_calculator_service.dart';
 import '../spirit_world_game.dart';
