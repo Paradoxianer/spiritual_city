@@ -14,6 +14,9 @@ enum NPCAIState { idle, walking, talking, praying, working, eating, sleeping }
 /// Personality archetype that influences AI decision-making.
 enum NPCPersonality { friendly, cautious, busy, sad, helpful }
 
+// Shared Random instance – avoids creating many short-lived Random objects.
+final _sharedRandom = Random();
+
 /// NPC Data Model based on Lastenheft Section 6.2
 class NPCModel {
   final String id;
@@ -98,6 +101,6 @@ class NPCModel {
 
   static NPCPersonality _randomPersonality() {
     final values = NPCPersonality.values;
-    return values[Random().nextInt(values.length)];
+    return values[_sharedRandom.nextInt(values.length)];
   }
 }

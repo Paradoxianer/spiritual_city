@@ -13,7 +13,6 @@ import '../domain/models/player_progress.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/services/npc_ai_service.dart';
 import 'components/chunk_manager.dart';
-import 'components/npc_component.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
 import 'components/prayer_hud_component.dart';
@@ -73,6 +72,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double interactionRange = 60.0;
   
   GameDialogData? activeDialog;
+
+  /// The NPC model currently engaged in a dialog session.  Cleared when the
+  /// dialog is closed so [closeDialog] can resume exactly that NPC's AI.
+  NPCModel? _activeDialogNPC;
 
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
@@ -184,6 +187,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     paused = true; 
   }
 
+  /// Opens a dialog session with a specific [npc] model, tracking the
+  /// reference so that [closeDialog] can efficiently resume exactly that NPC.
+  void openDialogWith(NPCModel npc, String emoji) {
+    _activeDialogNPC = npc;
+    showDialog(npc.name, emoji);
+  }
+
   String handleInteraction(String type) {
     if (_nearestInteractable != null) {
       return _nearestInteractable!.handleInteraction(type);
@@ -192,13 +202,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   void closeDialog() {
-    // Notify AI service that conversation ended for any NPC in talking state
-    for (final child in world.children) {
-      if (child is NPCComponent) {
-        if (child.model.currentState == NPCAIState.talking) {
-          npcAIService.endTalking(child.model);
-        }
-      }
+    // Resume AI for the NPC that was in the dialog session.
+    // We use the tracked reference rather than scanning all world children.
+    if (_activeDialogNPC != null) {
+      npcAIService.endTalking(_activeDialogNPC!);
+      _activeDialogNPC = null;
     }
     activeDialog = null;
     overlays.remove('DialogOverlay');

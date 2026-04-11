@@ -188,11 +188,20 @@ class NPCAIService {
         break;
     }
 
-    // If exhausted, force rest
+    // If exhausted, navigate home first before sleeping (not in middle of road)
     if (npc.energyLevel <= 0 &&
-        npc.currentState != NPCAIState.sleeping) {
+        npc.currentState != NPCAIState.sleeping &&
+        npc.currentState != NPCAIState.walking) {
+      // Only trigger if not already walking (avoids interrupting a walk home)
+      npc.currentJob = 'sleep';
       npc.currentState = NPCAIState.sleeping;
       npc.clearPath();
+    } else if (npc.energyLevel <= 5 &&
+        npc.currentState == NPCAIState.walking &&
+        npc.currentJob != 'home' &&
+        npc.currentJob != 'sleep') {
+      // Very low energy while walking: redirect home so NPC reaches safety first
+      npc.currentJob = 'home';
     }
   }
 }

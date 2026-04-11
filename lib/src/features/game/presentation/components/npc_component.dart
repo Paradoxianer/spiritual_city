@@ -76,7 +76,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   Vector2 get interactionPosition => position;
 
   String _getNPCEmoji() {
-    if (model.isChristian) return '✝️'; // Geändert von 🕊️ zu ✝️
+    if (model.isChristian) return '✝️';
     if (model.faith < -30) return '😠';
     if (model.faith < 30) return '👤';
     return '🤔';
@@ -86,7 +86,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   void onInteract() {
     model.resetSession();
     game.npcAIService.beginTalking(model);
-    game.showDialog(model.name, _getNPCEmoji());
+    game.openDialogWith(model, _getNPCEmoji());
   }
 
   @override
