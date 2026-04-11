@@ -4,7 +4,9 @@ import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
 import '../../domain/models/npc_model.dart';
+import '../../domain/models/npc_reaction.dart';
 import '../../domain/models/interactions.dart';
+import '../../domain/services/faith_calculator_service.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
@@ -24,6 +26,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   static const double npcSize = 20.0;
   final Random _random = Random();
+
+  late final FaithCalculatorService _faithCalc;
 
   /// LOD level assigned by the NPC manager based on distance to the player.
   NPCDetailLevel detailLevel = NPCDetailLevel.high;
@@ -80,21 +84,21 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   void onInteract() {
-    model.resetSession(); 
-    game.showDialog(model.name, _getNPCEmoji());
+    model.resetSession();
+    game.showDialog(model.name, _getNPCEmoji(), model);
   }
 
   @override
   String handleInteraction(String type) {
     model.currentSessionInteractions++;
     if (model.currentSessionInteractions > 3) {
-      return '👋'; 
+      return '👋';
     }
 
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
-    final spiritualState = cell?.spiritualState ?? 0.0; 
+    final spiritualState = cell?.spiritualState ?? 0.0;
 
     final interactionScore = model.faith + (spiritualState * 50);
 
@@ -102,41 +106,46 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     game.gainFaith(resonanceExchange);
 
     if (type == 'talk') {
-      model.applyInfluence(1.0);
+      final gain = _faithCalc.calculateConversationGain();
+      model.applyInfluence(gain.toDouble());
+      model.conversationCount++;
       game.recordConversation();
-      return '💬😊';
+      return '💬😊\n+$gain';
     }
 
     if (type == 'pray') {
       model.prayerCount++;
+      final prayerGain = _faithCalc.calculatePrayerGain();
       if (interactionScore + _random.nextInt(40) > 20) {
-        model.applyInfluence(12.0 + (spiritualState * 5)); 
+        model.applyInfluence(prayerGain.toDouble());
         game.gainFaith(3.0);
-        return '❤️';
+        return '❤️\n+$prayerGain';
       } else {
         model.applyInfluence(-8.0);
-        return interactionScore < -20 ? '💀' : '😠';
+        return '${interactionScore < -20 ? '💀' : '😠'}\n-8';
       }
-    } 
-    
+    }
+
     if (type == 'help') {
+      final giftGain = _faithCalc.calculateGiftGain();
       model.conversationCount++;
-      model.applyInfluence(8.0 + (spiritualState * 4));
-      game.gainFaith(5.0);       // +5 Faith for helping
-      game.spendMaterials(8.0);  // costs 8 MP (silently fails if not enough)
-      return '📦😊';
-    } 
-    
+      model.hadGiftThisSession = true;
+      model.applyInfluence(giftGain.toDouble());
+      game.gainFaith(5.0);
+      game.spendMaterials(8.0);
+      return '📦😊\n+$giftGain';
+    }
+
     if (type == 'convert') {
-      if (model.isChristian) return '✝️🙏'; // Kreuz statt Stern
-      
+      if (model.isChristian) return '✝️🙏';
+
       if (interactionScore > 60) {
         model.applyInfluence(100);
         game.gainFaith(25.0);
         game.recordConversion();
         return '✝️🕊️';
       } else {
-        model.applyInfluence(3.0); 
+        model.applyInfluence(3.0);
         if (interactionScore < 0) return '🚫';
         return '🤔';
       }
@@ -147,6 +156,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   Future<void> onLoad() async {
+    _faithCalc = FaithCalculatorService(difficulty: game.difficulty, rng: _random);
     add(CircleHitbox());
   }
 

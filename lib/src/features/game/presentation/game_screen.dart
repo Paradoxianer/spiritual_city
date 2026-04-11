@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
+import '../../../core/i18n/app_strings.dart';
+import '../domain/models/npc_model.dart';
+import '../domain/models/npc_reaction.dart';
 import 'spirit_world_game.dart';
 
 class GameScreen extends StatefulWidget {
@@ -204,6 +208,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
   final ScrollController _scrollController = ScrollController();
   bool _isWaiting = false;
   bool _isSessionOver = false;
+  bool _showingFarewellReaction = false;
 
   @override
   void dispose() {
@@ -232,7 +237,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
 
   void _handleInteraction(String type, String emoji) {
     if (_isWaiting || _isSessionOver) return;
-    
+
     _addMessage(emoji, true);
     setState(() => _isWaiting = true);
 
@@ -241,16 +246,8 @@ class _DialogOverlayState extends State<DialogOverlay> {
       final reaction = widget.game.handleInteraction(type);
       _addMessage(reaction, false);
       setState(() => _isWaiting = false);
-      
-      // Check for session end (👋) - 5 Sekunden Zeit zum Lesen
-      if (reaction == '👋') {
-        setState(() => _isSessionOver = true);
-        Future.delayed(const Duration(seconds: 5), () {
-          if (mounted) widget.game.closeDialog();
-        });
-      }
 
-      // Wenn Bekehrung erfolgreich (✝️ statt ✨)
+      // Conversion success
       if (reaction == '✝️🕊️') {
         setState(() => _isSessionOver = true);
         Future.delayed(const Duration(seconds: 5), () {
@@ -260,10 +257,25 @@ class _DialogOverlayState extends State<DialogOverlay> {
     });
   }
 
+  void _handleFarewell() {
+    if (_isSessionOver) return;
+    setState(() {
+      _isSessionOver = true;
+      _showingFarewellReaction = true;
+    });
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) widget.game.closeDialog();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final dialog = widget.game.activeDialog;
     if (dialog == null) return const SizedBox.shrink();
+
+    final model = dialog.npcModel;
+    final sessionCount = min(model.currentSessionInteractions, 3);
+    final reaction = NPCReaction.fromFaithLevel(model.faith, gotGift: model.hadGiftThisSession);
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -271,12 +283,13 @@ class _DialogOverlayState extends State<DialogOverlay> {
         height: MediaQuery.of(context).size.height * 0.45,
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF075E54).withValues(alpha: 0.95), 
+          color: const Color(0xFF075E54).withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10)],
         ),
         child: Column(
           children: [
+            // ── Header ────────────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: const BoxDecoration(
@@ -292,6 +305,15 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const Spacer(),
+                  // Conversation counter
+                  Text(
+                    '${AppStrings.get('dialog.conversation')} $sessionCount/3',
+                    style: TextStyle(
+                      color: model.isReadyToLeave ? Colors.orange : Colors.white60,
+                      fontSize: 12,
+                      fontWeight: model.isReadyToLeave ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => widget.game.closeDialog(),
@@ -299,19 +321,42 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 ],
               ),
             ),
-            
+
+            // ── Body ─────────────────────────────────────────────────────────
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                ),
-              ),
+              child: _showingFarewellReaction
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            reaction.emoji,
+                            style: const TextStyle(fontSize: 64),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            AppStrings.get('dialog.goodbye'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
+                      ),
+                    ),
             ),
 
+            // ── Action buttons ────────────────────────────────────────────────
             if (!_isSessionOver)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -319,26 +364,53 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   color: Colors.black26,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _InteractionChip(emoji: '💬', label: 'Talk', onTap: () => _handleInteraction('talk', '💬')),
-                      const SizedBox(width: 8),
-                      _InteractionChip(emoji: '🙏', label: 'Pray', onTap: () => _handleInteraction('pray', '🙏')),
-                      const SizedBox(width: 8),
-                      _InteractionChip(emoji: '📦', label: 'Help', onTap: () => _handleInteraction('help', '📦')),
-                      const SizedBox(width: 8),
-                      _InteractionChip(
-                        emoji: '✝️🕊️', 
-                        label: 'Convert', 
-                        isSpecial: true,
-                        onTap: () => _handleInteraction('convert', '✝️?'),
+                child: model.isReadyToLeave
+                    // After 3 interactions: show farewell button
+                    ? SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _handleFarewell,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal[700],
+                            foregroundColor: Colors.white,
+                            shape: const StadiumBorder(),
+                          ),
+                          child: Text(AppStrings.get('dialog.farewell')),
+                        ),
+                      )
+                    // Normal interaction buttons
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _InteractionChip(
+                              emoji: '💬',
+                              label: AppStrings.get('dialog.talk'),
+                              onTap: () => _handleInteraction('talk', '💬'),
+                            ),
+                            const SizedBox(width: 8),
+                            _InteractionChip(
+                              emoji: '🙏',
+                              label: AppStrings.get('dialog.pray'),
+                              onTap: () => _handleInteraction('pray', '🙏'),
+                            ),
+                            const SizedBox(width: 8),
+                            _InteractionChip(
+                              emoji: '📦',
+                              label: AppStrings.get('dialog.help'),
+                              onTap: () => _handleInteraction('help', '📦'),
+                            ),
+                            const SizedBox(width: 8),
+                            _InteractionChip(
+                              emoji: '✝️🕊️',
+                              label: AppStrings.get('dialog.convert'),
+                              isSpecial: true,
+                              onTap: () => _handleInteraction('convert', '✝️?'),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
               ),
           ],
         ),
@@ -410,5 +482,6 @@ class _ChatMessage {
 class GameDialogData {
   final String npcName;
   final String npcEmoji;
-  GameDialogData({required this.npcName, required this.npcEmoji});
+  final NPCModel npcModel;
+  GameDialogData({required this.npcName, required this.npcEmoji, required this.npcModel});
 }
