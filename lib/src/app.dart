@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'core/di/service_locator.dart';
 import 'features/game/presentation/game_screen.dart';
+import 'features/menu/domain/menu_service.dart';
+import 'features/menu/domain/models/difficulty.dart';
+import 'features/menu/presentation/difficulty_selector.dart';
+import 'features/menu/presentation/load_game_screen.dart';
+import 'features/menu/presentation/menu_screen.dart';
 
 class SpiritWorldCityApp extends StatelessWidget {
   const SpiritWorldCityApp({super.key});
@@ -20,11 +26,32 @@ class SpiritWorldCityApp extends StatelessWidget {
 }
 
 final _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/menu',
   routes: [
     GoRoute(
-      path: '/',
-      builder: (context, state) => const GameScreen(),
+      path: '/menu',
+      builder: (context, state) => MenuScreen(
+        menuService: getIt<MenuService>(),
+      ),
+    ),
+    GoRoute(
+      path: '/difficulty',
+      builder: (context, state) => DifficultySelector(
+        menuService: getIt<MenuService>(),
+      ),
+    ),
+    GoRoute(
+      path: '/load',
+      builder: (context, state) => LoadGameScreen(
+        menuService: getIt<MenuService>(),
+      ),
+    ),
+    GoRoute(
+      path: '/game',
+      builder: (context, state) {
+        final difficulty = state.extra as Difficulty? ?? Difficulty.normal;
+        return GameScreen(difficulty: difficulty);
+      },
     ),
   ],
 );
