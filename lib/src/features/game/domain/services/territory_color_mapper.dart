@@ -9,12 +9,18 @@ import 'package:flutter/material.dart';
 ///   −0.3..+0.3 – beige / neutral (contested territory)
 ///   −1.0..−0.3 – red spectrum  (darkness, Jes 1,18)
 class TerritoryColorMapper {
+  /// Threshold above which a cell is considered a positive (green) zone.
+  static const double positiveThreshold = 0.3;
+
+  /// Threshold below which a cell is considered a negative (red) zone.
+  static const double negativeThreshold = -0.3;
+
   /// Converts [spiritualState] (−1.0..+1.0) to a fully-opaque [Color].
   Color stateToColor(double spiritualState) {
     final s = spiritualState.clamp(-1.0, 1.0);
-    if (s > 0.3) {
+    if (s > positiveThreshold) {
       // light-green → lime-green → gold
-      final t = ((s - 0.3) / 0.7).clamp(0.0, 1.0);
+      final t = ((s - positiveThreshold) / (1.0 - positiveThreshold)).clamp(0.0, 1.0);
       if (t < 0.5) {
         return Color.lerp(
           const Color(0xFF90EE90), // lightgreen
@@ -27,9 +33,9 @@ class TerritoryColorMapper {
         const Color(0xFFFFD700), // gold
         (t - 0.5) * 2,
       )!;
-    } else if (s < -0.3) {
+    } else if (s < negativeThreshold) {
       // dark-red → crimson → near-black
-      final t = ((-s - 0.3) / 0.7).clamp(0.0, 1.0);
+      final t = ((-s + negativeThreshold) / (1.0 + negativeThreshold)).clamp(0.0, 1.0);
       if (t < 0.5) {
         return Color.lerp(
           const Color(0xFF8B0000), // darkred
@@ -50,8 +56,8 @@ class TerritoryColorMapper {
   /// in strongly negative zones (Jes 1,18).
   /// [animationTime] is cumulative game-seconds.
   double redPulseAlpha(double spiritualState, double animationTime) {
-    if (spiritualState < -0.3) {
-      final depth = ((-spiritualState - 0.3) / 0.7).clamp(0.0, 1.0);
+    if (spiritualState < negativeThreshold) {
+      final depth = ((-spiritualState + negativeThreshold) / (1.0 + negativeThreshold)).clamp(0.0, 1.0);
       final pulse = 0.5 + 0.5 * math.sin(animationTime * 2 * math.pi);
       return 0.6 + 0.4 * pulse * depth;
     }
@@ -61,9 +67,10 @@ class TerritoryColorMapper {
   /// Returns `true` when a sparkle particle should be spawned.
   /// Only fires for cells with [spiritualState] > 0.3.
   /// [random] must be a uniform value in [0, 1).
-  bool shouldSpawnSparkle(double spiritualState, double random) {
-    if (spiritualState <= 0.3) return false;
-    final chance = ((spiritualState - 0.3) / 0.7) * 0.08; // up to 8 % per frame
-    return random < chance;
+  /// [dt] scales the probability so the spawn rate is per-second, not per-frame.
+  bool shouldSpawnSparkle(double spiritualState, double random, {double dt = 1.0 / 60.0}) {
+    if (spiritualState <= positiveThreshold) return false;
+    final chancePerSecond = ((spiritualState - positiveThreshold) / (1.0 - positiveThreshold)) * 8.0; // up to 8 per second
+    return random < chancePerSecond * dt;
   }
 }

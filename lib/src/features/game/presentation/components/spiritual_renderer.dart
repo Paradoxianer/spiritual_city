@@ -40,17 +40,18 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
     // Invalidate cache each frame for flowing animation
     _cachedPicture = null;
 
-    _spawnParticles();
+    _spawnParticles(dt);
     _particleService.update(dt);
   }
 
-  void _spawnParticles() {
+  void _spawnParticles(double dt) {
     for (int y = 0; y < CityChunk.chunkSize; y++) {
       for (int x = 0; x < CityChunk.chunkSize; x++) {
         final cell = chunk.cells['$x,$y'];
-        if (cell == null) continue;
+        // Skip non-positive cells early to avoid unnecessary RNG calls
+        if (cell == null || cell.spiritualState <= TerritoryColorMapper.positiveThreshold) continue;
 
-        if (_colorMapper.shouldSpawnSparkle(cell.spiritualState, _rng.nextDouble())) {
+        if (_colorMapper.shouldSpawnSparkle(cell.spiritualState, _rng.nextDouble(), dt: dt)) {
           _particleService.spawnSparkle(
             x * cellSize + cellSize / 2,
             y * cellSize + cellSize / 2,

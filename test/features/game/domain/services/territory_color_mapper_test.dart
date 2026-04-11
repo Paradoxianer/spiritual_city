@@ -61,7 +61,7 @@ void main() {
     test('shouldSpawnSparkle returns false for neutral and negative states', () {
       expect(mapper.shouldSpawnSparkle(0.0, 0.5), false);
       expect(mapper.shouldSpawnSparkle(-0.5, 0.5), false);
-      expect(mapper.shouldSpawnSparkle(0.3, 0.5), false); // at boundary (inclusive)
+      expect(mapper.shouldSpawnSparkle(0.3, 0.5), false); // at boundary (excluded: threshold is exclusive upper bound)
     });
 
     test('shouldSpawnSparkle returns true for max state with zero random', () {
@@ -69,8 +69,8 @@ void main() {
     });
 
     test('shouldSpawnSparkle returns false when random exceeds spawn chance', () {
-      // For state = 0.5, chance = (0.2 / 0.7) * 0.08 ≈ 0.023
-      // random = 0.5 far exceeds chance → false
+      // For state = 0.5, chancePerSecond ≈ 2.286, at default dt=1/60: ~0.038
+      // random = 0.5 far exceeds per-frame chance → false
       expect(mapper.shouldSpawnSparkle(0.5, 0.5), false);
     });
   });
