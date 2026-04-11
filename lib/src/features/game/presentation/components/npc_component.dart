@@ -54,9 +54,11 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   }
 
   /// Prepare the component for return to the pool.  Removes it from the scene
-  /// graph if it still has a parent; callers must add it back via [world.add]
-  /// after [assignModel] has been called.
+  /// graph if it still has a parent and resets all per-session state so a
+  /// future [assignModel] call gets a clean slate.
   void deactivateForPool() {
+    _spiritualInfluenceTimer = 0.0;
+    detailLevel = NPCDetailLevel.high;
     removeFromParent();
   }
 

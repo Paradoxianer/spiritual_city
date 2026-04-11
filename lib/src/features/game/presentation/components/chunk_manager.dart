@@ -44,6 +44,12 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   /// Whether an async chunk-load pass is currently in flight.
   bool _loadInProgress = false;
 
+  /// Center coordinates of the most-recently requested preload pass.
+  /// If the player moves while a preload is in-flight, the next pass will
+  /// start with the updated center once the current one finishes.
+  int _preloadCenterX = 0;
+  int _preloadCenterY = 0;
+
   ChunkManager({
     required this.grid,
     required this.generator,
@@ -66,6 +72,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       _lastChunkX = currentChunkX;
       _lastChunkY = currentChunkY;
       _updateChunks(currentChunkX, currentChunkY);
+      _preloadCenterX = currentChunkX;
+      _preloadCenterY = currentChunkY;
       if (!_loadInProgress) {
         _preloadChunksAsync(currentChunkX, currentChunkY);
       }
@@ -148,6 +156,10 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   /// chunk data is ready when the player enters the adjacent render zone.
   /// Uses [Future.microtask] so each chunk yields to the event loop,
   /// preventing the game-loop from being blocked.
+  ///
+  /// If the player moves to a new chunk centre while a preload is in flight,
+  /// this method restarts with the updated centre coordinates once the
+  /// current pass completes.
   Future<void> _preloadChunksAsync(int centerX, int centerY) async {
     _loadInProgress = true;
     try {
@@ -157,6 +169,15 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         for (int y = centerY - preloadDistance;
             y <= centerY + preloadDistance;
             y++) {
+          // If the player has moved, abort this pass – a new one will start.
+          if (x != centerX || y != centerY) {
+            if (_preloadCenterX != centerX || _preloadCenterY != centerY) {
+              _log.fine(
+                  'Preload pass ($centerX,$centerY) abandoned – player moved');
+              return;
+            }
+          }
+
           // Skip the inner ring – already loaded synchronously
           if ((x - centerX).abs() <= renderDistance &&
               (y - centerY).abs() <= renderDistance) {
@@ -173,6 +194,10 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       }
     } finally {
       _loadInProgress = false;
+      // If the centre moved while we were running, start a fresh pass now.
+      if (_preloadCenterX != centerX || _preloadCenterY != centerY) {
+        _preloadChunksAsync(_preloadCenterX, _preloadCenterY);
+      }
     }
   }
 

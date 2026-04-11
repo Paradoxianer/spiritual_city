@@ -10,16 +10,16 @@ void main() {
       grid = SpatialGrid(cellSize: 256);
     });
 
-    PositionComponent _makeEntity(double x, double y) {
+    PositionComponent _makeTestEntity(double x, double y) {
       final e = PositionComponent();
       e.position = Vector2(x, y);
       return e;
     }
 
     test('returns entities in the same cell as the query point', () {
-      final e1 = _makeEntity(0, 0);
-      final e2 = _makeEntity(10, 10);
-      final e3 = _makeEntity(1000, 1000);
+      final e1 = _makeTestEntity(0, 0);
+      final e2 = _makeTestEntity(10, 10);
+      final e3 = _makeTestEntity(1000, 1000);
 
       grid.update([e1, e2, e3]);
 
@@ -31,8 +31,8 @@ void main() {
     });
 
     test('returns entities in adjacent cells when range spans cell boundary', () {
-      final e1 = _makeEntity(255, 255); // near top-right of cell (0,0)
-      final e2 = _makeEntity(257, 0);  // just inside cell (1,0)
+      final e1 = _makeTestEntity(255, 255); // near top-right of cell (0,0)
+      final e2 = _makeTestEntity(257, 0);  // just inside cell (1,0)
 
       grid.update([e1, e2]);
 
@@ -53,26 +53,26 @@ void main() {
       expect(grid.occupiedCells, 0);
 
       grid.update([
-        _makeEntity(0, 0),   // cell (0,0)
-        _makeEntity(256, 0), // cell (1,0)
+        _makeTestEntity(0, 0),   // cell (0,0)
+        _makeTestEntity(256, 0), // cell (1,0)
       ]);
       expect(grid.occupiedCells, 2);
     });
 
     test('update clears previous entries', () {
-      final e1 = _makeEntity(0, 0);
+      final e1 = _makeTestEntity(0, 0);
       grid.update([e1]);
       expect(grid.getNearby(Vector2(0, 0), 10), contains(e1));
 
       // Update with different set – e1 should no longer appear
-      final e2 = _makeEntity(2000, 2000);
+      final e2 = _makeTestEntity(2000, 2000);
       grid.update([e2]);
       expect(grid.getNearby(Vector2(0, 0), 10), isNot(contains(e1)));
     });
 
     test('entities at negative coordinates are handled correctly', () {
-      final e1 = _makeEntity(-10, -10);
-      final e2 = _makeEntity(-300, -300);
+      final e1 = _makeTestEntity(-10, -10);
+      final e2 = _makeTestEntity(-300, -300);
 
       grid.update([e1, e2]);
 
