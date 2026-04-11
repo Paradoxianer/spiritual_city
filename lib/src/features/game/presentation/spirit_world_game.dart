@@ -11,8 +11,6 @@ import '../domain/models/modifier_manager.dart';
 import '../domain/models/player_progress.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
-import 'components/cell_component.dart';
-import 'components/chunk_component.dart';
 import 'components/radial_menu.dart';
 import 'components/prayer_hud_component.dart';
 import 'components/spiritual_dynamics_system.dart';

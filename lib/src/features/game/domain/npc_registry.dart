@@ -3,7 +3,6 @@ import 'package:flame/components.dart';
 import 'models/npc_model.dart';
 import '../presentation/components/cell_component.dart';
 import 'models/city_chunk.dart';
-import 'models/city_cell.dart';
 import 'models/cell_object.dart';
 
 class NPCRegistry {
@@ -52,7 +51,7 @@ class NPCRegistry {
   }
 
   NPCModel _createRandomNPC(int wx, int wy, BuildingType homeType) {
-    final id = 'npc_${wx}_${wy}';
+    final id = 'npc_${wx}_$wy';
     final name = _getRandomName();
     final type = _getNPCTypeForBuilding(homeType);
     

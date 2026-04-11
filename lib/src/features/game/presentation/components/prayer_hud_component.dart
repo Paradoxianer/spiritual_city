@@ -15,8 +15,8 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
     final player = game.player;
     
     // 2. COMBAT HUD (Unten Mitte)
-    final hudWidth = 240.0;
-    final hudHeight = 80.0;
+    const hudWidth = 240.0;
+    const hudHeight = 80.0;
     final x = (game.size.x - hudWidth) / 2;
     final y = game.size.y - 195;
 
@@ -50,16 +50,16 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
     // Background panel
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(x - bgPad, y - bgPad, barW + 70, totalH),
+        const Rect.fromLTWH(x - bgPad, y - bgPad, barW + 70, totalH),
         const Radius.circular(10),
       ),
       Paint()..color = Colors.black.withValues(alpha: 0.55),
     );
 
-    _drawResourceBar(canvas, x, y,              barW, barH, '❤️', 'HP',       game.health,    game.maxHealth,    Colors.redAccent);
-    _drawResourceBar(canvas, x, y + spacing,     barW, barH, '🍞', 'Hunger',   game.hunger,    game.maxHunger,    Colors.orange);
-    _drawResourceBar(canvas, x, y + spacing * 2, barW, barH, '🙏', 'Faith',    game.faith,     game.maxFaith,     Colors.purpleAccent);
-    _drawResourceBar(canvas, x, y + spacing * 3, barW, barH, '📦', 'Supplies', game.materials, game.maxMaterials, Colors.blueGrey);
+    _drawResourceBar(canvas, x, y,              barW, barH, '❤️', 'HP',       game.health,    SpiritWorldGame.maxHealth,    Colors.redAccent);
+    _drawResourceBar(canvas, x, y + spacing,     barW, barH, '🍞', 'Hunger',   game.hunger,    SpiritWorldGame.maxHunger,    Colors.orange);
+    _drawResourceBar(canvas, x, y + spacing * 2, barW, barH, '🙏', 'Faith',    game.faith,     SpiritWorldGame.maxFaith,     Colors.purpleAccent);
+    _drawResourceBar(canvas, x, y + spacing * 3, barW, barH, '📦', 'Supplies', game.materials, SpiritWorldGame.maxMaterials, Colors.blueGrey);
   }
 
   void _drawResourceBar(Canvas canvas, double x, double y, double w, double h,

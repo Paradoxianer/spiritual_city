@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame_noise/flame_noise.dart';
@@ -40,13 +39,10 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
         final cell = chunk.cells['$x,$y'];
         if (cell == null) continue;
         
-        final worldX = chunk.getWorldX(x);
-        final worldY = chunk.getWorldY(y);
-        
         // Organisches Rauschen für Hotspots hinzufügen
         final noise = _lavaNoise.getNoise3(
-          worldX * 0.1, 
-          worldY * 0.1, 
+          chunk.getWorldX(x) * 0.1, 
+          chunk.getWorldY(y) * 0.1, 
           _animationTime
         );
 
