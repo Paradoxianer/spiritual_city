@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import '../../../features/menu/domain/models/difficulty.dart';
 import 'spirit_world_game.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  final Difficulty difficulty;
+
+  const GameScreen({super.key, this.difficulty = Difficulty.normal});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -16,7 +19,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    _game = SpiritWorldGame();
+    _game = SpiritWorldGame(difficulty: widget.difficulty);
   }
 
   @override

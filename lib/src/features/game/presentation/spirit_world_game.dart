@@ -4,6 +4,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
+import '../../../features/menu/domain/models/difficulty.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
@@ -18,6 +19,11 @@ import 'game_screen.dart';
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
+
+  /// Difficulty level selected in the main menu.
+  final Difficulty difficulty;
+
+  SpiritWorldGame({this.difficulty = Difficulty.normal});
   
   late final CityGrid grid;
   late final SeedManager seedManager;
