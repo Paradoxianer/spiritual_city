@@ -8,23 +8,59 @@ import '../../domain/models/interactions.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
+/// Level-of-detail setting for an NPC.
+///
+/// * [high]   – full AI, animation and spiritual-influence updates (≤200 u)
+/// * [medium] – simplified movement only, no spiritual influence (200–500 u)
+/// * [low]    – static/invisible, no logic (>500 u)
+enum NPCDetailLevel { high, medium, low }
+
 class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGame> implements Interactable {
-  final NPCModel model;
+  NPCModel _model;
+
+  /// Current active data model.  Updated by [assignModel] when the component
+  /// is recycled from the [NPCPool].
+  NPCModel get model => _model;
 
   static const double npcSize = 20.0;
   final Random _random = Random();
-  
+
+  /// LOD level assigned by the NPC manager based on distance to the player.
+  NPCDetailLevel detailLevel = NPCDetailLevel.high;
+
   // Timer for daily NPC spiritual influence on cells (Lastenheft §6.3)
   double _spiritualInfluenceTimer = 0.0;
   /// One in-game day = [GameTime.gameDaySeconds] real seconds.
   static const double _spiritualInfluenceInterval = GameTime.gameDaySeconds;
 
-  NPCComponent({required this.model}) : super(
-    position: model.homePosition.clone(),
-    size: Vector2.all(npcSize),
-    anchor: Anchor.center,
-    priority: 90,
-  );
+  NPCComponent({required NPCModel model})
+      : _model = model,
+        super(
+          position: model.homePosition.clone(),
+          size: Vector2.all(npcSize),
+          anchor: Anchor.center,
+          priority: 90,
+        );
+
+  // ─── Pool helpers ──────────────────────────────────────────────────────────
+
+  /// Reassign this component to [newModel].  Called by [NPCPool.borrow] when
+  /// recycling an existing component.
+  void assignModel(NPCModel newModel) {
+    _model = newModel;
+    position.setFrom(newModel.homePosition);
+    _spiritualInfluenceTimer = 0.0;
+    detailLevel = NPCDetailLevel.high;
+  }
+
+  /// Prepare the component for return to the pool.  Removes it from the scene
+  /// graph if it still has a parent and resets all per-session state so a
+  /// future [assignModel] call gets a clean slate.
+  void deactivateForPool() {
+    _spiritualInfluenceTimer = 0.0;
+    detailLevel = NPCDetailLevel.high;
+    removeFromParent();
+  }
 
   @override
   String get interactionLabel => model.name;
@@ -118,8 +154,18 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   void update(double dt) {
     super.update(dt);
     if (game.paused) return;
-    _updateAI(dt);
-    _updateSpiritualInfluence(dt);
+
+    switch (detailLevel) {
+      case NPCDetailLevel.high:
+        _updateAI(dt);
+        _updateSpiritualInfluence(dt);
+      case NPCDetailLevel.medium:
+        // Simplified: only wander, skip expensive spiritual influence
+        _updateAI(dt);
+      case NPCDetailLevel.low:
+        // Static placeholder – no logic executed
+        break;
+    }
   }
 
   /// Daily: NPC faith state influences the cell they are standing on (Lastenheft §6.3)
