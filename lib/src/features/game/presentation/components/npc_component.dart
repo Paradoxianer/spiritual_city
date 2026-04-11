@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
 import '../../domain/models/npc_model.dart';
 import '../../domain/models/interactions.dart';
+import '../../domain/services/npc_ai_service.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
@@ -23,6 +24,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   NPCModel get model => _model;
 
   static const double npcSize = 20.0;
+
   final Random _random = Random();
 
   /// LOD level assigned by the NPC manager based on distance to the player.
@@ -59,6 +61,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   void deactivateForPool() {
     _spiritualInfluenceTimer = 0.0;
     detailLevel = NPCDetailLevel.high;
+    model.currentState = NPCAIState.idle;
+    model.clearPath();
     removeFromParent();
   }
 
@@ -80,15 +84,18 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   void onInteract() {
-    model.resetSession(); 
+    model.resetSession();
+    game.npcAIService.beginTalking(model);
     game.showDialog(model.name, _getNPCEmoji());
   }
 
   @override
   String handleInteraction(String type) {
     model.currentSessionInteractions++;
+
+    // After 3 exchanges the NPC reacts first, then waves goodbye
     if (model.currentSessionInteractions > 3) {
-      return '👋'; 
+      return '${_sessionReactionEmoji()} 👋';
     }
 
     final gx = (position.x / CellComponent.cellSize).floor();
@@ -104,7 +111,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (type == 'talk') {
       model.applyInfluence(1.0);
       game.recordConversation();
-      return '💬😊';
+      return _talkResponse();
     }
 
     if (type == 'pray') {
@@ -112,37 +119,137 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       if (interactionScore + _random.nextInt(40) > 20) {
         model.applyInfluence(12.0 + (spiritualState * 5)); 
         game.gainFaith(3.0);
-        return '❤️';
+        return _prayPositiveResponse();
       } else {
         model.applyInfluence(-8.0);
-        return interactionScore < -20 ? '💀' : '😠';
+        return _prayNegativeResponse(interactionScore);
       }
     } 
     
     if (type == 'help') {
       model.conversationCount++;
       model.applyInfluence(8.0 + (spiritualState * 4));
-      game.gainFaith(5.0);       // +5 Faith for helping
-      game.spendMaterials(8.0);  // costs 8 MP (silently fails if not enough)
-      return '📦😊';
+      game.gainFaith(5.0);
+      game.spendMaterials(8.0);
+      return _helpResponse();
     } 
     
     if (type == 'convert') {
-      if (model.isChristian) return '✝️🙏'; // Kreuz statt Stern
+      if (model.isChristian) return '✝️ 🙏';
       
       if (interactionScore > 60) {
         model.applyInfluence(100);
         game.gainFaith(25.0);
         game.recordConversion();
-        return '✝️🕊️';
+        return '✝️ 🕊️ 😄';
       } else {
-        model.applyInfluence(3.0); 
-        if (interactionScore < 0) return '🚫';
-        return '🤔';
+        model.applyInfluence(3.0);
+        if (interactionScore < -30) return '🚫 ${_hostileEmoji()}';
+        if (interactionScore < 0)   return '🚫 😒';
+        return '🤔 ${_moodEmoji()}';
       }
     }
 
     return '❓';
+  }
+
+  // ── Dynamic emoji helpers ──────────────────────────────────────────────────
+
+  /// Current mood emoji derived from faith level.
+  String _moodEmoji() {
+    if (model.faith < -70) return '😤';
+    if (model.faith < -40) return '😒';
+    if (model.faith < -10) return '😐';
+    if (model.faith <  30) return '🙂';
+    if (model.faith <  60) return '😊';
+    return '😄';
+  }
+
+  /// Hostile-flavoured emoji for very negative NPCs.
+  String _hostileEmoji() {
+    final options = ['😡', '👊', '🙄', '😤'];
+    return options[_random.nextInt(options.length)];
+  }
+
+  /// Reaction emoji shown right before the session-end 👋.
+  /// Summarises how the overall session felt.
+  String _sessionReactionEmoji() {
+    if (model.faith < -40) {
+      final options = ['😒', '🙄', '😑', '😤'];
+      return options[_random.nextInt(options.length)];
+    }
+    if (model.faith < 20) {
+      final options = ['😐', '🤔', '😶'];
+      return options[_random.nextInt(options.length)];
+    }
+    if (model.isChristian) {
+      final options = ['🙏', '✝️', '😄'];
+      return options[_random.nextInt(options.length)];
+    }
+    final options = ['😊', '🙂', '😌'];
+    return options[_random.nextInt(options.length)];
+  }
+
+  /// Response for the 'talk' action – varies by personality and faith.
+  String _talkResponse() {
+    switch (model.personality) {
+      case NPCPersonality.friendly:
+        if (model.faith > 30) return '💬 😊';
+        return '💬 🙂';
+      case NPCPersonality.cautious:
+        if (model.faith < -20) return '💬 🤨';
+        return '💬 😐';
+      case NPCPersonality.busy:
+        return '💬 ⏱️';
+      case NPCPersonality.sad:
+        if (model.faith > 40) return '💬 🥲';
+        return '💬 😔';
+      case NPCPersonality.helpful:
+        return '💬 🤝';
+    }
+  }
+
+  /// Positive response to 'pray' – varies with personality and faith.
+  String _prayPositiveResponse() {
+    if (model.isChristian) return '🙏 ✝️ ❤️';
+    switch (model.personality) {
+      case NPCPersonality.friendly:  return '🙏 ❤️ ${_moodEmoji()}';
+      case NPCPersonality.cautious:  return '🙏 😌';
+      case NPCPersonality.sad:       return '🙏 🥲 ❤️';
+      case NPCPersonality.helpful:   return '🙏 ❤️ 🤝';
+      case NPCPersonality.busy:      return '🙏 ❤️';
+    }
+  }
+
+  /// Negative response to 'pray' – hostile or dismissive depending on score.
+  String _prayNegativeResponse(double interactionScore) {
+    if (interactionScore < -30) return '💀 ${_hostileEmoji()}';
+    if (interactionScore < -10) return '😠 🙄';
+    return '😠 ${_moodEmoji()}';
+  }
+
+  /// Response for 'help' (gift/material sharing).
+  ///
+  /// Even hostile NPCs accept the gift, but their accompanying mood varies:
+  /// very hostile → reluctant thanks; neutral → polite thanks; positive → happy thanks.
+  String _helpResponse() {
+    if (model.faith < -50) {
+      // Hostile: takes gift but looks away
+      final options = ['📦 🙄 😒', '📦 😑 👉', '📦 😤'];
+      return options[_random.nextInt(options.length)];
+    }
+    if (model.faith < 0) {
+      final options = ['📦 😐 🙏', '📦 🙏 😒', '📦 😐'];
+      return options[_random.nextInt(options.length)];
+    }
+    if (model.faith < 40) {
+      final options = ['📦 🙏 😊', '📦 😊 🤝', '📦 😌 🙏'];
+      return options[_random.nextInt(options.length)];
+    }
+    // Very positive NPC
+    if (model.isChristian) return '📦 😄 🙏 ✝️';
+    final options = ['📦 😄 🙏', '📦 🤗 ❤️', '📦 😄 🤝'];
+    return options[_random.nextInt(options.length)];
   }
 
   @override
@@ -160,7 +267,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         _updateAI(dt);
         _updateSpiritualInfluence(dt);
       case NPCDetailLevel.medium:
-        // Simplified: only wander, skip expensive spiritual influence
+        // Simplified: only move, skip expensive spiritual influence
         _updateAI(dt);
       case NPCDetailLevel.low:
         // Static placeholder – no logic executed
@@ -192,29 +299,26 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   }
 
   void _updateAI(double dt) {
-    if (_random.nextDouble() < 0.01) {
-      final gx = (position.x / CellComponent.cellSize).floor();
-      final gy = (position.y / CellComponent.cellSize).floor();
-      final target = _findNextWanderTarget(gx, gy);
-      if (target != null) {
-        position.setFrom(target);
-      }
+    final delta = game.npcAIService.updateNPC(model, position, dt, game.grid);
+    if (delta.x != 0 || delta.y != 0) {
+      position.add(delta);
     }
-  }
-
-  Vector2? _findNextWanderTarget(int gx, int gy) {
-    final dir = [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)][_random.nextInt(4)];
-    final tx = gx + dir.x.toInt();
-    final ty = gy + dir.y.toInt();
-    if (game.grid.isWalkable(tx, ty)) {
-      return Vector2(tx * CellComponent.cellSize + 10, ty * CellComponent.cellSize + 10);
-    }
-    return null;
   }
 
   @override
   void render(Canvas canvas) {
-    Color bodyColor = model.isChristian ? Colors.white : (model.faith < 0 ? Colors.red[800]! : Colors.grey);
+    // Body colour reflects faith and active state
+    Color bodyColor;
+    if (model.currentState == NPCAIState.sleeping) {
+      bodyColor = Colors.blueGrey[700]!;
+    } else if (model.isChristian) {
+      bodyColor = Colors.white;
+    } else if (model.faith < 0) {
+      bodyColor = Colors.red[800]!;
+    } else {
+      bodyColor = Colors.grey;
+    }
+
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
     
     // Kreuz-Symbol Rendering auf dem NPC
@@ -227,7 +331,29 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       canvas.drawLine(center + const Offset(-3.5, -1.5), center + const Offset(3.5, -1.5), paint);
     }
 
+    // State indicator dot (small, top-right corner)
+    _renderStateIndicator(canvas);
+
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
+  }
+
+  /// Renders a small dot in the top-right corner to indicate the current state
+  /// (useful for debugging and at-a-glance awareness).
+  void _renderStateIndicator(Canvas canvas) {
+    final Color dotColor = switch (model.currentState) {
+      NPCAIState.walking  => Colors.lightBlue,
+      NPCAIState.working  => Colors.orange,
+      NPCAIState.praying  => Colors.amber,
+      NPCAIState.talking  => Colors.green,
+      NPCAIState.sleeping => Colors.indigo[200]!,
+      NPCAIState.eating   => Colors.yellow,
+      NPCAIState.idle     => Colors.grey[400]!,
+    };
+    canvas.drawCircle(
+      Offset(size.x - 4, 4),
+      3,
+      Paint()..color = dotColor,
+    );
   }
 
   void _renderSpiritualAura(Canvas canvas) {

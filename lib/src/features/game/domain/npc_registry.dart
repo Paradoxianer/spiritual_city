@@ -28,20 +28,47 @@ class NPCRegistry {
 
   List<NPCModel> _generateNPCsForChunk(CityChunk chunk) {
     final List<NPCModel> npcs = [];
-    
-    // Wir loopen durch die Zellen und suchen nach Hauseingängen
+
+    // Collect all walkable non-building cells for work-location assignment
+    final List<Vector2> workCandidates = [];
+    for (int y = 0; y < CityChunk.chunkSize; y++) {
+      for (int x = 0; x < CityChunk.chunkSize; x++) {
+        final cell = chunk.cells['$x,$y'];
+        if (cell == null) continue;
+        final data = cell.data;
+        if (data is BuildingData &&
+            !data.isEntrance &&
+            (data.type == BuildingType.shop ||
+                data.type == BuildingType.office ||
+                data.type == BuildingType.factory ||
+                data.type == BuildingType.supermarket)) {
+          workCandidates.add(Vector2(
+            chunk.getWorldX(x) * CellComponent.cellSize + CellComponent.cellSize / 2,
+            chunk.getWorldY(y) * CellComponent.cellSize + CellComponent.cellSize / 2,
+          ));
+        }
+      }
+    }
+
+    // Spawn NPCs at residential building entrances
     for (int y = 0; y < CityChunk.chunkSize; y++) {
       for (int x = 0; x < CityChunk.chunkSize; x++) {
         final cell = chunk.cells['$x,$y'];
         if (cell == null) continue;
 
         final data = cell.data;
-        // In Wohnhäusern (Houses/Apartments) an Eingängen NPCs spawnen
         if (data is BuildingData && data.isEntrance) {
           if (data.type == BuildingType.house || data.type == BuildingType.apartment) {
-            // Chance von 70%, dass jemand zuhause/vor der Tür ist
             if (_random.nextDouble() < 0.7) {
-              npcs.add(_createRandomNPC(chunk.getWorldX(x), chunk.getWorldY(y), data.type));
+              final workLoc = workCandidates.isNotEmpty
+                  ? workCandidates[_random.nextInt(workCandidates.length)]
+                  : null;
+              npcs.add(_createRandomNPC(
+                chunk.getWorldX(x),
+                chunk.getWorldY(y),
+                data.type,
+                workLocation: workLoc,
+              ));
             }
           }
         }
@@ -50,11 +77,13 @@ class NPCRegistry {
     return npcs;
   }
 
-  NPCModel _createRandomNPC(int wx, int wy, BuildingType homeType) {
+  NPCModel _createRandomNPC(int wx, int wy, BuildingType homeType,
+      {Vector2? workLocation}) {
     final id = 'npc_${wx}_$wy';
     final name = _getRandomName();
     final type = _getNPCTypeForBuilding(homeType);
-    
+    final personality = NPCPersonality.values[_random.nextInt(NPCPersonality.values.length)];
+
     // Initialer Faith-Wert zwischen -60 und +20 (meistens eher distanziert am Anfang)
     final initialFaith = -60.0 + _random.nextDouble() * 80.0;
 
@@ -67,6 +96,9 @@ class NPCRegistry {
         wy * CellComponent.cellSize + CellComponent.cellSize / 2,
       ),
       faith: initialFaith,
+      personality: personality,
+      workLocation: workLocation,
+      energyLevel: 50.0 + _random.nextDouble() * 50.0,
     );
   }
 
@@ -77,15 +109,22 @@ class NPCRegistry {
   }
 
   String _getRandomName() {
-    final firstNames = ['Lukas', 'Maria', 'Johannes', 'Sarah', 'Peter', 'Anna', 'Thomas', 'Elisabeth', 'Matthias', 'Martha'];
-    final lastNames = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann'];
+    // Diverse, realistic international names (Lastenheft: not biblically themed)
+    const firstNames = [
+      'Maria', 'Klaus', 'Ahmed', 'Sofia', 'Yuki', 'Leila', 'Jonas', 'Fatima',
+      'David', 'Anna', 'Lukas', 'Mei', 'Thomas', 'Sarah', 'Omar', 'Elena',
+      'Marco', 'Aisha', 'Felix', 'Priya', 'Lena', 'Carlos', 'Emma', 'Kwame',
+      'Nina', 'Ravi', 'Hannah', 'Miguel', 'Laura', 'Yusuf',
+    ];
+    const lastNames = [
+      'Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner',
+      'Becker', 'Schulz', 'Hoffmann', 'Kaya', 'Hassan', 'Tanaka', 'Rossi',
+      'Mensah', 'Santos', 'Ivanova', 'Patel', 'Nguyen', 'Okonkwo',
+    ];
     return '${firstNames[_random.nextInt(firstNames.length)]} ${lastNames[_random.nextInt(lastNames.length)]}';
   }
 
   List<NPCModel> getNPCsNear(Vector2 position, double radius) {
-    // Diese Methode müsste für eine Welt-weite Suche optimiert werden, 
-    // für den Radius-Check im Umkreis des Spielers reicht es aber oft, 
-    // die aktiven Chunks im ChunkManager zu prüfen.
     return [];
   }
 }

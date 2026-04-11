@@ -10,7 +10,10 @@ import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
 import '../domain/models/modifier_manager.dart';
 import '../domain/models/player_progress.dart';
+import '../domain/models/npc_model.dart';
+import '../domain/services/npc_ai_service.dart';
 import 'components/chunk_manager.dart';
+import 'components/npc_component.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
 import 'components/prayer_hud_component.dart';
@@ -35,6 +38,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final HudButton actionButton;
   late final HudButton worldToggleButton;
   late final PrayerHudComponent prayerHud;
+
+  /// Central NPC AI service – shared by all [NPCComponent] instances.
+  late final NPCAIService npcAIService;
 
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
@@ -81,6 +87,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // Progress & modifiers
     progress = PlayerProgress();
     modifiers = ModifierManager(progress: progress);
+
+    // NPC AI service (shared by all NPCComponents via game reference)
+    npcAIService = NPCAIService(seed: seedManager.seed);
 
     player = PlayerComponent(joystick: _createJoystick());
     player.position = Vector2(256, 256); 
@@ -183,6 +192,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   void closeDialog() {
+    // Notify AI service that conversation ended for any NPC in talking state
+    for (final child in world.children) {
+      if (child is NPCComponent) {
+        if (child.model.currentState == NPCAIState.talking) {
+          npcAIService.endTalking(child.model);
+        }
+      }
+    }
     activeDialog = null;
     overlays.remove('DialogOverlay');
     paused = false;

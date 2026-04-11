@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flame/components.dart';
 
 enum NPCType {
@@ -6,6 +7,12 @@ enum NPCType {
   priest,
   officer,
 }
+
+/// State machine states for NPC AI behaviour.
+enum NPCAIState { idle, walking, talking, praying, working, eating, sleeping }
+
+/// Personality archetype that influences AI decision-making.
+enum NPCPersonality { friendly, cautious, busy, sad, helpful }
 
 /// NPC Data Model based on Lastenheft Section 6.2
 class NPCModel {
@@ -27,6 +34,30 @@ class NPCModel {
   
   String? currentMessage;
 
+  // ── AI State Machine ──────────────────────────────────────────────────────
+
+  /// Current behaviour state.
+  NPCAIState currentState;
+
+  /// Personality archetype – affects how often an NPC talks, prays, etc.
+  NPCPersonality personality;
+
+  /// Current movement destination in world pixels.
+  Vector2? currentTarget;
+
+  /// Ordered list of waypoints to reach [currentTarget].
+  /// NPCComponent consumes waypoints from the front as it reaches each one.
+  List<Vector2> currentPath;
+
+  /// Identifier for the current routine ('work', 'home', 'church', 'park', 'wander').
+  String? currentJob;
+
+  /// Assigned work-place position (world pixels).  Null for unemployed NPCs.
+  Vector2? workLocation;
+
+  /// Energy level 0–100; drains while active, recovers while sleeping.
+  double energyLevel;
+
   NPCModel({
     required this.id,
     required this.name,
@@ -36,7 +67,16 @@ class NPCModel {
     this.conversationCount = 0,
     this.prayerCount = 0,
     this.currentMessage,
-  });
+    NPCAIState? currentState,
+    NPCPersonality? personality,
+    this.currentTarget,
+    List<Vector2>? currentPath,
+    this.currentJob,
+    this.workLocation,
+    this.energyLevel = 100.0,
+  })  : currentState = currentState ?? NPCAIState.idle,
+        personality = personality ?? _randomPersonality(),
+        currentPath = currentPath ?? [];
 
   /// An NPC is considered a Christian if faith is above 50 (Lastenheft 6.2)
   bool get isChristian => faith > 50;
@@ -48,5 +88,16 @@ class NPCModel {
 
   void resetSession() {
     currentSessionInteractions = 0;
+  }
+
+  /// Clears the current navigation path and target.
+  void clearPath() {
+    currentPath = [];
+    currentTarget = null;
+  }
+
+  static NPCPersonality _randomPersonality() {
+    final values = NPCPersonality.values;
+    return values[Random().nextInt(values.length)];
   }
 }
