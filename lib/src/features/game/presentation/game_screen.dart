@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
-import '../../../core/i18n/app_strings.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import 'spirit_world_game.dart';
@@ -208,7 +206,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
   final ScrollController _scrollController = ScrollController();
   bool _isWaiting = false;
   bool _isSessionOver = false;
-  bool _showingFarewellReaction = false;
 
   @override
   void dispose() {
@@ -243,28 +240,35 @@ class _DialogOverlayState extends State<DialogOverlay> {
 
     Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
+      final model = widget.game.activeDialog?.npcModel;
       final reaction = widget.game.handleInteraction(type);
       _addMessage(reaction, false);
       setState(() => _isWaiting = false);
 
-      // Conversion success
+      // Conversion success → session ends
       if (reaction == '✝️🕊️') {
         setState(() => _isSessionOver = true);
         Future.delayed(const Duration(seconds: 5), () {
           if (mounted) widget.game.closeDialog();
         });
+        return;
       }
-    });
-  }
 
-  void _handleFarewell() {
-    if (_isSessionOver) return;
-    setState(() {
-      _isSessionOver = true;
-      _showingFarewellReaction = true;
-    });
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) widget.game.closeDialog();
+      // After 3 interactions: NPC sends farewell, then auto-close
+      if (model != null && model.isReadyToLeave) {
+        setState(() => _isSessionOver = true);
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (!mounted) return;
+          final sessionReaction = NPCReaction.fromFaithLevel(
+            model.faith,
+            gotGift: model.hadGiftThisSession,
+          );
+          _addMessage('${sessionReaction.emoji}👋', false);
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) widget.game.closeDialog();
+          });
+        });
+      }
     });
   }
 
@@ -272,10 +276,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
   Widget build(BuildContext context) {
     final dialog = widget.game.activeDialog;
     if (dialog == null) return const SizedBox.shrink();
-
-    final model = dialog.npcModel;
-    final sessionCount = min(model.currentSessionInteractions, 3);
-    final reaction = NPCReaction.fromFaithLevel(model.faith, gotGift: model.hadGiftThisSession);
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -305,15 +305,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const Spacer(),
-                  // Conversation counter
-                  Text(
-                    '${AppStrings.get('dialog.conversation')} $sessionCount/3',
-                    style: TextStyle(
-                      color: model.isReadyToLeave ? Colors.orange : Colors.white60,
-                      fontSize: 12,
-                      fontWeight: model.isReadyToLeave ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => widget.game.closeDialog(),
@@ -322,41 +313,20 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
 
-            // ── Body ─────────────────────────────────────────────────────────
+            // ── Chat body ─────────────────────────────────────────────────────
             Expanded(
-              child: _showingFarewellReaction
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            reaction.emoji,
-                            style: const TextStyle(fontSize: 64),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            AppStrings.get('dialog.goodbye'),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                      ),
-                    ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
+                ),
+              ),
             ),
 
-            // ── Action buttons ────────────────────────────────────────────────
+            // ── Action chips ──────────────────────────────────────────────────
             if (!_isSessionOver)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -364,53 +334,19 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   color: Colors.black26,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
-                child: model.isReadyToLeave
-                    // After 3 interactions: show farewell button
-                    ? SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _handleFarewell,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal[700],
-                            foregroundColor: Colors.white,
-                            shape: const StadiumBorder(),
-                          ),
-                          child: Text(AppStrings.get('dialog.farewell')),
-                        ),
-                      )
-                    // Normal interaction buttons
-                    : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _InteractionChip(
-                              emoji: '💬',
-                              label: AppStrings.get('dialog.talk'),
-                              onTap: () => _handleInteraction('talk', '💬'),
-                            ),
-                            const SizedBox(width: 8),
-                            _InteractionChip(
-                              emoji: '🙏',
-                              label: AppStrings.get('dialog.pray'),
-                              onTap: () => _handleInteraction('pray', '🙏'),
-                            ),
-                            const SizedBox(width: 8),
-                            _InteractionChip(
-                              emoji: '📦',
-                              label: AppStrings.get('dialog.help'),
-                              onTap: () => _handleInteraction('help', '📦'),
-                            ),
-                            const SizedBox(width: 8),
-                            _InteractionChip(
-                              emoji: '✝️🕊️',
-                              label: AppStrings.get('dialog.convert'),
-                              isSpecial: true,
-                              onTap: () => _handleInteraction('convert', '✝️?'),
-                            ),
-                          ],
-                        ),
-                      ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _EmojiChip(emoji: '💬', onTap: () => _handleInteraction('talk', '💬')),
+                    _EmojiChip(emoji: '🙏', onTap: () => _handleInteraction('pray', '🙏')),
+                    _EmojiChip(emoji: '📦', onTap: () => _handleInteraction('help', '📦')),
+                    _EmojiChip(
+                      emoji: '✝️🕊️',
+                      isSpecial: true,
+                      onTap: () => _handleInteraction('convert', '✝️?'),
+                    ),
+                  ],
+                ),
               ),
           ],
         ),
@@ -448,15 +384,13 @@ class _ChatBubble extends StatelessWidget {
   }
 }
 
-class _InteractionChip extends StatelessWidget {
+class _EmojiChip extends StatelessWidget {
   final String emoji;
-  final String label;
   final VoidCallback onTap;
   final bool isSpecial;
-  
-  const _InteractionChip({
-    required this.emoji, 
-    required this.label, 
+
+  const _EmojiChip({
+    required this.emoji,
     required this.onTap,
     this.isSpecial = false,
   });
@@ -464,11 +398,11 @@ class _InteractionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionChip(
-      avatar: Text(emoji, style: const TextStyle(fontSize: 18)),
-      label: Text(label, style: TextStyle(color: isSpecial ? Colors.white : Colors.black87, fontWeight: isSpecial ? FontWeight.bold : FontWeight.normal)),
+      label: Text(emoji, style: const TextStyle(fontSize: 22)),
       backgroundColor: isSpecial ? Colors.amber[800] : Colors.white70,
       onPressed: onTap,
       shape: StadiumBorder(side: BorderSide(color: isSpecial ? Colors.amber : Colors.transparent)),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
     );
   }
 }

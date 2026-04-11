@@ -90,9 +90,6 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   @override
   String handleInteraction(String type) {
     model.currentSessionInteractions++;
-    if (model.currentSessionInteractions > 3) {
-      return '👋';
-    }
 
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
@@ -109,7 +106,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.applyInfluence(gain.toDouble());
       model.conversationCount++;
       game.recordConversation();
-      return '💬😊\n+$gain';
+      return _talkEmoji();
     }
 
     if (type == 'pray') {
@@ -118,10 +115,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       if (interactionScore + _random.nextInt(40) > 20) {
         model.applyInfluence(prayerGain.toDouble());
         game.gainFaith(3.0);
-        return '❤️\n+$prayerGain';
+        return ['❤️✨', '🙏✨', '❤️🌟', '🙏❤️'][_random.nextInt(4)];
       } else {
         model.applyInfluence(-8.0);
-        return '${interactionScore < -20 ? '💀' : '😠'}\n-8';
+        return interactionScore < -20 ? '💀😬' : '😠💭';
       }
     }
 
@@ -132,7 +129,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.applyInfluence(giftGain.toDouble());
       game.gainFaith(5.0);
       game.spendMaterials(8.0);
-      return '📦😊\n+$giftGain';
+      return ['📦🙏', '😊📦', '🙏😊'][_random.nextInt(3)];
     }
 
     if (type == 'convert') {
@@ -145,12 +142,22 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         return '✝️🕊️';
       } else {
         model.applyInfluence(3.0);
-        if (interactionScore < 0) return '🚫';
-        return '🤔';
+        if (interactionScore < 0) return '🚫😤';
+        return '🤔💭';
       }
     }
 
-    return '❓';
+    return '❓💭';
+  }
+
+  /// Returns a dynamic two-emoji response for a talk interaction based on
+  /// the NPC's current faith level.
+  String _talkEmoji() {
+    if (model.faith > 50) return ['😊✝️', '🙌💬', '😄✨'][_random.nextInt(3)];
+    if (model.faith > 20) return ['😊💬', '🙌😊', '💬😄'][_random.nextInt(3)];
+    if (model.faith > 0)  return ['🤔💬', '💭😊', '👀💬'][_random.nextInt(3)];
+    if (model.faith > -30) return ['😐💬', '💭🤔', '😒💬'][_random.nextInt(3)];
+    return ['😠💬', '😤🙅', '😡💭'][_random.nextInt(3)];
   }
 
   @override
