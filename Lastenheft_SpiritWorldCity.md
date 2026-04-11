@@ -150,10 +150,10 @@ for each cell in zone_area:
   cell_influence += impact_power * (1 - distance_from_center)
 ```
 
-**Hinweis:**
-- Mehr Faith → stärkerer Effekt
-- Größere Zone → mehr Fläche, aber Kraft pro Zelle sinkt (Verteilung)
-- Timing + Richtung = Skill-Element; Faith-Menge = Fortschritts-Element
+**Wichtig:** 
+- Je mehr Faith man investiert, desto größer der Effekt
+- Aber: Optimal-Timing muss noch getroffen werden
+- **Neue Spieler:** Vielleicht mit weniger Faith anfangen (20-30) um Timing zu lernen
 
 ---
 
@@ -253,38 +253,12 @@ cell_influence = (
     (nearby_churches * 15) +        // Kirchen strahlen +15 pro Kirche
     (gol_neighbor_influence * 0.4)  // Game of Life Nachbar-Effekt
     - (crime_reports * 0.3)        // Kriminalität
+    - daemon_residuum_strength * 0.5   // Daemon-Residuum-Stärke (0..10 nach Auflösung, klingt ab)
 )
 
 // Zelle zwischen -100 und +100 clamped
-// Farbe basiert auf Intensität: Grün (positiv) ↔ Rot (negativ)
+// Farbe basiert auf Intensität
 ```
-
-### 5.4 MODIFIER-SYSTEM – PROGRESSIVER KAMPFVERSTÄRKER
-
-**Konzept:** Einfache, passive Modifier die durch Spielfortschritt freigeschaltet werden. Wirken auf zwei Bereiche:
-1. **Combat-Modifier** → verstärken den Dual-Control-Gebetkampf direkt
-2. **Territoriums-Modifier** → verlangsamen den Rückfall bereits eingenommener Bereiche
-
-**Design-Prinzip:** Keine komplexen Systeme – jeder Modifier ist ein einzelner Zahlen-Multiplikator. Epheser 6 dient als Namens-Inspiration, nicht als Mechanik-Vorgabe.
-
-#### COMBAT-MODIFIER (Kampfring)
-| Modifier | Unlock-Bedingung | Effekt |
-|---|---|---|
-| **Inbrunst** | 10× Prayer Combat durchgeführt | Timing-Optimal-Fenster +5 % breiter |
-| **Ausdauer** | 5 Territorien teilweise eingenommen | Joystick-Zone wächst 20 % schneller |
-| **Konzentration** | Bibellesen 10× abgeschlossen | Faith-Pulse verlangsamt sich um 15 % |
-| **Kraft** | 3 NPCs konvertiert | Impact-Power +20 % |
-| **Weisheit** | 20 Gespräche geführt | Faith-Kosten pro Combat −10 % |
-
-#### TERRITORIUMS-MODIFIER (Eingenommene Bereiche)
-| Modifier | Unlock-Bedingung | Effekt |
-|---|---|---|
-| **Bewahrung** | 1 Territorium vollständig eingenommen | Game-of-Life Rückfall-Rate −15 % für grüne Zellen |
-| **Gemeinde** | 5 Christen in einer Zelle | Zelle verliert pro Tag weniger Einfluss |
-| **Wachstum** | 30 Gespräche mit NPCs | Grüne Zellen beeinflussen Nachbarn +10 % stärker |
-| **Fundament** | Kirche in eingenommenem Gebiet | Zellen um Kirche sind resistent gegen Rückfall |
-
-**Wichtig:** Modifier sind dauerhaft aktiv sobald freigeschaltet – kein Ausrüsten nötig. Einfach und managebar.
 
 ### 5.3 Initiale Stadt-State
 
