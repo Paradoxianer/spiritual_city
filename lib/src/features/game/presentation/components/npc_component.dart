@@ -4,6 +4,7 @@ import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
 import '../../domain/models/npc_model.dart';
+import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
 import '../../domain/services/faith_calculator_service.dart';
 import '../spirit_world_game.dart';
@@ -244,6 +245,14 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   Vector2? _findNextWanderTarget(int gx, int gy) {
     final directions = [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)];
     directions.shuffle(_random);
+    // Prefer road cells so NPCs walk along streets, not through buildings
+    directions.sort((a, b) {
+      final cellA = game.grid.getCell(gx + a.x.toInt(), gy + a.y.toInt());
+      final cellB = game.grid.getCell(gx + b.x.toInt(), gy + b.y.toInt());
+      final isRoadA = cellA?.data is RoadData ? 1 : 0;
+      final isRoadB = cellB?.data is RoadData ? 1 : 0;
+      return isRoadB.compareTo(isRoadA);
+    });
     for (final dir in directions) {
       final tx = gx + dir.x.toInt();
       final ty = gy + dir.y.toInt();
