@@ -6,13 +6,11 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../domain/city_generator.dart';
-import '../domain/models/building_model.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
 import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
-import '../domain/services/building_interaction_service.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
@@ -70,13 +68,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double interactionRange = 60.0;
   
   GameDialogData? activeDialog;
-
-  /// Active building interior session (null when no building is open).
-  GameBuildingData? activeBuildingData;
-
-  /// Building interaction logic (shared instance).
-  final BuildingInteractionService buildingInteractionService =
-      BuildingInteractionService();
 
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
@@ -209,69 +200,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     activeDialog = null;
     overlays.remove('DialogOverlay');
     paused = false;
-  }
-
-  // ── Building interior ─────────────────────────────────────────────────────
-
-  /// Opens the building-interior overlay for [building].
-  void openBuildingInterior(BuildingModel building) {
-    activeBuildingData = GameBuildingData(building: building);
-    overlays.add('BuildingInteriorOverlay');
-    paused = true;
-  }
-
-  /// Closes the building-interior overlay.
-  void closeBuildingInterior() {
-    activeBuildingData = null;
-    overlays.remove('BuildingInteriorOverlay');
-    paused = false;
-  }
-
-  /// Performs [actionType] in the currently open building and returns the
-  /// result.  The caller (overlay) is responsible for applying resource
-  /// deltas to the game via [gainFaith], [gainMaterials] etc.
-  BuildingInteractionResult handleBuildingAction(String actionType) {
-    final data = activeBuildingData;
-    if (data == null) {
-      return const BuildingInteractionResult(reactionEmoji: '❓', success: false);
-    }
-    final result = buildingInteractionService.performAction(
-      actionType,
-      data.building,
-      faith,
-    );
-    // Apply resource deltas immediately
-    if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);
-    if (result.playerMaterialsDelta > 0) {
-      gainMaterials(result.playerMaterialsDelta);
-    } else if (result.playerMaterialsDelta < 0) {
-      spendMaterials(-result.playerMaterialsDelta);
-    }
-    // 'prayBusiness' also nudges the cell underneath the player positively
-    if (actionType == 'prayBusiness') {
-      _nudgeCellUnderPlayer(0.02);
-    }
-    return result;
-  }
-
-  /// Attempts to access [building] on behalf of the player.
-  ///
-  /// Returns `true` if access is granted (always true for non-residential).
-  bool attemptBuildingAccess(BuildingModel building) {
-    return buildingInteractionService.attemptAccess(building, faith);
-  }
-
-  /// Applies [delta] spiritual influence to the city cell directly beneath
-  /// the player (used by 'prayBusiness').
-  ///
-  /// Positive [delta] increases the spiritual state towards +1.0 (green zone).
-  void _nudgeCellUnderPlayer(double delta) {
-    final gx = (player.position.x / 32).floor();
-    final gy = (player.position.y / 32).floor();
-    final cell = grid.getCell(gx, gy);
-    if (cell != null) {
-      cell.spiritualState = (cell.spiritualState + delta).clamp(-1.0, 1.0);
-    }
   }
 
   void closeMenu() { _currentMenu?.removeFromParent(); _currentMenu = null; }
