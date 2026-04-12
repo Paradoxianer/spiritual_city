@@ -87,6 +87,27 @@ MATERIALS: [██████░░░░] 42/100 MP
 
 ---
 
+### 2.4 Loot Spawning on Streets (Issue #41)
+
+**Spawn-Regeln:**
+- 5–15 Material-Pakete gleichzeitig aktiv auf sichtbaren Straßen
+- Spawn-Chance: 10 % pro Minute pro sichtbarer Straße
+- Nur auf Straßen-Zellen (keine Gebäude, keine Parks)
+
+**Pickup:**
+- Pastor läuft nah heran (< 40 Einheiten Radius)
+- Material wird highlighted (gelbes Glimmer / Pulsieren)
+- Pickup via Aktionsbutton oder Auto-Pickup
+- Reward: +5–15 Material Points
+  - 60 % → small (+5 MP)
+  - 30 % → normal (+10 MP)
+  - 10 % → groß (+15 MP)
+
+**Effekt auf Unsichtbare Welt:**
+- Zelle: +1 Grün-Einfluss (symbolisiert praktische Hilfe / Nächstenliebe)
+
+---
+
 ### 2.3 GLAUBE IN DER UNSICHTBAREN WELT – DUAL-CONTROL-COMBAT
 
 **Zwei unabhängige Eingaben steuern den Gebetkampf:**
@@ -370,6 +391,16 @@ ATTRACTION_DURATION_SEC     = 30     // Sekunden bis Attraktion abklingt
 RESIDUUM_DECAY_MIN          = 5      // Minuten bis Residuum-Marker verblasst
 ```
 
+### 5.6 Prayer Effects Visibility – Gebets-Effekte NUR in unsichtbarer Welt (Issue #31)
+
+**Wichtig:** Alle visuellen Effekte von Gebet und Prayer Combat (Schockwellen, Farbänderungen, Territorienveränderungen) sind **NUR in der Unsichtbaren Welt sichtbar**. In der realen Welt gibt es **KEINE** visuellen Rückmeldungen auf Gebetsaktionen.
+
+- Gebet in der realen Welt: Pastor führt Animation durch (z. B. Kniebeugen) – kein Effekt sichtbar auf Umgebung
+- Territorium-Änderungen, Partikel, Lavalampen-Effekte: nur im Unsichtbaren-Welt-Overlay
+- HUD zeigt Faith-Zuwachs, aber KEINE Zell-Änderung in realer Ansicht
+
+---
+
 ## 6. NPC-SYSTEM MIT GEDÄCHTNIS
 
 ### 6.1 InteractableObject Framework
@@ -452,6 +483,35 @@ andere NPCS in der Nähe auch mit glauben stärken
 
 ---
 
+### 6.4 NPC Faith Progressive Discovery System (Issue #38)
+
+**Problem:** Der Glaube/die Geisteshaltung eines NPC ist aktuell sofort durch Emojis erkennbar ✝️ / 😠 / 👤 etc.
+
+**Lösung:**
+- Glauben wird **NICHT sofort offengelegt** – weder durch Emoji noch durch Farbe in der sichtbaren Welt
+- Nur neutrales Symbol (❓) ohne geführte Gespräche – kein Rückschluss auf Glaube möglich
+- Glauben wird auch **NICHT durch Farbe** in der sichtbaren Welt angezeigt, bevor Gespräche geführt wurden
+
+**Enthüllungs-Timeline:**
+- **0–2 Gespräche:** ❓ (komplett unbekannt, neutrales Grau/Weiß)
+- **3–5 Gespräche:** 🤔 (vage Einschätzung, noch nicht die echte Emotion)
+- **6+ Gespräche:** echtes Emoji (✝️ / 😠 / 👤) + klare Farbcodierung
+
+---
+
+### 6.5 Homebase (Pastorat) Visual Identification (Issue #39)
+
+**Problem:** Das eigene Haus (Pastorat) des Pastors ist visuell nicht deutlich erkennbar.
+
+**Lösung:**
+- **Sprite:** Haus mit großem goldenem Kreuz / Leuchten auf dem Dach
+- **Aura (reale Welt):** Goldenes Glimmer-Aura um das Haus
+- **Minimap:** Goldenes Stern- / Haus-Icon
+- **HUD:** „🏠 Home"-Label wenn Pastor sich in der Nähe befindet
+- **Spawn-Animation:** Beim Spielstart fokussiert die Kamera kurz auf das Pastorat
+
+---
+
 ## 7. MISSIONEN – VEREINFACHTES ACTION-SYSTEM
 
 ### 7.1 Standard-Missionen (gebunden an Objects)
@@ -506,6 +566,109 @@ class Mission extends InteractionAction {
   3. Drücke "Bete Segen über Bereich" Button
 - **Reward:** +100 Faith, +50 MP, Bereich wird +40 Grün, Missions unlocked
 - **Dauer:** ~30 Min Spielzeit
+
+---
+
+### 7.4 Building Interior & House Interaction System (Issue #37)
+
+**Ziel:** Häuser betreten, Innenräume sehen, mit NPCs interagieren.
+
+#### A. Wohnhäuser (Residential)
+
+**Zugang (Anklopfen):**
+- Zugang ist grundsätzlich für **alle** möglich (auch Menschen ohne Glaube)
+- **Hoher NPC-Glaube (faith > 30):** sehr wahrscheinlich (85 %)
+- **Neutral (faith −30..+30):** wahrscheinlich (50 %)
+- **Negativer Glaube (faith < −30):** unwahrscheinlich (15 %)
+- **Nach 3+ Gesprächen:** +30 % Bonus auf Erfolgschance
+- Bei niedriger Chance: Pastor kann es trotzdem versuchen – Ablehnung ist möglich
+
+**Interior-Darstellung:**
+- Zimmer mit Familie/Haushalt als **Bild/ASCII-Art** dargestellt
+- NPCs sitzen im Raum (👨 👩 👧)
+- Möbel/Einrichtung sichtbar
+
+**Aktionen im Interior – KREIS-MENÜ (Radial Menu):**
+
+Gleiche Mechanik wie der Prayer-Combat-Ring – vertrautes System für den Spieler:
+
+```
+     [Beten]
+        |
+[Sprechen] — [NPC] — [Hilfe]
+        |
+   [Bibellesen]
+```
+
+- **[A] Sprechen:** +5 Faith, conversationCount +1
+- **[B] Beten:** +15 Faith, +5 Material-Einfluss auf Zelle, Familie wird beeinflusst
+- **[C] Hilfe:** −10 MP, +10 Faith, NPC-faith +5
+- **[D] Bibellesen:** +10 Faith, Family-faith +2 (schwacher Effekt)
+
+**Verlassen:** X-Button oder Klick außerhalb
+
+#### B. Geschäftsgebäude (Shop, Office, Factory)
+
+**Zugang:** Immer offen (kein Anklopfen)
+
+**Aktionen (Kreis-Menü):**
+
+```
+   [Spenden bitten]
+        |
+[Sprechen] — [Manager] — [Für Betrieb beten]
+        |
+   [Material verteilen]
+```
+
+- **[A] Um Spenden bitten:** +20–40 MP (abhängig von Manager-Glaube, 50 % Erfolgsrate)
+- **[B] Mit Arbeiter sprechen:** +5 Faith pro Interaktion
+- **[C] Für Betrieb beten:** +10 Faith, Zelle +2 Grün-Einfluss
+- **[D] Material verteilen:** −5 MP, +15 Faith, Betrieb-Mitarbeiter +3 faith
+
+#### C. Kirchliche Gebäude
+
+- **Zugang:** Immer offen
+- **Siehe Kapitel 4:** Bibellesen, Gottesdienst, Gemeindebeten
+
+**Interior-Darstellung (Beispiel):**
+```
+┌──────────────────────────────┐
+│ WOHNZIMMER - Familie Schmidt │
+├──────────────────────────────┤
+│                              │
+│  👨 👩 👧 (Familie sitzt)    │
+│                              │
+│  Einfaches Zimmer mit Tisch  │
+│  & Bildern an der Wand       │
+│                              │
+│        [Beten]               │
+│           |                  │
+│  [Sprechen]—[👨]—[Hilfe]    │  ← Radial Menu
+│           |                  │
+│     [Bibellesen]             │
+│                              │
+└──────────────────────────────┘
+```
+
+---
+
+### 7.5 Street Names & House Numbers (Issue #40)
+
+**Straßennamen (deterministisch generiert):**
+- Prefixes: Main, Oak, Church, Grace, Hope, Faith, Light, …
+- Suffixes: Street, Road, Avenue, Lane, Way, Place
+- Beispiel: „Main Street", „Church Avenue", „Grace Road"
+
+**Hausnummern:**
+- Basierend auf Position in der Straße (deterministisch)
+- Ungerade Nummern = linke Seite, Gerade Nummern = rechte Seite
+- Beispiel: „Main Street 42", „Oak Road 127"
+
+**HUD-Display:**
+```
+📍 Current Location: Main Street 42 (Wohnhaus)
+```
 
 ---
 
@@ -602,6 +765,16 @@ incidents = [
 ║ [B] ABBRECHEN  (−5 Faith)               ║
 ╚═══════════════════════════════════════════╝
 ```
+
+---
+
+### 9.3 Chat Dialog UI Improvements (Issue #43)
+
+**Fixes:**
+- Chat-Icon Padding erhöhen (min. 4 px auf allen Seiten – kein abgeschnittenes Icon)
+- Chip-Höhe auf mindestens 48 px (Touch-freundlich)
+- Icon-Größe standardisieren auf 24 px
+- Erste Nachricht im Dialog vollständig sichtbar (kein Cut-off am oberen Rand)
 
 ---
 
