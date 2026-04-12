@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
+import '../domain/models/npc_model.dart';
+import '../domain/models/npc_reaction.dart';
 import 'spirit_world_game.dart';
 
 class GameScreen extends StatefulWidget {
@@ -232,29 +234,39 @@ class _DialogOverlayState extends State<DialogOverlay> {
 
   void _handleInteraction(String type, String emoji) {
     if (_isWaiting || _isSessionOver) return;
-    
+
     _addMessage(emoji, true);
     setState(() => _isWaiting = true);
 
     Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
+      final model = widget.game.activeDialog?.npcModel;
       final reaction = widget.game.handleInteraction(type);
       _addMessage(reaction, false);
       setState(() => _isWaiting = false);
-      
-      // Check for session end (👋) - 5 Sekunden Zeit zum Lesen
-      if (reaction == '👋') {
-        setState(() => _isSessionOver = true);
-        Future.delayed(const Duration(seconds: 5), () {
-          if (mounted) widget.game.closeDialog();
-        });
-      }
 
-      // Wenn Bekehrung erfolgreich (✝️ statt ✨)
+      // Conversion success → session ends
       if (reaction == '✝️🕊️') {
         setState(() => _isSessionOver = true);
         Future.delayed(const Duration(seconds: 5), () {
           if (mounted) widget.game.closeDialog();
+        });
+        return;
+      }
+
+      // After 3 interactions: NPC sends farewell, then auto-close
+      if (model != null && model.isReadyToLeave) {
+        setState(() => _isSessionOver = true);
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (!mounted) return;
+          final sessionReaction = NPCReaction.fromFaithLevel(
+            model.faith,
+            gotGift: model.hadGiftThisSession,
+          );
+          _addMessage('${sessionReaction.emoji}👋', false);
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) widget.game.closeDialog();
+          });
         });
       }
     });
@@ -271,12 +283,13 @@ class _DialogOverlayState extends State<DialogOverlay> {
         height: MediaQuery.of(context).size.height * 0.45,
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF075E54).withValues(alpha: 0.95), 
+          color: const Color(0xFF075E54).withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10)],
         ),
         child: Column(
           children: [
+            // ── Header ────────────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: const BoxDecoration(
@@ -299,7 +312,8 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 ],
               ),
             ),
-            
+
+            // ── Chat body ─────────────────────────────────────────────────────
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -312,6 +326,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
 
+            // ── Action chips ──────────────────────────────────────────────────
             if (!_isSessionOver)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -319,25 +334,18 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   color: Colors.black26,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _InteractionChip(emoji: '💬', label: 'Talk', onTap: () => _handleInteraction('talk', '💬')),
-                      const SizedBox(width: 8),
-                      _InteractionChip(emoji: '🙏', label: 'Pray', onTap: () => _handleInteraction('pray', '🙏')),
-                      const SizedBox(width: 8),
-                      _InteractionChip(emoji: '📦', label: 'Help', onTap: () => _handleInteraction('help', '📦')),
-                      const SizedBox(width: 8),
-                      _InteractionChip(
-                        emoji: '✝️🕊️', 
-                        label: 'Convert', 
-                        isSpecial: true,
-                        onTap: () => _handleInteraction('convert', '✝️?'),
-                      ),
-                    ],
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _EmojiChip(emoji: '💬', onTap: () => _handleInteraction('talk', '💬')),
+                    _EmojiChip(emoji: '🙏', onTap: () => _handleInteraction('pray', '🙏')),
+                    _EmojiChip(emoji: '📦', onTap: () => _handleInteraction('help', '📦')),
+                    _EmojiChip(
+                      emoji: '✝️🕊️',
+                      isSpecial: true,
+                      onTap: () => _handleInteraction('convert', '✝️?'),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -376,15 +384,13 @@ class _ChatBubble extends StatelessWidget {
   }
 }
 
-class _InteractionChip extends StatelessWidget {
+class _EmojiChip extends StatelessWidget {
   final String emoji;
-  final String label;
   final VoidCallback onTap;
   final bool isSpecial;
-  
-  const _InteractionChip({
-    required this.emoji, 
-    required this.label, 
+
+  const _EmojiChip({
+    required this.emoji,
     required this.onTap,
     this.isSpecial = false,
   });
@@ -392,11 +398,11 @@ class _InteractionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionChip(
-      avatar: Text(emoji, style: const TextStyle(fontSize: 18)),
-      label: Text(label, style: TextStyle(color: isSpecial ? Colors.white : Colors.black87, fontWeight: isSpecial ? FontWeight.bold : FontWeight.normal)),
+      label: Text(emoji, style: const TextStyle(fontSize: 22)),
       backgroundColor: isSpecial ? Colors.amber[800] : Colors.white70,
       onPressed: onTap,
       shape: StadiumBorder(side: BorderSide(color: isSpecial ? Colors.amber : Colors.transparent)),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
     );
   }
 }
@@ -410,5 +416,6 @@ class _ChatMessage {
 class GameDialogData {
   final String npcName;
   final String npcEmoji;
-  GameDialogData({required this.npcName, required this.npcEmoji});
+  final NPCModel npcModel;
+  GameDialogData({required this.npcName, required this.npcEmoji, required this.npcModel});
 }

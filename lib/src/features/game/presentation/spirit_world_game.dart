@@ -9,6 +9,7 @@ import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
 import '../domain/models/modifier_manager.dart';
+import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
@@ -143,7 +144,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   void _updateButtonStyles() {
     actionButton.updateContent(
-      isSpiritualWorld ? '✨' : '🖐️',
+      isSpiritualWorld ? '✝️' : '🖐️',
       isSpiritualWorld ? Colors.amber.withValues(alpha: 0.7) : Colors.blue.withValues(alpha: 0.6)
     );
     worldToggleButton.updateContent(
@@ -157,11 +158,24 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       RadialAction(label: '👀', icon: Icons.search, onSelect: () => _log.info('Looking around')),
     ];
 
-    if (_nearestInteractable != null) {
+    // Collect all interactables within range, sorted by distance (closest first)
+    final nearby = world.children
+        .whereType<Interactable>()
+        .map((i) => (i, player.position.distanceTo(i.interactionPosition)))
+        .where((e) => e.$2 < interactionRange)
+        .toList()
+      ..sort((a, b) => a.$2.compareTo(b.$2));
+
+    for (final (target, _) in nearby.take(4)) {
       actions.add(RadialAction(
-        label: '💬', 
-        icon: Icons.chat_bubble, 
-        onSelect: () => _nearestInteractable!.onInteract()
+        label: target.interactionEmoji,
+        sublabel: target.interactionLabel.split(' ').first,
+        icon: Icons.chat_bubble,
+        onSelect: () {
+          // Ensure handleInteraction targets this specific NPC while the dialog is open.
+          _nearestInteractable = target;
+          target.onInteract();
+        },
       ));
     }
 
@@ -169,8 +183,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     world.add(_currentMenu!);
   }
 
-  void showDialog(String name, String emoji) {
-    activeDialog = GameDialogData(npcName: name, npcEmoji: emoji);
+  void showDialog(String name, String emoji, NPCModel model) {
+    activeDialog = GameDialogData(npcName: name, npcEmoji: emoji, npcModel: model);
     overlays.add('DialogOverlay');
     paused = true; 
   }
