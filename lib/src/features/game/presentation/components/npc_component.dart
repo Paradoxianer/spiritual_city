@@ -115,7 +115,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       if (interactionScore + _random.nextInt(40) > 20) {
         model.applyInfluence(prayerGain.toDouble());
         game.gainFaith(3.0);
-        return ['❤️✨', '🙏✨', '❤️🌟', '🙏❤️'][_random.nextInt(4)];
+        return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
       } else {
         model.applyInfluence(-8.0);
         return interactionScore < -20 ? '💀😬' : '😠💭';
@@ -153,7 +153,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   /// Returns a dynamic two-emoji response for a talk interaction based on
   /// the NPC's current faith level.
   String _talkEmoji() {
-    if (model.faith > 50) return ['😊✝️', '🙌💬', '😄✨'][_random.nextInt(3)];
+    if (model.faith > 50) return ['😊✝️', '🙌💬', '😄🕊️'][_random.nextInt(3)];
     if (model.faith > 20) return ['😊💬', '🙌😊', '💬😄'][_random.nextInt(3)];
     if (model.faith > 0)  return ['🤔💬', '💭😊', '👀💬'][_random.nextInt(3)];
     if (model.faith > -30) return ['😐💬', '💭🤔', '😒💬'][_random.nextInt(3)];

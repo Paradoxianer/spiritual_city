@@ -7,7 +7,7 @@ enum ReactionType {
   sad,        // 😢
   grumpy,     // 😠
   confused,   // 😵
-  blessed,    // ✨
+  blessed,    // 🕊️
 }
 
 class NPCReaction {
@@ -19,7 +19,7 @@ class NPCReaction {
   /// Selects a reaction based on [faithLevel] and whether the player gave a
   /// gift this session.
   factory NPCReaction.fromFaithLevel(double faithLevel, {bool gotGift = false}) {
-    if (faithLevel > 50) return NPCReaction._(ReactionType.blessed, '✨');
+    if (faithLevel > 50) return NPCReaction._(ReactionType.blessed, '🕊️');
     if (faithLevel > 20) return NPCReaction._(ReactionType.grateful, '🙏');
     if (faithLevel > 0) {
       return gotGift

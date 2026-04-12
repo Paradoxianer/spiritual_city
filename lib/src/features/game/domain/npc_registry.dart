@@ -35,12 +35,15 @@ class NPCRegistry {
         final cell = chunk.cells['$x,$y'];
         if (cell == null) continue;
 
+        // Spawn NPCs at entrances of residential and public buildings
         final data = cell.data;
-        // In Wohnhäusern (Houses/Apartments) an Eingängen NPCs spawnen
         if (data is BuildingData && data.isEntrance) {
-          if (data.type == BuildingType.house || data.type == BuildingType.apartment) {
-            // Chance von 70%, dass jemand zuhause/vor der Tür ist
-            if (_random.nextDouble() < 0.7) {
+          if (data.type == BuildingType.house ||
+              data.type == BuildingType.apartment ||
+              data.type == BuildingType.church ||
+              data.type == BuildingType.shop) {
+            // 95% chance that someone is at home / in front of the door
+            if (_random.nextDouble() < 0.95) {
               npcs.add(_createRandomNPC(chunk.getWorldX(x), chunk.getWorldY(y), data.type));
             }
           }
@@ -72,6 +75,7 @@ class NPCRegistry {
 
   NPCType _getNPCTypeForBuilding(BuildingType bType) {
     if (bType == BuildingType.apartment) return NPCType.citizen;
+    if (bType == BuildingType.church) return NPCType.citizen;
     if (_random.nextDouble() < 0.2) return NPCType.merchant;
     return NPCType.citizen;
   }

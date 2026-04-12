@@ -144,7 +144,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   void _updateButtonStyles() {
     actionButton.updateContent(
-      isSpiritualWorld ? '✨' : '🖐️',
+      isSpiritualWorld ? '✝️' : '🖐️',
       isSpiritualWorld ? Colors.amber.withValues(alpha: 0.7) : Colors.blue.withValues(alpha: 0.6)
     );
     worldToggleButton.updateContent(
