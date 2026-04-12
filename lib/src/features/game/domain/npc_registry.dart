@@ -28,24 +28,25 @@ class NPCRegistry {
 
   List<NPCModel> _generateNPCsForChunk(CityChunk chunk) {
     final List<NPCModel> npcs = [];
-    
-    // Wir loopen durch die Zellen und suchen nach Hauseingängen
+
     for (int y = 0; y < CityChunk.chunkSize; y++) {
       for (int x = 0; x < CityChunk.chunkSize; x++) {
         final cell = chunk.cells['$x,$y'];
         if (cell == null) continue;
 
-        // Spawn NPCs at entrances of residential and public buildings
         final data = cell.data;
+
+        // Spawn NPCs at building entrances (residents coming / going)
         if (data is BuildingData && data.isEntrance) {
-          if (data.type == BuildingType.house ||
-              data.type == BuildingType.apartment ||
-              data.type == BuildingType.church ||
-              data.type == BuildingType.shop) {
-            // 95% chance that someone is at home / in front of the door
-            if (_random.nextDouble() < 0.95) {
-              npcs.add(_createRandomNPC(chunk.getWorldX(x), chunk.getWorldY(y), data.type));
-            }
+          if (_random.nextDouble() < 0.95) {
+            npcs.add(_createRandomNPC(chunk.getWorldX(x), chunk.getWorldY(y), null));
+          }
+        }
+
+        // Spawn pedestrians on road cells for a lively street life (~15% per cell)
+        if (data is RoadData) {
+          if (_random.nextDouble() < 0.15) {
+            npcs.add(_createRandomNPC(chunk.getWorldX(x), chunk.getWorldY(y), null));
           }
         }
       }
@@ -53,12 +54,12 @@ class NPCRegistry {
     return npcs;
   }
 
-  NPCModel _createRandomNPC(int wx, int wy, BuildingType homeType) {
+  NPCModel _createRandomNPC(int wx, int wy, BuildingType? homeType) {
     final id = 'npc_${wx}_$wy';
     final name = _getRandomName();
     final type = _getNPCTypeForBuilding(homeType);
-    
-    // Initialer Faith-Wert zwischen -60 und +20 (meistens eher distanziert am Anfang)
+
+    // Initial faith: mostly sceptical/neutral at game start
     final initialFaith = -60.0 + _random.nextDouble() * 80.0;
 
     return NPCModel(
@@ -73,7 +74,8 @@ class NPCRegistry {
     );
   }
 
-  NPCType _getNPCTypeForBuilding(BuildingType bType) {
+  NPCType _getNPCTypeForBuilding(BuildingType? bType) {
+    if (bType == null) return NPCType.citizen;
     if (bType == BuildingType.apartment) return NPCType.citizen;
     if (bType == BuildingType.church) return NPCType.citizen;
     if (_random.nextDouble() < 0.2) return NPCType.merchant;
