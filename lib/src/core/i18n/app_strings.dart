@@ -40,6 +40,15 @@ class AppStrings {
 
       // Common
       'common.language': 'Sprache',
+
+      // NPC Dialog
+      'dialog.talk': 'Sprich',
+      'dialog.pray': 'Bete',
+      'dialog.help': 'Diene',
+      'dialog.convert': 'Bekehre',
+      'dialog.farewell': '👋 Tschüss',
+      'dialog.goodbye': '👋 Tschüss!',
+      'dialog.conversation': 'Gespräch',
     },
     'en': {
       // Main Menu
@@ -78,6 +87,15 @@ class AppStrings {
 
       // Common
       'common.language': 'Language',
+
+      // NPC Dialog
+      'dialog.talk': 'Talk',
+      'dialog.pray': 'Pray',
+      'dialog.help': 'Help',
+      'dialog.convert': 'Convert',
+      'dialog.farewell': '👋 Goodbye',
+      'dialog.goodbye': '👋 Goodbye!',
+      'dialog.conversation': 'Chat',
     },
   };
 

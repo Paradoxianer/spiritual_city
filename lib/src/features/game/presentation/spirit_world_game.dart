@@ -9,6 +9,7 @@ import '../domain/city_generator.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
 import '../domain/models/modifier_manager.dart';
+import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
@@ -143,7 +144,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   void _updateButtonStyles() {
     actionButton.updateContent(
-      isSpiritualWorld ? '✨' : '🖐️',
+      isSpiritualWorld ? '✝️' : '🖐️',
       isSpiritualWorld ? Colors.amber.withValues(alpha: 0.7) : Colors.blue.withValues(alpha: 0.6)
     );
     worldToggleButton.updateContent(
@@ -169,8 +170,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     world.add(_currentMenu!);
   }
 
-  void showDialog(String name, String emoji) {
-    activeDialog = GameDialogData(npcName: name, npcEmoji: emoji);
+  void showDialog(String name, String emoji, NPCModel model) {
+    activeDialog = GameDialogData(npcName: name, npcEmoji: emoji, npcModel: model);
     overlays.add('DialogOverlay');
     paused = true; 
   }

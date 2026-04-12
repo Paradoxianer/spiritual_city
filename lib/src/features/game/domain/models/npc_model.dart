@@ -24,14 +24,30 @@ class NPCModel {
   
   /// Tracks interactions in the current active dialogue session
   int currentSessionInteractions = 0;
-  
+
+  /// True once the NPC has received 3 interactions this session.
+  bool get isReadyToLeave => currentSessionInteractions >= 3;
+
+  /// Whether the player gave a gift (help action) during this session.
+  bool hadGiftThisSession = false;
+
+  /// Emoji of the last end-of-session reaction, e.g. '🙏'.
+  String lastReactionEmoji = '';
+
   String? currentMessage;
+
+  /// ID of the building this NPC lives/works in.
+  /// Prepared for future house-entry feature: when the player enters a
+  /// building, all NPCs with a matching [homeBuildingId] can be interacted
+  /// with or prayed for at once.
+  final String? homeBuildingId;
 
   NPCModel({
     required this.id,
     required this.name,
     required this.type,
     required this.homePosition,
+    this.homeBuildingId,
     this.faith = 0.0,
     this.conversationCount = 0,
     this.prayerCount = 0,
@@ -48,5 +64,7 @@ class NPCModel {
 
   void resetSession() {
     currentSessionInteractions = 0;
+    hadGiftThisSession = false;
+    lastReactionEmoji = '';
   }
 }
