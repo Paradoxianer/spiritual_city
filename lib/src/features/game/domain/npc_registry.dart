@@ -79,49 +79,40 @@ class NPCRegistry {
     return npcs;
   }
 
+  /// NPC density per building type: `(min, extra)`.
+  /// Total = min + random.nextInt(extra), so (1, 2) yields 1 or 2 NPCs.
+  /// extra = 0 means exactly min NPCs.
+  static const Map<BuildingType, (int, int)> _buildingNPCDensity = {
+    BuildingType.house:        (1, 2), // 1–2
+    BuildingType.apartment:    (2, 3), // 2–4
+    BuildingType.church:       (1, 2), // 1–2
+    BuildingType.cathedral:    (1, 2), // 1–2
+    BuildingType.shop:         (1, 1), // 1
+    BuildingType.supermarket:  (1, 2), // 1–2
+    BuildingType.mall:         (2, 3), // 2–4
+    BuildingType.office:       (1, 2), // 1–2
+    BuildingType.skyscraper:   (1, 2), // 1–2
+    BuildingType.school:       (1, 2), // 1–2
+    BuildingType.university:   (2, 2), // 2–3
+    BuildingType.hospital:     (1, 2), // 1–2
+    BuildingType.policeStation:(1, 1), // 1
+    BuildingType.fireStation:  (1, 1), // 1
+    BuildingType.postOffice:   (1, 1), // 1
+    BuildingType.trainStation: (1, 2), // 1–2
+    BuildingType.cityHall:     (1, 2), // 1–2
+    BuildingType.library:      (1, 1), // 1
+    BuildingType.museum:       (1, 1), // 1
+    BuildingType.stadium:      (2, 3), // 2–4
+    BuildingType.factory:      (1, 1), // 1
+    BuildingType.warehouse:    (1, 1), // 1
+    BuildingType.powerPlant:   (1, 1), // 1
+    BuildingType.cemetery:     (0, 0), // 0
+  };
+
   /// How many NPCs live/work in a building of [type].
   int _npcCountForType(BuildingType type) {
-    switch (type) {
-      case BuildingType.house:
-        return 2 + _random.nextInt(3);        // 2–4
-      case BuildingType.apartment:
-        return 5 + _random.nextInt(6);        // 5–10
-      case BuildingType.church:
-      case BuildingType.cathedral:
-        return 2 + _random.nextInt(3);        // 2–4
-      case BuildingType.shop:
-      case BuildingType.supermarket:
-        return 1 + _random.nextInt(3);        // 1–3
-      case BuildingType.mall:
-        return 4 + _random.nextInt(5);        // 4–8
-      case BuildingType.office:
-      case BuildingType.skyscraper:
-        return 2 + _random.nextInt(4);        // 2–5
-      case BuildingType.school:
-      case BuildingType.university:
-        return 3 + _random.nextInt(4);        // 3–6
-      case BuildingType.hospital:
-        return 2 + _random.nextInt(3);        // 2–4
-      case BuildingType.policeStation:
-      case BuildingType.fireStation:
-      case BuildingType.postOffice:
-        return 1 + _random.nextInt(2);        // 1–2
-      case BuildingType.trainStation:
-        return 3 + _random.nextInt(4);        // 3–6
-      case BuildingType.cityHall:
-        return 2 + _random.nextInt(3);        // 2–4
-      case BuildingType.library:
-      case BuildingType.museum:
-        return 1 + _random.nextInt(2);        // 1–2
-      case BuildingType.stadium:
-        return 4 + _random.nextInt(6);        // 4–9
-      case BuildingType.factory:
-      case BuildingType.warehouse:
-      case BuildingType.powerPlant:
-        return 1 + _random.nextInt(2);        // 1–2
-      case BuildingType.cemetery:
-        return 0;
-    }
+    final (min, extra) = _buildingNPCDensity[type] ?? (1, 1);
+    return min + (extra > 0 ? _random.nextInt(extra) : 0);
   }
 
   NPCType _getNPCTypeForBuilding(BuildingType type) {
