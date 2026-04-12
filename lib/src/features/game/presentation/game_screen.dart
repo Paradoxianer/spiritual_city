@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
+import '../domain/models/building_model.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
+import '../domain/services/building_interaction_service.dart';
 import 'spirit_world_game.dart';
 
 class GameScreen extends StatefulWidget {
@@ -33,6 +35,8 @@ class _GameScreenState extends State<GameScreen> {
             game: _game,
             overlayBuilderMap: {
               'DialogOverlay': (context, game) => DialogOverlay(game: _game),
+              'BuildingInteriorOverlay': (context, game) =>
+                  BuildingInteriorOverlay(game: _game),
             },
           ),
           // Loading overlay – shown until the world is ready
@@ -418,4 +422,400 @@ class GameDialogData {
   final String npcEmoji;
   final NPCModel npcModel;
   GameDialogData({required this.npcName, required this.npcEmoji, required this.npcModel});
+}
+
+// ── Building interior data & overlay ──────────────────────────────────────────
+
+/// Data passed to the [BuildingInteriorOverlay] when a building is entered.
+class GameBuildingData {
+  final BuildingModel building;
+  GameBuildingData({required this.building});
+}
+
+/// Overlay shown when the player enters a building.
+///
+/// Flow for residential buildings:
+///   1. Access attempt (faith-based knock) → success / failure feedback.
+///   2. On success: interior view + radial action chips.
+///
+/// For commercial / church buildings: skip directly to the interior view.
+class BuildingInteriorOverlay extends StatefulWidget {
+  final SpiritWorldGame game;
+  const BuildingInteriorOverlay({super.key, required this.game});
+
+  @override
+  State<BuildingInteriorOverlay> createState() =>
+      _BuildingInteriorOverlayState();
+}
+
+class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
+  /// `null`  = access check not yet done (residential) or always-open
+  /// `true`  = access granted
+  /// `false` = access denied
+  bool? _accessGranted;
+
+  /// Latest action reaction emoji to display as feedback.
+  String? _lastReaction;
+
+  @override
+  void initState() {
+    super.initState();
+    final data = widget.game.activeBuildingData;
+    if (data == null) return;
+
+    if (data.building.isAlwaysOpen) {
+      _accessGranted = true;
+    }
+    // For residential buildings we show a knock screen first.
+  }
+
+  void _attemptKnock() {
+    final data = widget.game.activeBuildingData;
+    if (data == null) return;
+    final granted = widget.game.attemptBuildingAccess(data.building);
+    setState(() {
+      _accessGranted = granted;
+      _lastReaction = null;
+    });
+  }
+
+  void _performAction(String actionType) {
+    final result = widget.game.handleBuildingAction(actionType);
+    setState(() => _lastReaction = result.reactionEmoji);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.game.activeBuildingData;
+    if (data == null) return const SizedBox.shrink();
+
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.88,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+        ),
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A237E).withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12)],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildHeader(data.building),
+            if (_accessGranted == null)
+              _buildKnockScreen(data.building)
+            else if (_accessGranted == false)
+              _buildDeniedScreen()
+            else
+              _buildInteriorScreen(data.building),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Header ────────────────────────────────────────────────────────────────
+
+  Widget _buildHeader(BuildingModel building) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Color(0xFF283593),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            _categoryEmoji(building.category),
+            style: const TextStyle(fontSize: 28),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _categoryName(building.category),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white70),
+            onPressed: () => widget.game.closeBuildingInterior(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Knock screen (residential only) ──────────────────────────────────────
+
+  Widget _buildKnockScreen(BuildingModel building) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🚪', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 16),
+          Text(
+            'Anklopfen?',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _accessHint(building, widget.game.faith),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber[700],
+              foregroundColor: Colors.white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: const StadiumBorder(),
+            ),
+            icon: const Text('👊', style: TextStyle(fontSize: 22)),
+            label: const Text('Anklopfen', style: TextStyle(fontSize: 16)),
+            onPressed: _attemptKnock,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _accessHint(BuildingModel building, double faith) {
+    final pct =
+        (building.accessChance(faith) * 100).round();
+    final bonus = building.totalConversations >= 3 ? ' (+30 % Bonus)' : '';
+    return 'Erfolgschance: $pct %$bonus';
+  }
+
+  // ── Denied screen ─────────────────────────────────────────────────────────
+
+  Widget _buildDeniedScreen() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('😤', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 12),
+          const Text(
+            'Niemand öffnet die Tür.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          TextButton(
+            onPressed: () => widget.game.closeBuildingInterior(),
+            child: const Text('Weggehen', style: TextStyle(color: Colors.amber)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Interior screen ───────────────────────────────────────────────────────
+
+  Widget _buildInteriorScreen(BuildingModel building) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ASCII-art style interior
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Text(
+              _asciiInterior(building.category),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                color: Colors.white70,
+                fontSize: 11,
+                height: 1.4,
+              ),
+            ),
+          ),
+
+          // Residents summary
+          if (building.residents.isNotEmpty) ...[
+            Text(
+              '${building.residents.length} Bewohner anwesend',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.55),
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // Reaction feedback
+          if (_lastReaction != null) ...[
+            Text(
+              _lastReaction!,
+              style: const TextStyle(fontSize: 34),
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // Action chips
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: _buildActionChips(building.category),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildActionChips(BuildingCategory category) {
+    switch (category) {
+      case BuildingCategory.residential:
+        return [
+          _ActionChip(label: '💬', sublabel: 'Sprechen', onTap: () => _performAction('talk')),
+          _ActionChip(label: '🙏', sublabel: 'Beten', onTap: () => _performAction('pray')),
+          _ActionChip(label: '📦', sublabel: 'Hilfe', onTap: () => _performAction('help')),
+          _ActionChip(label: '📖', sublabel: 'Bibel', onTap: () => _performAction('bible')),
+        ];
+      case BuildingCategory.commercial:
+        return [
+          _ActionChip(label: '💸', sublabel: 'Spenden', onTap: () => _performAction('donate')),
+          _ActionChip(label: '👷', sublabel: 'Arbeiter', onTap: () => _performAction('worker')),
+          _ActionChip(label: '🙏', sublabel: 'Beten', onTap: () => _performAction('prayBusiness')),
+          _ActionChip(label: '📦', sublabel: 'Verteilen', onTap: () => _performAction('distribute')),
+        ];
+      case BuildingCategory.church:
+        return [
+          _ActionChip(label: '📖', sublabel: 'Bibellesen', onTap: () => _performAction('readBible')),
+          _ActionChip(label: '🙏', sublabel: 'Beten', onTap: () => _performAction('pray')),
+          _ActionChip(label: '🎵', sublabel: 'Gottesdienst', onTap: () => _performAction('worship')),
+        ];
+      default:
+        return [
+          _ActionChip(label: '👀', sublabel: 'Schauen', onTap: () {}),
+        ];
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  String _categoryEmoji(BuildingCategory cat) {
+    switch (cat) {
+      case BuildingCategory.residential: return '🏠';
+      case BuildingCategory.commercial:  return '🏢';
+      case BuildingCategory.church:      return '⛪';
+      default:                           return '🏗️';
+    }
+  }
+
+  String _categoryName(BuildingCategory cat) {
+    switch (cat) {
+      case BuildingCategory.residential: return 'Wohnhaus';
+      case BuildingCategory.commercial:  return 'Geschäftsgebäude';
+      case BuildingCategory.church:      return 'Kirchliches Gebäude';
+      default:                           return 'Gebäude';
+    }
+  }
+
+  String _asciiInterior(BuildingCategory cat) {
+    switch (cat) {
+      case BuildingCategory.residential:
+        return '┌─────────────────────┐\n'
+               '│  🪑       🛋️        │\n'
+               '│                     │\n'
+               '│   🖼️   [Wohnzimmer]  │\n'
+               '│                     │\n'
+               '│  🌿       ☕        │\n'
+               '└─────────────────────┘';
+      case BuildingCategory.commercial:
+        return '┌─────────────────────┐\n'
+               '│ 📦  📦  📦  📦  📦  │\n'
+               '│                     │\n'
+               '│   [Geschäftsraum]   │\n'
+               '│                     │\n'
+               '│  💼      🖥️         │\n'
+               '└─────────────────────┘';
+      case BuildingCategory.church:
+        return '┌─────────────────────┐\n'
+               '│       ✝️            │\n'
+               '│  🕯️           🕯️   │\n'
+               '│   [Kirchenraum]     │\n'
+               '│  🪑 🪑 🪑 🪑 🪑   │\n'
+               '│  🪑 🪑 🪑 🪑 🪑   │\n'
+               '└─────────────────────┘';
+      default:
+        return '┌─────────────────────┐\n'
+               '│                     │\n'
+               '│      [Raum]         │\n'
+               '│                     │\n'
+               '└─────────────────────┘';
+    }
+  }
+}
+
+/// A compact action chip used inside [BuildingInteriorOverlay].
+class _ActionChip extends StatelessWidget {
+  final String label;
+  final String sublabel;
+  final VoidCallback onTap;
+
+  const _ActionChip({
+    required this.label,
+    required this.sublabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 24)),
+            const SizedBox(height: 2),
+            Text(
+              sublabel,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
