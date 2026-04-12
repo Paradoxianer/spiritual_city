@@ -33,13 +33,13 @@ Ein spirituelles Sandbox-Simulationsspiel, wo ein Pastor eine prozedural generie
 **Generierung (In Realer Welt):**
 - Bibellesen in Kirche: +10-20 Faith
 - Gebet mit Gemeinde: +5-15 Faith
-- Mit NPCs sprechen (positiv): +2-5 Faith
+- Mit NPCs sprechen (positiv): +0-5 Faith .aber es wird immer klarer welchen "Faith" stand die Person hat.
 - Hilfsaktion durchführen: +5-10 Faith
 - NPC konvertiert zum Glauben: +30 Faith
 - Gottesdienst halten: +20-50 Faith
 
 **Verbrauch:**
-- **Weltenwechsel zur unsichtbaren Welt:** 10 Faith (Eintritts-Kosten)
+- **Weltenwechsel zur unsichtbaren Welt:** 7 Faith (Eintritts-Kosten)
 - **Gebets-Ring in unsichtbarer Welt:** Wird vollständig aufgebraucht (siehe 2.3)
 
 **Regeneration:**
@@ -59,21 +59,25 @@ FAITH: [████████░░] 85/100
 - Repräsentiert: Lebensmittel, Kleidung, Medikamente, Baumaterial, etc.
 - **Nicht-monetär**, sondern direkte Sachspenden
 - Visuell: "Kartons" oder "Pakete" im Inventory
+- Materials können selten auf der Straße gefunden und über aktionsring aufgelesen werden
 
 **Generierung (In Realer Welt):**
+- Misison gehe zu Haus.. x,y (wir benötigen Strapßennamen und Hausnunmmern (vor allem commerzellie /firmen gebäudeI und hole Spenden ab..)
 - Kirchen-Sammlung: +20-40 MP pro Gottesdienst
-- Von wohlhabenden NPCs: +5-15 MP pro Gespräch
+- Missionen bei NPCS finde  NPCs (NPCS mit misisonen mit hüpfendem Pfeil gekennzeichet..): +50-xxx MP pro Misison (im Chat missions icon--> ÜPfeil mi Fragezeichen emjoi??? oder so was??)
 - Gemeinde-Hilfe organisieren: +30-50 MP
-- Mission: "Lebensmittel-Ausgabe" durchführen: +20 MP
 
 **Verbrauch:**
 - Mit bedürftigen NPCs teilen: -10 MP, +15 Faith (!) 
-- Kirche instand halten: -5 MP/Spieltag
+- Kirche instand halten: -5 MP/Spieltag +10 Faith
 - Gemeinde-Projekte (Obdach-Hilfe, Essen für Arme): -30-50 MP, +20-30 Faith
 
 **Effekt auf unsichtbare Welt:**
 - Zellen wo Materialien verteilt wurden: +3 Grün (sanfter Effekt)
 - Symbolisiert: "praktischer Glaube reinigt Territorium"
+
+**Missionen**
+- bestimmte Missionen bei NPCS oder Häusern können deine Kapazität für Materials und Faith erhöhen
 
 **Darstellung im HUD:**
 ```
@@ -90,20 +94,22 @@ MATERIALS: [██████░░░░] 42/100 MP
 #### INPUT A – Faith-Button (rechter Daumen / Taste)
 - Gedrückt halten → Faith-Ladebalken pulsiert zyklisch von 0 % → 100 % → 0 % → …
 - Beim **Loslassen** wird der aktuelle %-Wert als Timing-Multiplikator eingefroren und der Angriff ausgelöst
+- **Visuelle Stärke:** Farbintensität der Zone zeigt Größe/Kraft
+- der Glaubenswert wird anteilig auf den über input b ausgewählten bereich verteilt...
+- Spöter gibt es versch. modifier die den Effekt der Verteilung des Glaubenswertes modifiezieren umd stärker zu werden
 - Biblische Basis: Jakobus 5,16 *„Das inbrünstige Gebet eines Gerechten vermag viel"* – Intensität ist steuerbar
 
 #### INPUT B – Joystick (linker Daumen)
-- **Nur gedrückt (ohne Richtung):** Ringförmige Zone wächst gleichmäßig um den Pastor
+- **Nur gedrückt (ohne Richtung):** Ringförmige Zone wächst gleichmäßig um den Pastor (auch pulsierend görßer und kleiner werden max größe kann später durch modifier angepasst werden)
 - **In Richtung gedrückt:** Ring beugt sich flammig in die gewählte Richtung aus (Apostelgeschichte 2,3: *„Zungen wie von Feuer, die sich verteilten"*)
-- Zone wächst kontinuierlich solange der Joystick gedrückt bleibt
-- Beim Loslassen: Zone schrumpft langsam zurück auf 0
-- **Visuelle Stärke:** Farbintensität der Zone zeigt Größe/Kraft
+- Zone wächst pulsiert auch... solange der Joystick gedrückt bleibt
+- Beim Loslassen: Zone schrumpft langsam zurück auf minimal radius (wenn nix gedrückt dann wird alles Fait auf die minimal möglichstes Zelle fokusiert )
 - **Wichtig:** Die Zone wird **erst** beim Loslassen von INPUT A aktiviert (beide Eingaben kombiniert)
-- Josua 1,3: *„Jede Stätte, worauf eure Fußsohle tritt, habe ich euch gegeben"* – du wählst Richtung und Ausdehnung aktiv
+- Josua 1,3: *„Jede Stätte, worauf eure Fußsohle tritt, habe ich euch gegeben"* – du wählst Richtung und Ausdehnung aktiv und kannst so stratgeisch dein befreiung der unsichtbaren welt auf berreiche fokusieren
 
 **Szenario (Ablauf):**
 1. Pastor in unsichtbarer Welt, z.B. **75 Faith**
-2. Spieler drückt **Joystick** in Richtung Nordosten → Zone wächst flammig in diese Richtung
+2. Spieler drückt **Joystick** in Richtung Nordosten → Kreis  erweitert sich  flammig in diese Richtung
 3. Gleichzeitig hält Spieler **Faith-Button** gedrückt → Ladebalken pulsiert
 4. Beim **optimalen Moment** (z.B. 85 %) lässt Spieler den Faith-Button los → Angriff auf die geformte Zone
 
@@ -131,7 +137,7 @@ MATERIALS: [██████░░░░] 42/100 MP
 - **Früh (<50 %):** Multiplikator **0.6x**
 - **Zu spät (0–30 %):** Multiplikator **0.4x**
 
-**Berechnungsformel bei Release:**
+**Berechnungsformel bei Release:** 
 ```
 timing_multiplier = {
   1.0 if faith_pulse in [70%, 100%],   // OPTIMAL
@@ -230,20 +236,29 @@ NEUTRAL: Beige/Weiß (-30..+30, Unentschieden)
 ```
 
 **Visueller Stil (organisch, Gaußisch):**
-- **Kein harter Pixel-Look** – die unsichtbare Welt ist das Gegenteil der realen Welt
-- Zell-Farbwerte werden mit **Gaussian Blur** weichgezeichnet (organisch, fließend)
-- Dunkle Zonen bekommen **animierte Perlin-Noise-Verschiebung** → Lavalampen-Effekt
+- **Kein harter Pixel-Look** – organischer look, die unsichtbare Welt ist das Gegenteil der realen Welt
+- Jeder "cell" kann jede beliebige schattierung von dunkelgrün über grau bis dunkelrot-schwarz einnehen
+- Zell-Farbwerte werden mit **Gaussian Blur** oder vergleich weichgezeichnet (organisch, fließend)
+- Dunkle Zonen bekommen **animierte Perlin-Noise-Verschiebung** → Lavalampen-Effekt also dunkle punkte die sich durch die nicht so dunklen berreich durchbwegen... (viel Bewegung um organische / lebendes sytem darzustellen)
 - Positive Zonen können **funkelnde Partikel** oder leichtes Pulsieren haben
-- Johannes 3,8: *„Der Wind bläst, wo er will"* – das Geistliche folgt keinen geraden Linien
+- jeder Bereich hat unterschiedlich rote berreiche (also hotspots... diese "knubbeln" sich in ganz besonders dunklen Berreichen)
 
 **Game-of-Life Dynamik:**
 - Jede Spielstunde: Zellen beeinflussen ihre Nachbarn
 - Positive Zellen verstärken nahegelegene positive Zellen
 - Negative Zellen tun dasselbe mit Negativem
 - Territorium "breitet sich aus" organisch
+- der verstörkungseffekt bzw. einnahme Effekt bei den dunklen Berreichen ist allerdings größer..
 
 ### 5.2 Zell-Einfluss-Berechnung
-
+[solten wir vlt noch mal überarbieten]
+Dunkle Berreich in der unsichtbaren Welt beeinflussen die Bereichschaft Glauben "aufzubbauen" von NPCS
+in der realen Welt... positiv und negativ
+Glaubende NPCS beeinflussen die unsichtbare Welt...
+entsprechend ihres Glaubens... wird immer ein kleiner Teil (12 Uhr nachmittags) von allen (über 0) NPCS
+auf die unsichtbare Welt umgelegt... (keine Ahnung aber bei den NPC drain (also -) 0.000001* faith oder so.. und im unsichtbaren Welt
+halt dann 0.001 * Faith der bereich ins positive umgewandelt...
+die berechung klingt auch nicht schlecht wie beommen wir das zusammen 
 ```
 cell_influence = (
     base_spiritual_state +          // Start: -100 bis +100
@@ -264,6 +279,7 @@ cell_influence = (
 
 **Bei Spielstart – bewusst ungleichmäßig:**
 - 80% der Stadt: ROT/Dunkelrot (Dunkelheit dominiert)
+- es spanen nur in der unsichtbaren welt (dunkle Mächte[NPCs])
 - **Verteilung ist absichtlich unregelmäßig:** Einige Bereiche sehr dunkel (-90), andere nur leicht negativ (-20)
 - Dämonische Schwerpunkte (Bastion-Zellen) ziehen benachbarte Zellen stärker ins Negative
 - Kirchen-Zellen: +50 Grün (isolierte positive Inseln)
@@ -272,11 +288,87 @@ cell_influence = (
 - Arme Gegenden: etwas negativ (-20)
 - Reiche Gegenden: neutral bis schwach positiv (+10)
 
-**Startanimation (optional):**
+**Animation (optional):**
 - Beim ersten Betreten der unsichtbaren Welt: langsames „Einblenden" der roten Lavalampen-Bereiche
 - Vermittelt dramatisch die Ausgangslage
-
+- oder allgemein beim betren der unsichtbaren welt ein "überblednen über weiß" wie "aufblitzen. .oder so..
 ---
+
+### 5.5 DAEMON NPC SYSTEM – WANDERNDE BÖSE MÄCHTE (Issue #31)
+**Konzept:** Dämonen/böse Mächte als wandernde, negativ beeinflussende NPCs in der unsichtbaren Welt. Sie entstehen in dunkelroten Bereichen, wandern durch die Welt und hinterlassen überall dort Dunkelheit, wo sie durchziehen – bis ihre Kraft erschöpft ist.
+**Biblische Basis:**
+- Mt 12,43–45: *„Wenn der unreine Geist vom Menschen ausgefahren ist, durchwandert er wasserlose Stätten"* → Daemon-Bewegung als „ruhelos Wandern"
+- Dämonen schwächen sich in gottgeweihten Bereichen: Lukas 10,17–19 (Jesu Autorität über böse Geister)
+- Gebet zieht geistliche Aufmerksamkeit an: 1. Petrus 5,8; Daniel 10,12–13
+#### Daemon-Lebenszyklus
+```
+SPAWN:
+  - Nur in stark negativen Zonen (cell.value <= -70)
+  - Basis-Spawn-Rate: 1 Daemon pro 60 Sekunden bei genug roten Zellen
+  - Erhöhte Spawn-Rate durch aktive Gebets-Aktion (Kap. 2.3): +40%
+BEWEGUNG:
+  - Wandert "random-walk" (zufällig + leichte Tendenz zu positiven Zellen)
+  - Geschwindigkeit: ~1 Zelle pro Tick
+AUFLÖSUNG:
+  - Wenn ihre_kraft <= 0: dissolve()
+  - Hinterlässt "Daemon-Residuum"-Marker auf der Auflösungs-Zelle
+```
+#### Daemon-Mechanik (Pseudocode)
+```python
+class DaemonNPC:
+    kraft: -1 bis -100   # Finsternis-Kraft (entspricht "Anti Faith")
+    position: Vector2
+    # Bewegung pro Tick:
+    def on_enter_cell(self, cell):
+        if cell.value <= -50:           # ROTE Zone
+            cell.value -= 1             # Zelle minimal eindunkeln
+            # (kein Kraft-Verlust: der Dämon ist in "heimischem Terrain")
+        elif -30 <= cell.value <= 30:   # NEUTRALE Zone
+            cell.value -= 2             # Zelle eindunkeln
+            self.kraft -= 2             # Gegenwind kostet Kraft
+        elif cell.value >= 50:          # GRÜNE Zone
+            cell.value -= 3             # Höherer Widerstand!
+            self.kraft -= 6             # 2× Verlust im "heiligen" Bereich!
+            # Widerstandswert der Zelle erhöht den Kraft-Verlust zusätzlich:
+            self.kraft -= cell.cell_resistance * 0.05
+        if self.kraft <= 0:
+            self.dissolve()
+    def dissolve(self):
+        current_cell.daemon_residuum = True   # Marker setzen
+        current_cell.value -= 5               # Residuum-Dunkelheit
+        self.destroy()
+```
+#### Daemon-Residuum-Marker
+Nach der Auflösung eines Daemons:
+- Die Zelle erhält einen **Daemon-Residuum-Marker** (visuell: spezielle Dunkelrot-Tönung, Perlin-Asche-Partikel)
+- `daemon_residuum`-Wert fließt in die `cell_influence`-Berechnung ein (Kap. 5.2): `- (daemon_residuum * 0.5)`
+- Marker klingt mit der Zeit ab (nach ~5 Spielminuten ohne negativen Einfluss)
+- Kann durch gezieltes Prayer-Combat schneller beseitigt werden
+#### Visuelle Darstellung der Daemon-NPCs
+```
+- Daemon-Gestalt:     Pulsierendes Dunkelrot mit düsterer Aura
+- Bewegungsspur:      Schweif-Effekt (wie zähflüssige Tinte)
+- Auf grüner Fläche:  Sichtbarer "Kampf" – Daemon flackert, schrumpft
+- Auflösung:          Zerfalls-Partikel → hinterlässt "Asche" (Residuum-Marker)
+- HUD-Warnung:        Kleines Symbol erscheint wenn Daemon in Nähe des Pastors
+```
+#### Gebets-Attraktion & Strategisches Risiko-Reward
+| Spieler-Aktion | Konsequenz |
+|---|---|
+| **Kurz beten** | ✅ Sicherer; ❌ Weniger Gebets-Kraft |
+| **Lang beten** | ✅ Stärkerer Gebets-Effekt; ❌ Daemon-Attraction +40 %, Spawn-Rate steigt |
+| **Grüne Bereiche ausbauen** | ✅ Dämonen lösen sich schnell auf; ❌ Hohe Faith-Kosten |
+| **Rote Zonen ignorieren** | ✅ Sicher; ❌ Mehr Daemon-Spawns dort |
+| **Kirchen-Nähe nutzen** | ✅ Dämonen haben höheren Kraft-Verlust; ❌ Begrenzter Radius |
+#### Balance-Parameter
+```
+DAEMON_SPAWN_THRESHOLD      = -70    // Zell-Mindestwert für Spawn
+BASE_SPAWN_INTERVAL_SEC     = 60     // Basis-Spawn-Intervall
+PRAYER_SPAWN_INCREASE_PCT   = 40     // % erhöhte Spawn-Rate beim Beten
+PRAYER_ATTRACTION_MULT      = 2.5    // Anziehungsmultiplikator
+ATTRACTION_DURATION_SEC     = 30     // Sekunden bis Attraktion abklingt
+RESIDUUM_DECAY_MIN          = 5      // Minuten bis Residuum-Marker verblasst
+```
 
 ## 6. NPC-SYSTEM MIT GEDÄCHTNIS
 
@@ -321,20 +413,18 @@ class NPCProfile {
   int prayerCount = 0;              // Wie oft für ihn gebetet?
   bool isConvertedChristian = false;
   DateTime lastInteraction;
-  String topic;                     // "Arbeitslos", "Sucht", etc.
 }
 ```
 
 **Konversions-Bedingungen:**
-1. conversationCount ≥ 5 ODER prayerCount ≥ 3
-2. faithLevel ≥ 40
-3. Pastor wählt "Sprich über Glauben" Dialog-Option
-4. → NPC konvertiert: isConvertedChristian = true, faithLevel = +80
+1. faithLevel ≥ 40
+2. conversationCount ≥ 5 ODER prayerCount ≥ 3
+4. Pastor wählt "Sprich über Glauben" Dialog-Option
+5. → NPC konvertiert: isConvertedChristian = true, faithLevel wird automatisch auf wenn noch nicht auf über 50 gesetzt 
 
 **Effekte nach Konversion:**
-- NPC kann in Gottesdiensten teilnehmen
-- NPC regeneriert +2 Grün pro Tag in ihrer Zelle
-- NPC wird "missionarisch" (spricht mit anderen NPCs)
+- NPC regeneriert +2 Grün pro Tag in der unsichtbaren welt ihrer Zelle wo sie gerade sind (oder schau mal oben die bobachtung
+- NPC die auch christen sind (isConverted Christian) hilft anderen Christen in seineer unmittelbaren umgebung (welche entfernung?) im Glauben zu wachsen --> die anderen Christen +  0.0000001 (macht das sinn aber wenn viele chsiten in einem Bereich könnte das ja schnell viel werden?)
 - +30 Faith Reward an Pastor
 
 ---
@@ -342,7 +432,7 @@ class NPCProfile {
 ### 6.3 NPC-Einfluss auf Territorium
 
 **Täglich (um 12:00 Uhr):**
-
+(muss noch überarbeitet werden siehe Berechnung 5.2)
 ```
 for each npc in city:
   cell = npc.position.toCell()
@@ -353,11 +443,12 @@ for each npc in city:
     cell.influence += 5  // Schwach positiv (hellgrün)
   else if npc.faithLevel < -50:
     cell.influence -= npc.faithLevel * 0.2  // Negativ verstärken (roter)
+andere NPCS in der Nähe auch mit glauben stärken
 ```
 
 **Effekt:** 
-- Ein konvertierter Christ in einer roten Zelle kann sie zu Grün kippen
-- Viele Christen in Zelle = stark Gold
+- Ein konvertierter Christ in einer roten Zelle kann sie auf langezeit damit zu Grün kippen
+- Viele Christen in Zelle = starkes Dunkelgrün mit sparkling effekt
 
 ---
 
@@ -389,7 +480,7 @@ class Mission extends InteractionAction {
 - **Scheitern:** Keine Strafe, einfach weniger Effekt
 
 #### B. Dienst-Missionen
-- **Trigger:** "Diene" Button bei NPC oder an Ort
+- **Trigger:** "Diene" Button bei NPC oder an Ort (evlt markiert mit springenden Pfeil über NPCs
 - **Flow:** 2-3 Min Animation (helfen, reparieren, etc.)
 - **Reward:** +10 Faith, +10 MP, NPC-faithLevel +5
 - **Effekt:** Zelle +2 Grün-Einfluss
@@ -420,6 +511,8 @@ class Mission extends InteractionAction {
 
 ### 7.3 Event-basierte Dynamik (Zufällige Incidents)
 
+Objekte (Häuser, Parks, NPCS können "missionen" hinzugefügt bekommen)
+
 **Jede Spielstunde: 5% Chance auf Incident**
 
 ```
@@ -442,7 +535,7 @@ incidents = [
 **Einfache Auto-Implementierung:**
 - 5-10 verschiedene Auto-Varianten (Farben/Stile)
 - 8x8 oder 16x16 Pixel-Sprites
-- Bewegen sich auf Straßen-Pfaden (A*-Pathfinding oder Grid-Routes)
+- Bewegen sich auf Straßen-Pfaden (super simpel .. .folge straße .. biege ab (zufällig) wenn keine Kreuzung da ist.. fahr gerade weiter)
 
 ### 8.2 Spawn & Despawn
 
@@ -458,10 +551,15 @@ incidents = [
 
 ### 8.4 Audio
 
+- Leise Stadtgeräusche
 - Leise Motor-Sounds
 - Gelegentliche Hupen
 - Ambient Verkehrslärm
 
+**unsichtbare Welt**
+- audio wechselt zu "spärisch"
+- in der dunkelheit / dämoinschen gegend eher leicht beeunruhigende Geräuche
+- in Grünen berreich... himmliche enspannde geräusche
 ---
 
 ## 9. HUD & UI
@@ -514,6 +612,8 @@ incidents = [
 Stattdessen: Graduelle Modifier-Freischaltung basierend auf Spielfortschritt (siehe Kap. 5.4)
 
 **Prinzip:** Einfach und managebar – Modifier sind passive Boni, kein aktives Ausrüsten.
+[vlt könnten wir das noch ändern.. also durch Missionen "erreichbar" geistliche Missionen helfen z.b. im Glauben zu wachsen.. (glauben wird mehr al 100 .. usw.. somit steht mehr zur verfügung..]
+[Evtl. modifier werden aquired durch geistliche Missionen??
 
 ```
 Nach 10 Prayer Combats:
@@ -641,7 +741,7 @@ Nach 3 Konversionen:
 
 **✅ IM SPIEL:**
 - Fahrzeug-Verkehr (einfach, ambient)
-- Dual-Control Gebets-Kampf-Mechanik (Button für Stärke + Joystick für Zone/Richtung)
+- Dual-Control Gebets-Kampf-Mechanik (Button für Stärke + Joystick für Zone/Richtung mit Modiferen)
 - Territorium-Kontrolle (Rot ↔ Grün, organisch-gaußisch)
 - Mission-System (flexibel, nicht-linear)
 - Modifier-System (passiv, progressiv, einfach)
