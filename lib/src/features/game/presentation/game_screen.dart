@@ -599,10 +599,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   }
 
   String _accessHint(BuildingModel building, double faith) {
-    final pct =
+    final accessPercentage =
         (building.accessChance(faith) * 100).round();
     final bonus = building.totalConversations >= 3 ? ' (+30 % Bonus)' : '';
-    return 'Erfolgschance: $pct %$bonus';
+    return 'Erfolgschance: $accessPercentage %$bonus';
   }
 
   // ── Denied screen ─────────────────────────────────────────────────────────
@@ -717,7 +717,11 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         ];
       default:
         return [
-          _ActionChip(label: '👀', sublabel: 'Schauen', onTap: () {}),
+          _ActionChip(
+            label: '👀',
+            sublabel: 'Schauen',
+            onTap: () => setState(() => _lastReaction = '👀'),
+          ),
         ];
     }
   }

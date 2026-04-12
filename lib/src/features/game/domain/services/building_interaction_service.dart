@@ -141,7 +141,8 @@ class BuildingInteractionService {
         final manager =
             building.residents.isNotEmpty ? building.residents.first : null;
         final managerFaith = manager?.faith ?? 0.0;
-        // Base 50 % ± up to 25 % from manager faith (−100..+100 → −0.25..+0.25)
+        // Base 50 % ± up to 25 % from manager faith.
+        // Manager faith range is −100..+100 → dividing by 400 gives ±0.25 modifier.
         final successChance = (0.50 + managerFaith / 400.0).clamp(0.0, 1.0);
         if (_rng.nextDouble() < successChance) {
           final amount = 20.0 + _rng.nextDouble() * 20.0;

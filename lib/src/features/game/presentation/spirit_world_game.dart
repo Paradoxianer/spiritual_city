@@ -263,6 +263,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Applies [delta] spiritual influence to the city cell directly beneath
   /// the player (used by 'prayBusiness').
+  ///
+  /// Positive [delta] increases the spiritual state towards +1.0 (green zone).
   void _nudgeCellUnderPlayer(double delta) {
     final gx = (player.position.x / 32).floor();
     final gy = (player.position.y / 32).floor();
