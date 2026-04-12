@@ -9,7 +9,6 @@ import '../../domain/services/performance_monitor.dart';
 import 'cell_component.dart';
 import 'chunk_component.dart';
 import 'npc_component.dart';
-import 'npc_pool.dart';
 import '../spirit_world_game.dart';
 
 class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
@@ -21,10 +20,12 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   final NPCRegistry npcRegistry = NPCRegistry();
 
   final Map<String, ChunkComponent> _renderedChunks = {};
-  final Map<String, List<NPCComponent>> _activeNPCs = {};
 
-  /// Object pool to avoid per-spawn allocations.
-  final NPCPool _npcPool = NPCPool(maxSize: 150);
+  /// All NPC components ever created – they live in the world permanently.
+  final List<NPCComponent> _allNPCs = [];
+
+  /// Chunks that have already had their NPCs created (to avoid duplicates).
+  final Set<String> _chunksWithNPCs = {};
 
   /// Spatial grid for efficient distance queries (LOD assignment).
   final SpatialGrid<NPCComponent> _spatialGrid = SpatialGrid(cellSize: 256);
@@ -79,15 +80,14 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       }
     }
 
-    // Update LOD for all active NPCs based on distance to target
+    // Update LOD for all NPCs based on distance to target
     _updateNPCDetailLevels();
 
     // Refresh spatial grid with current NPC positions
-    final allNPCs = _activeNPCs.values.expand((list) => list).toList();
-    _spatialGrid.update(allNPCs);
+    _spatialGrid.update(_allNPCs);
 
     _perfMonitor.updateCounters(
-      activeNPCs: allNPCs.length,
+      activeNPCs: _allNPCs.length,
       loadedChunks: _renderedChunks.length,
     );
     _perfMonitor.endFrame(dt);
@@ -126,28 +126,24 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     _renderedChunks[chunk.id] = chunkComp;
     parent?.add(chunkComp);
 
-    // Spawn NPCs using the object pool
-    final npcs = npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
-    final npcComponents = <NPCComponent>[];
-    for (final npcModel in npcs) {
-      final npcComp = _npcPool.borrow(npcModel);
-      npcComponents.add(npcComp);
-      parent?.add(npcComp);
+    // Create NPC components only the first time this chunk is loaded.
+    // They stay in the world permanently and walk around.
+    if (!_chunksWithNPCs.contains(chunk.id)) {
+      _chunksWithNPCs.add(chunk.id);
+      final npcs = npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
+      for (final npcModel in npcs) {
+        final npcComp = NPCComponent(model: npcModel);
+        _allNPCs.add(npcComp);
+        parent?.add(npcComp);
+      }
+      _log.fine('Created ${npcs.length} NPCs for chunk (${chunk.id})');
     }
-    _activeNPCs[chunk.id] = npcComponents;
   }
 
   void _unloadChunk(String key) {
+    // Only remove the visual tile chunk – NPCs stay in the world.
     _renderedChunks[key]?.removeFromParent();
     _renderedChunks.remove(key);
-
-    final npcs = _activeNPCs[key];
-    if (npcs != null) {
-      for (final npc in npcs) {
-        _npcPool.returnNPC(npc);
-      }
-      _activeNPCs.remove(key);
-    }
   }
 
   // ─── Async predictive preloading ──────────────────────────────────────────
@@ -209,16 +205,14 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
 
   void _updateNPCDetailLevels() {
     final playerPos = target.position;
-    for (final npcList in _activeNPCs.values) {
-      for (final npc in npcList) {
-        final d = npc.position.distanceTo(playerPos);
-        if (d < _lodHighThreshold) {
-          npc.detailLevel = NPCDetailLevel.high;
-        } else if (d < _lodMediumThreshold) {
-          npc.detailLevel = NPCDetailLevel.medium;
-        } else {
-          npc.detailLevel = NPCDetailLevel.low;
-        }
+    for (final npc in _allNPCs) {
+      final d = npc.position.distanceTo(playerPos);
+      if (d < _lodHighThreshold) {
+        npc.detailLevel = NPCDetailLevel.high;
+      } else if (d < _lodMediumThreshold) {
+        npc.detailLevel = NPCDetailLevel.medium;
+      } else {
+        npc.detailLevel = NPCDetailLevel.low;
       }
     }
   }
@@ -226,9 +220,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   // ─── Accessors (for tests / UI) ───────────────────────────────────────────
 
   /// All NPC components currently active in the world.
-  List<NPCComponent> get allActiveNPCs =>
-      _activeNPCs.values.expand((list) => list).toList();
+  List<NPCComponent> get allActiveNPCs => List.unmodifiable(_allNPCs);
 
-  /// Current pool statistics.
-  int get poolAvailable => _npcPool.available;
+  /// Number of NPCs created so far.
+  int get npcCount => _allNPCs.length;
 }
