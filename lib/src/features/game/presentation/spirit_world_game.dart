@@ -158,11 +158,24 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       RadialAction(label: '👀', icon: Icons.search, onSelect: () => _log.info('Looking around')),
     ];
 
-    if (_nearestInteractable != null) {
+    // Collect all interactables within range, sorted by distance (closest first)
+    final nearby = world.children
+        .whereType<Interactable>()
+        .map((i) => (i, player.position.distanceTo(i.interactionPosition)))
+        .where((e) => e.$2 < interactionRange)
+        .toList()
+      ..sort((a, b) => a.$2.compareTo(b.$2));
+
+    for (final (target, _) in nearby.take(4)) {
       actions.add(RadialAction(
-        label: '💬', 
-        icon: Icons.chat_bubble, 
-        onSelect: () => _nearestInteractable!.onInteract()
+        label: target.interactionEmoji,
+        sublabel: target.interactionLabel.split(' ').first,
+        icon: Icons.chat_bubble,
+        onSelect: () {
+          // Ensure handleInteraction targets this specific NPC while the dialog is open.
+          _nearestInteractable = target;
+          target.onInteract();
+        },
       ));
     }
 
