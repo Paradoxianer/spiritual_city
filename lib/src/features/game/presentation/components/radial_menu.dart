@@ -6,11 +6,13 @@ import '../spirit_world_game.dart';
 
 class RadialAction {
   final String label;
+  final String? sublabel;
   final IconData icon;
   final VoidCallback onSelect;
 
   RadialAction({
     required this.label,
+    this.sublabel,
     required this.icon,
     required this.onSelect,
   });
@@ -97,6 +99,26 @@ class RadialItem extends PositionComponent with TapCallbacks {
       canvas,
       Offset(size.x / 2 - textPainter.width / 2, size.y / 2 - textPainter.height / 2),
     );
+
+    // Sublabel (e.g. NPC first name) rendered below the circle
+    if (action.sublabel != null) {
+      final namePainter = TextPainter(
+        text: TextSpan(
+          text: action.sublabel,
+          style: TextStyle(
+            fontSize: 9,
+            color: Colors.white.withValues(alpha: 0.85),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      namePainter.layout(maxWidth: 60);
+      namePainter.paint(
+        canvas,
+        Offset(size.x / 2 - namePainter.width / 2, size.y + 2),
+      );
+    }
   }
 
   @override
