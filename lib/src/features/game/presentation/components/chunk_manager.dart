@@ -1,11 +1,15 @@
 import 'package:flame/components.dart';
 import 'package:logging/logging.dart';
+import '../../domain/models/building_model.dart';
+import '../../domain/models/cell_object.dart';
 import '../../domain/models/city_grid.dart';
 import '../../domain/city_generator.dart';
 import '../../domain/models/city_chunk.dart';
+import '../../domain/models/npc_model.dart';
 import '../../domain/models/spatial_grid.dart';
 import '../../domain/npc_registry.dart';
 import '../../domain/services/performance_monitor.dart';
+import 'building_component.dart';
 import 'cell_component.dart';
 import 'chunk_component.dart';
 import 'npc_component.dart';
@@ -23,6 +27,12 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
 
   /// All NPC components ever created – they live in the world permanently.
   final List<NPCComponent> _allNPCs = [];
+
+  /// All building components ever created – persist like NPCs.
+  final List<BuildingComponent> _allBuildings = [];
+
+  /// Persistent map of buildingId → BuildingModel across all loaded chunks.
+  final Map<String, BuildingModel> _buildingModels = {};
 
   /// Chunks that have already had their NPCs created (to avoid duplicates).
   final Set<String> _chunksWithNPCs = {};
@@ -131,11 +141,27 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     if (!_chunksWithNPCs.contains(chunk.id)) {
       _chunksWithNPCs.add(chunk.id);
       final npcs = npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
+
+      // Group NPCs by their home building for BuildingModel construction.
+      final Map<String, List<NPCModel>> npcsByBuilding = {};
+      for (final npc in npcs) {
+        if (npc.homeBuildingId != null) {
+          npcsByBuilding
+              .putIfAbsent(npc.homeBuildingId!, () => [])
+              .add(npc);
+        }
+      }
+
+      // Spawn NPC components.
       for (final npcModel in npcs) {
         final npcComp = NPCComponent(model: npcModel);
         _allNPCs.add(npcComp);
         parent?.add(npcComp);
       }
+
+      // Spawn building entrance components.
+      _spawnBuildingComponents(chunk, npcsByBuilding);
+
       _log.fine('Created ${npcs.length} NPCs for chunk (${chunk.id})');
     }
   }
@@ -144,6 +170,89 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     // Only remove the visual tile chunk – NPCs stay in the world.
     _renderedChunks[key]?.removeFromParent();
     _renderedChunks.remove(key);
+  }
+
+  // ── Building spawning ─────────────────────────────────────────────────────
+
+  /// Creates [BuildingComponent] instances for every unique building in
+  /// [chunk] the first time that chunk is loaded.
+  ///
+  /// The entrance position is the first walkable cell adjacent to the
+  /// building's footprint (same heuristic used by [NPCRegistry]).
+  void _spawnBuildingComponents(
+    CityChunk chunk,
+    Map<String, List<NPCModel>> npcsByBuilding,
+  ) {
+    // Collect the footprint cells of every unique building in the chunk.
+    final Map<String, _ChunkBuildingInfo> buildings = {};
+    for (int y = 0; y < CityChunk.chunkSize; y++) {
+      for (int x = 0; x < CityChunk.chunkSize; x++) {
+        final cell = chunk.cells['$x,$y'];
+        if (cell == null) continue;
+        final data = cell.data;
+        if (data is BuildingData) {
+          buildings
+              .putIfAbsent(
+                data.buildingId,
+                () => _ChunkBuildingInfo(data.type, data.buildingId),
+              )
+              .cells
+              .add([x, y]);
+        }
+      }
+    }
+
+    for (final bInfo in buildings.values) {
+      // Skip buildings that already have a component (e.g. spanning two chunks).
+      if (_buildingModels.containsKey(bInfo.buildingId)) continue;
+
+      final entrance = _findWalkableNeighbour(chunk, bInfo.cells);
+      if (entrance == null) continue;
+
+      final wx = chunk.getWorldX(entrance[0]);
+      final wy = chunk.getWorldY(entrance[1]);
+      final pos = Vector2(
+        wx * CellComponent.cellSize + CellComponent.cellSize / 2,
+        wy * CellComponent.cellSize + CellComponent.cellSize / 2,
+      );
+
+      final residents = npcsByBuilding[bInfo.buildingId] ?? [];
+      final model = BuildingModel(
+        buildingId: bInfo.buildingId,
+        type: bInfo.type,
+        residents: residents,
+      );
+      _buildingModels[bInfo.buildingId] = model;
+
+      final comp = BuildingComponent(buildingModel: model, position: pos);
+      _allBuildings.add(comp);
+      parent?.add(comp);
+    }
+  }
+
+  /// Finds the first walkable (road / nature) cell adjacent to any cell in
+  /// [buildingCells] within [chunk].
+  List<int>? _findWalkableNeighbour(
+    CityChunk chunk,
+    List<List<int>> buildingCells,
+  ) {
+    const dirs = [
+      [0, 1], [0, -1], [1, 0], [-1, 0],
+    ];
+    for (final cell in buildingCells) {
+      for (final d in dirs) {
+        final nx = cell[0] + d[0];
+        final ny = cell[1] + d[1];
+        if (nx < 0 || ny < 0 || nx >= CityChunk.chunkSize || ny >= CityChunk.chunkSize) {
+          continue;
+        }
+        final neighbour = chunk.cells['$nx,$ny'];
+        if (neighbour == null) continue;
+        final data = neighbour.data;
+        if (data is RoadData || data is NatureData) return [nx, ny];
+      }
+    }
+    return null;
   }
 
   // ─── Async predictive preloading ──────────────────────────────────────────
@@ -224,4 +333,17 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
 
   /// Number of NPCs created so far.
   int get npcCount => _allNPCs.length;
+
+  /// All building components currently active in the world.
+  List<BuildingComponent> get allActiveBuildings =>
+      List.unmodifiable(_allBuildings);
+}
+
+// ── Private helper ────────────────────────────────────────────────────────────
+
+class _ChunkBuildingInfo {
+  final BuildingType type;
+  final String buildingId;
+  final List<List<int>> cells = [];
+  _ChunkBuildingInfo(this.type, this.buildingId);
 }
