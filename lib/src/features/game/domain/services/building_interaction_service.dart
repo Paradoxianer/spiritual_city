@@ -53,6 +53,8 @@ class BuildingInteractionService {
   /// **Residential** – `'talk'`, `'pray'`, `'help'`, `'bible'`
   /// **Commercial**  – `'donate'`, `'worker'`, `'prayBusiness'`, `'distribute'`
   /// **Church**      – `'readBible'`, `'pray'`, `'worship'`
+  /// **Civic**       – `'pray'`, `'witness'`, `'distribute'`
+  /// **Industrial**  – `'pray'`, `'witness'`, `'distribute'`
   BuildingInteractionResult performAction(
     String actionType,
     BuildingModel building,
@@ -65,6 +67,10 @@ class BuildingInteractionService {
         return _commercialAction(actionType, building);
       case BuildingCategory.church:
         return _churchAction(actionType, building);
+      case BuildingCategory.civic:
+        return _civicAction(actionType, building);
+      case BuildingCategory.industrial:
+        return _industrialAction(actionType, building);
       default:
         return const BuildingInteractionResult(
           reactionEmoji: '❓',
@@ -119,6 +125,14 @@ class BuildingInteractionService {
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
           reactionEmoji: '📖✝️',
+        );
+
+      // [E] Brief einwerfen: kleiner Glaubenbonus, NPC-faith +1 (stille Handlung)
+      case 'letter':
+        building.influenceResidents(1.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: 3.0,
+          reactionEmoji: '✉️🙏',
         );
 
       default:
@@ -212,6 +226,90 @@ class BuildingInteractionService {
         return const BuildingInteractionResult(
           playerFaithDelta: 20.0,
           reactionEmoji: '🎵✝️',
+        );
+
+      default:
+        return const BuildingInteractionResult(
+          reactionEmoji: '❓',
+          success: false,
+        );
+    }
+  }
+
+  // ── Civic actions (public buildings) ─────────────────────────────────────
+
+  BuildingInteractionResult _civicAction(
+    String actionType,
+    BuildingModel building,
+  ) {
+    switch (actionType) {
+      // Beten: +10 Faith, kleine Ausstrahlung auf Mitarbeiter
+      case 'pray':
+        building.influenceResidents(2.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: 10.0,
+          reactionEmoji: '🙏🏛️',
+        );
+
+      // Zeugnis geben: Mitarbeiter-Einfluss +4
+      case 'witness':
+        for (final npc in building.residents) {
+          npc.applyInfluence(4.0);
+        }
+        return const BuildingInteractionResult(
+          playerFaithDelta: 8.0,
+          reactionEmoji: '💬✝️',
+        );
+
+      // Material verteilen: -8 MP, +12 Faith, Mitarbeiter +3 faith
+      case 'distribute':
+        building.influenceResidents(3.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: 12.0,
+          playerMaterialsDelta: -8.0,
+          reactionEmoji: '📦🏛️',
+        );
+
+      default:
+        return const BuildingInteractionResult(
+          reactionEmoji: '❓',
+          success: false,
+        );
+    }
+  }
+
+  // ── Industrial actions ────────────────────────────────────────────────────
+
+  BuildingInteractionResult _industrialAction(
+    String actionType,
+    BuildingModel building,
+  ) {
+    switch (actionType) {
+      // Beten: +8 Faith, kleine Ausstrahlung auf Arbeiter
+      case 'pray':
+        building.influenceResidents(2.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: 8.0,
+          reactionEmoji: '🙏🏭',
+        );
+
+      // Zeugnis geben: Arbeiter-Einfluss +5
+      case 'witness':
+        for (final npc in building.residents) {
+          npc.applyInfluence(5.0);
+        }
+        return const BuildingInteractionResult(
+          playerFaithDelta: 10.0,
+          reactionEmoji: '💬👷',
+        );
+
+      // Material verteilen: -10 MP, +15 Faith, Arbeiter +4 faith
+      case 'distribute':
+        building.influenceResidents(4.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: 15.0,
+          playerMaterialsDelta: -10.0,
+          reactionEmoji: '📦👷',
         );
 
       default:

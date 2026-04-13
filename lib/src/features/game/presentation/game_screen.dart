@@ -3,6 +3,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../domain/models/building_model.dart';
+import '../domain/models/cell_object.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/services/building_interaction_service.dart';
@@ -530,18 +531,32 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       child: Row(
         children: [
           Text(
-            _categoryEmoji(building.category),
+            _buildingTypeEmoji(building.type),
             style: const TextStyle(fontSize: 28),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              _categoryName(building.category),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _buildingTypeName(building.type),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
+                ),
+                if (building.residents.isNotEmpty)
+                  Text(
+                    _residentSummaryLine(building),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
             ),
           ),
           IconButton(
@@ -553,16 +568,22 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     );
   }
 
+  /// One-liner "Maria Müller (Bewohnerin) · Johannes Schmidt" for the header.
+  String _residentSummaryLine(BuildingModel building) {
+    final names = building.residents.map((r) => r.name.split(' ').first);
+    return names.join(' · ');
+  }
+
   // ── Knock screen (residential only) ──────────────────────────────────────
 
   Widget _buildKnockScreen(BuildingModel building) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text('🚪', style: TextStyle(fontSize: 56)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             'Anklopfen?',
             style: TextStyle(
@@ -571,7 +592,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             _accessHint(building, widget.game.faith),
             textAlign: TextAlign.center,
@@ -580,7 +601,12 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
               fontSize: 13,
             ),
           ),
-          const SizedBox(height: 24),
+          // Show who might live here
+          if (building.residents.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _buildResidentChips(building, compact: true),
+          ],
+          const SizedBox(height: 20),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.amber[700],
@@ -609,7 +635,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 
   Widget _buildDeniedScreen() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -620,10 +646,42 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white70, fontSize: 16),
           ),
-          const SizedBox(height: 24),
-          TextButton(
-            onPressed: () => widget.game.closeBuildingInterior(),
-            child: const Text('Weggehen', style: TextStyle(color: Colors.amber)),
+          const SizedBox(height: 6),
+          Text(
+            'Du kannst trotzdem einen Brief einwerfen.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18, vertical: 10),
+                  shape: const StadiumBorder(),
+                ),
+                icon: const Text('✉️', style: TextStyle(fontSize: 18)),
+                label: const Text('Brief einwerfen',
+                    style: TextStyle(fontSize: 13)),
+                onPressed: () {
+                  _performAction('letter');
+                  widget.game.closeBuildingInterior();
+                },
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: () => widget.game.closeBuildingInterior(),
+                child: const Text('Weggehen',
+                    style: TextStyle(color: Colors.amber)),
+              ),
+            ],
           ),
         ],
       ),
@@ -660,16 +718,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             ),
           ),
 
-          // Residents summary
+          // Residents detail list
           if (building.residents.isNotEmpty) ...[
-            Text(
-              '${building.residents.length} Bewohner anwesend',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.55),
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 8),
+            _buildResidentChips(building, compact: false),
+            const SizedBox(height: 10),
           ],
 
           // Reaction feedback
@@ -697,29 +749,127 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     switch (category) {
       case BuildingCategory.residential:
         return [
-          _ActionChip(label: '💬', sublabel: 'Sprechen', onTap: () => _performAction('talk')),
-          _ActionChip(label: '🙏', sublabel: 'Beten', onTap: () => _performAction('pray')),
-          _ActionChip(label: '📦', sublabel: 'Hilfe', onTap: () => _performAction('help')),
-          _ActionChip(label: '📖', sublabel: 'Bibel', onTap: () => _performAction('bible')),
+          _ActionChip(
+            label: '💬',
+            sublabel: 'Gespräch',
+            description: '+5 Glauben · Gespräch führen',
+            onTap: () => _performAction('talk'),
+          ),
+          _ActionChip(
+            label: '🙏',
+            sublabel: 'Beten',
+            description: '+15 Glauben · Familie segnen',
+            onTap: () => _performAction('pray'),
+          ),
+          _ActionChip(
+            label: '📦',
+            sublabel: 'Helfen',
+            description: '+10 Glauben · -10 Material',
+            onTap: () => _performAction('help'),
+          ),
+          _ActionChip(
+            label: '📖',
+            sublabel: 'Bibel',
+            description: '+10 Glauben · Familie +2',
+            onTap: () => _performAction('bible'),
+          ),
         ];
       case BuildingCategory.commercial:
         return [
-          _ActionChip(label: '💸', sublabel: 'Spenden', onTap: () => _performAction('donate')),
-          _ActionChip(label: '👷', sublabel: 'Arbeiter', onTap: () => _performAction('worker')),
-          _ActionChip(label: '🙏', sublabel: 'Beten', onTap: () => _performAction('prayBusiness')),
-          _ActionChip(label: '📦', sublabel: 'Verteilen', onTap: () => _performAction('distribute')),
+          _ActionChip(
+            label: '💸',
+            sublabel: 'Spende',
+            description: '+20–40 Material (50 % Chance)',
+            onTap: () => _performAction('donate'),
+          ),
+          _ActionChip(
+            label: '👷',
+            sublabel: 'Arbeiter',
+            description: '+8 Glauben · Mitarbeiter +3',
+            onTap: () => _performAction('worker'),
+          ),
+          _ActionChip(
+            label: '🙏',
+            sublabel: 'Beten',
+            description: '+10 Glauben · Stadteinfluss +',
+            onTap: () => _performAction('prayBusiness'),
+          ),
+          _ActionChip(
+            label: '📦',
+            sublabel: 'Verteilen',
+            description: '+15 Glauben · -5 Material',
+            onTap: () => _performAction('distribute'),
+          ),
         ];
       case BuildingCategory.church:
         return [
-          _ActionChip(label: '📖', sublabel: 'Bibellesen', onTap: () => _performAction('readBible')),
-          _ActionChip(label: '🙏', sublabel: 'Beten', onTap: () => _performAction('pray')),
-          _ActionChip(label: '🎵', sublabel: 'Gottesdienst', onTap: () => _performAction('worship')),
+          _ActionChip(
+            label: '📖',
+            sublabel: 'Bibellesen',
+            description: '+10 Glauben · Wissen vertiefen',
+            onTap: () => _performAction('readBible'),
+          ),
+          _ActionChip(
+            label: '🙏',
+            sublabel: 'Beten',
+            description: '+15 Glauben · Gemeinde +5',
+            onTap: () => _performAction('pray'),
+          ),
+          _ActionChip(
+            label: '🎵',
+            sublabel: 'Gottesdienst',
+            description: '+20 Glauben · Gemeinde +10',
+            onTap: () => _performAction('worship'),
+          ),
+        ];
+      case BuildingCategory.civic:
+        return [
+          _ActionChip(
+            label: '🙏',
+            sublabel: 'Beten',
+            description: '+10 Glauben · Personal +2',
+            onTap: () => _performAction('pray'),
+          ),
+          _ActionChip(
+            label: '💬',
+            sublabel: 'Zeugnis',
+            description: '+8 Glauben · Personal +4',
+            onTap: () => _performAction('witness'),
+          ),
+          _ActionChip(
+            label: '📦',
+            sublabel: 'Verteilen',
+            description: '+12 Glauben · -8 Material',
+            onTap: () => _performAction('distribute'),
+          ),
+        ];
+      case BuildingCategory.industrial:
+        return [
+          _ActionChip(
+            label: '🙏',
+            sublabel: 'Beten',
+            description: '+8 Glauben · Arbeiter +2',
+            onTap: () => _performAction('pray'),
+          ),
+          _ActionChip(
+            label: '💬',
+            sublabel: 'Zeugnis',
+            description: '+10 Glauben · Arbeiter +5',
+            onTap: () => _performAction('witness'),
+          ),
+          _ActionChip(
+            label: '📦',
+            sublabel: 'Verteilen',
+            description: '+15 Glauben · -10 Material',
+            onTap: () => _performAction('distribute'),
+          ),
         ];
       default:
         return [
           _ActionChip(
             label: '👀',
             sublabel: 'Schauen',
+            description: 'Umgebung beobachten',
             onTap: () => setState(() => _lastReaction = '👀'),
           ),
         ];
@@ -728,56 +878,177 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  String _categoryEmoji(BuildingCategory cat) {
-    switch (cat) {
-      case BuildingCategory.residential: return '🏠';
-      case BuildingCategory.commercial:  return '🏢';
-      case BuildingCategory.church:      return '⛪';
-      default:                           return '🏗️';
+  /// Returns a type-specific emoji for the building.
+  String _buildingTypeEmoji(BuildingType type) {
+    switch (type) {
+      case BuildingType.house:        return '🏠';
+      case BuildingType.apartment:    return '🏢';
+      case BuildingType.shop:         return '🏪';
+      case BuildingType.supermarket:  return '🛒';
+      case BuildingType.mall:         return '🛍️';
+      case BuildingType.office:       return '🏢';
+      case BuildingType.skyscraper:   return '🏙️';
+      case BuildingType.factory:      return '🏭';
+      case BuildingType.warehouse:    return '🏗️';
+      case BuildingType.church:       return '⛪';
+      case BuildingType.cathedral:    return '⛪';
+      case BuildingType.trainStation: return '🚉';
+      case BuildingType.policeStation:return '🚔';
+      case BuildingType.fireStation:  return '🚒';
+      case BuildingType.postOffice:   return '📮';
+      case BuildingType.hospital:     return '🏥';
+      case BuildingType.school:       return '🏫';
+      case BuildingType.university:   return '🎓';
+      case BuildingType.library:      return '📚';
+      case BuildingType.museum:       return '🏛️';
+      case BuildingType.stadium:      return '🏟️';
+      case BuildingType.cityHall:     return '🏛️';
+      case BuildingType.cemetery:     return '🪦';
+      case BuildingType.powerPlant:   return '⚡';
+      default:                        return '🏗️';
     }
   }
 
-  String _categoryName(BuildingCategory cat) {
-    switch (cat) {
-      case BuildingCategory.residential: return 'Wohnhaus';
-      case BuildingCategory.commercial:  return 'Geschäftsgebäude';
-      case BuildingCategory.church:      return 'Kirchliches Gebäude';
-      default:                           return 'Gebäude';
+  /// Returns the human-readable German name for a specific building type.
+  String _buildingTypeName(BuildingType type) {
+    switch (type) {
+      case BuildingType.house:        return 'Wohnhaus';
+      case BuildingType.apartment:    return 'Wohnblock';
+      case BuildingType.shop:         return 'Geschäft';
+      case BuildingType.supermarket:  return 'Supermarkt';
+      case BuildingType.mall:         return 'Einkaufszentrum';
+      case BuildingType.office:       return 'Bürogebäude';
+      case BuildingType.skyscraper:   return 'Hochhaus';
+      case BuildingType.factory:      return 'Fabrik';
+      case BuildingType.warehouse:    return 'Lagerhaus';
+      case BuildingType.church:       return 'Kirche';
+      case BuildingType.cathedral:    return 'Dom';
+      case BuildingType.trainStation: return 'Bahnhof';
+      case BuildingType.policeStation:return 'Polizeiwache';
+      case BuildingType.fireStation:  return 'Feuerwehr';
+      case BuildingType.postOffice:   return 'Postamt';
+      case BuildingType.hospital:     return 'Krankenhaus';
+      case BuildingType.school:       return 'Schule';
+      case BuildingType.university:   return 'Universität';
+      case BuildingType.library:      return 'Bibliothek';
+      case BuildingType.museum:       return 'Museum';
+      case BuildingType.stadium:      return 'Stadion';
+      case BuildingType.cityHall:     return 'Rathaus';
+      case BuildingType.cemetery:     return 'Friedhof';
+      case BuildingType.powerPlant:   return 'Kraftwerk';
+      default:                        return 'Gebäude';
+    }
+  }
+
+  /// Builds a row of resident info chips showing name, role and faith level.
+  Widget _buildResidentChips(BuildingModel building, {required bool compact}) {
+    if (building.residents.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      alignment: WrapAlignment.center,
+      children: building.residents.map((npc) {
+        final faithEmoji = npc.faith > 50
+            ? '✝️'
+            : npc.faith > 0
+                ? '😐'
+                : '😔';
+        final roleLabel = _npcRoleLabel(npc.type);
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 8 : 10,
+            vertical: compact ? 4 : 6,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(faithEmoji, style: TextStyle(fontSize: compact ? 12 : 14)),
+              const SizedBox(width: 4),
+              Text(
+                compact ? npc.name.split(' ').first : npc.name,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: compact ? 11 : 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (!compact) ...[
+                const SizedBox(width: 4),
+                Text(
+                  '· $roleLabel',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _npcRoleLabel(NPCType type) {
+    switch (type) {
+      case NPCType.priest:    return 'Pastor';
+      case NPCType.merchant:  return 'Händler';
+      case NPCType.officer:   return 'Beamter';
+      default:                return 'Bürger';
     }
   }
 
   String _asciiInterior(BuildingCategory cat) {
     switch (cat) {
       case BuildingCategory.residential:
-        return '┌─────────────────────┐\n'
-               '│  🪑       🛋️        │\n'
-               '│                     │\n'
-               '│   🖼️   [Wohnzimmer]  │\n'
-               '│                     │\n'
-               '│  🌿       ☕        │\n'
-               '└─────────────────────┘';
+        return '+-----------------------+\n'
+               '|  [Wohnzimmer]         |\n'
+               '|                       |\n'
+               '|  Sofa    Tisch        |\n'
+               '|  Pflanze Fenster      |\n'
+               '+-----------+-----------+\n'
+               '| Schlafzim | Kueche    |\n'
+               '+-----------+-----------+';
       case BuildingCategory.commercial:
-        return '┌─────────────────────┐\n'
-               '│ 📦  📦  📦  📦  📦  │\n'
-               '│                     │\n'
-               '│   [Geschäftsraum]   │\n'
-               '│                     │\n'
-               '│  💼      🖥️         │\n'
-               '└─────────────────────┘';
+        return '+-----------------------+\n'
+               '|  [Geschaeftsraum]     |\n'
+               '|                       |\n'
+               '|  Regal  Regal  Regal  |\n'
+               '|  Tresen        Buero  |\n'
+               '+-----------------------+';
       case BuildingCategory.church:
-        return '┌─────────────────────┐\n'
-               '│       ✝️            │\n'
-               '│  🕯️           🕯️   │\n'
-               '│   [Kirchenraum]     │\n'
-               '│  🪑 🪑 🪑 🪑 🪑   │\n'
-               '│  🪑 🪑 🪑 🪑 🪑   │\n'
-               '└─────────────────────┘';
+        return '+-----------------------+\n'
+               '|     [Kirchenraum]     |\n'
+               '|         Altar         |\n'
+               '|  Kerze         Kerze  |\n'
+               '|  Bank  Bank  Bank     |\n'
+               '|  Bank  Bank  Bank     |\n'
+               '+-----------[=]---------+';
+      case BuildingCategory.civic:
+        return '+-----------------------+\n'
+               '|   [Oeffentl. Gebaeude]|\n'
+               '|                       |\n'
+               '|  Empfang  Buero       |\n'
+               '|  Wartezimmer          |\n'
+               '+-----------------------+';
+      case BuildingCategory.industrial:
+        return '+-----------------------+\n'
+               '|   [Produktionshalle]  |\n'
+               '|                       |\n'
+               '|  Masch.  Masch.       |\n'
+               '|  Lager        Buero   |\n'
+               '+-----------------------+';
       default:
-        return '┌─────────────────────┐\n'
-               '│                     │\n'
-               '│      [Raum]         │\n'
-               '│                     │\n'
-               '└─────────────────────┘';
+        return '+-----------------------+\n'
+               '|                       |\n'
+               '|        [Raum]         |\n'
+               '|                       |\n'
+               '+-----------------------+';
     }
   }
 }
@@ -786,11 +1057,13 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 class _ActionChip extends StatelessWidget {
   final String label;
   final String sublabel;
+  final String description;
   final VoidCallback onTap;
 
   const _ActionChip({
     required this.label,
     required this.sublabel,
+    required this.description,
     required this.onTap,
   });
 
@@ -799,7 +1072,8 @@ class _ActionChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        width: 88,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(14),
@@ -812,9 +1086,22 @@ class _ActionChip extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               sublabel,
+              textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Colors.white70,
+                color: Colors.white,
                 fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.5),
+                fontSize: 9,
               ),
             ),
           ],
