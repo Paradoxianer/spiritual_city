@@ -1,8 +1,9 @@
 import 'cell_object.dart';
 import 'npc_model.dart';
 
-/// High-level category used to pick the right interaction menu.
-enum BuildingCategory { residential, commercial, church, civic, industrial, other }
+/// Two-state category: residential buildings require knocking; everything else
+/// is always open.
+enum BuildingCategory { residential, other }
 
 /// Runtime state for one building in the city.
 ///
@@ -32,51 +33,20 @@ class BuildingModel {
 
   // ── Category helpers ──────────────────────────────────────────────────────
 
-  /// Derives the interaction category from the building type.
+  /// Residential buildings (house, apartment) need knocking; everything else
+  /// is always open.
   BuildingCategory get category {
     switch (type) {
       case BuildingType.house:
       case BuildingType.apartment:
         return BuildingCategory.residential;
-
-      case BuildingType.shop:
-      case BuildingType.supermarket:
-      case BuildingType.mall:
-      case BuildingType.office:
-      case BuildingType.skyscraper:
-        return BuildingCategory.commercial;
-
-      case BuildingType.factory:
-      case BuildingType.warehouse:
-      case BuildingType.powerPlant:
-        return BuildingCategory.industrial;
-
-      case BuildingType.church:
-      case BuildingType.cathedral:
-        return BuildingCategory.church;
-
-      case BuildingType.trainStation:
-      case BuildingType.policeStation:
-      case BuildingType.fireStation:
-      case BuildingType.postOffice:
-      case BuildingType.hospital:
-      case BuildingType.school:
-      case BuildingType.university:
-      case BuildingType.library:
-      case BuildingType.museum:
-      case BuildingType.stadium:
-      case BuildingType.cityHall:
-      case BuildingType.cemetery:
-        return BuildingCategory.civic;
-
       default:
         return BuildingCategory.other;
     }
   }
 
-  /// Commercial and church buildings are always accessible; residential ones
-  /// require an access check (knocking).
-  bool get isAlwaysOpen => category != BuildingCategory.residential;
+  /// Non-residential buildings are always accessible without knocking.
+  bool get isAlwaysOpen => category == BuildingCategory.other;
 
   // ── Access logic (Lastenheft §7.4 / Issue §A) ─────────────────────────────
 

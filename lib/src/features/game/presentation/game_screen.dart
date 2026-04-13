@@ -7,6 +7,7 @@ import '../domain/models/cell_object.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/services/building_interaction_service.dart';
+import '../presentation/components/building_component.dart';
 import 'spirit_world_game.dart';
 
 class GameScreen extends StatefulWidget {
@@ -607,17 +608,43 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             _buildResidentChips(building, compact: true),
           ],
           const SizedBox(height: 20),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber[700],
-              foregroundColor: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: const StadiumBorder(),
-            ),
-            icon: const Text('👊', style: TextStyle(fontSize: 22)),
-            label: const Text('Anklopfen', style: TextStyle(fontSize: 16)),
-            onPressed: _attemptKnock,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: const StadiumBorder(),
+                ),
+                icon: const Text('👊', style: TextStyle(fontSize: 22)),
+                label: const Text('Anklopfen', style: TextStyle(fontSize: 16)),
+                onPressed: _attemptKnock,
+              ),
+              const SizedBox(width: 12),
+              Tooltip(
+                message: 'Brief einwerfen (+3 Glauben)',
+                child: GestureDetector(
+                  onTap: () {
+                    _performAction('letter');
+                    widget.game.closeBuildingInterior();
+                  },
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: const Center(
+                      child: Text('✉️', style: TextStyle(fontSize: 24)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -707,7 +734,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
               border: Border.all(color: Colors.white12),
             ),
             child: Text(
-              _asciiInterior(building.category),
+              _asciiInterior(building.type),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'monospace',
@@ -733,212 +760,114 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             const SizedBox(height: 8),
           ],
 
-          // Action chips
+          // Action chips — emoji only, Tooltip on long-press
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 12,
+            runSpacing: 12,
             alignment: WrapAlignment.center,
-            children: _buildActionChips(building.category),
+            children: _buildActionChips(building),
           ),
         ],
       ),
     );
   }
 
-  List<Widget> _buildActionChips(BuildingCategory category) {
-    switch (category) {
-      case BuildingCategory.residential:
+  // ── Action chips ─────────────────────────────────────────────────────────
+
+  /// Returns emoji-only action chips for [building].
+  ///
+  /// Each chip shows a single emoji in a round button.  A Tooltip (long-press
+  /// on mobile, hover on desktop) reveals a brief German description.
+  /// "Brief einwerfen" is always the last chip regardless of building type.
+  List<Widget> _buildActionChips(BuildingModel building) {
+    final letter = _ActionChip(
+      emoji: '✉️',
+      tooltip: 'Brief einwerfen',
+      onTap: () => _performAction('letter'),
+    );
+
+    switch (building.type) {
+      // ── Residential ───────────────────────────────────────────────────────
+      case BuildingType.house:
+      case BuildingType.apartment:
         return [
-          _ActionChip(
-            label: '💬',
-            sublabel: 'Gespräch',
-            description: '+5 Glauben · Gespräch führen',
-            onTap: () => _performAction('talk'),
-          ),
-          _ActionChip(
-            label: '🙏',
-            sublabel: 'Beten',
-            description: '+15 Glauben · Familie segnen',
-            onTap: () => _performAction('pray'),
-          ),
-          _ActionChip(
-            label: '📦',
-            sublabel: 'Helfen',
-            description: '+10 Glauben · -10 Material',
-            onTap: () => _performAction('help'),
-          ),
-          _ActionChip(
-            label: '📖',
-            sublabel: 'Bibel',
-            description: '+10 Glauben · Familie +2',
-            onTap: () => _performAction('bible'),
-          ),
+          _ActionChip(emoji: '💬', tooltip: 'Gespräch führen (+5 Glauben)',    onTap: () => _performAction('talk')),
+          _ActionChip(emoji: '🙏', tooltip: 'Für Familie beten (+15 Glauben)', onTap: () => _performAction('pray')),
+          _ActionChip(emoji: '📦', tooltip: 'Hilfe anbieten (-10 Material, +10 Glauben)',    onTap: () => _performAction('help')),
+          _ActionChip(emoji: '📖', tooltip: 'Bibel vorlesen (+10 Glauben)',    onTap: () => _performAction('bible')),
+          letter,
         ];
-      case BuildingCategory.commercial:
+
+      // ── Church ────────────────────────────────────────────────────────────
+      case BuildingType.church:
+      case BuildingType.cathedral:
         return [
-          _ActionChip(
-            label: '💸',
-            sublabel: 'Spende',
-            description: '+20–40 Material (50 % Chance)',
-            onTap: () => _performAction('donate'),
-          ),
-          _ActionChip(
-            label: '👷',
-            sublabel: 'Arbeiter',
-            description: '+8 Glauben · Mitarbeiter +3',
-            onTap: () => _performAction('worker'),
-          ),
-          _ActionChip(
-            label: '🙏',
-            sublabel: 'Beten',
-            description: '+10 Glauben · Stadteinfluss +',
-            onTap: () => _performAction('prayBusiness'),
-          ),
-          _ActionChip(
-            label: '📦',
-            sublabel: 'Verteilen',
-            description: '+15 Glauben · -5 Material',
-            onTap: () => _performAction('distribute'),
-          ),
+          _ActionChip(emoji: '📖', tooltip: 'Bibel lesen (+10 Glauben)',       onTap: () => _performAction('readBible')),
+          _ActionChip(emoji: '🙏', tooltip: 'Gemeinsam beten (+15 Glauben)',   onTap: () => _performAction('pray')),
+          _ActionChip(emoji: '🎵', tooltip: 'Gottesdienst halten (+20 Glauben)', onTap: () => _performAction('worship')),
+          letter,
         ];
-      case BuildingCategory.church:
+
+      // ── Hospital ──────────────────────────────────────────────────────────
+      case BuildingType.hospital:
         return [
-          _ActionChip(
-            label: '📖',
-            sublabel: 'Bibellesen',
-            description: '+10 Glauben · Wissen vertiefen',
-            onTap: () => _performAction('readBible'),
-          ),
-          _ActionChip(
-            label: '🙏',
-            sublabel: 'Beten',
-            description: '+15 Glauben · Gemeinde +5',
-            onTap: () => _performAction('pray'),
-          ),
-          _ActionChip(
-            label: '🎵',
-            sublabel: 'Gottesdienst',
-            description: '+20 Glauben · Gemeinde +10',
-            onTap: () => _performAction('worship'),
-          ),
+          _ActionChip(emoji: '🤝', tooltip: 'Kranke besuchen (+12 Glauben)',   onTap: () => _performAction('visitSick')),
+          _ActionChip(emoji: '🙏', tooltip: 'Für Heilung beten (+10 Glauben)', onTap: () => _performAction('pray')),
+          _ActionChip(emoji: '📦', tooltip: 'Spenden verteilen (-8 Material, +8 Glauben)',  onTap: () => _performAction('distribute')),
+          letter,
         ];
-      case BuildingCategory.civic:
+
+      // ── School / University ───────────────────────────────────────────────
+      case BuildingType.school:
+      case BuildingType.university:
         return [
-          _ActionChip(
-            label: '🙏',
-            sublabel: 'Beten',
-            description: '+10 Glauben · Personal +2',
-            onTap: () => _performAction('pray'),
-          ),
-          _ActionChip(
-            label: '💬',
-            sublabel: 'Zeugnis',
-            description: '+8 Glauben · Personal +4',
-            onTap: () => _performAction('witness'),
-          ),
-          _ActionChip(
-            label: '📦',
-            sublabel: 'Verteilen',
-            description: '+12 Glauben · -8 Material',
-            onTap: () => _performAction('distribute'),
-          ),
+          _ActionChip(emoji: '📚', tooltip: 'Glauben lehren (+8 Glauben)',     onTap: () => _performAction('teach')),
+          _ActionChip(emoji: '🙏', tooltip: 'Für Schüler beten (+10 Glauben)', onTap: () => _performAction('pray')),
+          _ActionChip(emoji: '📦', tooltip: 'Material spenden (-8 Material, +10 Glauben)', onTap: () => _performAction('distribute')),
+          letter,
         ];
-      case BuildingCategory.industrial:
+
+      // ── Cemetery ──────────────────────────────────────────────────────────
+      case BuildingType.cemetery:
         return [
-          _ActionChip(
-            label: '🙏',
-            sublabel: 'Beten',
-            description: '+8 Glauben · Arbeiter +2',
-            onTap: () => _performAction('pray'),
-          ),
-          _ActionChip(
-            label: '💬',
-            sublabel: 'Zeugnis',
-            description: '+10 Glauben · Arbeiter +5',
-            onTap: () => _performAction('witness'),
-          ),
-          _ActionChip(
-            label: '📦',
-            sublabel: 'Verteilen',
-            description: '+15 Glauben · -10 Material',
-            onTap: () => _performAction('distribute'),
-          ),
+          _ActionChip(emoji: '🙏', tooltip: 'Stille Andacht (+18 Glauben)',    onTap: () => _performAction('pray')),
+          _ActionChip(emoji: '🤝', tooltip: 'Trauernde trösten (+10 Glauben)', onTap: () => _performAction('comfort')),
+          letter,
         ];
+
+      // ── Commercial ────────────────────────────────────────────────────────
+      case BuildingType.shop:
+      case BuildingType.supermarket:
+      case BuildingType.mall:
+      case BuildingType.office:
+      case BuildingType.skyscraper:
+        return [
+          _ActionChip(emoji: '💸', tooltip: 'Um Spende bitten (+20–40 Material)', onTap: () => _performAction('donate')),
+          _ActionChip(emoji: '💬', tooltip: 'Mit Arbeiter sprechen (+5 Glauben)', onTap: () => _performAction('worker')),
+          _ActionChip(emoji: '🙏', tooltip: 'Für den Betrieb beten (+10 Glauben)', onTap: () => _performAction('prayBusiness')),
+          _ActionChip(emoji: '📦', tooltip: 'Material verteilen (-5 Material, +15 Glauben)', onTap: () => _performAction('distribute')),
+          letter,
+        ];
+
+      // ── Everything else ───────────────────────────────────────────────────
       default:
         return [
-          _ActionChip(
-            label: '👀',
-            sublabel: 'Schauen',
-            description: 'Umgebung beobachten',
-            onTap: () => setState(() => _lastReaction = '👀'),
-          ),
+          _ActionChip(emoji: '🙏', tooltip: 'Beten (+8 Glauben)',              onTap: () => _performAction('pray')),
+          _ActionChip(emoji: '💬', tooltip: 'Zeugnis geben (+10 Glauben)',     onTap: () => _performAction('witness')),
+          _ActionChip(emoji: '📦', tooltip: 'Material verteilen (-8 Material, +12 Glauben)', onTap: () => _performAction('distribute')),
+          letter,
         ];
     }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /// Returns a type-specific emoji for the building.
-  String _buildingTypeEmoji(BuildingType type) {
-    switch (type) {
-      case BuildingType.house:        return '🏠';
-      case BuildingType.apartment:    return '🏢';
-      case BuildingType.shop:         return '🏪';
-      case BuildingType.supermarket:  return '🛒';
-      case BuildingType.mall:         return '🛍️';
-      case BuildingType.office:       return '🏢';
-      case BuildingType.skyscraper:   return '🏙️';
-      case BuildingType.factory:      return '🏭';
-      case BuildingType.warehouse:    return '🏗️';
-      case BuildingType.church:       return '⛪';
-      case BuildingType.cathedral:    return '⛪';
-      case BuildingType.trainStation: return '🚉';
-      case BuildingType.policeStation:return '🚔';
-      case BuildingType.fireStation:  return '🚒';
-      case BuildingType.postOffice:   return '📮';
-      case BuildingType.hospital:     return '🏥';
-      case BuildingType.school:       return '🏫';
-      case BuildingType.university:   return '🎓';
-      case BuildingType.library:      return '📚';
-      case BuildingType.museum:       return '🏛️';
-      case BuildingType.stadium:      return '🏟️';
-      case BuildingType.cityHall:     return '🏛️';
-      case BuildingType.cemetery:     return '🪦';
-      case BuildingType.powerPlant:   return '⚡';
-      default:                        return '🏗️';
-    }
-  }
+  /// Delegates to the static helpers in [BuildingComponent] to stay DRY.
+  String _buildingTypeEmoji(BuildingType type) =>
+      BuildingComponent.buildingEmoji(type);
 
-  /// Returns the human-readable German name for a specific building type.
-  String _buildingTypeName(BuildingType type) {
-    switch (type) {
-      case BuildingType.house:        return 'Wohnhaus';
-      case BuildingType.apartment:    return 'Wohnblock';
-      case BuildingType.shop:         return 'Geschäft';
-      case BuildingType.supermarket:  return 'Supermarkt';
-      case BuildingType.mall:         return 'Einkaufszentrum';
-      case BuildingType.office:       return 'Bürogebäude';
-      case BuildingType.skyscraper:   return 'Hochhaus';
-      case BuildingType.factory:      return 'Fabrik';
-      case BuildingType.warehouse:    return 'Lagerhaus';
-      case BuildingType.church:       return 'Kirche';
-      case BuildingType.cathedral:    return 'Dom';
-      case BuildingType.trainStation: return 'Bahnhof';
-      case BuildingType.policeStation:return 'Polizeiwache';
-      case BuildingType.fireStation:  return 'Feuerwehr';
-      case BuildingType.postOffice:   return 'Postamt';
-      case BuildingType.hospital:     return 'Krankenhaus';
-      case BuildingType.school:       return 'Schule';
-      case BuildingType.university:   return 'Universität';
-      case BuildingType.library:      return 'Bibliothek';
-      case BuildingType.museum:       return 'Museum';
-      case BuildingType.stadium:      return 'Stadion';
-      case BuildingType.cityHall:     return 'Rathaus';
-      case BuildingType.cemetery:     return 'Friedhof';
-      case BuildingType.powerPlant:   return 'Kraftwerk';
-      default:                        return 'Gebäude';
-    }
-  }
+  String _buildingTypeName(BuildingType type) =>
+      BuildingComponent.buildingName(type);
 
   /// Builds a row of resident info chips showing name, role and faith level.
   Widget _buildResidentChips(BuildingModel building, {required bool compact}) {
@@ -1003,108 +932,103 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     }
   }
 
-  String _asciiInterior(BuildingCategory cat) {
-    switch (cat) {
-      case BuildingCategory.residential:
-        return '+-----------------------+\n'
-               '|  [Wohnzimmer]         |\n'
-               '|                       |\n'
-               '|  Sofa    Tisch        |\n'
-               '|  Pflanze Fenster      |\n'
-               '+-----------+-----------+\n'
-               '| Schlafzim | Kueche    |\n'
-               '+-----------+-----------+';
-      case BuildingCategory.commercial:
-        return '+-----------------------+\n'
-               '|  [Geschaeftsraum]     |\n'
-               '|                       |\n'
-               '|  Regal  Regal  Regal  |\n'
-               '|  Tresen        Buero  |\n'
-               '+-----------------------+';
-      case BuildingCategory.church:
-        return '+-----------------------+\n'
-               '|     [Kirchenraum]     |\n'
-               '|         Altar         |\n'
-               '|  Kerze         Kerze  |\n'
-               '|  Bank  Bank  Bank     |\n'
-               '|  Bank  Bank  Bank     |\n'
-               '+-----------[=]---------+';
-      case BuildingCategory.civic:
-        return '+-----------------------+\n'
-               '|   [Oeffentl. Gebaeude]|\n'
-               '|                       |\n'
-               '|  Empfang  Buero       |\n'
-               '|  Wartezimmer          |\n'
-               '+-----------------------+';
-      case BuildingCategory.industrial:
-        return '+-----------------------+\n'
-               '|   [Produktionshalle]  |\n'
-               '|                       |\n'
-               '|  Masch.  Masch.       |\n'
-               '|  Lager        Buero   |\n'
-               '+-----------------------+';
+  String _asciiInterior(BuildingType type) {
+    switch (type) {
+      case BuildingType.house:
+      case BuildingType.apartment:
+        return '+-----------+-------+\n'
+               '| Wohnzimmer|Kueche |\n'
+               '|  [Sofa]   +-------+\n'
+               '|  [Tisch]  |Schlaf.|\n'
+               '+-----------+-------+';
+      case BuildingType.church:
+      case BuildingType.cathedral:
+        return '+-------------------+\n'
+               '|    [   Altar   ]  |\n'
+               '|  Kerze     Kerze  |\n'
+               '| [Bank] [Bank]     |\n'
+               '| [Bank] [Bank]     |\n'
+               '+--------[=]--------+';
+      case BuildingType.hospital:
+        return '+-------+-------+---+\n'
+               '|Bett   |Bett   |   |\n'
+               '|       |       |Bue|\n'
+               '|Bett   |Bett   |ro |\n'
+               '+-------+-------+---+';
+      case BuildingType.school:
+      case BuildingType.university:
+        return '+-------------------+\n'
+               '|  Tafel            |\n'
+               '|  [Pult]           |\n'
+               '| [Tisch][Tisch]    |\n'
+               '| [Tisch][Tisch]    |\n'
+               '+-------------------+';
+      case BuildingType.cemetery:
+        return '+-------------------+\n'
+               '|  +   +   +   +   |\n'
+               '|                   |\n'
+               '|  +   +   +   +   |\n'
+               '|         [Kapelle] |\n'
+               '+-------------------+';
+      case BuildingType.factory:
+      case BuildingType.warehouse:
+      case BuildingType.powerPlant:
+        return '+-------+-----------+\n'
+               '|[Masch]|[Masch]    |\n'
+               '|       |           |\n'
+               '|[Lager]|   [Buero] |\n'
+               '+-------+-----------+';
+      case BuildingType.shop:
+      case BuildingType.supermarket:
+      case BuildingType.mall:
+        return '+-------------------+\n'
+               '| [Regal][Regal]    |\n'
+               '|                   |\n'
+               '| [Regal]   [Kasse] |\n'
+               '|       [Tresen]    |\n'
+               '+-------------------+';
       default:
-        return '+-----------------------+\n'
-               '|                       |\n'
-               '|        [Raum]         |\n'
-               '|                       |\n'
-               '+-----------------------+';
+        return '+-------------------+\n'
+               '|   [Empfang]       |\n'
+               '|                   |\n'
+               '|   [Buero]         |\n'
+               '+-------------------+';
     }
   }
 }
 
-/// A compact action chip used inside [BuildingInteriorOverlay].
+/// A compact round action button showing a single emoji.
+///
+/// No text is visible during normal use — the [tooltip] appears on long-press
+/// (mobile) or hover (desktop/web) to describe the action.
 class _ActionChip extends StatelessWidget {
-  final String label;
-  final String sublabel;
-  final String description;
+  final String emoji;
+  final String tooltip;
   final VoidCallback onTap;
 
   const _ActionChip({
-    required this.label,
-    required this.sublabel,
-    required this.description,
+    required this.emoji,
+    required this.tooltip,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 88,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white24),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: const TextStyle(fontSize: 24)),
-            const SizedBox(height: 2),
-            Text(
-              sublabel,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.5),
-                fontSize: 9,
-              ),
-            ),
-          ],
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white30, width: 1.5),
+          ),
+          child: Center(
+            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+          ),
         ),
       ),
     );

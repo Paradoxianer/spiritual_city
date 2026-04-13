@@ -177,8 +177,9 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   /// Creates [BuildingComponent] instances for every unique building in
   /// [chunk] the first time that chunk is loaded.
   ///
-  /// The entrance position is the first walkable cell adjacent to the
-  /// building's footprint (same heuristic used by [NPCRegistry]).
+  /// Prefers placing the component at the nearest walkable (road) cell so that
+  /// the player detects it while walking along the street.  Falls back to the
+  /// building's footprint centre if no road neighbour is found.
   void _spawnBuildingComponents(
     CityChunk chunk,
     Map<String, List<NPCModel>> npcsByBuilding,
@@ -206,15 +207,30 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       // Skip buildings that already have a component (e.g. spanning two chunks).
       if (_buildingModels.containsKey(bInfo.buildingId)) continue;
 
+      // Prefer an entrance on the adjacent road; fall back to footprint centre.
+      final Vector2 pos;
       final entrance = _findWalkableNeighbour(chunk, bInfo.cells);
-      if (entrance == null) continue;
-
-      final wx = chunk.getWorldX(entrance[0]);
-      final wy = chunk.getWorldY(entrance[1]);
-      final pos = Vector2(
-        wx * CellComponent.cellSize + CellComponent.cellSize / 2,
-        wy * CellComponent.cellSize + CellComponent.cellSize / 2,
-      );
+      if (entrance != null) {
+        final wx = chunk.getWorldX(entrance[0]);
+        final wy = chunk.getWorldY(entrance[1]);
+        pos = Vector2(
+          wx * CellComponent.cellSize + CellComponent.cellSize / 2,
+          wy * CellComponent.cellSize + CellComponent.cellSize / 2,
+        );
+      } else {
+        // Fallback: centre of the building footprint.
+        double sumX = 0, sumY = 0;
+        for (final c in bInfo.cells) {
+          sumX += c[0];
+          sumY += c[1];
+        }
+        final avgX = chunk.chunkX * CityChunk.chunkSize + sumX / bInfo.cells.length;
+        final avgY = chunk.chunkY * CityChunk.chunkSize + sumY / bInfo.cells.length;
+        pos = Vector2(
+          avgX * CellComponent.cellSize + CellComponent.cellSize / 2,
+          avgY * CellComponent.cellSize + CellComponent.cellSize / 2,
+        );
+      }
 
       final residents = npcsByBuilding[bInfo.buildingId] ?? [];
       final model = BuildingModel(

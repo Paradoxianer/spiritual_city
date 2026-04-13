@@ -13,6 +13,7 @@ import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
 import '../domain/services/building_interaction_service.dart';
+import 'components/building_component.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
@@ -93,7 +94,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     modifiers = ModifierManager(progress: progress);
 
     player = PlayerComponent(joystick: _createJoystick());
-    player.position = Vector2(256, 256); 
+    // Start in the suburbs so the player encounters residential streets first.
+    player.position = Vector2(7000, 7000);
     await world.add(player);
 
     chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
@@ -175,16 +177,29 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         .toList()
       ..sort((a, b) => a.$2.compareTo(b.$2));
 
-    for (final (target, _) in nearby.take(4)) {
+    // Up to 3 enter/interact actions (NPCs + buildings)
+    for (final (target, _) in nearby.take(3)) {
       actions.add(RadialAction(
         label: target.interactionEmoji,
         sublabel: target.interactionLabel.split(' ').first,
         icon: Icons.chat_bubble,
         onSelect: () {
-          // Ensure handleInteraction targets this specific NPC while the dialog is open.
           _nearestInteractable = target;
           target.onInteract();
         },
+      ));
+    }
+
+    // "Brief einwerfen" for the nearest building — always available without entering.
+    final nearestBuilding = nearby
+        .map((e) => e.$1)
+        .whereType<BuildingComponent>()
+        .firstOrNull;
+    if (nearestBuilding != null) {
+      actions.add(RadialAction(
+        label: '✉️',
+        icon: Icons.mail_outline,
+        onSelect: () => sendLetterToBuilding(nearestBuilding.buildingModel),
       ));
     }
 
@@ -212,6 +227,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   // ── Building interior ─────────────────────────────────────────────────────
+
+  /// Silently drops a letter into [building] without opening the interior.
+  /// Faith gain is applied immediately.
+  void sendLetterToBuilding(BuildingModel building) {
+    final result = buildingInteractionService.performAction('letter', building, faith);
+    if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);
+    if (result.playerMaterialsDelta > 0) {
+      gainMaterials(result.playerMaterialsDelta);
+    } else if (result.playerMaterialsDelta < 0) {
+      spendMaterials(-result.playerMaterialsDelta);
+    }
+  }
 
   /// Opens the building-interior overlay for [building].
   void openBuildingInterior(BuildingModel building) {

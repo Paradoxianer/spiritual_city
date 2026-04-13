@@ -22,48 +22,24 @@ void main() {
         );
       });
 
-      test('shop, office, skyscraper are commercial', () {
+      test('all non-residential types are category other', () {
         for (final t in [
           BuildingType.shop,
           BuildingType.office,
           BuildingType.skyscraper,
-        ]) {
-          expect(
-            BuildingModel(buildingId: 'b', type: t).category,
-            BuildingCategory.commercial,
-          );
-        }
-      });
-
-      test('factory and warehouse are industrial', () {
-        for (final t in [BuildingType.factory, BuildingType.warehouse]) {
-          expect(
-            BuildingModel(buildingId: 'b', type: t).category,
-            BuildingCategory.industrial,
-          );
-        }
-      });
-
-      test('church and cathedral are church category', () {
-        for (final t in [BuildingType.church, BuildingType.cathedral]) {
-          expect(
-            BuildingModel(buildingId: 'c', type: t).category,
-            BuildingCategory.church,
-          );
-        }
-      });
-
-      test('civic buildings (hospital, school etc.) are civic category', () {
-        for (final t in [
+          BuildingType.factory,
+          BuildingType.warehouse,
+          BuildingType.church,
+          BuildingType.cathedral,
           BuildingType.hospital,
           BuildingType.school,
           BuildingType.trainStation,
-          BuildingType.library,
-          BuildingType.cityHall,
+          BuildingType.cemetery,
         ]) {
           expect(
-            BuildingModel(buildingId: 'x', type: t).category,
-            BuildingCategory.civic,
+            BuildingModel(buildingId: 'b', type: t).category,
+            BuildingCategory.other,
+            reason: '$t should be other',
           );
         }
       });
@@ -71,28 +47,21 @@ void main() {
 
     group('isAlwaysOpen', () {
       test('residential buildings are NOT always open', () {
-        final m = BuildingModel(buildingId: 'h', type: BuildingType.house);
-        expect(m.isAlwaysOpen, isFalse);
+        expect(BuildingModel(buildingId: 'h', type: BuildingType.house).isAlwaysOpen, isFalse);
+        expect(BuildingModel(buildingId: 'a', type: BuildingType.apartment).isAlwaysOpen, isFalse);
       });
 
-      test('commercial buildings are always open', () {
-        final m = BuildingModel(buildingId: 's', type: BuildingType.shop);
-        expect(m.isAlwaysOpen, isTrue);
-      });
-
-      test('church buildings are always open', () {
-        final m = BuildingModel(buildingId: 'c', type: BuildingType.church);
-        expect(m.isAlwaysOpen, isTrue);
-      });
-
-      test('civic buildings are always open', () {
-        final m = BuildingModel(buildingId: 'h', type: BuildingType.hospital);
-        expect(m.isAlwaysOpen, isTrue);
-      });
-
-      test('industrial buildings are always open', () {
-        final m = BuildingModel(buildingId: 'f', type: BuildingType.factory);
-        expect(m.isAlwaysOpen, isTrue);
+      test('all other types are always open', () {
+        for (final t in [
+          BuildingType.shop, BuildingType.church, BuildingType.hospital,
+          BuildingType.factory, BuildingType.school, BuildingType.cemetery,
+        ]) {
+          expect(
+            BuildingModel(buildingId: 'b', type: t).isAlwaysOpen,
+            isTrue,
+            reason: '$t should be always open',
+          );
+        }
       });
     });
 
@@ -124,12 +93,9 @@ void main() {
 
       test('+30 % bonus after 3+ conversations, capped at 1.0', () {
         house.totalConversations = 3;
-        // 0.85 + 0.30 = 1.0 (capped)
-        expect(house.accessChance(100), 1.0);
-        // 0.50 + 0.30 = 0.80
-        expect(house.accessChance(0), 0.80);
-        // 0.15 + 0.30 = 0.45
-        expect(house.accessChance(-100), 0.45);
+        expect(house.accessChance(100), 1.0);   // 0.85 + 0.30 capped
+        expect(house.accessChance(0), 0.80);    // 0.50 + 0.30
+        expect(house.accessChance(-100), 0.45); // 0.15 + 0.30
       });
 
       test('bonus does NOT apply before 3 conversations', () {
@@ -140,30 +106,21 @@ void main() {
 
     group('influenceResidents', () {
       test('applies faith delta to all residents', () {
-        final npc1 = NPCModel(
-          id: 'n1', name: 'Alice', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 10.0,
-        );
-        final npc2 = NPCModel(
-          id: 'n2', name: 'Bob', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: -20.0,
-        );
+        final npc1 = NPCModel(id: 'n1', name: 'Alice', type: NPCType.citizen,
+            homePosition: Vector2.zero(), faith: 10.0);
+        final npc2 = NPCModel(id: 'n2', name: 'Bob', type: NPCType.citizen,
+            homePosition: Vector2.zero(), faith: -20.0);
         final building = BuildingModel(
-          buildingId: 'h', type: BuildingType.house,
-          residents: [npc1, npc2],
+          buildingId: 'h', type: BuildingType.house, residents: [npc1, npc2],
         );
-
         building.influenceResidents(5.0);
-
         expect(npc1.faith, closeTo(15.0, 0.001));
         expect(npc2.faith, closeTo(-15.0, 0.001));
       });
 
       test('clamps at ±100', () {
-        final npc = NPCModel(
-          id: 'n', name: 'Eve', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 98.0,
-        );
+        final npc = NPCModel(id: 'n', name: 'Eve', type: NPCType.citizen,
+            homePosition: Vector2.zero(), faith: 98.0);
         final building = BuildingModel(
           buildingId: 'h', type: BuildingType.house, residents: [npc],
         );
@@ -176,185 +133,143 @@ void main() {
   // ── BuildingInteractionService tests ─────────────────────────────────────
 
   group('BuildingInteractionService', () {
-    BuildingModel residential() =>
-        BuildingModel(buildingId: 'h', type: BuildingType.house);
-
-    BuildingModel commercial() =>
-        BuildingModel(buildingId: 's', type: BuildingType.shop);
-
+    NPCModel npc({double faith = 0.0}) => NPCModel(
+      id: 'n', name: 'X', type: NPCType.citizen,
+      homePosition: Vector2.zero(), faith: faith,
+    );
+    BuildingModel house({List<NPCModel>? residents}) =>
+        BuildingModel(buildingId: 'h', type: BuildingType.house, residents: residents);
+    BuildingModel shop({List<NPCModel>? residents}) =>
+        BuildingModel(buildingId: 's', type: BuildingType.shop, residents: residents);
     BuildingModel church() =>
         BuildingModel(buildingId: 'c', type: BuildingType.church);
+    BuildingModel hospital({List<NPCModel>? residents}) =>
+        BuildingModel(buildingId: 'h', type: BuildingType.hospital, residents: residents);
+    BuildingModel school({List<NPCModel>? residents}) =>
+        BuildingModel(buildingId: 'sc', type: BuildingType.school, residents: residents);
+    BuildingModel cemetery() =>
+        BuildingModel(buildingId: 'cem', type: BuildingType.cemetery);
+    BuildingModel factory({List<NPCModel>? residents}) =>
+        BuildingModel(buildingId: 'f', type: BuildingType.factory, residents: residents);
 
     group('attemptAccess', () {
-      test('always succeeds for commercial buildings', () {
+      test('always succeeds for non-residential buildings', () {
         final svc = BuildingInteractionService(rng: Random(0));
-        expect(svc.attemptAccess(commercial(), -100), isTrue);
-      });
-
-      test('always succeeds for church buildings', () {
-        final svc = BuildingInteractionService(rng: Random(0));
-        expect(svc.attemptAccess(church(), -100), isTrue);
+        for (final b in [shop(), church(), hospital(), factory(), cemetery()]) {
+          expect(svc.attemptAccess(b, -100), isTrue, reason: '${b.type} should be always open');
+        }
       });
 
       test('residential: high faith → mostly granted', () {
-        // With faith=100 (85 % chance) over 100 trials, at least 70 should pass.
         int successes = 0;
         for (int i = 0; i < 100; i++) {
-          final svc = BuildingInteractionService(rng: Random(i));
-          if (svc.attemptAccess(residential(), 100.0)) successes++;
+          if (BuildingInteractionService(rng: Random(i)).attemptAccess(house(), 100.0)) successes++;
         }
         expect(successes, greaterThan(70));
       });
 
       test('residential: very negative faith → mostly denied', () {
-        // With faith=-100 (15 % chance) most attempts should fail.
         int successes = 0;
         for (int i = 0; i < 100; i++) {
-          final svc = BuildingInteractionService(rng: Random(i));
-          if (svc.attemptAccess(residential(), -100.0)) successes++;
+          if (BuildingInteractionService(rng: Random(i)).attemptAccess(house(), -100.0)) successes++;
         }
         expect(successes, lessThan(35));
       });
     });
 
+    group('letter – works for any building type', () {
+      test('letter: +3 faith, resident +1 faith', () {
+        final resident = npc();
+        for (final b in [
+          house(residents: [resident]),
+          shop(residents: [resident]),
+          hospital(residents: [resident]),
+        ]) {
+          resident.faith = 0;
+          final result = BuildingInteractionService().performAction('letter', b, 0.0);
+          expect(result.playerFaithDelta, 3.0);
+          expect(resident.faith, 1.0);
+          expect(result.success, isTrue);
+        }
+      });
+    });
+
     group('performAction – residential', () {
       test('talk: +5 faith, increments resident conversationCount', () {
-        final npc = NPCModel(
-          id: 'n1', name: 'Maria', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'h', type: BuildingType.house, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('talk', b, 0.0);
+        final resident = npc();
+        final b = house(residents: [resident]);
+        final result = BuildingInteractionService().performAction('talk', b, 0.0);
         expect(result.playerFaithDelta, 5.0);
-        expect(npc.conversationCount, 1);
-        expect(result.success, isTrue);
+        expect(resident.conversationCount, 1);
       });
 
       test('pray: +15 faith, +5 materials, residents influenced', () {
-        final npc = NPCModel(
-          id: 'n', name: 'X', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'h', type: BuildingType.house, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('pray', b, 0.0);
+        final resident = npc();
+        final b = house(residents: [resident]);
+        final result = BuildingInteractionService().performAction('pray', b, 0.0);
         expect(result.playerFaithDelta, 15.0);
         expect(result.playerMaterialsDelta, 5.0);
-        expect(npc.faith, greaterThan(0));
+        expect(resident.faith, greaterThan(0));
       });
 
       test('help: -10 materials, +10 faith, NPC faith +5', () {
-        final npc = NPCModel(
-          id: 'n', name: 'X', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'h', type: BuildingType.house, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('help', b, 0.0);
+        final resident = npc();
+        final b = house(residents: [resident]);
+        final result = BuildingInteractionService().performAction('help', b, 0.0);
         expect(result.playerFaithDelta, 10.0);
         expect(result.playerMaterialsDelta, -10.0);
-        expect(npc.faith, 5.0);
+        expect(resident.faith, 5.0);
       });
 
       test('bible: +10 faith, family faith +2', () {
-        final npc = NPCModel(
-          id: 'n', name: 'X', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'h', type: BuildingType.house, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('bible', b, 0.0);
+        final resident = npc();
+        final b = house(residents: [resident]);
+        final result = BuildingInteractionService().performAction('bible', b, 0.0);
         expect(result.playerFaithDelta, 10.0);
-        expect(npc.faith, 2.0);
-      });
-
-      test('letter: +3 faith, resident faith +1 (drop letter when denied)', () {
-        final npc = NPCModel(
-          id: 'n', name: 'X', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'h', type: BuildingType.house, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('letter', b, 0.0);
-        expect(result.playerFaithDelta, 3.0);
-        expect(npc.faith, 1.0);
-        expect(result.success, isTrue);
+        expect(resident.faith, 2.0);
       });
 
       test('totalConversations incremented on every action', () {
-        final b = residential();
+        final b = house();
         final svc = BuildingInteractionService();
         svc.performAction('talk', b, 0.0);
         svc.performAction('pray', b, 0.0);
         expect(b.totalConversations, 2);
       });
 
-      test('unknown action type returns failure', () {
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('unknown', residential(), 0.0);
-        expect(result.success, isFalse);
+      test('unknown action returns failure', () {
+        expect(BuildingInteractionService().performAction('unknown', house(), 0.0).success, isFalse);
       });
     });
 
     group('performAction – commercial', () {
       test('worker: +5 faith', () {
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('worker', commercial(), 0.0);
-        expect(result.playerFaithDelta, 5.0);
+        expect(BuildingInteractionService().performAction('worker', shop(), 0.0).playerFaithDelta, 5.0);
       });
 
       test('prayBusiness: +10 faith', () {
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('prayBusiness', commercial(), 0.0);
-        expect(result.playerFaithDelta, 10.0);
+        expect(BuildingInteractionService().performAction('prayBusiness', shop(), 0.0).playerFaithDelta, 10.0);
       });
 
       test('distribute: -5 materials, +15 faith, residents +3 faith', () {
-        final npc = NPCModel(
-          id: 'n', name: 'W', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 's', type: BuildingType.shop, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('distribute', b, 0.0);
+        final resident = npc();
+        final b = shop(residents: [resident]);
+        final result = BuildingInteractionService().performAction('distribute', b, 0.0);
         expect(result.playerFaithDelta, 15.0);
         expect(result.playerMaterialsDelta, -5.0);
-        expect(npc.faith, 3.0);
+        expect(resident.faith, 3.0);
       });
 
-      test('donate: returns 20-40 materials on success', () {
-        // Use a manager NPC with high faith to maximize success chance.
-        final manager = NPCModel(
-          id: 'm', name: 'Manager', type: NPCType.merchant,
-          homePosition: Vector2.zero(), faith: 100.0,
-        );
-        final b = BuildingModel(
-          buildingId: 's', type: BuildingType.shop, residents: [manager],
-        );
-        // Run many trials – with faith=100 most should succeed.
+      test('donate: returns 20-40 materials on success with high-faith manager', () {
+        final manager = NPCModel(id: 'm', name: 'Mgr', type: NPCType.merchant,
+            homePosition: Vector2.zero(), faith: 100.0);
+        final b = shop(residents: [manager]);
         int successes = 0;
         for (int i = 0; i < 50; i++) {
-          final svc = BuildingInteractionService(rng: Random(i));
-          final result = svc.performAction('donate', b, 0.0);
+          final result = BuildingInteractionService(rng: Random(i)).performAction('donate', b, 0.0);
           if (result.success) {
             successes++;
-            expect(
-              result.playerMaterialsDelta,
-              inInclusiveRange(20.0, 40.0),
-            );
+            expect(result.playerMaterialsDelta, inInclusiveRange(20.0, 40.0));
           }
         }
         expect(successes, greaterThan(30));
@@ -362,142 +277,116 @@ void main() {
     });
 
     group('performAction – church', () {
-      BuildingModel church() =>
-          BuildingModel(buildingId: 'c', type: BuildingType.church);
-
       test('readBible: +10 faith', () {
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('readBible', church(), 0.0);
-        expect(result.playerFaithDelta, 10.0);
+        expect(BuildingInteractionService().performAction('readBible', church(), 0.0).playerFaithDelta, 10.0);
       });
 
       test('pray: +15 faith, residents influenced', () {
-        final priest = NPCModel(
-          id: 'p', name: 'Pfarrer', type: NPCType.priest,
-          homePosition: Vector2.zero(), faith: 50.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'c', type: BuildingType.church, residents: [priest],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('pray', b, 0.0);
+        final priest = NPCModel(id: 'p', name: 'Pfarrer', type: NPCType.priest,
+            homePosition: Vector2.zero(), faith: 50.0);
+        final b = BuildingModel(buildingId: 'c', type: BuildingType.church, residents: [priest]);
+        final result = BuildingInteractionService().performAction('pray', b, 0.0);
         expect(result.playerFaithDelta, 15.0);
         expect(priest.faith, greaterThan(50.0));
       });
 
       test('worship: +20 faith, residents +10 faith', () {
-        final priest = NPCModel(
-          id: 'p', name: 'Pfarrer', type: NPCType.priest,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'c', type: BuildingType.cathedral, residents: [priest],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('worship', b, 0.0);
+        final priest = NPCModel(id: 'p', name: 'Pfarrer', type: NPCType.priest,
+            homePosition: Vector2.zero(), faith: 0.0);
+        final b = BuildingModel(buildingId: 'c', type: BuildingType.cathedral, residents: [priest]);
+        final result = BuildingInteractionService().performAction('worship', b, 0.0);
         expect(result.playerFaithDelta, 20.0);
         expect(priest.faith, 10.0);
       });
     });
 
-    group('performAction – civic', () {
-      BuildingModel civic() =>
-          BuildingModel(buildingId: 'h', type: BuildingType.hospital);
-
-      test('pray: +10 faith, residents +2 faith', () {
-        final npc = NPCModel(
-          id: 'n', name: 'W', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'h', type: BuildingType.hospital, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('pray', b, 0.0);
-        expect(result.playerFaithDelta, 10.0);
-        expect(npc.faith, 2.0);
-      });
-
-      test('witness: +8 faith, residents +4 faith', () {
-        final npc = NPCModel(
-          id: 'n', name: 'W', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'h', type: BuildingType.hospital, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('witness', b, 0.0);
-        expect(result.playerFaithDelta, 8.0);
-        expect(npc.faith, 4.0);
-      });
-
-      test('distribute: -8 materials, +12 faith, residents +3 faith', () {
-        final npc = NPCModel(
-          id: 'n', name: 'W', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'h', type: BuildingType.hospital, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('distribute', b, 0.0);
+    group('performAction – hospital', () {
+      test('visitSick: +12 faith, residents +4 faith', () {
+        final resident = npc();
+        final b = hospital(residents: [resident]);
+        final result = BuildingInteractionService().performAction('visitSick', b, 0.0);
         expect(result.playerFaithDelta, 12.0);
-        expect(result.playerMaterialsDelta, -8.0);
-        expect(npc.faith, 3.0);
+        expect(resident.faith, 4.0);
       });
 
-      test('unknown action returns failure', () {
-        final svc = BuildingInteractionService();
-        expect(svc.performAction('unknown', civic(), 0.0).success, isFalse);
+      test('pray: +10 faith, residents +3 faith', () {
+        final resident = npc();
+        final b = hospital(residents: [resident]);
+        final result = BuildingInteractionService().performAction('pray', b, 0.0);
+        expect(result.playerFaithDelta, 10.0);
+        expect(resident.faith, 3.0);
+      });
+
+      test('distribute: -8 materials, +8 faith, residents +2 faith', () {
+        final resident = npc();
+        final b = hospital(residents: [resident]);
+        final result = BuildingInteractionService().performAction('distribute', b, 0.0);
+        expect(result.playerFaithDelta, 8.0);
+        expect(result.playerMaterialsDelta, -8.0);
+        expect(resident.faith, 2.0);
       });
     });
 
-    group('performAction – industrial', () {
-      BuildingModel industrial() =>
-          BuildingModel(buildingId: 'f', type: BuildingType.factory);
-
-      test('pray: +8 faith, residents +2 faith', () {
-        final npc = NPCModel(
-          id: 'n', name: 'W', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'f', type: BuildingType.factory, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('pray', b, 0.0);
+    group('performAction – school', () {
+      test('teach: +8 faith, residents +5 faith', () {
+        final resident = npc();
+        final b = school(residents: [resident]);
+        final result = BuildingInteractionService().performAction('teach', b, 0.0);
         expect(result.playerFaithDelta, 8.0);
-        expect(npc.faith, 2.0);
+        expect(resident.faith, 5.0);
       });
 
-      test('witness: +10 faith, residents +5 faith', () {
-        final npc = NPCModel(
-          id: 'n', name: 'W', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'f', type: BuildingType.factory, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('witness', b, 0.0);
+      test('pray: +10 faith, residents +2 faith', () {
+        final resident = npc();
+        final b = school(residents: [resident]);
+        final result = BuildingInteractionService().performAction('pray', b, 0.0);
         expect(result.playerFaithDelta, 10.0);
-        expect(npc.faith, 5.0);
+        expect(resident.faith, 2.0);
+      });
+    });
+
+    group('performAction – cemetery', () {
+      test('pray: +18 faith', () {
+        expect(BuildingInteractionService().performAction('pray', cemetery(), 0.0).playerFaithDelta, 18.0);
       });
 
-      test('distribute: -10 materials, +15 faith, residents +4 faith', () {
-        final npc = NPCModel(
-          id: 'n', name: 'W', type: NPCType.citizen,
-          homePosition: Vector2.zero(), faith: 0.0,
-        );
-        final b = BuildingModel(
-          buildingId: 'f', type: BuildingType.factory, residents: [npc],
-        );
-        final svc = BuildingInteractionService();
-        final result = svc.performAction('distribute', b, 0.0);
-        expect(result.playerFaithDelta, 15.0);
-        expect(result.playerMaterialsDelta, -10.0);
-        expect(npc.faith, 4.0);
+      test('comfort: +10 faith, residents +6 faith', () {
+        final resident = npc();
+        final b = BuildingModel(buildingId: 'cem', type: BuildingType.cemetery, residents: [resident]);
+        final result = BuildingInteractionService().performAction('comfort', b, 0.0);
+        expect(result.playerFaithDelta, 10.0);
+        expect(resident.faith, 6.0);
+      });
+    });
+
+    group('performAction – generic (factory, civic, etc.)', () {
+      test('pray: +8 faith, residents +2 faith', () {
+        final resident = npc();
+        final b = factory(residents: [resident]);
+        final result = BuildingInteractionService().performAction('pray', b, 0.0);
+        expect(result.playerFaithDelta, 8.0);
+        expect(resident.faith, 2.0);
+      });
+
+      test('witness: +10 faith, residents +4 faith', () {
+        final resident = npc();
+        final b = factory(residents: [resident]);
+        final result = BuildingInteractionService().performAction('witness', b, 0.0);
+        expect(result.playerFaithDelta, 10.0);
+        expect(resident.faith, 4.0);
+      });
+
+      test('distribute: -8 materials, +12 faith, residents +3 faith', () {
+        final resident = npc();
+        final b = factory(residents: [resident]);
+        final result = BuildingInteractionService().performAction('distribute', b, 0.0);
+        expect(result.playerFaithDelta, 12.0);
+        expect(result.playerMaterialsDelta, -8.0);
+        expect(resident.faith, 3.0);
+      });
+
+      test('unknown action returns failure', () {
+        expect(BuildingInteractionService().performAction('unknown', factory(), 0.0).success, isFalse);
       });
     });
   });

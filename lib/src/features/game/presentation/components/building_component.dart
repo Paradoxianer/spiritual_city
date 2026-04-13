@@ -1,30 +1,25 @@
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
 import '../../domain/models/building_model.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
 import '../spirit_world_game.dart';
 
-/// A lightweight game-world component that marks a building entrance and
-/// implements [Interactable] so that it appears in the radial menu when the
-/// player is within interaction range.
+/// A game-world component that represents one building as an [Interactable].
 ///
-/// One [BuildingComponent] is spawned per unique building when its chunk is
-/// loaded (by [ChunkManager]).  Unlike [NPCComponent], it does not move.
+/// It has no visual rendering – the tile renderer already draws the building.
+/// The component exists purely so the radial menu can discover it when the
+/// player walks up to a building wall.
 class BuildingComponent extends PositionComponent
     with HasGameReference<SpiritWorldGame>
     implements Interactable {
   final BuildingModel buildingModel;
-
-  /// Visual radius of the entrance marker (world units).
-  static const double _markerRadius = 6.0;
 
   BuildingComponent({
     required this.buildingModel,
     required Vector2 position,
   }) : super(
           position: position,
-          size: Vector2.all(_markerRadius * 2),
+          size: Vector2.all(4),
           anchor: Anchor.center,
           priority: 5,
         );
@@ -32,26 +27,24 @@ class BuildingComponent extends PositionComponent
   // ── Interactable ──────────────────────────────────────────────────────────
 
   @override
-  String get interactionLabel => _buildingName();
+  String get interactionLabel => buildingName(buildingModel.type);
 
   @override
-  String get interactionEmoji => _buildingEmoji();
+  String get interactionEmoji => buildingEmoji(buildingModel.type);
 
   @override
   Vector2 get interactionPosition => position;
 
   @override
-  void onInteract() {
-    game.openBuildingInterior(buildingModel);
-  }
+  void onInteract() => game.openBuildingInterior(buildingModel);
 
   @override
-  String handleInteraction(String type) => _buildingEmoji();
+  String handleInteraction(String type) => buildingEmoji(buildingModel.type);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Static helpers (reused by the overlay) ────────────────────────────────
 
-  String _buildingName() {
-    switch (buildingModel.type) {
+  static String buildingName(BuildingType type) {
+    switch (type) {
       case BuildingType.house:        return 'Wohnhaus';
       case BuildingType.apartment:    return 'Wohnblock';
       case BuildingType.shop:         return 'Geschäft';
@@ -80,8 +73,8 @@ class BuildingComponent extends PositionComponent
     }
   }
 
-  String _buildingEmoji() {
-    switch (buildingModel.type) {
+  static String buildingEmoji(BuildingType type) {
+    switch (type) {
       case BuildingType.house:        return '🏠';
       case BuildingType.apartment:    return '🏢';
       case BuildingType.shop:         return '🏪';
@@ -107,54 +100,6 @@ class BuildingComponent extends PositionComponent
       case BuildingType.cemetery:     return '🪦';
       case BuildingType.powerPlant:   return '⚡';
       default:                        return '🏗️';
-    }
-  }
-
-  // ── Rendering ─────────────────────────────────────────────────────────────
-
-  @override
-  void render(Canvas canvas) {
-    // Render an entrance-marker in the physical world.
-    if (!game.isSpiritualWorld) {
-      final category = buildingModel.category;
-      // Pick marker colour by category
-      final Color markerColor;
-      switch (category) {
-        case BuildingCategory.residential:
-          markerColor = Colors.lightBlueAccent;
-          break;
-        case BuildingCategory.church:
-          markerColor = Colors.amber;
-          break;
-        case BuildingCategory.civic:
-          markerColor = Colors.greenAccent;
-          break;
-        case BuildingCategory.industrial:
-          markerColor = Colors.orangeAccent;
-          break;
-        default:
-          markerColor = Colors.amberAccent;
-      }
-
-      // Outer glow ring
-      final glowPaint = Paint()
-        ..color = markerColor.withValues(alpha: 0.25)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(
-        Offset(size.x / 2, size.y / 2),
-        _markerRadius,
-        glowPaint,
-      );
-
-      // Solid centre dot
-      final dotPaint = Paint()
-        ..color = markerColor.withValues(alpha: 0.85)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(
-        Offset(size.x / 2, size.y / 2),
-        _markerRadius * 0.55,
-        dotPaint,
-      );
     }
   }
 }
