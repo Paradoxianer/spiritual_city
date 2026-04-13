@@ -432,11 +432,19 @@ void main() {
         expect(npc.faith, 4.0);
       });
 
-      test('distribute: -8 materials, +12 faith', () {
+      test('distribute: -8 materials, +12 faith, residents +3 faith', () {
+        final npc = NPCModel(
+          id: 'n', name: 'W', type: NPCType.citizen,
+          homePosition: Vector2.zero(), faith: 0.0,
+        );
+        final b = BuildingModel(
+          buildingId: 'h', type: BuildingType.hospital, residents: [npc],
+        );
         final svc = BuildingInteractionService();
-        final result = svc.performAction('distribute', civic(), 0.0);
+        final result = svc.performAction('distribute', b, 0.0);
         expect(result.playerFaithDelta, 12.0);
         expect(result.playerMaterialsDelta, -8.0);
+        expect(npc.faith, 3.0);
       });
 
       test('unknown action returns failure', () {
@@ -477,11 +485,19 @@ void main() {
         expect(npc.faith, 5.0);
       });
 
-      test('distribute: -10 materials, +15 faith', () {
+      test('distribute: -10 materials, +15 faith, residents +4 faith', () {
+        final npc = NPCModel(
+          id: 'n', name: 'W', type: NPCType.citizen,
+          homePosition: Vector2.zero(), faith: 0.0,
+        );
+        final b = BuildingModel(
+          buildingId: 'f', type: BuildingType.factory, residents: [npc],
+        );
         final svc = BuildingInteractionService();
-        final result = svc.performAction('distribute', industrial(), 0.0);
+        final result = svc.performAction('distribute', b, 0.0);
         expect(result.playerFaithDelta, 15.0);
         expect(result.playerMaterialsDelta, -10.0);
+        expect(npc.faith, 4.0);
       });
     });
   });
