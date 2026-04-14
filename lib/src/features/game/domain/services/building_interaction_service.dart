@@ -174,6 +174,7 @@ class BuildingInteractionService {
         building.influenceResidents(2.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
+          playerMaterialsDelta: -3.0,
           reactionEmoji: '📖✝️',
         );
       default:
@@ -214,6 +215,7 @@ class BuildingInteractionService {
       case 'prayBusiness':
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
+          playerMaterialsDelta: -3.0,
           reactionEmoji: '🙏🏢',
         );
       case 'distribute':
@@ -241,18 +243,21 @@ class BuildingInteractionService {
       case 'readBible':
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
+          playerMaterialsDelta: -3.0,
           reactionEmoji: '📖✝️',
         );
       case 'pray':
         building.influenceResidents(5.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 15.0,
+          playerMaterialsDelta: -3.0,
           reactionEmoji: '🙏⛪',
         );
       case 'worship':
         building.influenceResidents(10.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 20.0,
+          playerMaterialsDelta: -8.0,
           reactionEmoji: '🎵✝️',
         );
       default:
@@ -274,12 +279,14 @@ class BuildingInteractionService {
         building.influenceResidents(4.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 12.0,
+          playerMaterialsDelta: -5.0,
           reactionEmoji: '🤝🏥',
         );
       case 'pray':
         building.influenceResidents(3.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
+          playerMaterialsDelta: -3.0,
           reactionEmoji: '🙏🏥',
         );
       case 'heal':
@@ -314,12 +321,14 @@ class BuildingInteractionService {
         building.influenceResidents(5.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 8.0,
+          playerMaterialsDelta: -5.0,
           reactionEmoji: '📚✝️',
         );
       case 'pray':
         building.influenceResidents(2.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
+          playerMaterialsDelta: -3.0,
           reactionEmoji: '🙏🏫',
         );
       case 'distribute':
@@ -347,12 +356,14 @@ class BuildingInteractionService {
       case 'pray':
         return const BuildingInteractionResult(
           playerFaithDelta: 18.0,
+          playerMaterialsDelta: -5.0,
           reactionEmoji: '🙏🪦',
         );
       case 'comfort':
         building.influenceResidents(6.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
+          playerMaterialsDelta: -3.0,
           reactionEmoji: '🤝🪦',
         );
       default:
@@ -382,6 +393,7 @@ class BuildingInteractionService {
         }
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
+          playerMaterialsDelta: -3.0,
           reactionEmoji: '💬✝️',
         );
       case 'distribute':

@@ -506,6 +506,12 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   void _performAction(String actionType) {
     final result = widget.game.handleBuildingAction(actionType);
     setState(() => _lastReaction = result.reactionEmoji);
+    // Auto-leave on success: show feedback briefly then close the overlay.
+    if (result.success) {
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted) widget.game.closeBuildingInterior();
+      });
+    }
   }
 
   @override
@@ -833,7 +839,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Gespräch führen (+5 Glauben)', onTap: () => _performAction('talk')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '👥✝️✝️', tooltip: 'Für Familie beten (+15 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Hilfe anbieten (−10 Material, +10 Glauben)', onTap: () => _performAction('help')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Bibel vorlesen (+10 Glauben)', onTap: () => _performAction('bible')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '←', trailingEmoji: '💰×3👥', tooltip: 'Gemeinsam Bibel lesen (−3 Material, +10 Glauben)', onTap: () => _performAction('bible')),
           letter,
         ];
 
@@ -841,17 +847,17 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.church:
       case BuildingType.cathedral:
         return [
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Bibel lesen (+10 Glauben)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Gemeinsam beten (+15 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '🎵', arrowText: '→', trailingEmoji: '👥✝️✝️', tooltip: 'Gottesdienst halten (+20 Glauben)', onTap: () => _performAction('worship')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Bibel lesen (−3 Material, +10 Glauben)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Gemeinsam beten (−3 Material, +15 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🎵', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Gottesdienst halten (−8 Material, +20 Glauben)', onTap: () => _performAction('worship')),
           letter,
         ];
 
       // ── Hospital ──────────────────────────────────────────────────────────
       case BuildingType.hospital:
         return [
-          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Kranke besuchen (+12 Glauben)', onTap: () => _performAction('visitSick')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🌿✝️', tooltip: 'Für Heilung beten (+10 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Kranke besuchen (−5 Material, +12 Glauben)', onTap: () => _performAction('visitSick')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Heilung beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '💊', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Heilen lassen (−10 Material, +20 Glauben)', onTap: () => _performAction('heal')),
           letter,
         ];
@@ -860,8 +866,8 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.school:
       case BuildingType.university:
         return [
-          _ActionMenuRow(leadingEmoji: '📚', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Glauben lehren (+8 Glauben)', onTap: () => _performAction('teach')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Für Schüler beten (+10 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📚', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Glauben lehren (−5 Material, +8 Glauben)', onTap: () => _performAction('teach')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Schüler beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material spenden (−8 Material, +10 Glauben)', onTap: () => _performAction('distribute')),
           letter,
         ];
@@ -869,8 +875,8 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       // ── Cemetery ──────────────────────────────────────────────────────────
       case BuildingType.cemetery:
         return [
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️↑↑', tooltip: 'Stille Andacht (+18 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Trauernde trösten (+10 Glauben)', onTap: () => _performAction('comfort')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Stille Andacht (−5 Material, +18 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Trauernde trösten (−3 Material, +10 Glauben)', onTap: () => _performAction('comfort')),
           letter,
         ];
 
@@ -883,7 +889,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         return [
           _ActionMenuRow(leadingEmoji: '💸', arrowText: '←', trailingEmoji: '💰↑↑', tooltip: 'Um Spende bitten (+20–40 Material)', onTap: () => _performAction('donate')),
           _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👷✝️', tooltip: 'Mit Arbeiter sprechen (+5 Glauben)', onTap: () => _performAction('worker')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🏢✝️', tooltip: 'Für den Betrieb beten (+10 Glauben)', onTap: () => _performAction('prayBusiness')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für den Betrieb beten (−3 Material, +10 Glauben)', onTap: () => _performAction('prayBusiness')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Material verteilen (−5 Material, +15 Glauben)', onTap: () => _performAction('distribute')),
           letter,
         ];
@@ -892,7 +898,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       default:
         return [
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🌿✝️', tooltip: 'Beten (+8 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Zeugnis geben (+10 Glauben)', onTap: () => _performAction('witness')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Zeugnis geben (−3 Material, +10 Glauben)', onTap: () => _performAction('witness')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material verteilen (−8 Material, +12 Glauben)', onTap: () => _performAction('distribute')),
           letter,
         ];

@@ -270,6 +270,16 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       data.building,
       faith,
     );
+    // Guard: refuse if the player cannot afford the material cost.
+    // materialCost is negative when playerMaterialsDelta > 0 (a gain), so the
+    // check `materialCost > 0` safely skips this guard for income actions.
+    final materialCost = -result.playerMaterialsDelta;
+    if (materialCost > 0 && materials < materialCost) {
+      return const BuildingInteractionResult(
+        reactionEmoji: '🚫💰',
+        success: false,
+      );
+    }
     // Apply resource deltas immediately
     if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);
     if (result.playerMaterialsDelta > 0) {
