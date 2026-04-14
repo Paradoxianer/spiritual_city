@@ -47,6 +47,7 @@ class BuildingComponent extends PositionComponent
     switch (type) {
       case BuildingType.house:        return 'Wohnhaus';
       case BuildingType.apartment:    return 'Wohnblock';
+      case BuildingType.pastorHouse:  return 'Pastorhaus';
       case BuildingType.shop:         return 'Geschäft';
       case BuildingType.supermarket:  return 'Supermarkt';
       case BuildingType.mall:         return 'Einkaufszentrum';
@@ -77,6 +78,7 @@ class BuildingComponent extends PositionComponent
     switch (type) {
       case BuildingType.house:        return '🏠';
       case BuildingType.apartment:    return '🏢';
+      case BuildingType.pastorHouse:  return '🏡';
       case BuildingType.shop:         return '🏪';
       case BuildingType.supermarket:  return '🛒';
       case BuildingType.mall:         return '🛍️';

@@ -56,6 +56,10 @@ class BuildingInteractionService {
     if (actionType == 'letter') return _letterAction(building);
 
     switch (building.type) {
+      // ── Pastor's house ────────────────────────────────────────────────────
+      case BuildingType.pastorHouse:
+        return _pastorHouseAction(actionType, building);
+
       // ── Residential ───────────────────────────────────────────────────────
       case BuildingType.house:
       case BuildingType.apartment:
@@ -101,6 +105,36 @@ class BuildingInteractionService {
       playerFaithDelta: 3.0,
       reactionEmoji: '✉️🙏',
     );
+  }
+
+  // ── Pastor's house ────────────────────────────────────────────────────────
+
+  BuildingInteractionResult _pastorHouseAction(
+    String actionType,
+    BuildingModel building,
+  ) {
+    switch (actionType) {
+      case 'readBible':
+        return const BuildingInteractionResult(
+          playerFaithDelta: 20.0,
+          reactionEmoji: '📖✝️',
+        );
+      case 'pray':
+        return const BuildingInteractionResult(
+          playerFaithDelta: 15.0,
+          reactionEmoji: '🙏🏠',
+        );
+      case 'rest':
+        return const BuildingInteractionResult(
+          playerFaithDelta: 10.0,
+          reactionEmoji: '😴✝️',
+        );
+      default:
+        return const BuildingInteractionResult(
+          reactionEmoji: '❓',
+          success: false,
+        );
+    }
   }
 
   // ── Residential ───────────────────────────────────────────────────────────
@@ -247,6 +281,12 @@ class BuildingInteractionService {
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
           reactionEmoji: '🙏🏥',
+        );
+      case 'heal':
+        return const BuildingInteractionResult(
+          playerFaithDelta: 20.0,
+          playerMaterialsDelta: -10.0,
+          reactionEmoji: '💊✝️',
         );
       case 'distribute':
         building.influenceResidents(2.0);

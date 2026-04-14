@@ -426,6 +426,29 @@ class GameDialogData {
   GameDialogData({required this.npcName, required this.npcEmoji, required this.npcModel});
 }
 
+// ── Interior art abstraction ──────────────────────────────────────────────────
+
+/// Sealed type for a building's interior visual.
+///
+/// Currently only [EmojiGridArt] is used, but switching to [ImageArt] for a
+/// specific building requires changing only the corresponding entry in
+/// [_BuildingInteriorOverlayState._interiorArt] – no widget code changes.
+sealed class InteriorArt {}
+
+/// Emoji-grid art: a list of rows, each row a list of individual emoji/char
+/// strings.  Every cell is rendered in a fixed-size box so the grid stays
+/// perfectly aligned regardless of emoji width.
+class EmojiGridArt extends InteriorArt {
+  final List<List<String>> cells;
+  const EmojiGridArt(this.cells);
+}
+
+/// Pixel / raster art: rendered via [Image.asset].
+class ImageArt extends InteriorArt {
+  final String assetPath;
+  const ImageArt(this.assetPath);
+}
+
 // ── Building interior data & overlay ──────────────────────────────────────────
 
 /// Data passed to the [BuildingInteriorOverlay] when a building is entered.
@@ -718,83 +741,100 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   // ── Interior screen ───────────────────────────────────────────────────────
 
   Widget _buildInteriorScreen(BuildingModel building) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ASCII-art style interior
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white12),
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Reaction feedback
+        if (_lastReaction != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
             child: Text(
-              _asciiInterior(building.type),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                color: Colors.white70,
-                fontSize: 11,
-                height: 1.4,
-              ),
-            ),
-          ),
-
-          // Residents detail list
-          if (building.residents.isNotEmpty) ...[
-            _buildResidentChips(building, compact: false),
-            const SizedBox(height: 10),
-          ],
-
-          // Reaction feedback
-          if (_lastReaction != null) ...[
-            Text(
               _lastReaction!,
-              style: const TextStyle(fontSize: 34),
+              style: const TextStyle(fontSize: 32),
             ),
-            const SizedBox(height: 8),
-          ],
-
-          // Action chips — emoji only, Tooltip on long-press
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: _buildActionChips(building),
           ),
-        ],
-      ),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Left: action menu ─────────────────────────────────────────
+              SizedBox(
+                width: 162,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 8, 16),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _buildActionMenuRows(building),
+                    ),
+                  ),
+                ),
+              ),
+              // Divider
+              Container(
+                width: 1,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                color: Colors.white12,
+              ),
+              // ── Right: art + residents ────────────────────────────────────
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 12, 12, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _InteriorArtWidget(art: _interiorArt(building.type)),
+                      if (building.residents.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _buildResidentChips(building, compact: true),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  // ── Action chips ─────────────────────────────────────────────────────────
+  // ── Action menu rows (left panel) ─────────────────────────────────────────
 
-  /// Returns emoji-only action chips for [building].
+  /// Returns a vertical list of [_ActionMenuRow] widgets for [building].
   ///
-  /// Each chip shows a single emoji in a round button.  A Tooltip (long-press
-  /// on mobile, hover on desktop) reveals a brief German description.
-  /// "Brief einwerfen" is always the last chip regardless of building type.
-  List<Widget> _buildActionChips(BuildingModel building) {
-    final letter = _ActionChip(
-      emoji: '✉️',
-      tooltip: 'Brief einwerfen',
+  /// Each row shows: action emoji  →/←  effect emoji(s)
+  /// A Tooltip (long-press mobile / hover desktop) reveals a German description.
+  /// The letter action is always the last entry.
+  List<Widget> _buildActionMenuRows(BuildingModel building) {
+    final letter = _ActionMenuRow(
+      leadingEmoji: '✉️',
+      arrowText: '→',
+      trailingEmoji: '📬',
+      tooltip: 'Brief einwerfen (+3 Glauben)',
       onTap: () => _performAction('letter'),
     );
 
     switch (building.type) {
+      // ── Pastor's house ────────────────────────────────────────────────────
+      case BuildingType.pastorHouse:
+        return [
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Bibel lesen (+20 Glauben)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Beten (+15 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Ausruhen (+10 Glauben)', onTap: () => _performAction('rest')),
+          letter,
+        ];
+
       // ── Residential ───────────────────────────────────────────────────────
       case BuildingType.house:
       case BuildingType.apartment:
         return [
-          _ActionChip(emoji: '💬', tooltip: 'Gespräch führen (+5 Glauben)',    onTap: () => _performAction('talk')),
-          _ActionChip(emoji: '🙏', tooltip: 'Für Familie beten (+15 Glauben)', onTap: () => _performAction('pray')),
-          _ActionChip(emoji: '📦', tooltip: 'Hilfe anbieten (-10 Material, +10 Glauben)',    onTap: () => _performAction('help')),
-          _ActionChip(emoji: '📖', tooltip: 'Bibel vorlesen (+10 Glauben)',    onTap: () => _performAction('bible')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Gespräch führen (+5 Glauben)', onTap: () => _performAction('talk')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '👥✝️✝️', tooltip: 'Für Familie beten (+15 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Hilfe anbieten (−10 Material, +10 Glauben)', onTap: () => _performAction('help')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Bibel vorlesen (+10 Glauben)', onTap: () => _performAction('bible')),
           letter,
         ];
 
@@ -802,18 +842,18 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.church:
       case BuildingType.cathedral:
         return [
-          _ActionChip(emoji: '📖', tooltip: 'Bibel lesen (+10 Glauben)',       onTap: () => _performAction('readBible')),
-          _ActionChip(emoji: '🙏', tooltip: 'Gemeinsam beten (+15 Glauben)',   onTap: () => _performAction('pray')),
-          _ActionChip(emoji: '🎵', tooltip: 'Gottesdienst halten (+20 Glauben)', onTap: () => _performAction('worship')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Bibel lesen (+10 Glauben)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Gemeinsam beten (+15 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🎵', arrowText: '→', trailingEmoji: '👥✝️✝️', tooltip: 'Gottesdienst halten (+20 Glauben)', onTap: () => _performAction('worship')),
           letter,
         ];
 
       // ── Hospital ──────────────────────────────────────────────────────────
       case BuildingType.hospital:
         return [
-          _ActionChip(emoji: '🤝', tooltip: 'Kranke besuchen (+12 Glauben)',   onTap: () => _performAction('visitSick')),
-          _ActionChip(emoji: '🙏', tooltip: 'Für Heilung beten (+10 Glauben)', onTap: () => _performAction('pray')),
-          _ActionChip(emoji: '📦', tooltip: 'Spenden verteilen (-8 Material, +8 Glauben)',  onTap: () => _performAction('distribute')),
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Kranke besuchen (+12 Glauben)', onTap: () => _performAction('visitSick')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🌿✝️', tooltip: 'Für Heilung beten (+10 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💊', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Heilen lassen (−10 Material, +20 Glauben)', onTap: () => _performAction('heal')),
           letter,
         ];
 
@@ -821,17 +861,17 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.school:
       case BuildingType.university:
         return [
-          _ActionChip(emoji: '📚', tooltip: 'Glauben lehren (+8 Glauben)',     onTap: () => _performAction('teach')),
-          _ActionChip(emoji: '🙏', tooltip: 'Für Schüler beten (+10 Glauben)', onTap: () => _performAction('pray')),
-          _ActionChip(emoji: '📦', tooltip: 'Material spenden (-8 Material, +10 Glauben)', onTap: () => _performAction('distribute')),
+          _ActionMenuRow(leadingEmoji: '📚', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Glauben lehren (+8 Glauben)', onTap: () => _performAction('teach')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Für Schüler beten (+10 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material spenden (−8 Material, +10 Glauben)', onTap: () => _performAction('distribute')),
           letter,
         ];
 
       // ── Cemetery ──────────────────────────────────────────────────────────
       case BuildingType.cemetery:
         return [
-          _ActionChip(emoji: '🙏', tooltip: 'Stille Andacht (+18 Glauben)',    onTap: () => _performAction('pray')),
-          _ActionChip(emoji: '🤝', tooltip: 'Trauernde trösten (+10 Glauben)', onTap: () => _performAction('comfort')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️↑↑', tooltip: 'Stille Andacht (+18 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Trauernde trösten (+10 Glauben)', onTap: () => _performAction('comfort')),
           letter,
         ];
 
@@ -842,19 +882,19 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.office:
       case BuildingType.skyscraper:
         return [
-          _ActionChip(emoji: '💸', tooltip: 'Um Spende bitten (+20–40 Material)', onTap: () => _performAction('donate')),
-          _ActionChip(emoji: '💬', tooltip: 'Mit Arbeiter sprechen (+5 Glauben)', onTap: () => _performAction('worker')),
-          _ActionChip(emoji: '🙏', tooltip: 'Für den Betrieb beten (+10 Glauben)', onTap: () => _performAction('prayBusiness')),
-          _ActionChip(emoji: '📦', tooltip: 'Material verteilen (-5 Material, +15 Glauben)', onTap: () => _performAction('distribute')),
+          _ActionMenuRow(leadingEmoji: '💸', arrowText: '←', trailingEmoji: '💰↑↑', tooltip: 'Um Spende bitten (+20–40 Material)', onTap: () => _performAction('donate')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👷✝️', tooltip: 'Mit Arbeiter sprechen (+5 Glauben)', onTap: () => _performAction('worker')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🏢✝️', tooltip: 'Für den Betrieb beten (+10 Glauben)', onTap: () => _performAction('prayBusiness')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Material verteilen (−5 Material, +15 Glauben)', onTap: () => _performAction('distribute')),
           letter,
         ];
 
       // ── Everything else ───────────────────────────────────────────────────
       default:
         return [
-          _ActionChip(emoji: '🙏', tooltip: 'Beten (+8 Glauben)',              onTap: () => _performAction('pray')),
-          _ActionChip(emoji: '💬', tooltip: 'Zeugnis geben (+10 Glauben)',     onTap: () => _performAction('witness')),
-          _ActionChip(emoji: '📦', tooltip: 'Material verteilen (-8 Material, +12 Glauben)', onTap: () => _performAction('distribute')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🌿✝️', tooltip: 'Beten (+8 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Zeugnis geben (+10 Glauben)', onTap: () => _performAction('witness')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material verteilen (−8 Material, +12 Glauben)', onTap: () => _performAction('distribute')),
           letter,
         ];
     }
@@ -932,67 +972,92 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     }
   }
 
-  String _asciiInterior(BuildingType type) {
+  /// Returns the [InteriorArt] for [type].
+  ///
+  /// All building types are covered. Swapping a type's art to a raster image
+  /// only requires changing its return value to [ImageArt('assets/...')].
+  InteriorArt _interiorArt(BuildingType type) {
     switch (type) {
+      case BuildingType.pastorHouse:
+        return const EmojiGridArt([
+          ['📖', '✝️', '🕯️'],
+          ['🛏️', '🪑', '🪴'],
+          ['🍳', '📚', '🚪'],
+        ]);
       case BuildingType.house:
       case BuildingType.apartment:
-        return '+-----------+-------+\n'
-               '| Wohnzimmer|Kueche |\n'
-               '|  [Sofa]   +-------+\n'
-               '|  [Tisch]  |Schlaf.|\n'
-               '+-----------+-------+';
+        return const EmojiGridArt([
+          ['🛋️', '🪴', '🪟'],
+          ['🍳', '🚪', '📺'],
+          ['🛏️', '📚', '🪑'],
+        ]);
       case BuildingType.church:
       case BuildingType.cathedral:
-        return '+-------------------+\n'
-               '|    [   Altar   ]  |\n'
-               '|  Kerze     Kerze  |\n'
-               '| [Bank] [Bank]     |\n'
-               '| [Bank] [Bank]     |\n'
-               '+--------[=]--------+';
+        return const EmojiGridArt([
+          ['⛪', '✝️', '⛪'],
+          ['🕯️', '📖', '🕯️'],
+          ['🪑', '🙏', '🪑'],
+        ]);
       case BuildingType.hospital:
-        return '+-------+-------+---+\n'
-               '|Bett   |Bett   |   |\n'
-               '|       |       |Bue|\n'
-               '|Bett   |Bett   |ro |\n'
-               '+-------+-------+---+';
+        return const EmojiGridArt([
+          ['🛏️', '🛏️', '🔬'],
+          ['💊', '🏥', '🩺'],
+          ['🛏️', '🛏️', '📋'],
+        ]);
       case BuildingType.school:
       case BuildingType.university:
-        return '+-------------------+\n'
-               '|  Tafel            |\n'
-               '|  [Pult]           |\n'
-               '| [Tisch][Tisch]    |\n'
-               '| [Tisch][Tisch]    |\n'
-               '+-------------------+';
+        return const EmojiGridArt([
+          ['📚', '🖊️', '📝'],
+          ['🪑', '🏫', '🪑'],
+          ['📖', '✏️', '📐'],
+        ]);
       case BuildingType.cemetery:
-        return '+-------------------+\n'
-               '|  +   +   +   +   |\n'
-               '|                   |\n'
-               '|  +   +   +   +   |\n'
-               '|         [Kapelle] |\n'
-               '+-------------------+';
-      case BuildingType.factory:
-      case BuildingType.warehouse:
-      case BuildingType.powerPlant:
-        return '+-------+-----------+\n'
-               '|[Masch]|[Masch]    |\n'
-               '|       |           |\n'
-               '|[Lager]|   [Buero] |\n'
-               '+-------+-----------+';
+        return const EmojiGridArt([
+          ['✝️', '🌿', '✝️'],
+          ['🕯️', '⛪', '🕯️'],
+          ['✝️', '🌿', '✝️'],
+        ]);
       case BuildingType.shop:
       case BuildingType.supermarket:
       case BuildingType.mall:
-        return '+-------------------+\n'
-               '| [Regal][Regal]    |\n'
-               '|                   |\n'
-               '| [Regal]   [Kasse] |\n'
-               '|       [Tresen]    |\n'
-               '+-------------------+';
+        return const EmojiGridArt([
+          ['🛍️', '📦', '🏷️'],
+          ['🛒', '🏪', '💳'],
+          ['📦', '💰', '🛒'],
+        ]);
+      case BuildingType.office:
+      case BuildingType.skyscraper:
+        return const EmojiGridArt([
+          ['🖥️', '📁', '☕'],
+          ['🪑', '🏢', '📞'],
+          ['📋', '🖊️', '📎'],
+        ]);
+      case BuildingType.factory:
+      case BuildingType.warehouse:
+      case BuildingType.powerPlant:
+        return const EmojiGridArt([
+          ['⚙️', '🔧', '⚡'],
+          ['🏭', '📦', '🔩'],
+          ['⚙️', '🔧', '⚡'],
+        ]);
+      case BuildingType.library:
+        return const EmojiGridArt([
+          ['📚', '📖', '📚'],
+          ['🪑', '📚', '🪑'],
+          ['📖', '📚', '📖'],
+        ]);
+      case BuildingType.postOffice:
+        return const EmojiGridArt([
+          ['📮', '✉️', '📦'],
+          ['📪', '🏣', '📫'],
+          ['📝', '💳', '📋'],
+        ]);
       default:
-        return '+-------------------+\n'
-               '|   [Empfang]       |\n'
-               '|                   |\n'
-               '|   [Buero]         |\n'
-               '+-------------------+';
+        return const EmojiGridArt([
+          ['🖥️', '📁', '☕'],
+          ['🪑', '🏛️', '📞'],
+          ['📋', '🖊️', '📎'],
+        ]);
     }
   }
 }
@@ -1031,6 +1096,122 @@ class _ActionChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A tappable action menu row shown in the left panel of the interior overlay.
+///
+/// Layout: `[leadingEmoji]  [arrowText]  [trailingEmoji]`
+///
+/// Arrow convention:
+/// * `→`  the player performs an action whose benefit flows outward (faith,
+///         influence, NPC boosts).
+/// * `←`  the player receives something, but it costs a resource.
+class _ActionMenuRow extends StatelessWidget {
+  final String leadingEmoji;
+  final String arrowText;
+  final String trailingEmoji;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _ActionMenuRow({
+    required this.leadingEmoji,
+    required this.arrowText,
+    required this.trailingEmoji,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+          child: Row(
+            children: [
+              Text(leadingEmoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 6),
+              Text(
+                arrowText,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.45),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  trailingEmoji,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Renders an [InteriorArt] object.
+///
+/// [EmojiGridArt] is drawn as a grid of fixed-size cells so that every emoji
+/// aligns perfectly regardless of its intrinsic glyph width.
+/// [ImageArt] delegates to [Image.asset].
+class _InteriorArtWidget extends StatelessWidget {
+  final InteriorArt art;
+  const _InteriorArtWidget({required this.art});
+
+  static const double _cellSize = 28.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white12),
+      ),
+      padding: const EdgeInsets.all(8),
+      child: switch (art) {
+        EmojiGridArt(:final cells) => _buildGrid(cells),
+        ImageArt(:final assetPath) => Image.asset(assetPath, fit: BoxFit.contain),
+      },
+    );
+  }
+
+  Widget _buildGrid(List<List<String>> cells) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: cells
+          .map(
+            (row) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: row
+                  .map(
+                    (cell) => SizedBox(
+                      width: _cellSize,
+                      height: _cellSize,
+                      child: Center(
+                        child: Text(
+                          cell,
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          )
+          .toList(),
     );
   }
 }

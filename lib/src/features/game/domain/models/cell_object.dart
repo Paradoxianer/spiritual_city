@@ -6,6 +6,7 @@ enum BuildingType {
   // --- Residential ---
   house,        // Single-family home (suburbs)
   apartment,    // Multi-storey apartment block (inner rings)
+  pastorHouse,  // The pastor's personal home (always open; player base)
 
   // --- Commercial ---
   shop,         // Small shop / boutique

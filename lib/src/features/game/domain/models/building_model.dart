@@ -20,6 +20,10 @@ class BuildingModel {
   /// NPCs that live or work in this building.
   final List<NPCModel> residents;
 
+  /// Whether this building is the pastor's own home (the player's base).
+  /// Only one building in the city should have this set to `true`.
+  final bool isHomebase;
+
   /// How many times the player has successfully interacted with this building.
   /// After 3 or more interactions the access-chance bonus of +30 % applies
   /// (Lastenheft §7.4 / Issue §A).
@@ -29,6 +33,7 @@ class BuildingModel {
     required this.buildingId,
     required this.type,
     List<NPCModel>? residents,
+    this.isHomebase = false,
   }) : residents = residents ?? [];
 
   // ── Category helpers ──────────────────────────────────────────────────────

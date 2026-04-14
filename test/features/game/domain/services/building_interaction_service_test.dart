@@ -317,6 +317,16 @@ void main() {
         expect(resident.faith, 3.0);
       });
 
+      test('heal: -10 materials, +20 faith, no NPC effect', () {
+        final resident = npc();
+        final b = hospital(residents: [resident]);
+        final result = BuildingInteractionService().performAction('heal', b, 0.0);
+        expect(result.playerFaithDelta, 20.0);
+        expect(result.playerMaterialsDelta, -10.0);
+        expect(result.success, isTrue);
+        expect(resident.faith, 0.0, reason: 'heal only benefits the player');
+      });
+
       test('distribute: -8 materials, +8 faith, residents +2 faith', () {
         final resident = npc();
         final b = hospital(residents: [resident]);
@@ -387,6 +397,38 @@ void main() {
 
       test('unknown action returns failure', () {
         expect(BuildingInteractionService().performAction('unknown', factory(), 0.0).success, isFalse);
+      });
+    });
+
+    group('performAction – pastorHouse', () {
+      BuildingModel pastorHouse() => BuildingModel(
+        buildingId: 'ph', type: BuildingType.pastorHouse, isHomebase: true,
+      );
+
+      test('is always open (no knock required)', () {
+        expect(BuildingModel(buildingId: 'ph', type: BuildingType.pastorHouse).isAlwaysOpen, isTrue);
+      });
+
+      test('readBible: +20 faith', () {
+        final result = BuildingInteractionService().performAction('readBible', pastorHouse(), 0.0);
+        expect(result.playerFaithDelta, 20.0);
+        expect(result.success, isTrue);
+      });
+
+      test('pray: +15 faith', () {
+        final result = BuildingInteractionService().performAction('pray', pastorHouse(), 0.0);
+        expect(result.playerFaithDelta, 15.0);
+        expect(result.success, isTrue);
+      });
+
+      test('rest: +10 faith', () {
+        final result = BuildingInteractionService().performAction('rest', pastorHouse(), 0.0);
+        expect(result.playerFaithDelta, 10.0);
+        expect(result.success, isTrue);
+      });
+
+      test('unknown action returns failure', () {
+        expect(BuildingInteractionService().performAction('unknown', pastorHouse(), 0.0).success, isFalse);
       });
     });
   });
