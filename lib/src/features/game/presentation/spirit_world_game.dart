@@ -170,8 +170,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     ];
 
     // Collect all interactables within range, sorted by distance (closest first)
-    final nearby = world.children
-        .whereType<Interactable>()
+    final Iterable<Interactable> all = [
+      ...chunkManager.allActiveBuildings,
+      ...chunkManager.allActiveNPCs,
+    ];
+    final nearby = all
         .map((i) => (i, player.position.distanceTo(i.interactionPosition)))
         .where((e) => e.$2 < interactionRange)
         .toList()
@@ -372,7 +375,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     Interactable? nearest;
     double minDistance = interactionRange;
 
-    for (final interactable in world.children.whereType<Interactable>()) {
+    final Iterable<Interactable> all = [
+      ...chunkManager.allActiveBuildings,
+      ...chunkManager.allActiveNPCs,
+    ];
+    for (final interactable in all) {
       final dist = player.position.distanceTo(interactable.interactionPosition);
       if (dist < minDistance) {
         minDistance = dist;

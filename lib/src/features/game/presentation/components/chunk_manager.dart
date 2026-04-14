@@ -218,17 +218,16 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
           wy * CellComponent.cellSize + CellComponent.cellSize / 2,
         );
       } else {
-        // Fallback: centre of the building footprint.
-        double sumX = 0, sumY = 0;
-        for (final c in bInfo.cells) {
-          sumX += c[0];
-          sumY += c[1];
-        }
-        final avgX = chunk.chunkX * CityChunk.chunkSize + sumX / bInfo.cells.length;
-        final avgY = chunk.chunkY * CityChunk.chunkSize + sumY / bInfo.cells.length;
+        // Fallback: use the building cell closest to any chunk boundary, since
+        // the road entrance is most likely in the adjacent chunk.  This keeps
+        // the interaction point at the building wall rather than deep inside.
+        final edgeCell = bInfo.cells
+            .reduce((a, b) => _distToChunkEdge(a) <= _distToChunkEdge(b) ? a : b);
+        final wx = chunk.getWorldX(edgeCell[0]);
+        final wy = chunk.getWorldY(edgeCell[1]);
         pos = Vector2(
-          avgX * CellComponent.cellSize + CellComponent.cellSize / 2,
-          avgY * CellComponent.cellSize + CellComponent.cellSize / 2,
+          wx * CellComponent.cellSize + CellComponent.cellSize / 2,
+          wy * CellComponent.cellSize + CellComponent.cellSize / 2,
         );
       }
 
@@ -269,6 +268,16 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       }
     }
     return null;
+  }
+
+  /// Returns the minimum Manhattan distance from [cell] (chunk-local [x, y])
+  /// to any edge of the chunk.  Used to find the building cell most likely to
+  /// be adjacent to a road in a neighbouring chunk.
+  static int _distToChunkEdge(List<int> cell) {
+    final x = cell[0];
+    final y = cell[1];
+    final s = CityChunk.chunkSize - 1;
+    return [x, s - x, y, s - y].reduce((m, v) => v < m ? v : m);
   }
 
   // ─── Async predictive preloading ──────────────────────────────────────────
