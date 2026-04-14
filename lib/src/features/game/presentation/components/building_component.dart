@@ -70,7 +70,6 @@ class BuildingComponent extends PositionComponent
       case BuildingType.cityHall:     return 'Rathaus';
       case BuildingType.cemetery:     return 'Friedhof';
       case BuildingType.powerPlant:   return 'Kraftwerk';
-      default:                        return 'Gebäude';
     }
   }
 
@@ -101,7 +100,6 @@ class BuildingComponent extends PositionComponent
       case BuildingType.cityHall:     return '🏛️';
       case BuildingType.cemetery:     return '🪦';
       case BuildingType.powerPlant:   return '⚡';
-      default:                        return '🏗️';
     }
   }
 }

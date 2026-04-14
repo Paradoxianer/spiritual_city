@@ -6,7 +6,6 @@ import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
-import '../domain/services/building_interaction_service.dart';
 import '../presentation/components/building_component.dart';
 import 'spirit_world_game.dart';
 
@@ -440,13 +439,13 @@ sealed class InteriorArt {}
 /// perfectly aligned regardless of emoji width.
 class EmojiGridArt extends InteriorArt {
   final List<List<String>> cells;
-  const EmojiGridArt(this.cells);
+  EmojiGridArt(this.cells);
 }
 
 /// Pixel / raster art: rendered via [Image.asset].
 class ImageArt extends InteriorArt {
   final String assetPath;
-  const ImageArt(this.assetPath);
+  ImageArt(this.assetPath);
 }
 
 // ── Building interior data & overlay ──────────────────────────────────────────
@@ -979,40 +978,40 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   InteriorArt _interiorArt(BuildingType type) {
     switch (type) {
       case BuildingType.pastorHouse:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['📖', '✝️', '🕯️'],
           ['🛏️', '🪑', '🪴'],
           ['🍳', '📚', '🚪'],
         ]);
       case BuildingType.house:
       case BuildingType.apartment:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['🛋️', '🪴', '🪟'],
           ['🍳', '🚪', '📺'],
           ['🛏️', '📚', '🪑'],
         ]);
       case BuildingType.church:
       case BuildingType.cathedral:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['⛪', '✝️', '⛪'],
           ['🕯️', '📖', '🕯️'],
           ['🪑', '🙏', '🪑'],
         ]);
       case BuildingType.hospital:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['🛏️', '🛏️', '🔬'],
           ['💊', '🏥', '🩺'],
           ['🛏️', '🛏️', '📋'],
         ]);
       case BuildingType.school:
       case BuildingType.university:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['📚', '🖊️', '📝'],
           ['🪑', '🏫', '🪑'],
           ['📖', '✏️', '📐'],
         ]);
       case BuildingType.cemetery:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['✝️', '🌿', '✝️'],
           ['🕯️', '⛪', '🕯️'],
           ['✝️', '🌿', '✝️'],
@@ -1020,14 +1019,14 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.shop:
       case BuildingType.supermarket:
       case BuildingType.mall:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['🛍️', '📦', '🏷️'],
           ['🛒', '🏪', '💳'],
           ['📦', '💰', '🛒'],
         ]);
       case BuildingType.office:
       case BuildingType.skyscraper:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['🖥️', '📁', '☕'],
           ['🪑', '🏢', '📞'],
           ['📋', '🖊️', '📎'],
@@ -1035,68 +1034,30 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.factory:
       case BuildingType.warehouse:
       case BuildingType.powerPlant:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['⚙️', '🔧', '⚡'],
           ['🏭', '📦', '🔩'],
           ['⚙️', '🔧', '⚡'],
         ]);
       case BuildingType.library:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['📚', '📖', '📚'],
           ['🪑', '📚', '🪑'],
           ['📖', '📚', '📖'],
         ]);
       case BuildingType.postOffice:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['📮', '✉️', '📦'],
           ['📪', '🏣', '📫'],
           ['📝', '💳', '📋'],
         ]);
       default:
-        return const EmojiGridArt([
+        return EmojiGridArt([
           ['🖥️', '📁', '☕'],
           ['🪑', '🏛️', '📞'],
           ['📋', '🖊️', '📎'],
         ]);
     }
-  }
-}
-
-/// A compact round action button showing a single emoji.
-///
-/// No text is visible during normal use — the [tooltip] appears on long-press
-/// (mobile) or hover (desktop/web) to describe the action.
-class _ActionChip extends StatelessWidget {
-  final String emoji;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  const _ActionChip({
-    required this.emoji,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white30, width: 1.5),
-          ),
-          child: Center(
-            child: Text(emoji, style: const TextStyle(fontSize: 26)),
-          ),
-        ),
-      ),
-    );
   }
 }
 

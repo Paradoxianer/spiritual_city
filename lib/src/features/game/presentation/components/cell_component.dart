@@ -175,6 +175,14 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         canvas.drawRect(size.toRect(), _fillApartment);
         _drawWindows(canvas, 2);
         break;
+      case BuildingType.pastorHouse:
+        canvas.drawRect(size.toRect(), _fillHouse);
+        // Small cross above door to distinguish from regular house
+        canvas.drawLine(Offset(size.x * 0.5, size.y * 0.1),
+            Offset(size.x * 0.5, size.y * 0.4), _accentBrownStroke2);
+        canvas.drawLine(Offset(size.x * 0.35, size.y * 0.2),
+            Offset(size.x * 0.65, size.y * 0.2), _accentBrownStroke2);
+        break;
 
       // ---- Commercial ----------------------------------------------------
       case BuildingType.skyscraper:
