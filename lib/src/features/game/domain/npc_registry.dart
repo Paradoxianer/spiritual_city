@@ -66,6 +66,7 @@ class NPCRegistry {
       for (int i = 0; i < count; i++) {
         final id = 'npc_${bInfo.buildingId}_$i';
         final age = _generateAge();
+        final story = _buildLifeStory(age);
         npcs.add(NPCModel(
           id: id,
           name: _getRandomName(),
@@ -73,7 +74,8 @@ class NPCRegistry {
           homePosition: spawnPos.clone(),
           homeBuildingId: bInfo.buildingId,
           age: age,
-          lifeStory: _generateLifeStory(age),
+          lifeStory: story.segments,
+          lifeStoryIcons: story.labels,
           faith: -60.0 + _random.nextDouble() * 80.0,
         ));
       }
@@ -265,35 +267,28 @@ class NPCRegistry {
     return neg;
   }
 
-  /// Generates 4–6 life story segments based on the NPC's [age].
-  List<String> _generateLifeStory(int age) {
+  /// Generates life story segments and parallel German labels based on [age].
+  /// Returns a record `(segments: ..., labels: ...)`.
+  ({List<String> segments, List<String> labels}) _buildLifeStory(int age) {
     final segments = <String>[];
+    final labels = <String>[];
 
-    // Everyone has childhood
-    segments.add(_pickVariant(_childhoodPos, _childhoodNeu, _childhoodNeg));
+    void add(String segment, String label) {
+      segments.add(segment);
+      labels.add(label);
+    }
 
-    if (age >= 14) {
-      segments.add(_pickVariant(_schoolPos, _schoolNeu, _schoolNeg));
-    }
-    if (age >= 18) {
-      segments.add(_pickVariant(_familyPos, _familyNeu, _familyNeg));
-    }
-    if (age >= 22) {
-      segments.add(_pickVariant(_educationPos, _educationNeu, _educationNeg));
-    }
-    if (age >= 25) {
-      segments.add(_pickVariant(_workPos, _workNeu, _workNeg));
-    }
-    // ~60 % chance of marriage segment for adults
+    add(_pickVariant(_childhoodPos, _childhoodNeu, _childhoodNeg), '👶');
+    if (age >= 14) add(_pickVariant(_schoolPos, _schoolNeu, _schoolNeg), '🏫');
+    if (age >= 18) add(_pickVariant(_familyPos, _familyNeu, _familyNeg), '👪');
+    if (age >= 22) add(_pickVariant(_educationPos, _educationNeu, _educationNeg), '🎓');
+    if (age >= 25) add(_pickVariant(_workPos, _workNeu, _workNeg), '💼');
     if (age >= 20 && _random.nextDouble() < 0.6) {
-      segments.add(_pickVariant(_marriagePos, _marriageNeu, _marriageNeg));
+      add(_pickVariant(_marriagePos, _marriageNeu, _marriageNeg), '💑');
     }
-    // Faith background for older NPCs (30+)
-    if (age >= 30) {
-      segments.add(_pickVariant(_faithPos, _faithNeu, _faithNeg));
-    }
+    if (age >= 30) add(_pickVariant(_faithPos, _faithNeu, _faithNeg), '⛪');
 
-    return segments;
+    return (segments: segments, labels: labels);
   }
 
   List<NPCModel> getNPCsNear(Vector2 position, double radius) {

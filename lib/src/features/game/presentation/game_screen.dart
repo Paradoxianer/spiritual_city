@@ -368,16 +368,26 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
 
-            // ── Chat body ─────────────────────────────────────────────────────
+            // ── Chat body + Lebenslauf panel ──────────────────────────────────
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Chat messages
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
+                      ),
+                    ),
+                  ),
+                  // Lebenslauf sidebar
+                  _LifeStoryPanel(model: model),
+                ],
               ),
             ),
 
@@ -413,6 +423,101 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Right-side panel inside the dialog showing all life-story stages.
+/// Revealed stages show the stage icon + segment emojis on a coloured tile.
+/// Locked stages show the stage icon dimmed with a 🔒 overlay.
+class _LifeStoryPanel extends StatelessWidget {
+  final NPCModel model;
+  const _LifeStoryPanel({required this.model});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = model.lifeStory.length;
+    return Container(
+      width: 108,
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A3A35),
+        border: Border(left: BorderSide(color: Colors.white12)),
+      ),
+      child: total == 0
+          ? const SizedBox.shrink()
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              itemCount: total,
+              itemBuilder: (context, i) {
+                final revealed = i < model.revealedLifeStoryCount;
+                final icon = (i < model.lifeStoryIcons.length)
+                    ? model.lifeStoryIcons[i]
+                    : '❓';
+                final segment = model.lifeStory[i];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: revealed
+                      ? _RevealedTile(icon: icon, segment: segment)
+                      : _LockedTile(icon: icon),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _RevealedTile extends StatelessWidget {
+  final String icon;
+  final String segment;
+  const _RevealedTile({required this.icon, required this.segment});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF128C7E).withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(height: 2),
+          Text(
+            segment,
+            style: const TextStyle(fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LockedTile extends StatelessWidget {
+  final String icon;
+  const _LockedTile({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            icon,
+            style: const TextStyle(fontSize: 18, color: Colors.white24),
+          ),
+          const SizedBox(height: 2),
+          const Text('🔒', style: TextStyle(fontSize: 12)),
+        ],
       ),
     );
   }

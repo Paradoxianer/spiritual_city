@@ -244,13 +244,11 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     return '❓💭';
   }
 
-  /// Reveals the next unrevealed life story segment into [model.pendingMessages].
-  /// Does nothing if all segments are already revealed.
+  /// Advances [model.revealedLifeStoryCount] by one so the Lebenslauf panel
+  /// shows the newly unlocked segment. Does nothing when all are revealed.
   void _revealNextLifeStorySegment() {
     if (model.revealedLifeStoryCount < model.lifeStory.length) {
-      final segment = model.lifeStory[model.revealedLifeStoryCount];
       model.revealedLifeStoryCount++;
-      model.pendingMessages.add(segment);
     }
   }
 

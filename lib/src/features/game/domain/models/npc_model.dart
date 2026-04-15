@@ -21,6 +21,10 @@ class NPCModel {
   /// Each segment represents one life area (childhood, school, family, …).
   final List<String> lifeStory;
 
+  /// Single emoji icon for each life story segment (parallel to [lifeStory]).
+  /// E.g. ['👶', '🏫', '👪', '🎓', '💼', '💑', '⛪']
+  final List<String> lifeStoryIcons;
+
   /// Faith Level: -100.0 to +100.0
   /// < -50: Opposed/Negative
   /// > 50: Christian/Believer
@@ -83,6 +87,7 @@ class NPCModel {
     required this.homePosition,
     this.age = 30,
     this.lifeStory = const [],
+    this.lifeStoryIcons = const [],
     this.homeBuildingId,
     this.faith = 0.0,
     this.conversationCount = 0,
