@@ -28,22 +28,22 @@ class LifeStoryGenerator {
   static const _childhoodNeg = ['😢', '🌧️', '😰', '💔', '😨', '🌑', '😣', '🚫'];
 
   // School
-  static const _schoolPos = ['📚', '⭐', '🏆', '✏️', '📝', '🌟', '🥇', '🎯', '🙌'];
+  static const _schoolPos = ['📚', '🎖️', '🏆', '✏️', '📝', '🌟', '🥇', '🎯', '🙌'];
   static const _schoolNeu = ['📚', '📝', '✏️', '📖', '🕐', '😑', '📋', '🖊️'];
   static const _schoolNeg = ['😔', '😞', '🚫', '😤', '❌', '😩', '📉', '😠'];
 
   // Family
-  static const _familyPos = ['😊', '❤️', '🏡', '🎉', '🤗', '💕', '🌷', '🎂', '🥰'];
+  static const _familyPos = ['😊', '🫂', '🏡', '🎉', '🤗', '💕', '🌷', '🎂', '🥰'];
   static const _familyNeu = ['😐', '💭', '🏠', '🍽️', '🛋️', '🕰️', '📺', '😶'];
   static const _familyNeg = ['💔', '😢', '😤', '🚪', '😔', '❌', '😠', '🌧️'];
 
   // Education / University
-  static const _educationPos = ['✨', '📜', '🌟', '🥇', '📖', '🎯', '🏅', '🚀', '💡'];
+  static const _educationPos = ['🎓', '📜', '🌟', '🥇', '📖', '🎯', '🏅', '🚀', '💡'];
   static const _educationNeu = ['📖', '🕐', '📝', '🖊️', '📊', '📋', '😐', '🏛️'];
   static const _educationNeg = ['😔', '❌', '😞', '📉', '🚫', '😩', '💸', '😤'];
 
   // Work / Career
-  static const _workPos = ['😊', '🏆', '🌟', '💰', '📈', '🎯', '🤝', '⭐', '🚀'];
+  static const _workPos = ['😊', '🏆', '🌟', '💵', '📈', '🎯', '🤝', '🏅', '🚀'];
   static const _workNeu = ['😐', '📋', '🖥️', '⏱️', '📊', '🏢', '📁', '🔧'];
   static const _workNeg = ['😞', '🔥', '💸', '😩', '📉', '😤', '❌', '⚡'];
 
@@ -53,7 +53,7 @@ class LifeStoryGenerator {
   static const _marriageNeg = ['💔', '😢', '😤', '🚪', '😔', '❌', '🌧️', '😰'];
 
   // Faith
-  static const _faithPos = ['🙏', '✨', '📖', '🕊️', '✝️', '💒', '🌟', '🙌', '🌅'];
+  static const _faithPos = ['🙏', '🌄', '📖', '🕊️', '✝️', '💒', '🌟', '🙌', '🌅'];
   static const _faithNeu = ['🤔', '💭', '❓', '🕯️', '📖', '😐', '🌅', '🌿'];
   static const _faithNeg = ['😤', '🚫', '❌', '😒', '💨', '🌑', '😔', '⚡'];
 

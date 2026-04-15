@@ -303,25 +303,31 @@ class _DialogOverlayState extends State<DialogOverlay> {
   }
 
   /// Builds a compact resource-feedback string from the model's last deltas.
+  ///
+  /// Canonical stat emoji (must match the HUD in prayer_hud_component.dart):
+  ///   ❤️  = player health
+  ///   🙏  = player faith
+  ///   ✝️  = NPC faith  (distinct from the pray-action chip 🙏)
+  ///   📦  = materials / supplies
   String _buildFeedback(NPCModel model) {
     final parts = <String>[];
     if (model.lastNpcFaithDelta != 0) {
       final delta = model.lastNpcFaithDelta;
-      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}🙏');
+      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}✝️');
     }
     if (model.lastPlayerFaithDelta != 0) {
       final delta = model.lastPlayerFaithDelta;
-      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}✨');
+      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}🙏');
     }
     if (model.lastMaterialsDelta != 0) {
       final delta = model.lastMaterialsDelta;
-      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}💰');
+      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}📦');
     }
     if (model.lastHealthDelta != 0) {
       final delta = model.lastHealthDelta;
       parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}❤️');
     }
-    return parts.isEmpty ? '' : '📊 ${parts.join(' ')}';
+    return parts.join(' ');
   }
 
   @override
