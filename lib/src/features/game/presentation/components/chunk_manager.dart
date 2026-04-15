@@ -362,6 +362,10 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   /// All building components currently active in the world.
   List<BuildingComponent> get allActiveBuildings =>
       List.unmodifiable(_allBuildings);
+
+  /// Returns the [BuildingModel] registered under [buildingId], or null.
+  BuildingModel? getBuildingModel(String buildingId) =>
+      _buildingModels[buildingId];
 }
 
 // ── Private helper ────────────────────────────────────────────────────────────

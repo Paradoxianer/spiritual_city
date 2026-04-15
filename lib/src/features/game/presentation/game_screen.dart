@@ -837,9 +837,9 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.apartment:
         return [
           _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Gespräch führen (+5 Glauben)', onTap: () => _performAction('talk')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '👥✝️✝️', tooltip: 'Für Familie beten (+15 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '❤️×5', tooltip: 'Für Familie beten (−5 HP, +15 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Hilfe anbieten (−10 Material, +10 Glauben)', onTap: () => _performAction('help')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '←', trailingEmoji: '💰×3👥', tooltip: 'Gemeinsam Bibel lesen (−3 Material, +10 Glauben)', onTap: () => _performAction('bible')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '←', trailingEmoji: '❤️×3💰×3', tooltip: 'Gemeinsam Bibel lesen (−3 HP, −3 Material, +10 Glauben)', onTap: () => _performAction('bible')),
           letter,
         ];
 

@@ -10,6 +10,9 @@ class BuildingInteractionResult {
   /// How much the player's materials change (positive = gain, negative = cost).
   final double playerMaterialsDelta;
 
+  /// How much the player's health changes (positive = heal, negative = cost).
+  final double playerHealthDelta;
+
   /// Emoji string shown in the UI as feedback.
   final String reactionEmoji;
 
@@ -19,6 +22,7 @@ class BuildingInteractionResult {
   const BuildingInteractionResult({
     this.playerFaithDelta = 0,
     this.playerMaterialsDelta = 0,
+    this.playerHealthDelta = 0,
     required this.reactionEmoji,
     this.success = true,
   });
@@ -159,6 +163,7 @@ class BuildingInteractionService {
         return const BuildingInteractionResult(
           playerFaithDelta: 15.0,
           playerMaterialsDelta: 5.0,
+          playerHealthDelta: -5.0,
           reactionEmoji: '🙏❤️',
         );
       case 'help':
@@ -175,6 +180,7 @@ class BuildingInteractionService {
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
           playerMaterialsDelta: -3.0,
+          playerHealthDelta: -3.0,
           reactionEmoji: '📖✝️',
         );
       default:

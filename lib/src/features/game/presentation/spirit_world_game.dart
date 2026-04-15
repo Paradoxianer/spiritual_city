@@ -13,6 +13,7 @@ import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
 import '../domain/services/building_interaction_service.dart';
+import '../domain/models/cell_object.dart';
 import 'components/building_component.dart';
 import 'components/chunk_manager.dart';
 import 'components/player_component.dart';
@@ -180,6 +181,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         .toList()
       ..sort((a, b) => a.$2.compareTo(b.$2));
 
+    // Track which building IDs are already offered (for deduplication).
+    final offeredBuildingIds = <String>{};
+    for (final (i, _) in nearby) {
+      if (i is BuildingComponent) offeredBuildingIds.add(i.buildingModel.buildingId);
+    }
+
     // Up to 3 enter/interact actions (NPCs + buildings)
     for (final (target, _) in nearby.take(3)) {
       actions.add(RadialAction(
@@ -190,6 +197,19 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           _nearestInteractable = target;
           target.onInteract();
         },
+      ));
+    }
+
+    // Collision query: buildings whose cells directly touch the player's grid
+    // position.  This surfaces every drawn building regardless of whether it
+    // has a pre-registered BuildingComponent interaction point.
+    for (final model in _getAdjacentBuildingModels()) {
+      if (!offeredBuildingIds.add(model.buildingId)) continue; // already offered
+      actions.add(RadialAction(
+        label: BuildingComponent.buildingEmoji(model.type),
+        sublabel: BuildingComponent.buildingName(model.type).split(' ').first,
+        icon: Icons.meeting_room,
+        onSelect: () => openBuildingInterior(model),
       ));
     }
 
@@ -208,6 +228,35 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     _currentMenu = RadialMenu(actions: actions, position: player.position);
     world.add(_currentMenu!);
+  }
+
+  /// Returns the [BuildingModel]s for any building cells that directly adjoin
+  /// (8-directional) the player's current grid cell.
+  ///
+  /// Acts as the collision query: every drawn building in the world can be
+  /// detected here, not just those with a pre-registered [BuildingComponent].
+  List<BuildingModel> _getAdjacentBuildingModels() {
+    const cellSize = 32.0;
+    final px = (player.position.x / cellSize).floor();
+    final py = (player.position.y / cellSize).floor();
+
+    final result = <BuildingModel>[];
+    final seen = <String>{};
+
+    for (final d in const [
+      [-1, -1], [0, -1], [1, -1],
+      [-1,  0],          [1,  0],
+      [-1,  1], [0,  1], [1,  1],
+    ]) {
+      final cell = grid.getCell(px + d[0], py + d[1]);
+      if (cell == null) continue;
+      final data = cell.data;
+      if (data is! BuildingData) continue;
+      if (!seen.add(data.buildingId)) continue;
+      final model = chunkManager.getBuildingModel(data.buildingId);
+      if (model != null) result.add(model);
+    }
+    return result;
   }
 
   void showDialog(String name, String emoji, NPCModel model) {
@@ -280,12 +329,23 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         success: false,
       );
     }
+    // Guard: refuse if the player does not have enough health for the action.
+    final healthCost = -result.playerHealthDelta;
+    if (healthCost > 0 && health < healthCost) {
+      return const BuildingInteractionResult(
+        reactionEmoji: '🚫❤️',
+        success: false,
+      );
+    }
     // Apply resource deltas immediately
     if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);
     if (result.playerMaterialsDelta > 0) {
       gainMaterials(result.playerMaterialsDelta);
     } else if (result.playerMaterialsDelta < 0) {
       spendMaterials(-result.playerMaterialsDelta);
+    }
+    if (result.playerHealthDelta != 0) {
+      health = (health + result.playerHealthDelta).clamp(0.0, maxHealth);
     }
     // 'prayBusiness' also nudges the cell underneath the player positively
     if (actionType == 'prayBusiness') {
@@ -394,6 +454,23 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       if (dist < minDistance) {
         minDistance = dist;
         nearest = interactable;
+      }
+    }
+
+    // If no interactable found by distance, also check via grid adjacency.
+    // This makes the interaction aura activate when the player is touching a
+    // building wall, even for buildings without a registered component.
+    if (nearest == null) {
+      final adjacentModels = _getAdjacentBuildingModels();
+      if (adjacentModels.isNotEmpty) {
+        final buildingId = adjacentModels.first.buildingId;
+        // Prefer the registered component so interactionLabel/onInteract work.
+        nearest = chunkManager.allActiveBuildings
+            .where((b) => b.buildingModel.buildingId == buildingId)
+            .firstOrNull;
+        // Fallback: any registered building component acts as a sentinel so
+        // the player aura switches to its "nearby" colour.
+        nearest ??= chunkManager.allActiveBuildings.firstOrNull;
       }
     }
 
