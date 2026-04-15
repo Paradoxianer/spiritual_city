@@ -487,6 +487,10 @@ class BuildingInteriorOverlay extends StatefulWidget {
 }
 
 class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
+  /// Maximum height of the interior art widget to prevent overflow in
+  /// taller-than-expected layouts (e.g. AspectRatio(1.0) expanding unbounded).
+  static const double _maxInteriorArtHeight = 200.0;
+
   /// `null`  = access check not yet done (residential) or always-open
   /// `true`  = access granted
   /// `false` = access denied
@@ -539,9 +543,9 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     return Align(
       alignment: Alignment.center,
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.88,
+        width: MediaQuery.of(context).size.width * 0.82,
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.75,
+          maxHeight: MediaQuery.of(context).size.height * 0.70,
         ),
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -847,7 +851,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _InteriorArtWidget(art: _interiorArt(building.type)),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
+                        child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                      ),
                       if (building.residents.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         _buildResidentChips(building, compact: true),
