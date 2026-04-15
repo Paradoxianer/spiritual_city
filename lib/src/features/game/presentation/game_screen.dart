@@ -1040,6 +1040,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   /// only requires changing its return value to [ImageArt('assets/...')].
   InteriorArt _interiorArt(BuildingType type) {
     switch (type) {
+      // ── Residential ─────────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         // Drawn room: warm parchment walls, sparsely placed furniture.
         // Coordinates are normalised (0–1) relative to the square room area.
@@ -1060,31 +1061,29 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           ],
         );
       case BuildingType.house:
-      case BuildingType.apartment:
         return EmojiGridArt([
-          ['🛋️', '🪴', '🪟'],
-          ['🍳', '🚪', '📺'],
+          ['🏡', '🪴', '🪟'],
+          ['🛁', '🚪', '🍳'],
           ['🛏️', '📚', '🪑'],
         ]);
+      case BuildingType.apartment:
+        return EmojiGridArt([
+          ['📬', '🪟', '🪟'],
+          ['🛋️', '📺', '🍳'],
+          ['🛏️', '🚿', '🚪'],
+        ]);
+      // ── Religion ────────────────────────────────────────────────────────────
       case BuildingType.church:
-      case BuildingType.cathedral:
         return EmojiGridArt([
           ['⛪', '✝️', '⛪'],
           ['🕯️', '📖', '🕯️'],
           ['🪑', '🙏', '🪑'],
         ]);
-      case BuildingType.hospital:
+      case BuildingType.cathedral:
         return EmojiGridArt([
-          ['🛏️', '🛏️', '🔬'],
-          ['💊', '🏥', '🩺'],
-          ['🛏️', '🛏️', '📋'],
-        ]);
-      case BuildingType.school:
-      case BuildingType.university:
-        return EmojiGridArt([
-          ['📚', '🖊️', '📝'],
-          ['🪑', '🏫', '🪑'],
-          ['📖', '✏️', '📐'],
+          ['🔔', '⛪', '🔔'],
+          ['✝️', '📖', '✝️'],
+          ['🕯️', '🙏', '🕯️'],
         ]);
       case BuildingType.cemetery:
         return EmojiGridArt([
@@ -1092,34 +1091,100 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           ['🕯️', '⛪', '🕯️'],
           ['✝️', '🌿', '✝️'],
         ]);
+      // ── Health & Education ───────────────────────────────────────────────────
+      case BuildingType.hospital:
+        return EmojiGridArt([
+          ['🛏️', '🛏️', '🔬'],
+          ['💊', '🏥', '🩺'],
+          ['🛏️', '🛏️', '📋'],
+        ]);
+      case BuildingType.school:
+        return EmojiGridArt([
+          ['📚', '🖊️', '📝'],
+          ['🪑', '🏫', '🪑'],
+          ['📖', '✏️', '📐'],
+        ]);
+      case BuildingType.university:
+        return EmojiGridArt([
+          ['🎓', '📐', '🔬'],
+          ['📚', '🏛️', '💻'],
+          ['📖', '🧪', '🎓'],
+        ]);
+      // ── Commercial ──────────────────────────────────────────────────────────
       case BuildingType.shop:
-      case BuildingType.supermarket:
-      case BuildingType.mall:
         return EmojiGridArt([
           ['🛍️', '📦', '🏷️'],
           ['🛒', '🏪', '💳'],
           ['📦', '💰', '🛒'],
         ]);
+      case BuildingType.supermarket:
+        return EmojiGridArt([
+          ['🥦', '🥩', '🥛'],
+          ['🛒', '🏪', '🛒'],
+          ['🥫', '💳', '🧾'],
+        ]);
+      case BuildingType.mall:
+        return EmojiGridArt([
+          ['🛍️', '👗', '👟'],
+          ['☕', '🏬', '🍕'],
+          ['💎', '💳', '🛒'],
+        ]);
       case BuildingType.office:
-      case BuildingType.skyscraper:
         return EmojiGridArt([
           ['🖥️', '📁', '☕'],
           ['🪑', '🏢', '📞'],
           ['📋', '🖊️', '📎'],
         ]);
+      case BuildingType.skyscraper:
+        return EmojiGridArt([
+          ['🏙️', '📊', '💹'],
+          ['💻', '🏢', '📱'],
+          ['📋', '🤝', '💼'],
+        ]);
+      // ── Industrial ──────────────────────────────────────────────────────────
       case BuildingType.factory:
-      case BuildingType.warehouse:
-      case BuildingType.powerPlant:
         return EmojiGridArt([
           ['⚙️', '🔧', '⚡'],
           ['🏭', '📦', '🔩'],
-          ['⚙️', '🔧', '⚡'],
+          ['⚙️', '🔨', '⚡'],
         ]);
+      case BuildingType.warehouse:
+        return EmojiGridArt([
+          ['📦', '📦', '📦'],
+          ['🏗️', '📋', '🔦'],
+          ['📦', '📦', '📦'],
+        ]);
+      case BuildingType.powerPlant:
+        return EmojiGridArt([
+          ['⚡', '🔌', '⚡'],
+          ['🔧', '🏭', '🔧'],
+          ['⚡', '🔌', '⚡'],
+        ]);
+      // ── Culture ─────────────────────────────────────────────────────────────
       case BuildingType.library:
         return EmojiGridArt([
           ['📚', '📖', '📚'],
           ['🪑', '📚', '🪑'],
           ['📖', '📚', '📖'],
+        ]);
+      case BuildingType.museum:
+        return EmojiGridArt([
+          ['🖼️', '🏺', '🗿'],
+          ['🔎', '🏛️', '📜'],
+          ['🏺', '🎭', '🖼️'],
+        ]);
+      case BuildingType.stadium:
+        return EmojiGridArt([
+          ['🏟️', '⚽', '🏟️'],
+          ['📣', '🎽', '📣'],
+          ['🏆', '🎫', '🏆'],
+        ]);
+      // ── Civic / Government ───────────────────────────────────────────────────
+      case BuildingType.cityHall:
+        return EmojiGridArt([
+          ['🏛️', '📜', '🏛️'],
+          ['⚖️', '🗳️', '📋'],
+          ['🏛️', '🤝', '🏛️'],
         ]);
       case BuildingType.postOffice:
         return EmojiGridArt([
@@ -1127,11 +1192,23 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           ['📪', '🏣', '📫'],
           ['📝', '💳', '📋'],
         ]);
-      default:
+      case BuildingType.policeStation:
         return EmojiGridArt([
-          ['🖥️', '📁', '☕'],
-          ['🪑', '🏛️', '📞'],
-          ['📋', '🖊️', '📎'],
+          ['🚓', '🔵', '🔵'],
+          ['👮', '🏛️', '🔑'],
+          ['📋', '🔒', '📡'],
+        ]);
+      case BuildingType.fireStation:
+        return EmojiGridArt([
+          ['🚒', '🔴', '🔴'],
+          ['🧯', '🏛️', '🪓'],
+          ['🪣', '🚒', '📡'],
+        ]);
+      case BuildingType.trainStation:
+        return EmojiGridArt([
+          ['🚂', '🎫', '🕐'],
+          ['🚉', '📋', '🚉'],
+          ['🧳', '🎫', '🚂'],
         ]);
     }
   }
