@@ -138,7 +138,9 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (type == 'counsel') {
-      final gain = _faithCalc.calculateCounselingGain();
+      // Trauma-sensitive: counselling is more effective for NPCs with a hard past.
+      final traumaMult = (1.0 - model.traumaScore * 0.5).clamp(0.5, 1.5);
+      final gain = (_faithCalc.calculateCounselingGain() * traumaMult).round();
       model.applyInfluence(gain.toDouble());
       model.counselingCount++;
       model.conversationCount++;
@@ -153,9 +155,11 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     if (type == 'pray') {
       model.prayerCount++;
-      final prayerGain = _faithCalc.calculatePrayerGain();
-      // Issue #58 fix: 25% base chance so even hostile NPCs can accept prayer.
-      final alwaysAccept = _random.nextDouble() < 0.25;
+      // Trauma-sensitive: NPCs with a hard past are initially more resistant to prayer.
+      final traumaMult = (1.0 + model.traumaScore * 0.4).clamp(0.6, 1.4);
+      final baseAcceptChance = (0.25 + model.traumaScore * 0.15).clamp(0.05, 0.55);
+      final prayerGain = (_faithCalc.calculatePrayerGain() * traumaMult).round();
+      final alwaysAccept = _random.nextDouble() < baseAcceptChance;
       if (alwaysAccept || interactionScore + _random.nextInt(40) > 20) {
         model.applyInfluence(prayerGain.toDouble());
         model.lastNpcFaithDelta = prayerGain.toDouble();
@@ -174,8 +178,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (type == 'bible') {
+      // Trauma-sensitive: NPCs with a difficult past respond less to scripture initially.
+      final traumaMult = (1.0 + model.traumaScore * 0.3).clamp(0.7, 1.3);
       final playerGain = _faithCalc.calculateBibleReadingPlayerGain();
-      final npcGain = _faithCalc.calculateBibleReadingNPCGain();
+      final npcGain = (_faithCalc.calculateBibleReadingNPCGain() * traumaMult).round();
       model.applyInfluence(npcGain.toDouble());
       model.conversationCount++;
       game.gainFaith(playerGain.toDouble());
@@ -212,7 +218,9 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (type == 'help') {
       // Gift is only given when the NPC explicitly asked for it.
       if (!model.wantsGift) return '🤷💭';
-      final giftGain = _faithCalc.calculateGiftGain();
+      // Trauma-sensitive: practical help resonates more strongly with NPCs who suffered hardship.
+      final traumaMult = (1.0 - model.traumaScore * 0.4).clamp(0.6, 1.4);
+      final giftGain = (_faithCalc.calculateGiftGain() * traumaMult).round();
       model.conversationCount++;
       model.hadGiftThisSession = true;
       model.wantsGift = false;

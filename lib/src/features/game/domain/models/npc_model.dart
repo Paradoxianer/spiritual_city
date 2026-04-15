@@ -25,6 +25,20 @@ class NPCModel {
   /// E.g. ['👶', '🏫', '👪', '🎓', '💼', '💑', '⛪']
   final List<String> lifeStoryIcons;
 
+  /// Valence tone of each life-story segment, parallel to [lifeStory].
+  /// +1 = positive, 0 = neutral, -1 = negative.
+  /// Derived from [LifeStoryGenerator.emojiValence] via majority vote.
+  final List<int> lifeStoryTones;
+
+  /// Overall life sentiment: -1.0 (fully traumatic) to +1.0 (fully positive).
+  /// Computed as the mean of all [lifeStoryTones].
+  /// Influences how the NPC responds to different ministry actions.
+  double get traumaScore {
+    if (lifeStoryTones.isEmpty) return 0.0;
+    final sum = lifeStoryTones.fold(0, (a, b) => a + b);
+    return sum / lifeStoryTones.length;
+  }
+
   /// Faith Level: -100.0 to +100.0
   /// < -50: Opposed/Negative
   /// > 50: Christian/Believer
@@ -88,6 +102,7 @@ class NPCModel {
     this.age = 30,
     this.lifeStory = const [],
     this.lifeStoryIcons = const [],
+    this.lifeStoryTones = const [],
     this.homeBuildingId,
     this.faith = 0.0,
     this.conversationCount = 0,

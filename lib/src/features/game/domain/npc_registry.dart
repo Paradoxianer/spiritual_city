@@ -80,6 +80,7 @@ class NPCRegistry {
           age: age,
           lifeStory: story.segments,
           lifeStoryIcons: story.icons,
+          lifeStoryTones: story.tones,
           faith: -60.0 + _random.nextDouble() * 80.0,
         ));
       }
