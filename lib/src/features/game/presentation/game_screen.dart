@@ -459,7 +459,7 @@ class RoomArt extends InteriorArt {
   final List<(double, double, String)> furniture;
   /// Colour used for the drawn wall lines and door frame.
   final Color wallColor;
-  const RoomArt({required this.furniture, this.wallColor = const Color(0xFFC4A882)});
+  RoomArt({required this.furniture, this.wallColor = const Color(0xFFC4A882)});
 }
 
 // ── Building interior data & overlay ──────────────────────────────────────────
@@ -1044,7 +1044,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         // Drawn room: warm parchment walls, sparsely placed furniture.
         // Coordinates are normalised (0–1) relative to the square room area.
         // Door opening is rendered by _RoomPainter at the bottom-centre.
-        return const RoomArt(
+        return RoomArt(
           wallColor: Color(0xFFD4A882), // warm parchment
           furniture: [
             (0.50, 0.08, '✝️'),   // cross, back wall centred – spiritual focus
