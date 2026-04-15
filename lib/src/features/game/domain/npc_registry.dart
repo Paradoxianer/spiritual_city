@@ -4,12 +4,16 @@ import 'models/npc_model.dart';
 import '../presentation/components/cell_component.dart';
 import 'models/city_chunk.dart';
 import 'models/cell_object.dart';
+import 'services/life_story_generator.dart';
 
 class NPCRegistry {
   final Map<String, List<NPCModel>> _chunkNPCs = {};
   final Random _random;
+  late final LifeStoryGenerator _lifeStoryGenerator;
 
-  NPCRegistry({int? seed}) : _random = Random(seed ?? 42);
+  NPCRegistry({int? seed}) : _random = Random(seed ?? 42) {
+    _lifeStoryGenerator = LifeStoryGenerator(_random);
+  }
 
   List<NPCModel> getNPCsInChunk(int cx, int cy, {CityChunk? chunk}) {
     final key = '$cx,$cy';
@@ -66,7 +70,7 @@ class NPCRegistry {
       for (int i = 0; i < count; i++) {
         final id = 'npc_${bInfo.buildingId}_$i';
         final age = _generateAge();
-        final story = _buildLifeStory(age);
+        final story = _lifeStoryGenerator.build(age);
         npcs.add(NPCModel(
           id: id,
           name: _getRandomName(),
@@ -75,7 +79,7 @@ class NPCRegistry {
           homeBuildingId: bInfo.buildingId,
           age: age,
           lifeStory: story.segments,
-          lifeStoryIcons: story.labels,
+          lifeStoryIcons: story.icons,
           faith: -60.0 + _random.nextDouble() * 80.0,
         ));
       }
@@ -227,69 +231,6 @@ class NPCRegistry {
 
   /// Generates a realistic NPC age between 18 and 85.
   int _generateAge() => 18 + _random.nextInt(68); // 18–85
-
-  // ── Life story generation ────────────────────────────────────────────────
-
-  // Emoji pools for each life area: positive, neutral, negative.
-  static const _childhoodPos  = '👶🏡😊';
-  static const _childhoodNeu  = '👶🏫😐';
-  static const _childhoodNeg  = '👶😢🌧️';
-
-  static const _schoolPos     = '🏫📚⭐';
-  static const _schoolNeu     = '🏫📚😐';
-  static const _schoolNeg     = '🏫😔📚';
-
-  static const _familyPos     = '👨‍👩‍👧😊❤️';
-  static const _familyNeu     = '👪😐💭';
-  static const _familyNeg     = '💔😢👪';
-
-  static const _educationPos  = '🎓✨💼';
-  static const _educationNeu  = '🎓📖😐';
-  static const _educationNeg  = '🎓😔❌';
-
-  static const _workPos       = '💼😊🏆';
-  static const _workNeu       = '💼😐📋';
-  static const _workNeg       = '💼😞🔥';
-
-  static const _faithPos      = '⛪🙏✨';
-  static const _faithNeu      = '🤔💭❓';
-  static const _faithNeg      = '😤🚫⛪';
-
-  static const _marriagePos   = '💑😊💍';
-  static const _marriageNeu   = '💑😐🏠';
-  static const _marriageNeg   = '💔😢💍';
-
-  /// Picks one of three variants (positive/neutral/negative) randomly.
-  String _pickVariant(String pos, String neu, String neg) {
-    final roll = _random.nextDouble();
-    if (roll < 0.35) return pos;
-    if (roll < 0.65) return neu;
-    return neg;
-  }
-
-  /// Generates life story segments and parallel German labels based on [age].
-  /// Returns a record `(segments: ..., labels: ...)`.
-  ({List<String> segments, List<String> labels}) _buildLifeStory(int age) {
-    final segments = <String>[];
-    final labels = <String>[];
-
-    void add(String segment, String label) {
-      segments.add(segment);
-      labels.add(label);
-    }
-
-    add(_pickVariant(_childhoodPos, _childhoodNeu, _childhoodNeg), '👶');
-    if (age >= 14) add(_pickVariant(_schoolPos, _schoolNeu, _schoolNeg), '🏫');
-    if (age >= 18) add(_pickVariant(_familyPos, _familyNeu, _familyNeg), '👪');
-    if (age >= 22) add(_pickVariant(_educationPos, _educationNeu, _educationNeg), '🎓');
-    if (age >= 25) add(_pickVariant(_workPos, _workNeu, _workNeg), '💼');
-    if (age >= 20 && _random.nextDouble() < 0.6) {
-      add(_pickVariant(_marriagePos, _marriageNeu, _marriageNeg), '💑');
-    }
-    if (age >= 30) add(_pickVariant(_faithPos, _faithNeu, _faithNeg), '⛪');
-
-    return (segments: segments, labels: labels);
-  }
 
   List<NPCModel> getNPCsNear(Vector2 position, double radius) {
     return [];
