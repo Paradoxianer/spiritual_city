@@ -85,10 +85,15 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   Vector2 get interactionPosition => position;
 
   String _getNPCEmoji() {
-    if (model.isChristian) return '✝️'; // Geändert von 🕊️ zu ✝️
-    if (model.faith < -30) return '😠';
-    if (model.faith < 30) return '👤';
-    return '🤔';
+    // Issue #45: faith only revealed after enough conversations.
+    if (model.isFaithRevealed) {
+      if (model.isChristian) return '✝️';
+      if (model.faith < -30) return '😠';
+      if (model.faith < 30) return '👤';
+      return '😊';
+    }
+    if (model.isFaithVague) return '🤔'; // 3–5 conversations: vague hint
+    return '❓'; // 0–2 conversations: completely unknown
   }
 
   @override
@@ -100,6 +105,11 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   @override
   String handleInteraction(String type) {
     model.currentSessionInteractions++;
+    model.pendingMessages.clear();
+    model.lastNpcFaithDelta = 0.0;
+    model.lastPlayerFaithDelta = 0.0;
+    model.lastMaterialsDelta = 0.0;
+    model.lastHealthDelta = 0.0;
 
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
@@ -110,35 +120,106 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0);
     game.gainFaith(resonanceExchange);
+    model.lastPlayerFaithDelta += resonanceExchange;
 
     if (type == 'talk') {
       final gain = _faithCalc.calculateConversationGain();
       model.applyInfluence(gain.toDouble());
       model.conversationCount++;
+      model.lastNpcFaithDelta = gain.toDouble();
       game.recordConversation();
+      // Random chance NPC asks for material support
+      _maybeRequestGift();
       return _talkEmoji();
+    }
+
+    if (type == 'counsel') {
+      final gain = _faithCalc.calculateCounselingGain();
+      model.applyInfluence(gain.toDouble());
+      model.counselingCount++;
+      model.conversationCount++;
+      model.lastNpcFaithDelta = gain.toDouble();
+      game.recordConversation();
+      // Reveal next life story segment
+      if (model.revealedLifeStoryCount < model.lifeStory.length) {
+        final segment = model.lifeStory[model.revealedLifeStoryCount];
+        model.revealedLifeStoryCount++;
+        model.pendingMessages.add(segment);
+      }
+      // Random chance NPC asks for material support after opening up
+      _maybeRequestGift(baseChance: 0.4);
+      return ['😊👂', '👂💬', '👂🙏'][_random.nextInt(3)];
     }
 
     if (type == 'pray') {
       model.prayerCount++;
       final prayerGain = _faithCalc.calculatePrayerGain();
-      if (interactionScore + _random.nextInt(40) > 20) {
+      // Issue #58 fix: 25% base chance so even hostile NPCs can accept prayer.
+      final alwaysAccept = _random.nextDouble() < 0.25;
+      if (alwaysAccept || interactionScore + _random.nextInt(40) > 20) {
         model.applyInfluence(prayerGain.toDouble());
+        model.lastNpcFaithDelta = prayerGain.toDouble();
         game.gainFaith(3.0);
+        model.lastPlayerFaithDelta += 3.0;
+        // Prayer has a stronger effect on the spiritual world
+        if (cell != null) {
+          cell.spiritualState = (cell.spiritualState + 0.1).clamp(-1.0, 1.0);
+        }
         return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
       } else {
         model.applyInfluence(-8.0);
+        model.lastNpcFaithDelta = -8.0;
         return interactionScore < -20 ? '💀😬' : '😠💭';
       }
     }
 
+    if (type == 'bible') {
+      final playerGain = _faithCalc.calculateBibleReadingPlayerGain();
+      final npcGain = _faithCalc.calculateBibleReadingNPCGain();
+      model.applyInfluence(npcGain.toDouble());
+      model.conversationCount++;
+      game.gainFaith(playerGain.toDouble());
+      game.recordBibleReading();
+      model.lastNpcFaithDelta = npcGain.toDouble();
+      model.lastPlayerFaithDelta += playerGain.toDouble();
+      return ['📖🙏', '📖😊', '📖💬'][_random.nextInt(3)];
+    }
+
+    if (type == 'prophecy') {
+      const faithCost = 5.0;
+      final npcGain = _faithCalc.calculateProphecyGain();
+      model.applyInfluence(npcGain.toDouble());
+      game.gainFaith(-faithCost);
+      model.lastNpcFaithDelta = npcGain.toDouble();
+      model.lastPlayerFaithDelta += -faithCost;
+      // Prophecy strongly affects the spiritual world
+      if (cell != null) {
+        cell.spiritualState = (cell.spiritualState + 0.3).clamp(-1.0, 1.0);
+      }
+      return ['🔮✨', '🔮💛', '🔮🕊️'][_random.nextInt(3)];
+    }
+
+    if (type == 'healing') {
+      const healthCost = 5.0;
+      final npcGain = _faithCalc.calculateHealingGain();
+      model.applyInfluence(npcGain.toDouble());
+      game.gainHealth(-healthCost);
+      model.lastNpcFaithDelta = npcGain.toDouble();
+      model.lastHealthDelta = -healthCost;
+      return ['💊❤️', '🙌💊', '💊✨'][_random.nextInt(3)];
+    }
+
     if (type == 'help') {
+      // Gift is only given when the NPC explicitly asked for it.
+      if (!model.wantsGift) return '🤷💭';
       final giftGain = _faithCalc.calculateGiftGain();
       model.conversationCount++;
       model.hadGiftThisSession = true;
+      model.wantsGift = false;
       model.applyInfluence(giftGain.toDouble());
-      game.gainFaith(5.0);
       game.spendMaterials(8.0);
+      model.lastNpcFaithDelta = giftGain.toDouble();
+      model.lastMaterialsDelta = -8.0;
       return ['📦🙏', '😊📦', '🙏😊'][_random.nextInt(3)];
     }
 
@@ -148,16 +229,28 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       if (interactionScore > 60) {
         model.applyInfluence(100);
         game.gainFaith(25.0);
+        model.lastPlayerFaithDelta += 25.0;
+        model.lastNpcFaithDelta = 100.0;
         game.recordConversion();
         return '✝️🕊️';
       } else {
         model.applyInfluence(3.0);
+        model.lastNpcFaithDelta = 3.0;
         if (interactionScore < 0) return '🚫😤';
         return '🤔💭';
       }
     }
 
     return '❓💭';
+  }
+
+  /// Adds a gift-request to pendingMessages with the given [baseChance]
+  /// if the NPC does not already want a gift.
+  void _maybeRequestGift({double baseChance = 0.3}) {
+    if (!model.wantsGift && _random.nextDouble() < baseChance) {
+      model.wantsGift = true;
+      model.pendingMessages.add('📦❓');
+    }
   }
 
   /// Returns a dynamic two-emoji response for a talk interaction based on
@@ -280,7 +373,13 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   @override
   void render(Canvas canvas) {
     Color bodyColor;
-    if (model.isChristian) {
+    if (!model.isFaithVague) {
+      // 0–2 conversations: completely unknown – neutral grey
+      bodyColor = Colors.grey[400]!;
+    } else if (!model.isFaithRevealed) {
+      // 3–5 conversations: vague sense – light blue-grey
+      bodyColor = Colors.blueGrey[200]!;
+    } else if (model.isChristian) {
       bodyColor = Colors.white;
     } else if (model.faith < 0) {
       bodyColor = Color.lerp(Colors.red[900]!, Colors.grey, (model.faith + 100) / 100)!;
@@ -289,7 +388,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
 
-    if (model.isChristian) {
+    // Christian cross only shown once faith is fully revealed
+    if (model.isChristian && model.isFaithRevealed) {
       final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
       final center = (size / 2).toOffset();
       canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);

@@ -212,6 +212,17 @@ class _DialogOverlayState extends State<DialogOverlay> {
   bool _isSessionOver = false;
 
   @override
+  void initState() {
+    super.initState();
+    // If the NPC was already asking for a gift in a previous session, show
+    // a reminder as the opening message so the player has context.
+    final model = widget.game.activeDialog?.npcModel;
+    if (model != null && model.wantsGift) {
+      _messages.add(_ChatMessage(content: '📦❓', isPlayer: false));
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
@@ -247,6 +258,21 @@ class _DialogOverlayState extends State<DialogOverlay> {
       final model = widget.game.activeDialog?.npcModel;
       final reaction = widget.game.handleInteraction(type);
       _addMessage(reaction, false);
+
+      // Show pending messages (life story reveals, gift requests)
+      if (model != null && model.pendingMessages.isNotEmpty) {
+        for (final msg in List<String>.from(model.pendingMessages)) {
+          _addMessage(msg, false);
+        }
+        model.pendingMessages.clear();
+      }
+
+      // Show resource feedback line
+      if (model != null) {
+        final feedback = _buildFeedback(model);
+        if (feedback.isNotEmpty) _addMessage(feedback, false);
+      }
+
       setState(() => _isWaiting = false);
 
       // Conversion success → session ends
@@ -276,10 +302,33 @@ class _DialogOverlayState extends State<DialogOverlay> {
     });
   }
 
+  /// Builds a compact resource-feedback string from the model's last deltas.
+  String _buildFeedback(NPCModel model) {
+    final parts = <String>[];
+    if (model.lastNpcFaithDelta != 0) {
+      final delta = model.lastNpcFaithDelta;
+      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}🙏');
+    }
+    if (model.lastPlayerFaithDelta != 0) {
+      final delta = model.lastPlayerFaithDelta;
+      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}✨');
+    }
+    if (model.lastMaterialsDelta != 0) {
+      final delta = model.lastMaterialsDelta;
+      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}💰');
+    }
+    if (model.lastHealthDelta != 0) {
+      final delta = model.lastHealthDelta;
+      parts.add('${delta > 0 ? '+' : ''}${delta.toStringAsFixed(0)}❤️');
+    }
+    return parts.isEmpty ? '' : '📊 ${parts.join(' ')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final dialog = widget.game.activeDialog;
     if (dialog == null) return const SizedBox.shrink();
+    final model = dialog.npcModel;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -304,11 +353,13 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 children: [
                   CircleAvatar(backgroundColor: Colors.white24, child: Text(dialog.npcEmoji)),
                   const SizedBox(width: 12),
-                  Text(
-                    dialog.npcName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  Expanded(
+                    child: Text(
+                      '${dialog.npcName} (${model.age})',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => widget.game.closeDialog(),
@@ -333,17 +384,25 @@ class _DialogOverlayState extends State<DialogOverlay> {
             // ── Action chips ──────────────────────────────────────────────────
             if (!_isSessionOver)
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: const BoxDecoration(
                   color: Colors.black26,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
                     _EmojiChip(emoji: '💬', onTap: () => _handleInteraction('talk', '💬')),
+                    _EmojiChip(emoji: '👂', onTap: () => _handleInteraction('counsel', '👂')),
                     _EmojiChip(emoji: '🙏', onTap: () => _handleInteraction('pray', '🙏')),
-                    _EmojiChip(emoji: '📦', onTap: () => _handleInteraction('help', '📦')),
+                    _EmojiChip(emoji: '📖', onTap: () => _handleInteraction('bible', '📖')),
+                    _EmojiChip(emoji: '🔮', onTap: () => _handleInteraction('prophecy', '🔮')),
+                    _EmojiChip(emoji: '💊', onTap: () => _handleInteraction('healing', '💊')),
+                    // Gift chip only appears when NPC explicitly asked for it
+                    if (model.wantsGift)
+                      _EmojiChip(emoji: '📦', onTap: () => _handleInteraction('help', '📦')),
                     _EmojiChip(
                       emoji: '✝️🕊️',
                       isSpecial: true,

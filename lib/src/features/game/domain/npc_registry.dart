@@ -65,12 +65,15 @@ class NPCRegistry {
 
       for (int i = 0; i < count; i++) {
         final id = 'npc_${bInfo.buildingId}_$i';
+        final age = _generateAge();
         npcs.add(NPCModel(
           id: id,
           name: _getRandomName(),
           type: _getNPCTypeForBuilding(bInfo.type),
           homePosition: spawnPos.clone(),
           homeBuildingId: bInfo.buildingId,
+          age: age,
+          lifeStory: _generateLifeStory(age),
           faith: -60.0 + _random.nextDouble() * 80.0,
         ));
       }
@@ -155,10 +158,142 @@ class NPCRegistry {
     return null;
   }
 
+  // ── Name generation (Issue #49) ──────────────────────────────────────────
+
+  // 100+ first names: German, English, and further cultural diversity.
+  static const List<String> _firstNames = [
+    // German male
+    'Lukas', 'Johannes', 'Peter', 'Thomas', 'Matthias', 'Stefan', 'Markus',
+    'Michael', 'Christian', 'Andreas', 'Daniel', 'Sebastian', 'Tobias',
+    'Florian', 'Niklas', 'Felix', 'Leon', 'Jonas', 'Philipp', 'Benjamin',
+    // German female
+    'Maria', 'Sarah', 'Anna', 'Elisabeth', 'Martha', 'Katharina', 'Laura',
+    'Lena', 'Julia', 'Sophie', 'Hannah', 'Lea', 'Emma', 'Clara', 'Mia',
+    'Franziska', 'Christina', 'Monika', 'Sabine', 'Ursula',
+    // English male
+    'James', 'John', 'William', 'David', 'Richard', 'Joseph', 'Charles',
+    'Robert', 'Henry', 'Edward', 'George', 'Samuel', 'Nathan', 'Elijah',
+    'Noah', 'Liam', 'Oliver', 'Ethan', 'Lucas', 'Mason',
+    // English female
+    'Mary', 'Emma', 'Olivia', 'Ava', 'Isabella', 'Sophia', 'Charlotte',
+    'Amelia', 'Harper', 'Evelyn', 'Abigail', 'Emily', 'Elizabeth', 'Grace',
+    'Chloe', 'Victoria', 'Rachel', 'Rebecca', 'Natalie', 'Audrey',
+    // French
+    'Pierre', 'Jacques', 'Michel', 'François', 'Henri', 'Marie', 'Isabelle',
+    'Chloé', 'Manon', 'Amélie',
+    // Italian
+    'Marco', 'Luca', 'Antonio', 'Giuseppe', 'Giovanna', 'Lucia', 'Chiara',
+    // Spanish/Portuguese
+    'Carlos', 'Miguel', 'Diego', 'Isabella', 'Sofia', 'Valentina',
+    // Eastern European
+    'Aleksander', 'Dmitri', 'Ivan', 'Natasha', 'Oksana', 'Miroslav',
+    // African/Arabic
+    'Ibrahim', 'Omar', 'Fatima', 'Aisha', 'Kwame', 'Amara',
+    // Asian
+    'Yuki', 'Kenji', 'Lin', 'Wei', 'Priya', 'Arjun',
+  ];
+
+  // 50+ last names: diverse cultural backgrounds.
+  static const List<String> _lastNames = [
+    // German
+    'Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner',
+    'Becker', 'Schulz', 'Hoffmann', 'Schäfer', 'Koch', 'Bauer', 'Richter',
+    'Klein', 'Wolf', 'Schröder', 'Neumann', 'Schwarz', 'Zimmermann',
+    // English
+    'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 'Davis',
+    'Wilson', 'Anderson', 'Taylor', 'Thomas', 'Jackson', 'White', 'Harris',
+    'Martin', 'Thompson', 'Young', 'Robinson', 'Walker', 'Hall',
+    // French/Italian
+    'Dubois', 'Moreau', 'Fontaine', 'Rossi', 'Ferrari', 'Conti',
+    // Spanish/Portuguese
+    'Garcia', 'Rodriguez', 'Martinez', 'Lopez', 'Hernandez', 'Silva',
+    // Eastern European
+    'Novak', 'Kowalski', 'Petrov', 'Popescu', 'Horvath',
+    // African/Arabic
+    'Hassan', 'Ibrahim', 'Al-Rashid', 'Diallo', 'Mensah',
+    // Asian
+    'Tanaka', 'Kimura', 'Wang', 'Li', 'Patel', 'Kumar',
+  ];
+
   String _getRandomName() {
-    final firstNames = ['Lukas', 'Maria', 'Johannes', 'Sarah', 'Peter', 'Anna', 'Thomas', 'Elisabeth', 'Matthias', 'Martha'];
-    final lastNames = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann'];
-    return '${firstNames[_random.nextInt(firstNames.length)]} ${lastNames[_random.nextInt(lastNames.length)]}';
+    final first = _firstNames[_random.nextInt(_firstNames.length)];
+    final last = _lastNames[_random.nextInt(_lastNames.length)];
+    return '$first $last';
+  }
+
+  // ── Age generation ───────────────────────────────────────────────────────
+
+  /// Generates a realistic NPC age between 18 and 85.
+  int _generateAge() => 18 + _random.nextInt(68); // 18–85
+
+  // ── Life story generation ────────────────────────────────────────────────
+
+  // Emoji pools for each life area: positive, neutral, negative.
+  static const _childhoodPos  = '👶🏡😊';
+  static const _childhoodNeu  = '👶🏫😐';
+  static const _childhoodNeg  = '👶😢🌧️';
+
+  static const _schoolPos     = '🏫📚⭐';
+  static const _schoolNeu     = '🏫📚😐';
+  static const _schoolNeg     = '🏫😔📚';
+
+  static const _familyPos     = '👨‍👩‍👧😊❤️';
+  static const _familyNeu     = '👪😐💭';
+  static const _familyNeg     = '💔😢👪';
+
+  static const _educationPos  = '🎓✨💼';
+  static const _educationNeu  = '🎓📖😐';
+  static const _educationNeg  = '🎓😔❌';
+
+  static const _workPos       = '💼😊🏆';
+  static const _workNeu       = '💼😐📋';
+  static const _workNeg       = '💼😞🔥';
+
+  static const _faithPos      = '⛪🙏✨';
+  static const _faithNeu      = '🤔💭❓';
+  static const _faithNeg      = '😤🚫⛪';
+
+  static const _marriagePos   = '💑😊💍';
+  static const _marriageNeu   = '💑😐🏠';
+  static const _marriageNeg   = '💔😢💍';
+
+  /// Picks one of three variants (positive/neutral/negative) randomly.
+  String _pickVariant(String pos, String neu, String neg) {
+    final roll = _random.nextDouble();
+    if (roll < 0.35) return pos;
+    if (roll < 0.65) return neu;
+    return neg;
+  }
+
+  /// Generates 4–6 life story segments based on the NPC's [age].
+  List<String> _generateLifeStory(int age) {
+    final segments = <String>[];
+
+    // Everyone has childhood
+    segments.add(_pickVariant(_childhoodPos, _childhoodNeu, _childhoodNeg));
+
+    if (age >= 14) {
+      segments.add(_pickVariant(_schoolPos, _schoolNeu, _schoolNeg));
+    }
+    if (age >= 18) {
+      segments.add(_pickVariant(_familyPos, _familyNeu, _familyNeg));
+    }
+    if (age >= 22) {
+      segments.add(_pickVariant(_educationPos, _educationNeu, _educationNeg));
+    }
+    if (age >= 25) {
+      segments.add(_pickVariant(_workPos, _workNeu, _workNeg));
+    }
+    // ~60 % chance of marriage segment for adults
+    if (age >= 20 && _random.nextDouble() < 0.6) {
+      segments.add(_pickVariant(_marriagePos, _marriageNeu, _marriageNeg));
+    }
+    // Faith background for older NPCs (30+)
+    if (age >= 30) {
+      segments.add(_pickVariant(_faithPos, _faithNeu, _faithNeg));
+    }
+
+    return segments;
   }
 
   List<NPCModel> getNPCsNear(Vector2 position, double radius) {

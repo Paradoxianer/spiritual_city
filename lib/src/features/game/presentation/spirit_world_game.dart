@@ -325,6 +325,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     _checkAndApplyModifiers();
   }
 
+  /// Record a completed bible reading
+  void recordBibleReading() {
+    progress.recordBibleReading();
+    _checkAndApplyModifiers();
+  }
+
   /// Record an NPC conversion
   void recordConversion() {
     progress.recordConversion();

@@ -121,5 +121,117 @@ void main() {
         expect(calc.calculateDarknessLoss(), 2);
       });
     });
+
+    group('calculateCounselingGain', () {
+      test('normal difficulty: gain in range [1, 3]', () {
+        final calc = FaithCalculatorService(difficulty: Difficulty.normal, rng: seededRng(10));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateCounselingGain();
+          expect(gain, inInclusiveRange(1, 3));
+        }
+      });
+
+      test('easy difficulty: gain in range [2, 5]', () {
+        // base=1 → ceil(1.5)=2; base=3 → ceil(4.5)=5
+        final calc = FaithCalculatorService(difficulty: Difficulty.easy, rng: seededRng(11));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateCounselingGain();
+          expect(gain, inInclusiveRange(2, 5));
+        }
+      });
+
+      test('hard difficulty: gain in range [1, 2]', () {
+        final calc = FaithCalculatorService(difficulty: Difficulty.hard, rng: seededRng(12));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateCounselingGain();
+          expect(gain, inInclusiveRange(1, 2));
+        }
+      });
+    });
+
+    group('calculateBibleReadingPlayerGain', () {
+      test('normal difficulty: gain in range [3, 6]', () {
+        final calc = FaithCalculatorService(difficulty: Difficulty.normal, rng: seededRng(13));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateBibleReadingPlayerGain();
+          expect(gain, inInclusiveRange(3, 6));
+        }
+      });
+
+      test('easy difficulty: gain in range [5, 9]', () {
+        // base=3 → ceil(4.5)=5; base=6 → ceil(9.0)=9
+        final calc = FaithCalculatorService(difficulty: Difficulty.easy, rng: seededRng(14));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateBibleReadingPlayerGain();
+          expect(gain, inInclusiveRange(5, 9));
+        }
+      });
+    });
+
+    group('calculateBibleReadingNPCGain', () {
+      test('normal difficulty: gain in range [1, 3]', () {
+        final calc = FaithCalculatorService(difficulty: Difficulty.normal, rng: seededRng(15));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateBibleReadingNPCGain();
+          expect(gain, inInclusiveRange(1, 3));
+        }
+      });
+    });
+
+    group('calculateProphecyGain', () {
+      test('normal difficulty: gain in range [20, 30]', () {
+        final calc = FaithCalculatorService(difficulty: Difficulty.normal, rng: seededRng(16));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateProphecyGain();
+          expect(gain, inInclusiveRange(20, 30));
+        }
+      });
+
+      test('easy difficulty: gain in range [30, 45]', () {
+        // base=20 → ceil(30.0)=30; base=30 → ceil(45.0)=45
+        final calc = FaithCalculatorService(difficulty: Difficulty.easy, rng: seededRng(17));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateProphecyGain();
+          expect(gain, inInclusiveRange(30, 45));
+        }
+      });
+
+      test('hard difficulty: gain in range [10, 15]', () {
+        // base=20 → ceil(10.0)=10; base=30 → ceil(15.0)=15
+        final calc = FaithCalculatorService(difficulty: Difficulty.hard, rng: seededRng(18));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateProphecyGain();
+          expect(gain, inInclusiveRange(10, 15));
+        }
+      });
+    });
+
+    group('calculateHealingGain', () {
+      test('normal difficulty: gain in range [15, 20]', () {
+        final calc = FaithCalculatorService(difficulty: Difficulty.normal, rng: seededRng(19));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateHealingGain();
+          expect(gain, inInclusiveRange(15, 20));
+        }
+      });
+
+      test('easy difficulty: gain in range [23, 30]', () {
+        // base=15 → ceil(22.5)=23; base=20 → ceil(30.0)=30
+        final calc = FaithCalculatorService(difficulty: Difficulty.easy, rng: seededRng(20));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateHealingGain();
+          expect(gain, inInclusiveRange(23, 30));
+        }
+      });
+
+      test('hard difficulty: gain in range [8, 10]', () {
+        // base=15 → ceil(7.5)=8; base=20 → ceil(10.0)=10
+        final calc = FaithCalculatorService(difficulty: Difficulty.hard, rng: seededRng(21));
+        for (int i = 0; i < 100; i++) {
+          final gain = calc.calculateHealingGain();
+          expect(gain, inInclusiveRange(8, 10));
+        }
+      });
+    });
   });
 }

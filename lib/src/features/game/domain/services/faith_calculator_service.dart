@@ -30,6 +30,37 @@ class FaithCalculatorService {
     return _applyMultiplier(base);
   }
 
+  /// Seelsorge / Counseling (👂): actively listening builds trust.
+  /// NPC faith gain 1–3.
+  int calculateCounselingGain() {
+    final base = 1 + _random.nextInt(3); // 1, 2, or 3
+    return _applyMultiplier(base);
+  }
+
+  /// Bible reading (📖) – player faith gain: 3–6.
+  int calculateBibleReadingPlayerGain() {
+    final base = 3 + _random.nextInt(4); // 3, 4, 5, or 6
+    return _applyMultiplier(base);
+  }
+
+  /// Bible reading (📖) – NPC faith gain: 1–3.
+  int calculateBibleReadingNPCGain() {
+    final base = 1 + _random.nextInt(3); // 1, 2, or 3
+    return _applyMultiplier(base);
+  }
+
+  /// Prophecy (🔮) – NPC faith gain: 20–30 (costly: −5 player faith).
+  int calculateProphecyGain() {
+    final base = 20 + _random.nextInt(11); // 20–30
+    return _applyMultiplier(base);
+  }
+
+  /// Healing (💊) – NPC faith gain: 15–20 (costly: −5 player health).
+  int calculateHealingGain() {
+    final base = 15 + _random.nextInt(6); // 15–20
+    return _applyMultiplier(base);
+  }
+
   /// Faith lost per time-unit spent in a darkness zone.
   int calculateDarknessLoss() {
     const baseLoss = 1;
