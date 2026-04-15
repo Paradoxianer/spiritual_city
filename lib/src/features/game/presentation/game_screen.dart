@@ -210,6 +210,8 @@ class _DialogOverlayState extends State<DialogOverlay> {
   final ScrollController _scrollController = ScrollController();
   bool _isWaiting = false;
   bool _isSessionOver = false;
+  /// Last interaction cost/gain string shown in the dialog header.
+  String _lastFeedback = '';
 
   @override
   void initState() {
@@ -267,10 +269,10 @@ class _DialogOverlayState extends State<DialogOverlay> {
         model.pendingMessages.clear();
       }
 
-      // Show resource feedback line
+      // Show resource feedback in the header (not as a chat bubble)
       if (model != null) {
         final feedback = _buildFeedback(model);
-        if (feedback.isNotEmpty) _addMessage(feedback, false);
+        if (feedback.isNotEmpty) setState(() => _lastFeedback = feedback);
       }
 
       setState(() => _isWaiting = false);
@@ -360,10 +362,21 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   CircleAvatar(backgroundColor: Colors.white24, child: Text(dialog.npcEmoji)),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      '${dialog.npcName} (${model.age})',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${dialog.npcName} (${model.age})',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (_lastFeedback.isNotEmpty)
+                          Text(
+                            _lastFeedback,
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                      ],
                     ),
                   ),
                   IconButton(
@@ -434,41 +447,50 @@ class _DialogOverlayState extends State<DialogOverlay> {
   }
 }
 
-/// Right-side panel inside the dialog showing all life-story stages.
-/// Revealed stages show the stage icon + segment emojis on a coloured tile.
-/// Locked stages show the stage icon dimmed with a 🔒 overlay.
+/// Right-side panel inside the dialog showing all revealed life-story stages.
+/// Only discovered stages are shown; unrevealed stages are hidden entirely.
+/// Display order is reversed: the most recently revealed stage (highest index)
+/// appears at the top, childhood at the bottom.
+/// Each row: `👶  🏡😊🌈` (stage icon as label, then emoji segment).
 class _LifeStoryPanel extends StatelessWidget {
   final NPCModel model;
   const _LifeStoryPanel({required this.model});
 
   @override
   Widget build(BuildContext context) {
-    final total = model.lifeStory.length;
+    final revealed = model.revealedLifeStoryCount;
+    if (revealed == 0) {
+      return Container(
+        width: 108,
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A3A35),
+          border: Border(left: BorderSide(color: Colors.white12)),
+        ),
+      );
+    }
+    // Show indices 0..revealed-1 in REVERSE order (newest/highest first).
+    final indices = List.generate(revealed, (i) => revealed - 1 - i);
     return Container(
       width: 108,
       decoration: const BoxDecoration(
         color: Color(0xFF1A3A35),
         border: Border(left: BorderSide(color: Colors.white12)),
       ),
-      child: total == 0
-          ? const SizedBox.shrink()
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              itemCount: total,
-              itemBuilder: (context, i) {
-                final revealed = i < model.revealedLifeStoryCount;
-                final icon = (i < model.lifeStoryIcons.length)
-                    ? model.lifeStoryIcons[i]
-                    : '❓';
-                final segment = model.lifeStory[i];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: revealed
-                      ? _RevealedTile(icon: icon, segment: segment)
-                      : _LockedTile(icon: icon),
-                );
-              },
-            ),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        itemCount: indices.length,
+        itemBuilder: (context, pos) {
+          final i = indices[pos];
+          final icon = (i < model.lifeStoryIcons.length)
+              ? model.lifeStoryIcons[i]
+              : '❓';
+          final segment = model.lifeStory[i];
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: _RevealedTile(icon: icon, segment: segment),
+          );
+        },
+      ),
     );
   }
 }
@@ -483,46 +505,22 @@ class _RevealedTile extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF128C7E).withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 18)),
-          const SizedBox(height: 2),
-          Text(
-            segment,
-            style: const TextStyle(fontSize: 14),
-            textAlign: TextAlign.center,
+          Text(icon, style: const TextStyle(fontSize: 14)),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              segment,
+              style: const TextStyle(fontSize: 13),
+              textAlign: TextAlign.left,
+              softWrap: true,
+            ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LockedTile extends StatelessWidget {
-  final String icon;
-  const _LockedTile({required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black26,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            icon,
-            style: const TextStyle(fontSize: 18, color: Colors.white24),
-          ),
-          const SizedBox(height: 2),
-          const Text('🔒', style: TextStyle(fontSize: 12)),
         ],
       ),
     );

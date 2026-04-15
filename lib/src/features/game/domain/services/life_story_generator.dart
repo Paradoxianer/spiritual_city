@@ -6,55 +6,133 @@ import 'dart:math';
 /// Every emoji in every stage pool is registered in [emojiValence] with a
 /// fixed valence (+1 positive / 0 neutral / -1 negative).  When a segment of
 /// three emoji is assembled its tone is determined by majority vote: a sum >= 2
-/// is positive, <= -2 is negative, anything else is neutral.  This replaces the
-/// old "three separate pools per stage" approach with a single combined pool
-/// and a shared valence map.
+/// is positive, <= -2 is negative, anything else is neutral.
 class LifeStoryGenerator {
   final Random _random;
 
   LifeStoryGenerator(this._random);
 
-  // Stage icons
-  static const String _iconChildhood = '👶';
-  static const String _iconSchool    = '🏫';
-  static const String _iconFamily    = '👪';
-  static const String _iconEducation = '🎓';
-  static const String _iconWork      = '💼';
-  static const String _iconMarriage  = '💑';
-  static const String _iconFaith     = '⛪';
+  // ── Stage icons ───────────────────────────────────────────────────────────
+  static const String _iconChildhood = '\u{1F476}'; // 👶
+  static const String _iconSchool    = '\u{1F3EB}'; // 🏫
+  static const String _iconFamily    = '\u{1F46A}'; // 👪
+  static const String _iconEducation = '\u{1F393}'; // 🎓
+  static const String _iconWork      = '\u{1F4BC}'; // 💼
+  static const String _iconMarriage  = '\u{1F491}'; // 💑
+  static const String _iconFaith     = '\u{26EA}';  // ⛪
 
   // ── Emoji valence map ─────────────────────────────────────────────────────
   /// Global valence of every emoji that can appear in a life-story segment.
   /// +1 = positive, 0 = neutral, -1 = negative.
   static const Map<String, int> emojiValence = {
-    // Positive (+1)
-    '🏡': 1, '��': 1, '🌈': 1, '🎠': 1, '🧸': 1, '🌻': 1, '🎈': 1, '🍭': 1, '🤸': 1,
-    '🎖️': 1, '🏆': 1, '🌟': 1, '🥇': 1, '🎯': 1, '🙌': 1,
-    '🫂': 1, '🎉': 1, '🤗': 1, '💕': 1, '🌷': 1, '🎂': 1, '🥰': 1,
-    '📜': 1, '🏅': 1, '🚀': 1, '💡': 1, '📈': 1, '🤝': 1, '��': 1,
-    '💍': 1, '🌹': 1, '🎊': 1, '🥂': 1, '🌸': 1, '🤍': 1,
-    '🙏': 1, '🌄': 1, '🕊️': 1, '✝️': 1, '💒': 1, '🌅': 1,
-    // Neutral (0)
-    '😐': 0, '🏠': 0, '🧺': 0, '🌥️': 0, '🚌': 0, '🎒': 0, '🧩': 0, '🕰️': 0,
-    '📚': 0, '📝': 0, '✏️': 0, '📖': 0, '🕐': 0, '😑': 0, '📋': 0, '🖊️': 0,
-    '💭': 0, '🍽️': 0, '🛋️': 0, '📺': 0, '😶': 0,
-    '📊': 0, '🏛️': 0, '🎓': 0,
-    '🖥️': 0, '⏱️': 0, '🏢': 0, '📁': 0, '🔧': 0,
-    '🤔': 0, '📅': 0, '🌙': 0,
-    '❓': 0, '🕯️': 0, '🌿': 0,
-    // Negative (-1)
-    '😢': -1, '🌧️': -1, '😰': -1, '💔': -1, '😨': -1, '🌑': -1, '😣': -1, '🚫': -1,
-    '😔': -1, '😞': -1, '😤': -1, '❌': -1, '😩': -1, '📉': -1, '😠': -1,
-    '🚪': -1, '💸': -1, '🔥': -1, '⚡': -1, '😒': -1, '💨': -1,
+    // ── Positive (+1) ────────────────────────────────────────────────────────
+    '\u{1F3E1}': 1, // 🏡
+    '\u{1F60A}': 1, // 😊
+    '\u{1F308}': 1, // 🌈
+    '\u{1F3A0}': 1, // 🎠
+    '\u{1F9F8}': 1, // 🧸
+    '\u{1F33B}': 1, // 🌻
+    '\u{1F388}': 1, // 🎈
+    '\u{1F36D}': 1, // 🍭
+    '\u{1F938}': 1, // 🤸
+    '\u{1F396}\uFE0F': 1, // 🎖️
+    '\u{1F3C6}': 1, // 🏆
+    '\u{1F31F}': 1, // 🌟
+    '\u{1F947}': 1, // 🥇
+    '\u{1F3AF}': 1, // 🎯
+    '\u{1F64C}': 1, // 🙌
+    '\u{1FAC2}': 1, // 🫂
+    '\u{1F389}': 1, // 🎉
+    '\u{1F917}': 1, // 🤗
+    '\u{1F495}': 1, // 💕
+    '\u{1F337}': 1, // 🌷
+    '\u{1F382}': 1, // 🎂
+    '\u{1F970}': 1, // 🥰
+    '\u{1F4DC}': 1, // 📜
+    '\u{1F3C5}': 1, // 🏅
+    '\u{1F680}': 1, // 🚀
+    '\u{1F4A1}': 1, // 💡
+    '\u{1F4C8}': 1, // 📈
+    '\u{1F91D}': 1, // 🤝
+    '\u{1F4B5}': 1, // 💵
+    '\u{1F48D}': 1, // 💍
+    '\u{1F339}': 1, // 🌹
+    '\u{1F38A}': 1, // 🎊
+    '\u{1F942}': 1, // 🥂
+    '\u{1F338}': 1, // 🌸
+    '\u{1F90D}': 1, // 🤍
+    '\u{1F64F}': 1, // 🙏
+    '\u{1F304}': 1, // 🌄
+    '\u{1F54A}\uFE0F': 1, // 🕊️
+    '\u2705': 1,    // ✅  (replacing ✝️ to avoid stat-emoji conflict)
+    '\u{1F492}': 1, // 💒
+    '\u{1F305}': 1, // 🌅
+    // ── Neutral (0) ──────────────────────────────────────────────────────────
+    '\u{1F610}': 0, // 😐
+    '\u{1F3E0}': 0, // 🏠
+    '\u{1F9FA}': 0, // 🧺
+    '\u{1F325}\uFE0F': 0, // 🌥️
+    '\u{1F68C}': 0, // 🚌
+    '\u{1F392}': 0, // 🎒
+    '\u{1F9E9}': 0, // 🧩
+    '\u{1F570}\uFE0F': 0, // 🕰️
+    '\u{1F4DA}': 0, // 📚
+    '\u{1F4DD}': 0, // 📝
+    '\u270F\uFE0F': 0, // ✏️
+    '\u{1F4D6}': 0, // 📖
+    '\u{1F550}': 0, // 🕐
+    '\u{1F611}': 0, // 😑
+    '\u{1F4CB}': 0, // 📋
+    '\u{1F58A}\uFE0F': 0, // 🖊️
+    '\u{1F4AD}': 0, // 💭
+    '\u{1F37D}\uFE0F': 0, // 🍽️
+    '\u{1F6CB}\uFE0F': 0, // 🛋️
+    '\u{1F4FA}': 0, // 📺
+    '\u{1F636}': 0, // 😶
+    '\u{1F4CA}': 0, // 📊
+    '\u{1F3DB}\uFE0F': 0, // 🏛️
+    '\u{1F393}': 0, // 🎓
+    '\u{1F5A5}\uFE0F': 0, // 🖥️
+    '\u23F1\uFE0F': 0,    // ⏱️
+    '\u{1F3E2}': 0, // 🏢
+    '\u{1F4C1}': 0, // 📁
+    '\u{1F527}': 0, // 🔧
+    '\u{1F914}': 0, // 🤔
+    '\u{1F4C5}': 0, // 📅
+    '\u{1F319}': 0, // 🌙
+    '\u2753': 0,    // ❓
+    '\u{1F56F}\uFE0F': 0, // 🕯️
+    '\u{1F33F}': 0, // 🌿
+    // ── Negative (-1) ────────────────────────────────────────────────────────
+    '\u{1F622}': -1, // 😢
+    '\u{1F327}\uFE0F': -1, // 🌧️
+    '\u{1F630}': -1, // 😰
+    '\u{1F494}': -1, // 💔
+    '\u{1F628}': -1, // 😨
+    '\u{1F311}': -1, // 🌑
+    '\u{1F623}': -1, // 😣
+    '\u{1F6AB}': -1, // 🚫
+    '\u{1F614}': -1, // 😔
+    '\u{1F61E}': -1, // 😞
+    '\u{1F624}': -1, // 😤
+    '\u274C': -1,    // ❌
+    '\u{1F629}': -1, // 😩
+    '\u{1F4C9}': -1, // 📉
+    '\u{1F620}': -1, // 😠
+    '\u{1F6AA}': -1, // 🚪
+    '\u{1F4B8}': -1, // 💸
+    '\u{1F525}': -1, // 🔥
+    '\u26A1': -1,    // ⚡
+    '\u{1F612}': -1, // 😒
+    '\u{1F4A8}': -1, // 💨
   };
 
   // ── Combined stage pools ──────────────────────────────────────────────────
-  // Each pool lists all emoji for that life stage in three thematic groups
-  // (positive / neutral / negative).  The groups are informational only; the
-  // actual valence of each emoji is determined by [emojiValence].
+  // Emoji literal strings are used here for readability.
+  // The actual valence is always looked up from [emojiValence].
   static const _childhoodPool = [
     '🏡', '😊', '🌈', '🎠', '🧸', '🌻', '🎈', '🍭', '🤸', // positive
-    '��', '🏠', '🧺', '🌥️', '🚌', '🎒', '🧩', '🕰️',        // neutral
+    '😐', '🏠', '🧺', '🌥️', '🚌', '🎒', '🧩', '🕰️',        // neutral
     '😢', '🌧️', '😰', '💔', '😨', '🌑', '😣', '🚫',         // negative
   ];
 
@@ -79,17 +157,17 @@ class LifeStoryGenerator {
   static const _workPool = [
     '😊', '🏆', '🌟', '💵', '📈', '🎯', '🤝', '🏅', '🚀',  // positive
     '😐', '📋', '🖥️', '⏱️', '📊', '🏢', '📁', '🔧',         // neutral
-    '😞', '🔥', '💸', '😩', '📉', '😤', '❌', '⚡',          // negative
+    '😞', '🔥', '��', '😩', '📉', '😤', '❌', '⚡',          // negative
   ];
 
   static const _marriagePool = [
-    '😊', '💍', '💕', '🌹', '🎊', '🥂', '🏡', '🌸', '🤍',  // positive
+    '😊', '💍', '💕', '🌹', '🎊', '��', '🏡', '🌸', '🤍',  // positive
     '😐', '🏠', '🍽️', '🛋️', '💭', '🤔', '📅', '🌙',         // neutral
     '💔', '😢', '😤', '🚪', '😔', '❌', '🌧️', '😰',         // negative
   ];
 
   static const _faithPool = [
-    '🙏', '🌄', '📖', '🕊️', '✝️', '💒', '🌟', '🙌', '🌅',  // positive
+    '🙏', '🌄', '📖', '🕊️', '✅', '💒', '🌟', '🙌', '🌅',  // positive
     '🤔', '💭', '❓', '🕯️', '😐', '🌿',                       // neutral
     '😤', '🚫', '❌', '😒', '💨', '🌑', '😔', '⚡',          // negative
   ];
