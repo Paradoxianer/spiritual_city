@@ -128,6 +128,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.conversationCount++;
       model.lastNpcFaithDelta = gain.toDouble();
       game.recordConversation();
+      // Reveal a life story segment every 2nd conversation (odd counts: 2, 4, 6, …)
+      if (model.conversationCount % 2 == 0) {
+        _revealNextLifeStorySegment();
+      }
       // Random chance NPC asks for material support
       _maybeRequestGift();
       return _talkEmoji();
@@ -140,12 +144,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.conversationCount++;
       model.lastNpcFaithDelta = gain.toDouble();
       game.recordConversation();
-      // Reveal next life story segment
-      if (model.revealedLifeStoryCount < model.lifeStory.length) {
-        final segment = model.lifeStory[model.revealedLifeStoryCount];
-        model.revealedLifeStoryCount++;
-        model.pendingMessages.add(segment);
-      }
+      // Counsel always reveals the next life story segment (faster than talk)
+      _revealNextLifeStorySegment();
       // Random chance NPC asks for material support after opening up
       _maybeRequestGift(baseChance: 0.4);
       return ['😊👂', '👂💬', '👂🙏'][_random.nextInt(3)];
@@ -242,6 +242,16 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     return '❓💭';
+  }
+
+  /// Reveals the next unrevealed life story segment into [model.pendingMessages].
+  /// Does nothing if all segments are already revealed.
+  void _revealNextLifeStorySegment() {
+    if (model.revealedLifeStoryCount < model.lifeStory.length) {
+      final segment = model.lifeStory[model.revealedLifeStoryCount];
+      model.revealedLifeStoryCount++;
+      model.pendingMessages.add(segment);
+    }
   }
 
   /// Adds a gift-request to pendingMessages with the given [baseChance]
