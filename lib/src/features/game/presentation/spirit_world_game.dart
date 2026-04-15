@@ -96,6 +96,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     player = PlayerComponent(joystick: _createJoystick());
     // Start in the suburbs so the player encounters residential streets first.
+    // pixel (7000, 7000) → grid cell (floor(7000/32), floor(7000/32)) = (218, 218).
+    // The pastor's house is placed at grid cell (220, 222) — just a few cells
+    // away — see SpecialBuildingRegistry._pastorHouseX/Y.
     player.position = Vector2(7000, 7000);
     await world.add(player);
 

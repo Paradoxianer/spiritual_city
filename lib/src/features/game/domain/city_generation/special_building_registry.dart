@@ -44,6 +44,11 @@ class SpecialBuildingRegistry {
   static const int _museumOffY     =   8;
   static const int _powerPlantOffX = 200;
   static const int _powerPlantOffY = 180;
+  // Player spawn is at pixel (7000, 7000) = grid cell (218, 218).
+  // The pastor house is placed a few cells east so the player can immediately
+  // walk up to it.  (220 % 8 = 4, 222 % 8 = 6 → valid non-sidewalk lot cells.)
+  static const int _pastorHouseX   = 220;
+  static const int _pastorHouseY   = 222;
 
   // ---- Zone sizes for per-zone buildings (in cells, ~1 cell = 10 m) -------
   // Roughly calibrated for a 500 000-inhabitant city (~650-cell radius):
@@ -82,6 +87,10 @@ class SpecialBuildingRegistry {
   // ---- Global landmark helpers --------------------------------------------
 
   BuildingType? _checkGlobal(int wx, int wy, DistrictType district) {
+    // Pastor's house – fixed position near the player spawn point.
+    if (wx == _pastorHouseX && wy == _pastorHouseY) {
+      return BuildingType.pastorHouse;
+    }
     // City Hall – must be in downtown
     if (district == DistrictType.downtown &&
         wx == _cityHallX && wy == _cityHallY) {

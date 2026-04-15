@@ -506,8 +506,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   void _performAction(String actionType) {
     final result = widget.game.handleBuildingAction(actionType);
     setState(() => _lastReaction = result.reactionEmoji);
-    // Auto-leave on success: show feedback briefly then close the overlay.
-    if (result.success) {
+    // Auto-leave on success – but NOT for the pastor's own home (homebase),
+    // where the player should stay as long as they like.
+    final data = widget.game.activeBuildingData;
+    if (result.success && (data == null || !data.building.isHomebase)) {
       Future.delayed(const Duration(milliseconds: 1200), () {
         if (mounted) widget.game.closeBuildingInterior();
       });
@@ -519,6 +521,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     final data = widget.game.activeBuildingData;
     if (data == null) return const SizedBox.shrink();
 
+    final isHome = data.building.isHomebase;
     return Align(
       alignment: Alignment.center,
       child: Container(
@@ -528,9 +531,23 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         ),
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A237E).withValues(alpha: 0.97),
+          color: isHome
+              ? const Color(0xFF3E2723).withValues(alpha: 0.97)
+              : const Color(0xFF1A237E).withValues(alpha: 0.97),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12)],
+          border: isHome
+              ? Border.all(color: const Color(0xFFFFD54F), width: 2.5)
+              : null,
+          boxShadow: isHome
+              ? [
+                  const BoxShadow(color: Colors.black54, blurRadius: 12),
+                  BoxShadow(
+                    color: const Color(0xFFFFD54F).withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    spreadRadius: 4,
+                  ),
+                ]
+              : const [BoxShadow(color: Colors.black54, blurRadius: 12)],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -551,17 +568,18 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   // ── Header ────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(BuildingModel building) {
+    final isHome = building.isHomebase;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF283593),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: isHome ? const Color(0xFF4E342E) : const Color(0xFF283593),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
         children: [
           Text(
             _buildingTypeEmoji(building.type),
-            style: const TextStyle(fontSize: 28),
+            style: TextStyle(fontSize: isHome ? 32 : 28),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -569,13 +587,38 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  _buildingTypeName(building.type),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      _buildingTypeName(building.type),
+                      style: TextStyle(
+                        color: isHome ? const Color(0xFFFFD54F) : Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: isHome ? 19 : 17,
+                      ),
+                    ),
+                    if (isHome) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: const Color(0xFFFFD54F).withValues(alpha: 0.6)),
+                        ),
+                        child: const Text(
+                          'Mein Zuhause',
+                          style: TextStyle(
+                            color: Color(0xFFFFD54F),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 if (building.residents.isNotEmpty)
                   Text(
@@ -984,10 +1027,14 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   InteriorArt _interiorArt(BuildingType type) {
     switch (type) {
       case BuildingType.pastorHouse:
+        // 5×5 room layout: outer cells are walls (🧱), inner cells are
+        // furniture.  The bottom-centre wall is replaced with a door (🚪).
         return EmojiGridArt([
-          ['📖', '✝️', '🕯️'],
-          ['🛏️', '🪑', '🪴'],
-          ['🍳', '📚', '🚪'],
+          ['🧱', '🧱', '🧱', '🧱', '🧱'],
+          ['🧱', '📖', '✝️', '🕯️', '🧱'],
+          ['🧱', '🛏️', '🪑', '🪴', '🧱'],
+          ['🧱', '🍳', '📚', '🙏', '🧱'],
+          ['🧱', '🧱', '🚪', '🧱', '🧱'],
         ]);
       case BuildingType.house:
       case BuildingType.apartment:

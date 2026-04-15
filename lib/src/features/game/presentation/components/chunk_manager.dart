@@ -236,6 +236,7 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         buildingId: bInfo.buildingId,
         type: bInfo.type,
         residents: residents,
+        isHomebase: bInfo.type == BuildingType.pastorHouse,
       );
       _buildingModels[bInfo.buildingId] = model;
 
