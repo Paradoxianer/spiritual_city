@@ -1061,155 +1061,377 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           ],
         );
       case BuildingType.house:
-        return EmojiGridArt([
-          ['🏡', '🪴', '🪟'],
-          ['🛁', '🚪', '🍳'],
-          ['🛏️', '📚', '🪑'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFC8A97A), // warm beige
+          furniture: [
+            (0.15, 0.08, '🪟'), // window left
+            (0.85, 0.08, '🪟'), // window right
+            (0.08, 0.35, '📚'), // bookshelf
+            (0.88, 0.32, '🛏️'), // bed
+            (0.50, 0.48, '🛋️'), // sofa centre
+            (0.50, 0.22, '📺'), // TV above sofa
+            (0.15, 0.74, '🍳'), // kitchen stove
+            (0.82, 0.70, '🪴'), // plant corner
+            (0.50, 0.78, '🪑'), // chair at table
+          ],
+        );
       case BuildingType.apartment:
-        return EmojiGridArt([
-          ['📬', '🪟', '🪟'],
-          ['🛋️', '📺', '🍳'],
-          ['🛏️', '🚿', '🚪'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF7A90A8), // cool steel blue
+          furniture: [
+            (0.20, 0.08, '🪟'), // window
+            (0.80, 0.08, '📬'), // letter slot
+            (0.10, 0.38, '🛏️'), // bed left
+            (0.88, 0.42, '🚿'), // shower
+            (0.50, 0.26, '📺'), // TV
+            (0.50, 0.52, '🛋️'), // sofa
+            (0.18, 0.72, '🍳'), // kitchen
+            (0.80, 0.74, '🪑'), // chair
+          ],
+        );
       // ── Religion ────────────────────────────────────────────────────────────
       case BuildingType.church:
-        return EmojiGridArt([
-          ['⛪', '✝️', '⛪'],
-          ['🕯️', '📖', '🕯️'],
-          ['🪑', '🙏', '🪑'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFD6C9A0), // pale sandstone
+          furniture: [
+            (0.50, 0.07, '✝️'), // cross, back wall
+            (0.15, 0.08, '🔔'), // bell left
+            (0.85, 0.08, '🔔'), // bell right
+            (0.10, 0.35, '🕯️'), // candle left
+            (0.90, 0.35, '🕯️'), // candle right
+            (0.50, 0.32, '📖'), // open bible on lectern
+            (0.22, 0.60, '🪑'), // pew left
+            (0.50, 0.60, '🙏'), // kneeling
+            (0.78, 0.60, '🪑'), // pew right
+          ],
+        );
       case BuildingType.cathedral:
-        return EmojiGridArt([
-          ['🔔', '⛪', '🔔'],
-          ['✝️', '📖', '✝️'],
-          ['🕯️', '🙏', '🕯️'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFC0A870), // aged stone gold
+          furniture: [
+            (0.50, 0.06, '✝️'), // high cross
+            (0.20, 0.07, '🪟'), // stained window
+            (0.80, 0.07, '🪟'), // stained window
+            (0.10, 0.28, '🕯️'),
+            (0.90, 0.28, '🕯️'),
+            (0.50, 0.28, '📖'), // altar bible
+            (0.18, 0.55, '🪑'), // pew
+            (0.82, 0.55, '🪑'),
+            (0.50, 0.50, '🔔'), // hanging bell
+            (0.50, 0.75, '🙏'),
+          ],
+        );
       case BuildingType.cemetery:
-        return EmojiGridArt([
-          ['✝️', '🌿', '✝️'],
-          ['🕯️', '⛪', '🕯️'],
-          ['✝️', '🌿', '✝️'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF6B7B6B), // mossy grey-green
+          furniture: [
+            (0.25, 0.10, '✝️'),
+            (0.75, 0.10, '✝️'),
+            (0.12, 0.38, '🌿'),
+            (0.88, 0.38, '🌿'),
+            (0.50, 0.32, '⛪'),
+            (0.30, 0.62, '🕯️'),
+            (0.70, 0.62, '🕯️'),
+            (0.50, 0.70, '🌿'),
+          ],
+        );
       // ── Health & Education ───────────────────────────────────────────────────
       case BuildingType.hospital:
-        return EmojiGridArt([
-          ['🛏️', '🛏️', '🔬'],
-          ['💊', '🏥', '🩺'],
-          ['🛏️', '🛏️', '📋'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFB8D4E0), // clinical light blue
+          furniture: [
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.32, '🛏️'),
+            (0.88, 0.32, '🛏️'),
+            (0.50, 0.22, '🏥'),
+            (0.50, 0.48, '🩺'),
+            (0.20, 0.68, '💊'),
+            (0.80, 0.65, '🔬'),
+            (0.50, 0.74, '📋'),
+          ],
+        );
       case BuildingType.school:
-        return EmojiGridArt([
-          ['📚', '🖊️', '📝'],
-          ['🪑', '🏫', '🪑'],
-          ['📖', '✏️', '📐'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFD4C87A), // chalk-board yellow
+          furniture: [
+            (0.50, 0.10, '🖊️'), // blackboard top
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.20, 0.38, '🪑'),
+            (0.50, 0.38, '🪑'),
+            (0.80, 0.38, '🪑'),
+            (0.20, 0.60, '📝'),
+            (0.50, 0.55, '📚'),
+            (0.80, 0.60, '✏️'),
+            (0.50, 0.78, '📐'),
+          ],
+        );
       case BuildingType.university:
-        return EmojiGridArt([
-          ['🎓', '📐', '🔬'],
-          ['📚', '🏛️', '💻'],
-          ['📖', '🧪', '🎓'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF8B7355), // dark oak
+          furniture: [
+            (0.50, 0.08, '🎓'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.10, 0.35, '📚'),
+            (0.90, 0.35, '📚'),
+            (0.50, 0.32, '💻'),
+            (0.22, 0.60, '🔬'),
+            (0.50, 0.60, '📖'),
+            (0.78, 0.60, '🧪'),
+            (0.50, 0.78, '🎓'),
+          ],
+        );
       // ── Commercial ──────────────────────────────────────────────────────────
       case BuildingType.shop:
-        return EmojiGridArt([
-          ['🛍️', '📦', '🏷️'],
-          ['🛒', '🏪', '💳'],
-          ['📦', '💰', '🛒'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFE8B870), // warm shop amber
+          furniture: [
+            (0.50, 0.08, '🏪'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.35, '📦'),
+            (0.88, 0.35, '📦'),
+            (0.50, 0.35, '🛍️'),
+            (0.25, 0.62, '🏷️'),
+            (0.50, 0.60, '🛒'),
+            (0.75, 0.62, '💰'),
+          ],
+        );
       case BuildingType.supermarket:
-        return EmojiGridArt([
-          ['🥦', '🥩', '🥛'],
-          ['🛒', '🏪', '🛒'],
-          ['🥫', '💳', '🧾'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF78B878), // fresh green
+          furniture: [
+            (0.50, 0.08, '🏪'),
+            (0.10, 0.30, '🥦'),
+            (0.30, 0.30, '🥩'),
+            (0.70, 0.30, '🥛'),
+            (0.90, 0.30, '🥫'),
+            (0.20, 0.58, '🛒'),
+            (0.80, 0.58, '🛒'),
+            (0.50, 0.58, '💳'),
+            (0.50, 0.76, '🧾'),
+          ],
+        );
       case BuildingType.mall:
-        return EmojiGridArt([
-          ['🛍️', '👗', '👟'],
-          ['☕', '🏬', '🍕'],
-          ['💎', '💳', '🛒'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFD0A0C8), // fashion violet
+          furniture: [
+            (0.50, 0.08, '🏬'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.15, 0.35, '👗'),
+            (0.85, 0.35, '👟'),
+            (0.50, 0.38, '☕'),
+            (0.25, 0.65, '💎'),
+            (0.50, 0.62, '🍕'),
+            (0.75, 0.65, '🛍️'),
+            (0.50, 0.78, '💳'),
+          ],
+        );
       case BuildingType.office:
-        return EmojiGridArt([
-          ['🖥️', '📁', '☕'],
-          ['🪑', '🏢', '📞'],
-          ['📋', '🖊️', '📎'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF8898A8), // corporate grey-blue
+          furniture: [
+            (0.50, 0.08, '🏢'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.38, '🖥️'),
+            (0.88, 0.38, '📁'),
+            (0.50, 0.35, '☕'),
+            (0.25, 0.65, '🪑'),
+            (0.50, 0.62, '📋'),
+            (0.75, 0.65, '🖊️'),
+            (0.50, 0.78, '📞'),
+          ],
+        );
       case BuildingType.skyscraper:
-        return EmojiGridArt([
-          ['🏙️', '📊', '💹'],
-          ['💻', '🏢', '📱'],
-          ['📋', '🤝', '💼'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF556677), // dark steel
+          furniture: [
+            (0.50, 0.08, '🏙️'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.35, '📊'),
+            (0.88, 0.35, '💹'),
+            (0.50, 0.32, '💻'),
+            (0.22, 0.62, '📱'),
+            (0.50, 0.62, '🤝'),
+            (0.78, 0.62, '💼'),
+            (0.50, 0.78, '📋'),
+          ],
+        );
       // ── Industrial ──────────────────────────────────────────────────────────
       case BuildingType.factory:
-        return EmojiGridArt([
-          ['⚙️', '🔧', '⚡'],
-          ['🏭', '📦', '🔩'],
-          ['⚙️', '🔨', '⚡'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF888070), // industrial khaki
+          furniture: [
+            (0.50, 0.08, '🏭'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.35, '⚙️'),
+            (0.88, 0.35, '🔧'),
+            (0.50, 0.35, '⚡'),
+            (0.25, 0.65, '🔩'),
+            (0.50, 0.62, '📦'),
+            (0.75, 0.65, '🔨'),
+          ],
+        );
       case BuildingType.warehouse:
-        return EmojiGridArt([
-          ['📦', '📦', '📦'],
-          ['🏗️', '📋', '🔦'],
-          ['📦', '📦', '📦'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF9A8060), // dusty brown
+          furniture: [
+            (0.50, 0.10, '🏗️'),
+            (0.10, 0.32, '📦'),
+            (0.30, 0.28, '📦'),
+            (0.70, 0.28, '📦'),
+            (0.90, 0.32, '📦'),
+            (0.15, 0.60, '📦'),
+            (0.85, 0.60, '📦'),
+            (0.50, 0.55, '📋'),
+            (0.50, 0.76, '🔦'),
+          ],
+        );
       case BuildingType.powerPlant:
-        return EmojiGridArt([
-          ['⚡', '🔌', '⚡'],
-          ['🔧', '🏭', '🔧'],
-          ['⚡', '🔌', '⚡'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF606858), // dark utility green
+          furniture: [
+            (0.50, 0.08, '🏭'),
+            (0.20, 0.10, '⚡'),
+            (0.80, 0.10, '⚡'),
+            (0.12, 0.38, '🔌'),
+            (0.88, 0.38, '🔌'),
+            (0.50, 0.38, '⚡'),
+            (0.25, 0.65, '🔧'),
+            (0.50, 0.65, '🔌'),
+            (0.75, 0.65, '🔧'),
+          ],
+        );
       // ── Culture ─────────────────────────────────────────────────────────────
       case BuildingType.library:
-        return EmojiGridArt([
-          ['📚', '📖', '📚'],
-          ['🪑', '📚', '🪑'],
-          ['📖', '📚', '📖'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF7A6040), // aged mahogany
+          furniture: [
+            (0.50, 0.08, '📚'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.10, 0.32, '📚'),
+            (0.90, 0.32, '📚'),
+            (0.30, 0.32, '📖'),
+            (0.70, 0.32, '📖'),
+            (0.25, 0.62, '🪑'),
+            (0.50, 0.60, '📖'),
+            (0.75, 0.62, '🪑'),
+          ],
+        );
       case BuildingType.museum:
-        return EmojiGridArt([
-          ['🖼️', '🏺', '🗿'],
-          ['🔎', '🏛️', '📜'],
-          ['🏺', '🎭', '🖼️'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFB8A880), // marble cream
+          furniture: [
+            (0.50, 0.08, '🏛️'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.32, '🖼️'),
+            (0.88, 0.32, '🖼️'),
+            (0.50, 0.30, '🏺'),
+            (0.22, 0.62, '🗿'),
+            (0.50, 0.60, '🔎'),
+            (0.78, 0.62, '📜'),
+            (0.50, 0.78, '🎭'),
+          ],
+        );
       case BuildingType.stadium:
-        return EmojiGridArt([
-          ['🏟️', '⚽', '🏟️'],
-          ['📣', '🎽', '📣'],
-          ['🏆', '🎫', '🏆'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF4A7A4A), // grass green
+          furniture: [
+            (0.50, 0.08, '🏟️'),
+            (0.15, 0.10, '🪟'),
+            (0.85, 0.10, '🪟'),
+            (0.20, 0.35, '📣'),
+            (0.80, 0.35, '📣'),
+            (0.50, 0.32, '⚽'),
+            (0.25, 0.62, '🏆'),
+            (0.50, 0.62, '🎫'),
+            (0.75, 0.62, '🎽'),
+          ],
+        );
       // ── Civic / Government ───────────────────────────────────────────────────
       case BuildingType.cityHall:
-        return EmojiGridArt([
-          ['🏛️', '📜', '🏛️'],
-          ['⚖️', '🗳️', '📋'],
-          ['🏛️', '🤝', '🏛️'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFA09060), // official stone
+          furniture: [
+            (0.50, 0.08, '🏛️'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.35, '⚖️'),
+            (0.88, 0.35, '📜'),
+            (0.50, 0.32, '🗳️'),
+            (0.25, 0.65, '📋'),
+            (0.50, 0.62, '🤝'),
+            (0.75, 0.65, '🏛️'),
+          ],
+        );
       case BuildingType.postOffice:
-        return EmojiGridArt([
-          ['📮', '✉️', '📦'],
-          ['📪', '🏣', '📫'],
-          ['📝', '💳', '📋'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFD4B04A), // post yellow
+          furniture: [
+            (0.50, 0.08, '🏣'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.35, '📮'),
+            (0.88, 0.35, '📫'),
+            (0.50, 0.35, '✉️'),
+            (0.25, 0.65, '📦'),
+            (0.50, 0.62, '💳'),
+            (0.75, 0.65, '📝'),
+          ],
+        );
       case BuildingType.policeStation:
-        return EmojiGridArt([
-          ['🚓', '🔵', '🔵'],
-          ['👮', '🏛️', '🔑'],
-          ['📋', '🔒', '📡'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF2A3A5A), // navy blue
+          furniture: [
+            (0.50, 0.08, '🚓'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.35, '👮'),
+            (0.88, 0.35, '🔑'),
+            (0.50, 0.35, '🔵'),
+            (0.25, 0.65, '📋'),
+            (0.50, 0.65, '🔒'),
+            (0.75, 0.65, '📡'),
+          ],
+        );
       case BuildingType.fireStation:
-        return EmojiGridArt([
-          ['🚒', '🔴', '🔴'],
-          ['🧯', '🏛️', '🪓'],
-          ['🪣', '🚒', '📡'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFFB83020), // fire red
+          furniture: [
+            (0.50, 0.08, '🚒'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.38, '🧯'),
+            (0.88, 0.38, '🪓'),
+            (0.50, 0.35, '🔴'),
+            (0.25, 0.68, '🪣'),
+            (0.50, 0.65, '🚒'),
+            (0.75, 0.68, '📡'),
+          ],
+        );
       case BuildingType.trainStation:
-        return EmojiGridArt([
-          ['🚂', '🎫', '🕐'],
-          ['🚉', '📋', '🚉'],
-          ['🧳', '🎫', '🚂'],
-        ]);
+        return RoomArt(
+          wallColor: const Color(0xFF708090), // slate grey
+          furniture: [
+            (0.50, 0.08, '🚉'),
+            (0.15, 0.08, '🪟'),
+            (0.85, 0.08, '🪟'),
+            (0.12, 0.35, '🚂'),
+            (0.88, 0.35, '🕐'),
+            (0.50, 0.35, '🎫'),
+            (0.25, 0.65, '🧳'),
+            (0.50, 0.65, '📋'),
+            (0.75, 0.65, '🚂'),
+          ],
+        );
     }
   }
 }
@@ -1328,7 +1550,8 @@ class _InteriorArtWidget extends StatelessWidget {
     Color wallColor,
     double side,
   ) {
-    const double halfBox = 11.0; // half of the 22×22 emoji bounding box
+    // Emoji bounding box is 22×22 px; half is used for centering.
+    const double halfBox = 11.0; // 22/2
     return Stack(
       children: [
         // Floor colour + drawn wall lines
@@ -1374,8 +1597,11 @@ class _InteriorArtWidget extends StatelessWidget {
   }
 }
 
-/// Paints a simple room interior: warm floor fill, thin wall lines on all four
-/// sides, and a door gap at the centre of the bottom wall.
+/// Paints a room interior with:
+/// - a warm dark-wood floor with horizontal plank lines
+/// - a solid wall band across the top ~30 % of the canvas in [wallColor]
+/// - a thin baseboard line separating wall from floor
+/// - full-height side walls and a bottom wall with a centred door gap
 ///
 /// Designed to be replaced by [ImageArt] when a real room illustration is
 /// available — the [CustomPaint] approach ensures zero widget-level changes.
@@ -1383,43 +1609,83 @@ class _RoomPainter extends CustomPainter {
   final Color wallColor;
   const _RoomPainter({required this.wallColor});
 
+  // Fraction of the canvas height occupied by the back wall band.
+  static const double _wallHeightRatio = 0.30;
+  // Stripe geometry (wall texture).
+  static const double _stripeStartX = 10.0;
+  static const double _stripeSpacing = 14.0;
+  // Number of horizontal divisions that create floor planks.
+  static const int _plankDivisions = 5;
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    // ── Floor ───────────────────────────────────────────────────────────────
+    // ── Wall band (top ~30 %) ────────────────────────────────────────────────
+    final wallH = h * _wallHeightRatio;
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, w, h),
-      Paint()..color = const Color(0xFF2C1A0E).withValues(alpha: 0.60),
+      Rect.fromLTWH(0, 0, w, wallH),
+      Paint()..color = wallColor.withValues(alpha: 0.92),
     );
 
-    // ── Wall paint ──────────────────────────────────────────────────────────
-    final wall = Paint()
-      ..color = wallColor
+    // Subtle vertical stripe pattern on wall
+    final stripeP = Paint()
+      ..color = wallColor.withValues(alpha: 0.25)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    for (double x = _stripeStartX; x < w; x += _stripeSpacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, wallH), stripeP);
+    }
+
+    // ── Floor (bottom 70 %) ──────────────────────────────────────────────────
+    canvas.drawRect(
+      Rect.fromLTWH(0, wallH, w, h - wallH),
+      Paint()..color = const Color(0xFF3B2008).withValues(alpha: 0.75),
+    );
+
+    // Horizontal plank lines on floor
+    final plankP = Paint()
+      ..color = const Color(0xFF5C3317).withValues(alpha: 0.55)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    final plankSpacing = (h - wallH) / _plankDivisions;
+    for (int i = 1; i < _plankDivisions; i++) {
+      final y = wallH + i * plankSpacing;
+      canvas.drawLine(Offset(0, y), Offset(w, y), plankP);
+    }
+
+    // ── Baseboard (wall/floor separator) ────────────────────────────────────
+    final baseboard = Paint()
+      ..color = wallColor.withValues(alpha: 0.70)
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.square
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, wallH), Offset(w, wallH), baseboard);
+
+    // ── Outer wall borders ───────────────────────────────────────────────────
+    final border = Paint()
+      ..color = wallColor.withValues(alpha: 0.85)
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
+    const e = 1.25;
 
-    const e = 1.25; // half stroke-width offset so lines sit inside the rect
-
-    // Top wall (full)
-    canvas.drawLine(Offset(0, e), Offset(w, e), wall);
-    // Left wall (full)
-    canvas.drawLine(Offset(e, 0), Offset(e, h), wall);
-    // Right wall (full)
-    canvas.drawLine(Offset(w - e, 0), Offset(w - e, h), wall);
+    // Left wall (full height)
+    canvas.drawLine(Offset(e, 0), Offset(e, h), border);
+    // Right wall (full height)
+    canvas.drawLine(Offset(w - e, 0), Offset(w - e, h), border);
 
     // Bottom wall with door gap centred
     final doorHalf = w * 0.10;
     final mid = w / 2;
-    canvas.drawLine(Offset(e, h - e), Offset(mid - doorHalf, h - e), wall);
-    canvas.drawLine(Offset(mid + doorHalf, h - e), Offset(w - e, h - e), wall);
-    // Small door-frame verticals
-    canvas.drawLine(Offset(mid - doorHalf, h - e), Offset(mid - doorHalf, h - 9), wall);
-    canvas.drawLine(Offset(mid + doorHalf, h - e), Offset(mid + doorHalf, h - 9), wall);
+    canvas.drawLine(Offset(e, h - e), Offset(mid - doorHalf, h - e), border);
+    canvas.drawLine(Offset(mid + doorHalf, h - e), Offset(w - e, h - e), border);
+    // Door-frame verticals
+    canvas.drawLine(Offset(mid - doorHalf, h - e), Offset(mid - doorHalf, h - 10), border);
+    canvas.drawLine(Offset(mid + doorHalf, h - e), Offset(mid + doorHalf, h - 10), border);
   }
 
   @override
-  bool shouldRepaint(_RoomPainter old) => old.wallColor != wallColor;
+  bool shouldRepaint(_RoomPainter oldPainter) => oldPainter.wallColor != wallColor;
 }
