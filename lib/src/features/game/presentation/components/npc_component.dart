@@ -138,7 +138,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (type == 'counsel') {
-      // Trauma-sensitive: counselling is more effective for NPCs with a hard past.
+      // Trauma-sensitive: negative traumaScore (hard past) raises multiplier above 1.0,
+      // making counselling more effective; a positive score (happy life) lowers it.
       final traumaMult = (1.0 - model.traumaScore * 0.5).clamp(0.5, 1.5);
       final gain = (_faithCalc.calculateCounselingGain() * traumaMult).round();
       model.applyInfluence(gain.toDouble());
@@ -155,7 +156,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     if (type == 'pray') {
       model.prayerCount++;
-      // Trauma-sensitive: NPCs with a hard past are initially more resistant to prayer.
+      // Trauma-sensitive: both effects compound to make prayer less effective for
+      // NPCs with a hard past (negative traumaScore):
+      //   • traumaMult < 1.0  → lower faith gain if prayer is accepted
+      //   • baseAcceptChance  → lower probability of automatic acceptance
       final traumaMult = (1.0 + model.traumaScore * 0.4).clamp(0.6, 1.4);
       final baseAcceptChance = (0.25 + model.traumaScore * 0.15).clamp(0.05, 0.55);
       final prayerGain = (_faithCalc.calculatePrayerGain() * traumaMult).round();
