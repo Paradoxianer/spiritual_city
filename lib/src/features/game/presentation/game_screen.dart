@@ -448,6 +448,20 @@ class ImageArt extends InteriorArt {
   ImageArt(this.assetPath);
 }
 
+/// Room art: drawn walls + sparsely placed furniture items.
+///
+/// The room boundary is rendered by [_RoomPainter] (CustomPaint lines), so
+/// replacing this with [ImageArt] later requires zero changes to widget code.
+///
+/// Each entry in [furniture] is a record (normalised-x, normalised-y, emoji)
+/// where x and y are in the range 0.0–1.0 relative to the room square.
+class RoomArt extends InteriorArt {
+  final List<(double, double, String)> furniture;
+  /// Colour used for the drawn wall lines and door frame.
+  final Color wallColor;
+  const RoomArt({required this.furniture, this.wallColor = const Color(0xFFC4A882)});
+}
+
 // ── Building interior data & overlay ──────────────────────────────────────────
 
 /// Data passed to the [BuildingInteriorOverlay] when a building is entered.
@@ -1027,15 +1041,24 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   InteriorArt _interiorArt(BuildingType type) {
     switch (type) {
       case BuildingType.pastorHouse:
-        // 5×5 room layout: outer cells are walls (🧱), inner cells are
-        // furniture.  The bottom-centre wall is replaced with a door (🚪).
-        return EmojiGridArt([
-          ['🧱', '🧱', '🧱', '🧱', '🧱'],
-          ['🧱', '📖', '✝️', '🕯️', '🧱'],
-          ['🧱', '🛏️', '🪑', '🪴', '🧱'],
-          ['🧱', '🍳', '📚', '🙏', '🧱'],
-          ['🧱', '🧱', '🚪', '🧱', '🧱'],
-        ]);
+        // Drawn room: warm parchment walls, sparsely placed furniture.
+        // Coordinates are normalised (0–1) relative to the square room area.
+        // Door opening is rendered by _RoomPainter at the bottom-centre.
+        return const RoomArt(
+          wallColor: Color(0xFFD4A882), // warm parchment
+          furniture: [
+            (0.50, 0.08, '✝️'),   // cross, back wall centred – spiritual focus
+            (0.18, 0.07, '🪟'),   // window, top-left
+            (0.82, 0.07, '🪟'),   // window, top-right
+            (0.08, 0.30, '📚'),   // bookshelf, left wall
+            (0.28, 0.40, '📖'),   // open bible, desk area
+            (0.44, 0.56, '🪑'),   // armchair
+            (0.80, 0.22, '🛏️'), // bed, top-right corner
+            (0.90, 0.48, '🕯️'),  // candle beside bed
+            (0.10, 0.74, '🪴'),   // plant, bottom-left corner
+            (0.68, 0.74, '🙏'),   // prayer corner, bottom-right
+          ],
+        );
       case BuildingType.house:
       case BuildingType.apartment:
         return EmojiGridArt([
@@ -1180,6 +1203,7 @@ class _ActionMenuRow extends StatelessWidget {
 /// [EmojiGridArt] is drawn as a grid of fixed-size cells so that every emoji
 /// aligns perfectly regardless of its intrinsic glyph width.
 /// [ImageArt] delegates to [Image.asset].
+/// [RoomArt] renders a drawn room (CustomPaint walls + absolute furniture).
 class _InteriorArtWidget extends StatelessWidget {
   final InteriorArt art;
   const _InteriorArtWidget({required this.art});
@@ -1188,17 +1212,60 @@ class _InteriorArtWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white12),
-      ),
-      padding: const EdgeInsets.all(8),
-      child: switch (art) {
-        EmojiGridArt(:final cells) => _buildGrid(cells),
-        ImageArt(:final assetPath) => Image.asset(assetPath, fit: BoxFit.contain),
-      },
+    return switch (art) {
+      // ── Emoji grid ─────────────────────────────────────────────────────────
+      EmojiGridArt(:final cells) => Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white12),
+          ),
+          padding: const EdgeInsets.all(8),
+          child: _buildGrid(cells),
+        ),
+      // ── Raster image ───────────────────────────────────────────────────────
+      ImageArt(:final assetPath) => Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Image.asset(assetPath, fit: BoxFit.contain),
+        ),
+      // ── Drawn room ─────────────────────────────────────────────────────────
+      RoomArt(:final furniture, :final wallColor) => AspectRatio(
+          aspectRatio: 1.0,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LayoutBuilder(
+              builder: (_, c) => _buildRoom(furniture, wallColor, c.maxWidth),
+            ),
+          ),
+        ),
+    };
+  }
+
+  /// Builds the drawn-room view: CustomPaint walls + sparsely placed items.
+  Widget _buildRoom(
+    List<(double, double, String)> furniture,
+    Color wallColor,
+    double side,
+  ) {
+    const double halfBox = 11.0; // half of the 22×22 emoji bounding box
+    return Stack(
+      children: [
+        // Floor colour + drawn wall lines
+        Positioned.fill(child: CustomPaint(painter: _RoomPainter(wallColor: wallColor))),
+        // Furniture – positioned by normalised (x, y) coordinates
+        for (final (nx, ny, emoji) in furniture)
+          Positioned(
+            left: nx * side - halfBox,
+            top: ny * side - halfBox,
+            width: halfBox * 2,
+            height: halfBox * 2,
+            child: Center(child: Text(emoji, style: const TextStyle(fontSize: 18))),
+          ),
+      ],
     );
   }
 
@@ -1228,4 +1295,54 @@ class _InteriorArtWidget extends StatelessWidget {
           .toList(),
     );
   }
+}
+
+/// Paints a simple room interior: warm floor fill, thin wall lines on all four
+/// sides, and a door gap at the centre of the bottom wall.
+///
+/// Designed to be replaced by [ImageArt] when a real room illustration is
+/// available — the [CustomPaint] approach ensures zero widget-level changes.
+class _RoomPainter extends CustomPainter {
+  final Color wallColor;
+  const _RoomPainter({required this.wallColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // ── Floor ───────────────────────────────────────────────────────────────
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w, h),
+      Paint()..color = const Color(0xFF2C1A0E).withValues(alpha: 0.60),
+    );
+
+    // ── Wall paint ──────────────────────────────────────────────────────────
+    final wall = Paint()
+      ..color = wallColor
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    const e = 1.25; // half stroke-width offset so lines sit inside the rect
+
+    // Top wall (full)
+    canvas.drawLine(Offset(0, e), Offset(w, e), wall);
+    // Left wall (full)
+    canvas.drawLine(Offset(e, 0), Offset(e, h), wall);
+    // Right wall (full)
+    canvas.drawLine(Offset(w - e, 0), Offset(w - e, h), wall);
+
+    // Bottom wall with door gap centred
+    final doorHalf = w * 0.10;
+    final mid = w / 2;
+    canvas.drawLine(Offset(e, h - e), Offset(mid - doorHalf, h - e), wall);
+    canvas.drawLine(Offset(mid + doorHalf, h - e), Offset(w - e, h - e), wall);
+    // Small door-frame verticals
+    canvas.drawLine(Offset(mid - doorHalf, h - e), Offset(mid - doorHalf, h - 9), wall);
+    canvas.drawLine(Offset(mid + doorHalf, h - e), Offset(mid + doorHalf, h - 9), wall);
+  }
+
+  @override
+  bool shouldRepaint(_RoomPainter old) => old.wallColor != wallColor;
 }
