@@ -108,6 +108,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     final interactionScore = model.faith + (spiritualState * 50);
 
+    // Spiritual-world bonus: liberated cells amplify gains, dark cells reduce them.
+    // Range: 0.5× (fully dark) … 1.0× (neutral) … 1.5× (fully light).
+    final spiritualBonus = (1.0 + spiritualState * 0.5).clamp(0.5, 1.5);
+
     final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0);
     game.gainFaith(resonanceExchange);
 
@@ -118,7 +122,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     model.lastPlayerHealthDelta = 0.0;
 
     if (type == 'talk') {
-      final gain = _faithCalc.calculateConversationGain();
+      final gain = (_faithCalc.calculateConversationGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
       model.conversationCount++;
       model.lastNpcFaithDelta = gain.toDouble();
@@ -134,7 +138,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       }
       game.gainHealth(-hpCost.toDouble());
       model.lastPlayerHealthDelta = -hpCost.toDouble();
-      final gain = _faithCalc.calculateCounselingGain();
+      final gain = (_faithCalc.calculateCounselingGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
       model.conversationCount++;
       model.counselingCount++;
@@ -151,7 +155,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       }
       game.gainFaith(-faithCost.toDouble());
       model.lastPlayerFaithDelta -= faithCost.toDouble();
-      final prayerGain = _faithCalc.calculatePrayerGain();
+      final prayerGain = (_faithCalc.calculatePrayerGain() * spiritualBonus).round();
       // Base 20% acceptance probability that scales positively with faith.
       // Even the most hostile NPC has a realistic chance to accept prayer.
       final acceptanceChance = ((interactionScore + 100) / 200.0 * 0.6 + 0.2).clamp(0.0, 1.0);
@@ -174,7 +178,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (type == 'bible') {
-      final gain = _faithCalc.calculateBibleGain();
+      final gain = (_faithCalc.calculateBibleGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
       model.conversationCount++;
       model.lastNpcFaithDelta = gain.toDouble();
@@ -184,7 +188,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (type == 'help') {
-      final giftGain = _faithCalc.calculateGiftGain();
+      final giftGain = (_faithCalc.calculateGiftGain() * spiritualBonus).round();
       model.conversationCount++;
       model.hadGiftThisSession = true;
       model.wantsGift = false;
@@ -200,8 +204,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (type == 'convert') {
       if (model.isChristian) return '✝️🙏';
 
-      // Conversion is ready once the NPC's own faith exceeds 50.
-      if (model.faith > 50) {
+      // Conversion succeeds once interactionScore > 50.
+      // interactionScore = model.faith + spiritualState×50, so a liberated cell
+      // makes conversion easier even if the NPC's faith hasn't quite reached 50.
+      if (interactionScore > 50) {
         model.isConverted = true;
         model.applyInfluence(100);
         model.lastNpcFaithDelta = 100.0;

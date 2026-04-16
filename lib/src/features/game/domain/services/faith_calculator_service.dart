@@ -44,7 +44,11 @@ class FaithCalculatorService {
 
   /// Unified difficulty factor:  easy = 1.5 ×, normal = 1.0 ×, hard = 0.5 ×.
   /// Gains are multiplied by this factor; costs use the inverse (1 / factor).
-  double get _difficultyFactor => switch (difficulty) {
+  double get _difficultyFactor => difficultyFactorFor(difficulty);
+
+  /// Public static version so callers outside this service (e.g. the UI timer)
+  /// can derive the same factor without duplicating the switch.
+  static double difficultyFactorFor(Difficulty d) => switch (d) {
     Difficulty.easy   => 1.5,
     Difficulty.normal => 1.0,
     Difficulty.hard   => 0.5,

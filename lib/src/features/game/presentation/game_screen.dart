@@ -6,6 +6,7 @@ import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
+import '../domain/services/faith_calculator_service.dart';
 import '../presentation/components/building_component.dart';
 import 'spirit_world_game.dart';
 
@@ -227,11 +228,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
   /// Reading duration derived from the same difficulty factor used for costs:
   /// base 5 s × (1 / factor) → easy ≈ 3 s, normal = 5 s, hard = 10 s.
   int get _bibleDuration {
-    final factor = switch (widget.game.difficulty) {
-      Difficulty.easy   => 1.5,
-      Difficulty.normal => 1.0,
-      Difficulty.hard   => 0.5,
-    };
+    final factor = FaithCalculatorService.difficultyFactorFor(widget.game.difficulty);
     return (5.0 / factor).round();
   }
 
