@@ -156,15 +156,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       game.gainFaith(-faithCost.toDouble());
       model.lastPlayerFaithDelta -= faithCost.toDouble();
       final prayerGain = (_faithCalc.calculatePrayerGain() * spiritualBonus).round();
-      // Base 20% acceptance probability. Both the NPC's interactionScore and the
-      // player's own faith contribute equally (up to +0.3 each), so high player
-      // faith makes prayer consistently more likely to succeed even with a
-      // resistant NPC.
-      final playerFaithFactor = (game.faith / SpiritWorldGame.maxFaith).clamp(0.0, 1.0);
-      final acceptanceChance = ((interactionScore + 100) / 200.0 * 0.3
-              + playerFaithFactor * 0.3
-              + 0.2)
-          .clamp(0.0, 1.0);
+      // Base 20% acceptance probability that scales with the NPC's own faith
+      // (0-100). A deeply believing NPC is far more likely to accept prayer
+      // (up to 80%), while a faithless NPC barely reacts (20% floor).
+      final acceptanceChance = (model.faith / 100.0 * 0.6 + 0.2).clamp(0.0, 1.0);
       if (_random.nextDouble() < acceptanceChance) {
         model.applyInfluence(prayerGain.toDouble());
         model.lastNpcFaithDelta = prayerGain.toDouble();
