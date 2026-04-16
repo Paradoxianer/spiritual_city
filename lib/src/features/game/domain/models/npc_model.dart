@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flame/components.dart';
 
 enum NPCType {
@@ -21,6 +22,9 @@ class NPCModel {
   
   int conversationCount;
   int prayerCount;
+
+  /// Number of counseling (Seelsorge) sessions applied.
+  int counselingCount = 0;
   
   /// Tracks interactions in the current active dialogue session
   int currentSessionInteractions = 0;
@@ -31,10 +35,33 @@ class NPCModel {
   /// Whether the player gave a gift (help action) during this session.
   bool hadGiftThisSession = false;
 
+  /// Whether the NPC is currently asking for material support.
+  /// Randomly set at session start (35% chance when faith < 30).
+  bool wantsGift = false;
+
   /// Emoji of the last end-of-session reaction, e.g. '🙏'.
   String lastReactionEmoji = '';
 
   String? currentMessage;
+
+  // ── Delta tracking – updated by each interaction for UI feedback ──────────
+
+  /// NPC faith change from the most recent interaction.
+  double lastNpcFaithDelta = 0.0;
+
+  /// Player faith change from the most recent interaction (from resonance + action).
+  double lastPlayerFaithDelta = 0.0;
+
+  /// Materials change from the most recent interaction (negative = spent).
+  double lastMaterialsDelta = 0.0;
+
+  // ── Progressive faith reveal ───────────────────────────────────────────────
+
+  /// After 3 conversations the player has a vague sense of the NPC's faith.
+  bool get isFaithVague => conversationCount >= 3;
+
+  /// After 6 conversations the player knows the NPC's exact faith level.
+  bool get isFaithRevealed => conversationCount >= 6;
 
   /// ID of the building this NPC lives/works in.
   /// Prepared for future house-entry feature: when the player enters a
@@ -66,5 +93,11 @@ class NPCModel {
     currentSessionInteractions = 0;
     hadGiftThisSession = false;
     lastReactionEmoji = '';
+    counselingCount = 0;
+    lastNpcFaithDelta = 0.0;
+    lastPlayerFaithDelta = 0.0;
+    lastMaterialsDelta = 0.0;
+    // 35% chance to request material help when faith is low
+    wantsGift = faith < 30 && Random().nextDouble() < 0.35;
   }
 }

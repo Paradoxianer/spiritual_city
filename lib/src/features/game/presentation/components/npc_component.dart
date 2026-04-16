@@ -111,32 +111,67 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0);
     game.gainFaith(resonanceExchange);
 
+    // Reset per-action deltas before computing new ones.
+    model.lastNpcFaithDelta = 0.0;
+    model.lastPlayerFaithDelta = resonanceExchange;
+    model.lastMaterialsDelta = 0.0;
+
     if (type == 'talk') {
       final gain = _faithCalc.calculateConversationGain();
       model.applyInfluence(gain.toDouble());
       model.conversationCount++;
+      model.lastNpcFaithDelta = gain.toDouble();
       game.recordConversation();
       return _talkEmoji();
+    }
+
+    if (type == 'counsel') {
+      final gain = _faithCalc.calculateCounselingGain();
+      model.applyInfluence(gain.toDouble());
+      model.conversationCount++;
+      model.counselingCount++;
+      model.lastNpcFaithDelta = gain.toDouble();
+      return ['👂💬', '👂🙏', '👂😊', '👂💛'][_random.nextInt(4)];
     }
 
     if (type == 'pray') {
       model.prayerCount++;
       final prayerGain = _faithCalc.calculatePrayerGain();
-      if (interactionScore + _random.nextInt(40) > 20) {
+      // Base 20% acceptance probability that scales positively with faith.
+      // Even the most hostile NPC has a realistic chance to accept prayer.
+      final acceptanceChance = ((interactionScore + 100) / 200.0 * 0.6 + 0.2).clamp(0.0, 1.0);
+      if (_random.nextDouble() < acceptanceChance) {
         model.applyInfluence(prayerGain.toDouble());
+        model.lastNpcFaithDelta = prayerGain.toDouble();
+        model.lastPlayerFaithDelta += 3.0;
         game.gainFaith(3.0);
         return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
       } else {
         model.applyInfluence(-8.0);
+        model.lastNpcFaithDelta = -8.0;
         return interactionScore < -20 ? '💀😬' : '😠💭';
       }
+    }
+
+    if (type == 'bible') {
+      final gain = _faithCalc.calculateBibleGain();
+      model.applyInfluence(gain.toDouble());
+      model.conversationCount++;
+      model.lastNpcFaithDelta = gain.toDouble();
+      model.lastPlayerFaithDelta += 2.0;
+      game.gainFaith(2.0);
+      return ['📖✝️', '📖😊', '📖🙏', '📖💛'][_random.nextInt(4)];
     }
 
     if (type == 'help') {
       final giftGain = _faithCalc.calculateGiftGain();
       model.conversationCount++;
       model.hadGiftThisSession = true;
+      model.wantsGift = false;
       model.applyInfluence(giftGain.toDouble());
+      model.lastNpcFaithDelta = giftGain.toDouble();
+      model.lastPlayerFaithDelta += 5.0;
+      model.lastMaterialsDelta = -8.0;
       game.gainFaith(5.0);
       game.spendMaterials(8.0);
       return ['📦🙏', '😊📦', '🙏😊'][_random.nextInt(3)];
@@ -147,11 +182,14 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
       if (interactionScore > 60) {
         model.applyInfluence(100);
+        model.lastNpcFaithDelta = 100.0;
+        model.lastPlayerFaithDelta += 25.0;
         game.gainFaith(25.0);
         game.recordConversion();
         return '✝️🕊️';
       } else {
         model.applyInfluence(3.0);
+        model.lastNpcFaithDelta = 3.0;
         if (interactionScore < 0) return '🚫😤';
         return '🤔💭';
       }

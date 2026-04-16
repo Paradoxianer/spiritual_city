@@ -30,6 +30,18 @@ class FaithCalculatorService {
     return _applyMultiplier(base);
   }
 
+  /// Counseling / Seelsorge – active listening: base gain 1–3.
+  int calculateCounselingGain() {
+    final base = 1 + _random.nextInt(3); // 1, 2, or 3
+    return _applyMultiplier(base);
+  }
+
+  /// Reading the Bible with an NPC: base gain 3–6.
+  int calculateBibleGain() {
+    final base = 3 + _random.nextInt(4); // 3, 4, 5, or 6
+    return _applyMultiplier(base);
+  }
+
   /// Faith lost per time-unit spent in a darkness zone.
   int calculateDarknessLoss() {
     const baseLoss = 1;
