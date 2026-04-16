@@ -201,6 +201,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       if (model.isChristian) return '✝️🙏';
 
       if (interactionScore > 60) {
+        model.isConverted = true;
         model.applyInfluence(100);
         model.lastNpcFaithDelta = 100.0;
         model.lastPlayerFaithDelta += 25.0;
@@ -264,8 +265,11 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (cell == null) return;
 
     if (model.isChristian) {
-      // Converted Christians radiate positive influence
+      // Converted Christians radiate positive influence.
       cell.spiritualState = (cell.spiritualState + model.faith * 0.003).clamp(-1.0, 1.0);
+      // Small faith decay: without ongoing care their fervour slowly cools.
+      // Floor at 50 so they remain Christian but their influence weakens.
+      model.faith = (model.faith - 0.15).clamp(50.0, 100.0);
     } else if (model.faith > 50) {
       // Sympathetic NPCs provide a weak positive nudge
       cell.spiritualState = (cell.spiritualState + 0.05).clamp(-1.0, 1.0);

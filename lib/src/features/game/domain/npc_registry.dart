@@ -65,13 +65,23 @@ class NPCRegistry {
 
       for (int i = 0; i < count; i++) {
         final id = 'npc_${bInfo.buildingId}_$i';
+        // ~5 % of NPCs are pre-converted Christians (Übergabegebet already
+        // prayed before the game starts).  Church/cathedral residents have a
+        // higher chance (25 %) because they are already part of a congregation.
+        final isChurchWorker = bInfo.type == BuildingType.church ||
+            bInfo.type == BuildingType.cathedral;
+        final preConvertedChance = isChurchWorker ? 0.25 : 0.03;
+        final isConverted = _random.nextDouble() < preConvertedChance;
         npcs.add(NPCModel(
           id: id,
           name: _getRandomName(),
           type: _getNPCTypeForBuilding(bInfo.type),
           homePosition: spawnPos.clone(),
           homeBuildingId: bInfo.buildingId,
-          faith: -60.0 + _random.nextDouble() * 80.0,
+          faith: isConverted
+              ? 65.0 + _random.nextDouble() * 35.0   // 65–100 for Christians
+              : -60.0 + _random.nextDouble() * 80.0, // –60 to +20 otherwise
+          isConverted: isConverted,
         ));
       }
     }

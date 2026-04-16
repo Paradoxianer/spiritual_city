@@ -72,6 +72,10 @@ class NPCModel {
   /// with or prayed for at once.
   final String? homeBuildingId;
 
+  /// Whether this NPC has gone through the conversion prayer (Übergabegebet).
+  /// Only true NPCs show the cross badge and influence the spiritual world.
+  bool isConverted;
+
   NPCModel({
     required this.id,
     required this.name,
@@ -82,10 +86,12 @@ class NPCModel {
     this.conversationCount = 0,
     this.prayerCount = 0,
     this.currentMessage,
+    this.isConverted = false,
   });
 
-  /// An NPC is considered a Christian if faith is above 50 (Lastenheft 6.2)
-  bool get isChristian => faith > 50;
+  /// An NPC is considered a Christian once they have prayed the conversion
+  /// prayer (Übergabegebet) with the player.  High faith alone is not enough.
+  bool get isChristian => isConverted;
 
   /// Logic to update faith based on interaction and environment
   void applyInfluence(double amount) {
