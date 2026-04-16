@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:logging/logging.dart';
 import '../../../../core/utils/game_time.dart';
+import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import '../../domain/models/city_chunk.dart';
 import '../../domain/models/city_cell.dart';
@@ -51,11 +52,38 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
 
   double _timer = 0.0;
 
-  // Daemon spawning
-  static const int maxDaemons = 8;
-  static const double daemonSpawnChance = 0.15; // per tick, per strongly-negative region
+  // ── Daemon spawning ───────────────────────────────────────────────────────
+
+  /// Base maximum number of concurrent daemons (difficulty-scaled in getter).
+  static const int _maxDaemonsNormal = 8;
+
+  /// Base spawn chance per tick per strongly-negative region (difficulty-scaled).
+  static const double _daemonSpawnChanceNormal = 0.15;
+
   int _daemonIdCounter = 0;
   final math.Random _rng = math.Random(77);
+
+  // ── Prayer-attraction state ───────────────────────────────────────────────
+
+  /// Remaining seconds of the prayer-attraction effect.
+  double _prayerAttractionTimer = 0.0;
+
+  /// How long the prayer-attraction effect lasts (seconds).
+  static const double prayerAttractionDuration = 30.0;
+
+  /// Spawn-chance bonus while prayer attraction is active.
+  static const double prayerAttractionSpawnBonus = 0.40;
+
+  /// True while the prayer-attraction effect is active.
+  bool get isPrayerAttractionActive => _prayerAttractionTimer > 0;
+
+  /// Activates the 30-second prayer-attraction window.
+  ///
+  /// Called by the player component whenever a prayer is released.
+  void activatePrayerAttraction() {
+    _prayerAttractionTimer = prayerAttractionDuration;
+    _log.fine('Prayer attraction activated');
+  }
 
   // Modifier support – injected by the ModifierManager
   double modifierSpreadMultiplier = 1.0;  // Wachstum modifier
@@ -64,6 +92,9 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   @override
   void update(double dt) {
     super.update(dt);
+    if (_prayerAttractionTimer > 0) {
+      _prayerAttractionTimer = (_prayerAttractionTimer - dt).clamp(0.0, prayerAttractionDuration);
+    }
     _timer += dt;
     if (_timer >= tickInterval) {
       _timer = 0.0;
@@ -164,8 +195,20 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   }
 
   void _maybeSpawnDaemons(List<CityChunk> chunks) {
+    // Difficulty-scaled daemon cap
+    final maxDaemons = switch (game.difficulty) {
+      Difficulty.easy   => 5,
+      Difficulty.normal => _maxDaemonsNormal,
+      Difficulty.hard   => 12,
+    };
+
     int existingDaemons = game.world.children.whereType<DaemonComponent>().length;
     if (existingDaemons >= maxDaemons) return;
+
+    // Spawn chance boosted when the player has recently prayed (Issue #31)
+    final spawnChance = isPrayerAttractionActive
+        ? _daemonSpawnChanceNormal * (1 + prayerAttractionSpawnBonus)
+        : _daemonSpawnChanceNormal;
 
     outer:
     for (final chunk in chunks) {
@@ -174,7 +217,7 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
           if (existingDaemons >= maxDaemons) break outer;
           final cell = chunk.cells['$x,$y'];
           if (cell == null) continue;
-          if (cell.spiritualState < -0.8 && _rng.nextDouble() < daemonSpawnChance) {
+          if (cell.spiritualState < -0.8 && _rng.nextDouble() < spawnChance) {
             _spawnDaemon(cell);
             existingDaemons++;
           }
@@ -189,8 +232,13 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       cell.x * CellComponent.cellSize + CellComponent.cellSize / 2,
       cell.y * CellComponent.cellSize + CellComponent.cellSize / 2,
     );
-    // Energy starts at -100 (strong) and drains toward 0
-    final model = DaemonModel(id: id, position: spawnPos, energy: -100.0);
+    // Difficulty-scaled initial energy: harder = more energy (tougher daemon)
+    final initialEnergy = switch (game.difficulty) {
+      Difficulty.easy   => -60.0,
+      Difficulty.normal => -100.0,
+      Difficulty.hard   => -140.0,
+    };
+    final model = DaemonModel(id: id, position: spawnPos, energy: initialEnergy);
     final component = DaemonComponent(model);
     game.world.add(component);
     _log.fine('Spawned daemon $id at (${cell.x}, ${cell.y})');

@@ -3,8 +3,10 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
+import 'daemon_component.dart';
 import 'prayer_zone_component.dart';
 
 class PlayerComponent extends PositionComponent 
@@ -127,6 +129,8 @@ class PlayerComponent extends PositionComponent
     _isChargingIntensity = false;
     _intensityPulseTime = 0;
     game.recordPrayerCombat();
+    // Praying attracts daemons for 30 seconds (Issue #31)
+    game.spiritualDynamics.activatePrayerAttraction();
   }
 
   void _executePrayerImpact() {
@@ -193,6 +197,35 @@ class PlayerComponent extends PositionComponent
             cell.spiritualState = (cell.spiritualState + finalImpact).clamp(-1.0, 1.0);
           }
         }
+      }
+    }
+
+    // ── Daemon combat (Issue #31) ────────────────────────────────────────────
+    // Daemons inside the impact zone take direct damage.
+    // On easy the player deals more damage; on hard daemons are more resistant.
+    final daemonDamageMultiplier = switch (game.difficulty) {
+      Difficulty.easy   => 1.5,
+      Difficulty.normal => 1.0,
+      Difficulty.hard   => 0.7,
+    };
+
+    for (final daemon
+        in List.of(game.world.children.whereType<DaemonComponent>())) {
+      if (daemon.model.dissolved) continue;
+      final dist = center.distanceTo(daemon.position);
+      bool inZone;
+      if (prayerZone.direction.isZero()) {
+        inZone = dist <= radius;
+      } else {
+        final toTarget = daemon.position - center;
+        inZone = toTarget.length <= radius * 1.8 &&
+            toTarget.angleTo(prayerZone.direction).abs() < math.pi / 4.5;
+      }
+      if (inZone) {
+        final falloff = 1.0 - (dist / (radius * 1.8)).clamp(0.0, 1.0);
+        // Scale damage so that a full optimal prayer kills a daemon in ~3 hits.
+        daemon.takeDamage(
+            impactPower * 50.0 * falloff * daemonDamageMultiplier);
       }
     }
   }
