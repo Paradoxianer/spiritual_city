@@ -93,7 +93,6 @@ class NPCModel {
     currentSessionInteractions = 0;
     hadGiftThisSession = false;
     lastReactionEmoji = '';
-    counselingCount = 0;
     lastNpcFaithDelta = 0.0;
     lastPlayerFaithDelta = 0.0;
     lastMaterialsDelta = 0.0;

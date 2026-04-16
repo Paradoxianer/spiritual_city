@@ -504,7 +504,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                         onTap: () => _handleInteraction('help', '📦'),
                       ),
                     _EmojiChip(
-                      emoji: '✝️',
+                      emoji: '✝️🕊️',
                       hint: '→?',
                       isSpecial: true,
                       onTap: () => _handleInteraction('convert', '✝️?'),
