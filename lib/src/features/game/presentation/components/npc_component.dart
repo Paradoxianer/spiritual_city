@@ -27,6 +27,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   static const double npcSize = 20.0;
   final Random _random = Random();
 
+  // ── Faith thresholds used in emoji responses ──────────────────────────────
+  static const double _faithPositiveThreshold = 30.0;
+  static const double _faithNegativeThreshold = -30.0;
+
   late final FaithCalculatorService _faithCalc;
 
   /// LOD level assigned by the NPC manager based on distance to the player.
@@ -229,9 +233,12 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   /// Returns a two-emoji response for a counselling (Seelsorge) interaction
   /// that hints at the NPC's inner faith state without fully revealing it.
   String _counselEmoji() {
-    if (model.faith > 30) return ['😊💭', '🙌💬', '😄💭'][_random.nextInt(3)];
-    if (model.faith > 0)  return ['🤔💭', '💭🤔', '👀💭'][_random.nextInt(3)];
-    if (model.faith > -30) return ['😔💭', '💭😐', '😒💭'][_random.nextInt(3)];
+    if (model.faith > _faithPositiveThreshold)
+      return ['😊💭', '🙌💬', '😄💭'][_random.nextInt(3)];
+    if (model.faith > 0)
+      return ['🤔💭', '💭🤔', '👀💭'][_random.nextInt(3)];
+    if (model.faith > _faithNegativeThreshold)
+      return ['😔💭', '💭😐', '😒💭'][_random.nextInt(3)];
     return ['😢💭', '😞💭', '💭😔'][_random.nextInt(3)];
   }
 

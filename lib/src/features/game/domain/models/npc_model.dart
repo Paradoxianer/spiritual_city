@@ -60,7 +60,11 @@ class NPCModel {
   /// Change in player materials from the last interaction (📦).
   double lastMaterialsDelta = 0.0;
 
-  static final _rng = Random();
+  static final _sessionRng = Random();
+
+  /// Probability (0–100) that an NPC will request materials at session start
+  /// when their faith is not yet positive.
+  static const int _giftRequestChance = 35;
 
   NPCModel({
     required this.id,
@@ -99,6 +103,6 @@ class NPCModel {
     lastPlayerFaithDelta = 0.0;
     lastMaterialsDelta = 0.0;
     // NPC randomly requests materials when their faith is not yet positive.
-    wantsGift = faith < 30 && _rng.nextInt(100) < 35;
+    wantsGift = faith < 30 && _sessionRng.nextInt(100) < _giftRequestChance;
   }
 }

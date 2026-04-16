@@ -438,7 +438,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     if (model.wantsGift && !model.hadGiftThisSession)
                       _ActionChipWithHint(
                         emoji: '📦',
-                        hint: '−8📦→✝️',
+                        hint: '-8📦→✝️',
                         onTap: () => _handleInteraction('help', '📦'),
                       ),
                     _ActionChipWithHint(
