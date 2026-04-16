@@ -61,6 +61,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double maxMaterials = 100.0;
   static const double worldToggleCost = 10.0;
 
+  /// Number of daemons spawned around the player on spiritual-world entry.
+  static const int _entryDaemonsEasy   = 1;
+  static const int _entryDaemonsNormal = 2;
+  static const int _entryDaemonsHard   = 3;
+
   // Passive resource timers
   double _hungerDrainTimer = 0.0;
   static const double hungerDrainInterval = 30.0; // drain 1 hunger every 30 seconds
@@ -139,6 +144,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     isSpiritualWorld = !isSpiritualWorld;
     _updateButtonStyles();
     _log.info('Switched World: $isSpiritualWorld');
+
+    // Immediately spawn daemons around the player when entering the spiritual
+    // world so they are visible from the first moment (difficulty-scaled count).
+    if (isSpiritualWorld) {
+      final entryCount = switch (difficulty) {
+        Difficulty.easy   => _entryDaemonsEasy,
+        Difficulty.normal => _entryDaemonsNormal,
+        Difficulty.hard   => _entryDaemonsHard,
+      };
+      spiritualDynamics.spawnDaemonsAroundPlayer(entryCount);
+    }
   }
 
   void handleActionDown() {

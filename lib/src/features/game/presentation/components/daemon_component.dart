@@ -25,8 +25,16 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   static const double _daemonSize = 18.0;
   static const double _energyToCellRatio = 0.01; // energy units → spiritualState change
 
+  /// Scales how aggressively daemons darken cells they pass through.
+  /// Set in [onLoad] based on difficulty.
+  double _cellDrainMultiplier = 1.0;
+
   /// Seconds per move step – set in onLoad() based on difficulty.
   double _moveInterval = 2.5;
+
+  static const double _moveIntervalEasy   = 3.0;
+  static const double _moveIntervalNormal = 2.5;
+  static const double _moveIntervalHard   = 2.0;
 
   double _moveTimer = 0.0;
   double _wobble = 0.0;
@@ -65,9 +73,15 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   Future<void> onLoad() async {
     // Difficulty-scaled movement speed (hard = faster = 2.0 s, easy = slower = 3.0 s)
     _moveInterval = switch (game.difficulty) {
-      Difficulty.easy => 3.0,
-      Difficulty.normal => 2.5,
-      Difficulty.hard => 2.0,
+      Difficulty.easy => _moveIntervalEasy,
+      Difficulty.normal => _moveIntervalNormal,
+      Difficulty.hard => _moveIntervalHard,
+    };
+    // Difficulty-scaled cell darkening per move (hard daemons corrupt cells faster)
+    _cellDrainMultiplier = switch (game.difficulty) {
+      Difficulty.easy => 0.6,
+      Difficulty.normal => 1.0,
+      Difficulty.hard => 1.5,
     };
   }
 
@@ -206,15 +220,15 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
     if (cell.spiritualState < -0.5) {
       // Strongly negative: daemon thrives, costs little energy
-      cellDrain   = 1.0 * _energyToCellRatio;
+      cellDrain   = 1.0 * _energyToCellRatio * _cellDrainMultiplier;
       energyDrain = 1.0;
     } else if (cell.spiritualState.abs() < 0.3) {
       // Neutral: moderate drain
-      cellDrain   = 2.0 * _energyToCellRatio;
+      cellDrain   = 2.0 * _energyToCellRatio * _cellDrainMultiplier;
       energyDrain = 2.0;
     } else {
       // Positive territory: daemon is weakened rapidly
-      cellDrain   = 3.0 * _energyToCellRatio;
+      cellDrain   = 3.0 * _energyToCellRatio * _cellDrainMultiplier;
       energyDrain = 6.0;
     }
 

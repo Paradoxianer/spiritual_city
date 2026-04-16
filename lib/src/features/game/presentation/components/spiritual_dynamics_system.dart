@@ -54,11 +54,17 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
 
   // ── Daemon spawning ───────────────────────────────────────────────────────
 
-  /// Base maximum number of concurrent daemons (difficulty-scaled in getter).
+  static const int _maxDaemonsEasy   = 5;
   static const int _maxDaemonsNormal = 8;
+  static const int _maxDaemonsHard   = 12;
 
   /// Base spawn chance per tick per strongly-negative region (difficulty-scaled).
   static const double _daemonSpawnChanceNormal = 0.15;
+
+  /// Initial daemon energy by difficulty (negative; closer to 0 = weaker daemon).
+  static const double _daemonEnergyEasy   = -60.0;
+  static const double _daemonEnergyNormal = -100.0;
+  static const double _daemonEnergyHard   = -140.0;
 
   int _daemonIdCounter = 0;
   final math.Random _rng = math.Random(77);
@@ -198,9 +204,9 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   void _maybeSpawnDaemons(List<CityChunk> chunks) {
     // Difficulty-scaled daemon cap
     final maxDaemons = switch (game.difficulty) {
-      Difficulty.easy   => 5,
+      Difficulty.easy   => _maxDaemonsEasy,
       Difficulty.normal => _maxDaemonsNormal,
-      Difficulty.hard   => 12,
+      Difficulty.hard   => _maxDaemonsHard,
     };
 
     int existingDaemons = game.world.children.whereType<DaemonComponent>().length;
@@ -233,16 +239,46 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       cell.x * CellComponent.cellSize + CellComponent.cellSize / 2,
       cell.y * CellComponent.cellSize + CellComponent.cellSize / 2,
     );
-    // Difficulty-scaled initial energy: harder = more energy (tougher daemon)
-    final initialEnergy = switch (game.difficulty) {
-      Difficulty.easy   => -60.0,
-      Difficulty.normal => -100.0,
-      Difficulty.hard   => -140.0,
-    };
-    final model = DaemonModel(id: id, position: spawnPos, energy: initialEnergy);
+    final model = DaemonModel(id: id, position: spawnPos, energy: _initialEnergy());
     final component = DaemonComponent(model);
     game.world.add(component);
     _log.fine('Spawned daemon $id at (${cell.x}, ${cell.y})');
+  }
+
+  /// Returns difficulty-scaled initial energy for a newly spawned daemon.
+  double _initialEnergy() => switch (game.difficulty) {
+    Difficulty.easy   => _daemonEnergyEasy,
+    Difficulty.normal => _daemonEnergyNormal,
+    Difficulty.hard   => _daemonEnergyHard,
+  };
+
+  /// Spawns [count] daemons in a random ring (100–300 px) around the player.
+  ///
+  /// Called when the player enters the invisible world so that daemons are
+  /// immediately visible rather than waiting for the next tick.
+  void spawnDaemonsAroundPlayer(int count) {
+    final playerPos = game.player.position;
+    const double minDist = 100.0;
+    const double maxDist = 300.0;
+    final energy = _initialEnergy();
+
+    for (int i = 0; i < count; i++) {
+      // Spread daemons evenly around the player (+ small random jitter)
+      final baseAngle = (i / count) * math.pi * 2;
+      final angle = baseAngle + (_rng.nextDouble() - 0.5) * (math.pi / count);
+      final dist = minDist + _rng.nextDouble() * (maxDist - minDist);
+
+      final spawnPos = Vector2(
+        playerPos.x + math.cos(angle) * dist,
+        playerPos.y + math.sin(angle) * dist,
+      );
+
+      final id = 'daemon_entry_${_daemonIdCounter++}';
+      final model = DaemonModel(id: id, position: spawnPos, energy: energy);
+      final component = DaemonComponent(model);
+      game.world.add(component);
+      _log.fine('Entry-spawned daemon $id around player');
+    }
   }
 
   static const List<List<int>> _dirs = [
