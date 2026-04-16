@@ -31,7 +31,19 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   double _moveTimer = 0.0;
   double _wobble = 0.0;
 
-  // ── Prayer-attraction spiral state ────────────────────────────────────────
+  // ── Prayer-attraction spiral constants ─────────────────────────────────────
+
+  /// Fraction by which the spiral radius shrinks each step (2.5× attraction).
+  static const double _spiralTighteningFactor = 0.75;
+
+  /// Angle advance per spiral step (60 °), giving one full orbit in 6 steps.
+  static const double _spiralAngleStep = math.pi / 3;
+
+  /// Minimum spiral radius before the daemon is considered to have "arrived".
+  static const double _spiralRadiusMin = 50.0;
+
+  /// Maximum spiral radius when first initialised from the current distance.
+  static const double _spiralRadiusMax = 600.0;
   double _spiralRadius = 0.0;
   double _spiralAngle = 0.0;
   bool _spiralInitialized = false;
@@ -136,15 +148,15 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
     // Initialise spiral from the daemon's current position relative to the player.
     if (!_spiralInitialized) {
-      _spiralRadius = position.distanceTo(playerPos).clamp(50.0, 600.0);
+      _spiralRadius = position.distanceTo(playerPos).clamp(_spiralRadiusMin, _spiralRadiusMax);
       _spiralAngle = math.atan2(
           position.y - playerPos.y, position.x - playerPos.x);
       _spiralInitialized = true;
     }
 
-    // Tighten the spiral by 25 % each step and advance 60° around the player.
-    _spiralRadius = (_spiralRadius * 0.75).clamp(0.0, 600.0);
-    _spiralAngle += math.pi / 3;
+    // Tighten the spiral and advance the angle each step.
+    _spiralRadius = (_spiralRadius * _spiralTighteningFactor).clamp(0.0, _spiralRadiusMax);
+    _spiralAngle += _spiralAngleStep;
 
     final targetX = playerPos.x + math.cos(_spiralAngle) * _spiralRadius;
     final targetY = playerPos.y + math.sin(_spiralAngle) * _spiralRadius;

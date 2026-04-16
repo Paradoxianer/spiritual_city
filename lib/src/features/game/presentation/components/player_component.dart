@@ -47,6 +47,19 @@ class PlayerComponent extends PositionComponent
 
   // ===========================================================================
 
+  // ── Directional prayer-zone geometry constants ─────────────────────────────
+
+  /// The directional zone extends this multiple of [modifierMaxRadius] beyond
+  /// the base radius to allow a generous cone reach.
+  static const double _dirZoneRadiusMultiplier = 1.8;
+
+  /// Half-angle (radians) of the directional prayer cone (~40 °).
+  static const double _dirZoneHalfAngle = math.pi / 4.5;
+
+  /// Converts normalized impact power to daemon energy damage.
+  /// Tuned so a full optimal prayer kills a normal-difficulty daemon in ~3 hits.
+  static const double _daemonDamageScale = 50.0;
+
   // Getters für das HUD
   double get faithPulse => prayerZone.pulseValue;
   double get zoneSize => prayerZone.sizeFactor;
@@ -184,15 +197,15 @@ class PlayerComponent extends PositionComponent
           } else {
             final toCell = cellPos - center;
             final dist = toCell.length;
-            if (dist <= radius * 1.8) {
+            if (dist <= radius * _dirZoneRadiusMultiplier) {
               final angle = toCell.angleTo(prayerZone.direction);
-              if (angle.abs() < math.pi / 4.5) inZone = true;
+              if (angle.abs() < _dirZoneHalfAngle) inZone = true;
             }
           }
 
           if (inZone) {
             final dist = center.distanceTo(cellPos);
-            final falloff = 1.0 - (dist / (radius * 1.8)).clamp(0.0, 1.0);
+            final falloff = 1.0 - (dist / (radius * _dirZoneRadiusMultiplier)).clamp(0.0, 1.0);
             final finalImpact = (impactPower / 100.0) * falloff / modifierResistanceFactor;
             cell.spiritualState = (cell.spiritualState + finalImpact).clamp(-1.0, 1.0);
           }
@@ -218,14 +231,14 @@ class PlayerComponent extends PositionComponent
         inZone = dist <= radius;
       } else {
         final toTarget = daemon.position - center;
-        inZone = toTarget.length <= radius * 1.8 &&
-            toTarget.angleTo(prayerZone.direction).abs() < math.pi / 4.5;
+        inZone = toTarget.length <= radius * _dirZoneRadiusMultiplier &&
+            toTarget.angleTo(prayerZone.direction).abs() < _dirZoneHalfAngle;
       }
       if (inZone) {
-        final falloff = 1.0 - (dist / (radius * 1.8)).clamp(0.0, 1.0);
+        final falloff = 1.0 - (dist / (radius * _dirZoneRadiusMultiplier)).clamp(0.0, 1.0);
         // Scale damage so that a full optimal prayer kills a daemon in ~3 hits.
         daemon.takeDamage(
-            impactPower * 50.0 * falloff * daemonDamageMultiplier);
+            impactPower * _daemonDamageScale * falloff * daemonDamageMultiplier);
       }
     }
   }
