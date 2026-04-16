@@ -10,13 +10,17 @@ import 'cell_component.dart';
 
 /// Visual and logic component for a Daemon NPC in the invisible world.
 ///
-/// Behaviour per move tick:
-/// - On a strongly negative cell (spiritualState < -0.5): drains cell by 1, own energy by 1
-/// - On a neutral cell (|spiritualState| < 0.3):          drains cell by 2, own energy by 2
-/// - On a positive cell (spiritualState > 0.5):           drains cell by 3, own energy by 6
+/// Movement is fully continuous (pixel-space orbital flight):
+/// - The daemon orbits a center point at a constant angular velocity,
+///   producing smooth, vulture-like circling.  A secondary phase oscillator
+///   warps the radius organically so the path is never perfectly circular.
+/// - Without prayer: the orbit center drifts toward the nearest strongly-
+///   negative cell, so the daemon patrols dark territory.
+/// - When prayer attraction is active: the orbit center snaps to the player
+///   and the radius slowly tightens, drawing the daemon ever closer.
 ///
-/// When energy reaches 0 the daemon dissolves and leaves a "residuum" marker on the cell.
-/// When killed by prayer combat, the daemon explodes and strongly cleanses the surrounding area.
+/// Cell drain and energy management run on their own 2-second timer,
+/// completely decoupled from the render loop.
 ///
 /// Lastenheft Issue #31
 class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
@@ -24,40 +28,61 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   final math.Random _rng;
 
   static const double _daemonSize = 18.0;
-  static const double _energyToCellRatio = 0.01; // energy units → spiritualState change
+  static const double _energyToCellRatio = 0.01;
 
-  /// Scales how aggressively daemons darken cells they pass through.
-  /// Set in [onLoad] based on difficulty.
   double _cellDrainMultiplier = 1.0;
 
-  /// Seconds per move step – set in onLoad() based on difficulty.
-  double _moveInterval = 2.5;
+  // ── Continuous orbital movement ────────────────────────────────────────────
 
-  static const double _moveIntervalEasy   = 1.8;
-  static const double _moveIntervalNormal = 1.4;
-  static const double _moveIntervalHard   = 1.0;
+  /// Angular velocity (rad/s) – how fast the daemon circles its orbit center.
+  double _angularSpeed = 1.1;
 
-  double _moveTimer = 0.0;
+  static const double _angularSpeedEasy   = 0.7;  // ~9 s per full orbit
+  static const double _angularSpeedNormal = 1.1;  // ~5.7 s per full orbit
+  static const double _angularSpeedHard   = 1.7;  // ~3.7 s per full orbit
+
+  /// How fast (px/s) the daemon's rendered position chases its computed
+  /// orbit point.  Lower = floaty lag; higher = snappy.
+  double _followSpeed = 90.0;
+
+  static const double _followSpeedEasy   = 55.0;
+  static const double _followSpeedNormal = 85.0;
+  static const double _followSpeedHard   = 125.0;
+
+  double _orbitAngle = 0.0;
+  double _orbitRadius = 200.0;
+
+  static const double _orbitRadiusMin = 60.0;
+  static const double _orbitRadiusMax = 300.0;
+
+  /// Rate at which the orbit radius shrinks while spiralling toward the player (px/s).
+  static const double _spiralInSpeed = 18.0;
+
+  /// Secondary phase oscillator: creates organic radius variation.
+  double _radiusPhase = 0.0;
+  static const double _radiusPhaseSpeed = 0.53; // prime-ratio to _wobble
+
+  /// Orbit center in world coordinates – updated every frame.
+  final Vector2 _orbitCenter = Vector2.zero();
+
+  // ── Drift (wandering without prayer) ──────────────────────────────────────
+
+  final Vector2 _driftTarget = Vector2.zero();
+  double _driftUpdateTimer = 0.0;
+  static const double _driftUpdateInterval = 4.0;
+  bool _driftInitialized = false;
+
+  // ── Cell-effect timer ──────────────────────────────────────────────────────
+
+  double _cellEffectTimer = 0.0;
+  static const double _cellEffectInterval = 2.0;
+
+  // ── Visuals ────────────────────────────────────────────────────────────────
+
   double _wobble = 0.0;
 
-  // ── Prayer-attraction spiral constants ─────────────────────────────────────
+  // ── Hit flicker ────────────────────────────────────────────────────────────
 
-  /// Fraction by which the spiral radius shrinks each step (stronger attraction).
-  static const double _spiralTighteningFactor = 0.60;
-
-  /// Angle advance per spiral step (90 °), giving one full orbit in 4 steps.
-  static const double _spiralAngleStep = math.pi / 2;
-
-  /// Minimum spiral radius before the daemon is considered to have "arrived".
-  static const double _spiralRadiusMin = 50.0;
-
-  /// Maximum spiral radius when first initialised from the current distance.
-  static const double _spiralRadiusMax = 600.0;
-  double _spiralRadius = 0.0;
-  double _spiralAngle = 0.0;
-  bool _spiralInitialized = false;
-
-  // Flicker effect when hit
   double _hitFlickerTimer = 0.0;
   static const double _hitFlickerDuration = 0.3;
 
@@ -72,17 +97,26 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   @override
   Future<void> onLoad() async {
-    // Difficulty-scaled movement speed (hard = faster = 2.0 s, easy = slower = 3.0 s)
-    _moveInterval = switch (game.difficulty) {
-      Difficulty.easy => _moveIntervalEasy,
-      Difficulty.normal => _moveIntervalNormal,
-      Difficulty.hard => _moveIntervalHard,
+    _angularSpeed = switch (game.difficulty) {
+      Difficulty.easy   => _angularSpeedEasy,
+      Difficulty.normal => _angularSpeedNormal,
+      Difficulty.hard   => _angularSpeedHard,
     };
-    // Difficulty-scaled cell darkening per move (hard daemons corrupt cells faster).
-    // Uses the inverse of the canonical difficultyFactor so that hard → more drain,
-    // consistent with all other difficulty scaling in FaithCalculatorService.
+    _followSpeed = switch (game.difficulty) {
+      Difficulty.easy   => _followSpeedEasy,
+      Difficulty.normal => _followSpeedNormal,
+      Difficulty.hard   => _followSpeedHard,
+    };
     _cellDrainMultiplier =
         1.0 / FaithCalculatorService.difficultyFactorFor(game.difficulty);
+
+    // Spread daemons' starting angles and radii for visual variety.
+    _orbitAngle  = _rng.nextDouble() * math.pi * 2;
+    _orbitRadius = 150.0 + _rng.nextDouble() * (_orbitRadiusMax - 150.0);
+    _radiusPhase = _rng.nextDouble() * math.pi * 2;
+
+    _driftTarget.setFrom(position);
+    _orbitCenter.setFrom(position);
   }
 
   @override
@@ -95,124 +129,108 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
       return;
     }
 
-    _wobble += dt * 2.5;
-
+    _wobble      += dt * 2.5;
+    _radiusPhase += dt * _radiusPhaseSpeed;
     if (_hitFlickerTimer > 0) _hitFlickerTimer -= dt;
 
-    _moveTimer += dt;
-    if (_moveTimer >= _moveInterval) {
-      _moveTimer = 0.0;
-      _step();
-    }
-  }
+    // ── Update orbit center ───────────────────────────────────────────────────
 
-  // ── Movement ──────────────────────────────────────────────────────────────
-
-  void _step() {
     if (game.spiritualDynamics.isPrayerAttractionActive) {
-      _stepSpiral();
+      // Lock onto player and tighten the spiral.
+      _orbitCenter.setFrom(game.player.position);
+      _orbitRadius = math.max(
+          _orbitRadiusMin, _orbitRadius - _spiralInSpeed * dt);
     } else {
-      _spiralInitialized = false; // reset so spiral restarts fresh next time
-      _stepRandom();
+      // Slowly expand back outward when prayer is not active.
+      if (_orbitRadius < _orbitRadiusMax) {
+        _orbitRadius = math.min(
+            _orbitRadiusMax, _orbitRadius + _spiralInSpeed * 0.25 * dt);
+      }
+
+      // Drift orbit center toward a nearby dark cell.
+      _driftUpdateTimer += dt;
+      if (!_driftInitialized || _driftUpdateTimer >= _driftUpdateInterval) {
+        _driftUpdateTimer = 0.0;
+        _driftInitialized = true;
+        _pickNewDriftTarget();
+      }
+      // Smoothly slide orbit center toward drift target.
+      _orbitCenter.lerp(_driftTarget, (dt * 0.4).clamp(0.0, 1.0));
+    }
+
+    // ── Advance orbit angle ───────────────────────────────────────────────────
+    _orbitAngle += _angularSpeed * dt;
+
+    // ── Compute target position with organic radius wobble ───────────────────
+    final effectiveRadius = _orbitRadius + math.sin(_radiusPhase) * 28.0;
+    final target = Vector2(
+      _orbitCenter.x + math.cos(_orbitAngle) * effectiveRadius,
+      _orbitCenter.y + math.sin(_orbitAngle) * effectiveRadius,
+    );
+
+    // ── Chase target position smoothly ───────────────────────────────────────
+    final diff = target - position;
+    final dist = diff.length;
+    if (dist > 0.5) {
+      final step = math.min(dist, _followSpeed * dt);
+      position.addScaled(diff / dist, step);
+    }
+    model.position.setFrom(position);
+
+    // ── Cell effect (independent of movement speed) ───────────────────────────
+    _cellEffectTimer += dt;
+    if (_cellEffectTimer >= _cellEffectInterval) {
+      _cellEffectTimer = 0.0;
+      _applyEffectAtCurrentPos();
     }
   }
 
-  /// Normal wandering movement: prefer more-negative cells.
-  void _stepRandom() {
+  // ── Drift target ───────────────────────────────────────────────────────────
+
+  /// Pick a new drift target: the most-negative cell within a search window,
+  /// or a random offset if no cells are found.
+  void _pickNewDriftTarget() {
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
 
-    final candidates = <List<int>>[
-      [gx + 1, gy], [gx - 1, gy], [gx, gy + 1], [gx, gy - 1],
-    ];
-    candidates.shuffle(_rng);
-
-    List<int>? best;
+    CityCell? best;
     double bestScore = double.infinity;
-    for (final c in candidates) {
-      final cell = game.grid.getCell(c[0], c[1]);
-      if (cell == null) continue;
-      if (cell.spiritualState < bestScore) {
-        bestScore = cell.spiritualState;
-        best = c;
-      }
-    }
+    const int searchRadius = 10;
 
-    final targetGridPos = best ?? candidates.first;
-    final targetCell = game.grid.getCell(targetGridPos[0], targetGridPos[1]);
-
-    if (targetCell != null) {
-      _applyEffect(targetCell);
-      if (!model.dissolved) {
-        position = Vector2(
-          targetGridPos[0] * CellComponent.cellSize + CellComponent.cellSize / 2,
-          targetGridPos[1] * CellComponent.cellSize + CellComponent.cellSize / 2,
-        );
-        model.position.setFrom(position);
-      }
-    }
-  }
-
-  /// Prayer-attraction spiral movement: circle the player in ever-tightening arcs.
-  ///
-  /// Attraction is ~2.5× stronger than normal drift: the spiral radius shrinks
-  /// by 25 % per step (vs. random drift which has no direct player pull).
-  void _stepSpiral() {
-    final playerPos = game.player.position;
-
-    // Initialise spiral from the daemon's current position relative to the player.
-    if (!_spiralInitialized) {
-      _spiralRadius = position.distanceTo(playerPos).clamp(_spiralRadiusMin, _spiralRadiusMax);
-      _spiralAngle = math.atan2(
-          position.y - playerPos.y, position.x - playerPos.x);
-      _spiralInitialized = true;
-    }
-
-    // Tighten the spiral and advance the angle each step.
-    _spiralRadius = (_spiralRadius * _spiralTighteningFactor).clamp(0.0, _spiralRadiusMax);
-    _spiralAngle += _spiralAngleStep;
-
-    final targetX = playerPos.x + math.cos(_spiralAngle) * _spiralRadius;
-    final targetY = playerPos.y + math.sin(_spiralAngle) * _spiralRadius;
-
-    // Among the four adjacent cells pick the one nearest to the spiral target.
-    final gx = (position.x / CellComponent.cellSize).floor();
-    final gy = (position.y / CellComponent.cellSize).floor();
-
-    final candidates = <List<int>>[
-      [gx + 1, gy], [gx - 1, gy], [gx, gy + 1], [gx, gy - 1],
-    ];
-
-    List<int>? best;
-    double bestDist = double.infinity;
-    for (final c in candidates) {
-      if (game.grid.getCell(c[0], c[1]) == null) continue;
-      final cx = c[0] * CellComponent.cellSize + CellComponent.cellSize / 2;
-      final cy = c[1] * CellComponent.cellSize + CellComponent.cellSize / 2;
-      final dist = math.sqrt(
-          math.pow(cx - targetX, 2) + math.pow(cy - targetY, 2));
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = c;
+    for (int dy = -searchRadius; dy <= searchRadius; dy += 2) {
+      for (int dx = -searchRadius; dx <= searchRadius; dx += 2) {
+        final cell = game.grid.getCell(gx + dx, gy + dy);
+        if (cell == null) continue;
+        if (cell.spiritualState < bestScore) {
+          bestScore = cell.spiritualState;
+          best = cell;
+        }
       }
     }
 
     if (best != null) {
-      final targetCell = game.grid.getCell(best[0], best[1]);
-      if (targetCell != null) {
-        _applyEffect(targetCell);
-        if (!model.dissolved) {
-          position = Vector2(
-            best[0] * CellComponent.cellSize + CellComponent.cellSize / 2,
-            best[1] * CellComponent.cellSize + CellComponent.cellSize / 2,
-          );
-          model.position.setFrom(position);
-        }
-      }
+      _driftTarget.setValues(
+        best.x * CellComponent.cellSize + CellComponent.cellSize / 2,
+        best.y * CellComponent.cellSize + CellComponent.cellSize / 2,
+      );
+    } else {
+      final angle = _rng.nextDouble() * math.pi * 2;
+      final d = 100.0 + _rng.nextDouble() * 150.0;
+      _driftTarget.setValues(
+        position.x + math.cos(angle) * d,
+        position.y + math.sin(angle) * d,
+      );
     }
   }
 
-  // ── Cell effect ───────────────────────────────────────────────────────────
+  // ── Cell effect ────────────────────────────────────────────────────────────
+
+  void _applyEffectAtCurrentPos() {
+    final gx = (position.x / CellComponent.cellSize).floor();
+    final gy = (position.y / CellComponent.cellSize).floor();
+    final cell = game.grid.getCell(gx, gy);
+    if (cell != null) _applyEffect(cell);
+  }
 
   void _applyEffect(CityCell cell) {
     double cellDrain;
@@ -234,29 +252,25 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
     cell.spiritualState = (cell.spiritualState - cellDrain).clamp(-1.0, 1.0);
 
-    model.energy += energyDrain; // energy drains toward 0 (starts negative, approaches 0)
+    model.energy += energyDrain; // energy drains toward 0 (starts negative)
     if (model.energy >= 0) {
       _dissolve(cell);
     }
   }
 
-  // ── Combat ────────────────────────────────────────────────────────────────
+  // ── Combat ─────────────────────────────────────────────────────────────────
 
   /// Called by the prayer combat system when this daemon is within the impact zone.
-  ///
-  /// [amount] is scaled by difficulty and prayer power by the caller.
   void takeDamage(double amount) {
     if (model.dissolved) return;
     _hitFlickerTimer = _hitFlickerDuration;
-    model.energy += amount; // advances energy toward 0
+    model.energy += amount;
     if (model.energy >= 0) {
       _explode();
     }
   }
 
   /// Daemon destroyed by prayer: strongly cleanses the surrounding area.
-  ///
-  /// Explosion radius is 3 cells; inner cells receive a larger positive boost.
   void _explode() {
     model.dissolved = true;
     const int explosionRadius = 3;
@@ -286,7 +300,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     removeFromParent();
   }
 
-  // ── Rendering ─────────────────────────────────────────────────────────────
+  // ── Rendering ──────────────────────────────────────────────────────────────
 
   @override
   void render(Canvas canvas) {
@@ -296,7 +310,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final center = Offset(size.x / 2, size.y / 2 + wobbleOffset);
     final t = (math.sin(_wobble * 0.7) + 1) / 2;
 
-    // Hit flicker: briefly tint white when damaged
     final isFlickering = _hitFlickerTimer > 0;
 
     // Pulsing red-to-black aura
@@ -325,8 +338,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
             : Colors.red[800]!.withValues(alpha: 0.9),
     );
 
-    // Energy indicator (how much energy the daemon still has)
-    final energyFraction = (model.energy.abs() / 100.0).clamp(0.0, 1.0);
+    // Energy arc: normalised against spawn energy so it always starts full.
+    final energyFraction =
+        (model.energy.abs() / model.initialEnergy.abs()).clamp(0.0, 1.0);
     final arcPaint = Paint()
       ..color = Colors.deepOrange.withValues(alpha: 0.7)
       ..style = PaintingStyle.stroke

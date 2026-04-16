@@ -64,9 +64,10 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   static const double _daemonSpawnChanceHard   = 0.28;
 
   /// Initial daemon energy by difficulty (negative; closer to 0 = weaker daemon).
-  static const double _daemonEnergyEasy   = -60.0;
-  static const double _daemonEnergyNormal = -100.0;
-  static const double _daemonEnergyHard   = -140.0;
+  /// Tripled vs. original values so daemons persist long enough to feel threatening.
+  static const double _daemonEnergyEasy   = -180.0;
+  static const double _daemonEnergyNormal = -300.0;
+  static const double _daemonEnergyHard   = -420.0;
 
   int _daemonIdCounter = 0;
   final math.Random _rng = math.Random(77);
