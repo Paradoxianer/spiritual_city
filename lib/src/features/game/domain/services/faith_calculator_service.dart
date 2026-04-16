@@ -42,51 +42,39 @@ class FaithCalculatorService {
     return _applyMultiplier(base);
   }
 
+  /// Unified difficulty factor:  easy = 1.5 ×, normal = 1.0 ×, hard = 0.5 ×.
+  /// Gains are multiplied by this factor; costs use the inverse (1 / factor).
+  double get _difficultyFactor => switch (difficulty) {
+    Difficulty.easy   => 1.5,
+    Difficulty.normal => 1.0,
+    Difficulty.hard   => 0.5,
+  };
+
   /// Faith cost paid by the player when praying for an NPC.
-  /// Easy: 1, Normal: 2, Hard: 3.
+  /// Base 2 × inverse factor: easy ≈ 1, normal = 2, hard = 4.
   int calculatePrayerFaithCost() {
-    return switch (difficulty) {
-      Difficulty.easy => 1,
-      Difficulty.normal => 2,
-      Difficulty.hard => 3,
-    };
+    return (2.0 / _difficultyFactor).round().clamp(1, 99);
   }
 
   /// Spiritual-state nudge applied to the NPC's cell when prayer is accepted.
-  /// Larger on easy, smaller on hard so territory change feels earned.
+  /// Base 0.025 × factor: easy ≈ 0.04, normal = 0.025, hard ≈ 0.013.
   double calculatePrayerCellDelta() {
-    return switch (difficulty) {
-      Difficulty.easy => 0.04,
-      Difficulty.normal => 0.025,
-      Difficulty.hard => 0.015,
-    };
+    return (0.025 * _difficultyFactor).clamp(0.01, 0.10);
   }
 
   /// HP cost paid by the player when counseling an NPC (active listening is tiring).
-  /// Easy: 1, Normal: 2, Hard: 3.
+  /// Base 2 × inverse factor: easy ≈ 1, normal = 2, hard = 4.
   int calculateCounselingHpCost() {
-    return switch (difficulty) {
-      Difficulty.easy => 1,
-      Difficulty.normal => 2,
-      Difficulty.hard => 3,
-    };
+    return (2.0 / _difficultyFactor).round().clamp(1, 99);
   }
 
   /// Faith lost per time-unit spent in a darkness zone.
+  /// Base 1 × inverse factor: easy ≈ 1, normal = 1, hard = 2.
   int calculateDarknessLoss() {
-    const baseLoss = 1;
-    return switch (difficulty) {
-      Difficulty.easy => 1, // (baseLoss * 0.5).ceil()
-      Difficulty.normal => baseLoss,
-      Difficulty.hard => baseLoss * 2,
-    };
+    return (1.0 / _difficultyFactor).round().clamp(1, 99);
   }
 
   int _applyMultiplier(int base) {
-    return switch (difficulty) {
-      Difficulty.easy => (base * 1.5).ceil(), // +50 %
-      Difficulty.normal => base,
-      Difficulty.hard => (base * 0.5).ceil(), // −50 %
-    };
+    return (base * _difficultyFactor).ceil();
   }
 }

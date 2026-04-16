@@ -200,7 +200,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (type == 'convert') {
       if (model.isChristian) return '✝️🙏';
 
-      if (interactionScore > 60) {
+      // Conversion is ready once the NPC's own faith exceeds 50.
+      if (model.faith > 50) {
         model.isConverted = true;
         model.applyInfluence(100);
         model.lastNpcFaithDelta = 100.0;

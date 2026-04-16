@@ -219,8 +219,28 @@ class _DialogOverlayState extends State<DialogOverlay> {
   double _lastPlayerHealthDelta = 0.0;
   bool _showDelta = false;
 
+  // ── Bible reading timer ───────────────────────────────────────────────────
+  /// Remaining seconds of the bible-reading block (0 = not reading).
+  int _bibleSecondsLeft = 0;
+  Timer? _bibleTimer;
+
+  /// Reading duration derived from the same difficulty factor used for costs:
+  /// base 5 s × (1 / factor) → easy ≈ 3 s, normal = 5 s, hard = 10 s.
+  int get _bibleDuration {
+    final factor = switch (widget.game.difficulty) {
+      Difficulty.easy   => 1.5,
+      Difficulty.normal => 1.0,
+      Difficulty.hard   => 0.5,
+    };
+    return (5.0 / factor).round();
+  }
+
+  /// Whether the player is currently blocked by the bible-reading timer.
+  bool get _isReadingBible => _bibleSecondsLeft > 0;
+
   @override
   void dispose() {
+    _bibleTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -245,7 +265,26 @@ class _DialogOverlayState extends State<DialogOverlay> {
   }
 
   void _handleInteraction(String type, String emoji) {
-    if (_isWaiting || _isSessionOver) return;
+    if (_isWaiting || _isSessionOver || _isReadingBible) return;
+
+    // ── Bible reading: start blocking countdown, then process ─────────────
+    if (type == 'bible') {
+      _addMessage(emoji, true);
+      setState(() {
+        _bibleSecondsLeft = _bibleDuration;
+        _showDelta = false;
+      });
+      _bibleTimer?.cancel();
+      _bibleTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!mounted) { t.cancel(); return; }
+        setState(() => _bibleSecondsLeft--);
+        if (_bibleSecondsLeft <= 0) {
+          t.cancel();
+          _processBibleResult();
+        }
+      });
+      return;
+    }
 
     _addMessage(emoji, true);
     setState(() {
@@ -298,6 +337,38 @@ class _DialogOverlayState extends State<DialogOverlay> {
         });
       }
     });
+  }
+
+  /// Called after the bible-reading countdown expires.
+  void _processBibleResult() {
+    final model = widget.game.activeDialog?.npcModel;
+    final reaction = widget.game.handleInteraction('bible');
+    _addMessage(reaction, false);
+
+    if (model != null) {
+      setState(() {
+        _lastNpcDelta = model.lastNpcFaithDelta;
+        _lastPlayerDelta = model.lastPlayerFaithDelta;
+        _lastMaterialsDelta = model.lastMaterialsDelta;
+        _lastPlayerHealthDelta = model.lastPlayerHealthDelta;
+        _showDelta = true;
+      });
+    }
+
+    if (model != null && model.isReadyToLeave) {
+      setState(() => _isSessionOver = true);
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (!mounted) return;
+        final sessionReaction = NPCReaction.fromFaithLevel(
+          model.faith,
+          gotGift: model.hadGiftThisSession,
+        );
+        _addMessage('${sessionReaction.emoji}👋', false);
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) widget.game.closeDialog();
+        });
+      });
+    }
   }
 
   /// Formats a delta value as a signed string, e.g. "+3" or "-8".
@@ -438,7 +509,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => widget.game.closeDialog(),
+                    onPressed: _isReadingBible ? null : () => widget.game.closeDialog(),
                   ),
                 ],
               ),
@@ -477,43 +548,63 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   color: Colors.black26,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _EmojiChip(
-                      emoji: '💬',
-                      hint: '→✝️',
-                      onTap: () => _handleInteraction('talk', '💬'),
-                    ),
-                    _EmojiChip(
-                      emoji: '👂',
-                      hint: '−❤️→✝️',
-                      onTap: () => _handleInteraction('counsel', '👂'),
-                    ),
-                    _EmojiChip(
-                      emoji: '🙏',
-                      hint: '−🙏→✝️🌍',
-                      onTap: () => _handleInteraction('pray', '🙏'),
-                    ),
-                    _EmojiChip(
-                      emoji: '📖',
-                      hint: '→🙏🙏+✝️',
-                      onTap: () => _handleInteraction('bible', '📖'),
-                    ),
-                    if (model.wantsGift)
-                      _EmojiChip(
-                        emoji: '📦',
-                        hint: '−8📦→✝️',
-                        onTap: () => _handleInteraction('help', '📦'),
+                child: _isReadingBible
+                    // ── Bible reading in progress: show countdown ──────────────
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('📖', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_bibleSecondsLeft}s',
+                            style: const TextStyle(
+                              color: Colors.amber,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('📖', style: TextStyle(fontSize: 20)),
+                        ],
+                      )
+                    // ── Normal action chips ────────────────────────────────────
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _EmojiChip(
+                            emoji: '💬',
+                            hint: '→✝️',
+                            onTap: () => _handleInteraction('talk', '💬'),
+                          ),
+                          _EmojiChip(
+                            emoji: '👂',
+                            hint: '−❤️→✝️',
+                            onTap: () => _handleInteraction('counsel', '👂'),
+                          ),
+                          _EmojiChip(
+                            emoji: '🙏',
+                            hint: '−🙏→✝️🌍',
+                            onTap: () => _handleInteraction('pray', '🙏'),
+                          ),
+                          _EmojiChip(
+                            emoji: '📖',
+                            hint: '→🙏🙏+✝️',
+                            onTap: () => _handleInteraction('bible', '📖'),
+                          ),
+                          if (model.wantsGift)
+                            _EmojiChip(
+                              emoji: '📦',
+                              hint: '−8📦→✝️',
+                              onTap: () => _handleInteraction('help', '📦'),
+                            ),
+                          _EmojiChip(
+                            emoji: '✝️🕊️',
+                            hint: '→?',
+                            isSpecial: true,
+                            onTap: () => _handleInteraction('convert', '✝️?'),
+                          ),
+                        ],
                       ),
-                    _EmojiChip(
-                      emoji: '✝️🕊️',
-                      hint: '→?',
-                      isSpecial: true,
-                      onTap: () => _handleInteraction('convert', '✝️?'),
-                    ),
-                  ],
-                ),
               ),
           ],
         ),
