@@ -158,8 +158,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       final prayerGain = (_faithCalc.calculatePrayerGain() * spiritualBonus).round();
       // Base 20% acceptance probability that scales with the NPC's own faith
       // (0-100). A deeply believing NPC is far more likely to accept prayer
-      // (up to 80%), while a faithless NPC barely reacts (20% floor).
-      final acceptanceChance = (model.faith / 100.0 * 0.6 + 0.2).clamp(0.0, 1.0);
+      // (100% at full faith), while a faithless NPC barely reacts (20% floor).
+      final acceptanceChance = (model.faith / 100.0 * 0.8 + 0.2).clamp(0.0, 1.0);
       if (_random.nextDouble() < acceptanceChance) {
         model.applyInfluence(prayerGain.toDouble());
         model.lastNpcFaithDelta = prayerGain.toDouble();
