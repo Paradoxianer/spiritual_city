@@ -42,6 +42,36 @@ class FaithCalculatorService {
     return _applyMultiplier(base);
   }
 
+  /// Faith cost paid by the player when praying for an NPC.
+  /// Easy: 1, Normal: 2, Hard: 3.
+  int calculatePrayerFaithCost() {
+    return switch (difficulty) {
+      Difficulty.easy => 1,
+      Difficulty.normal => 2,
+      Difficulty.hard => 3,
+    };
+  }
+
+  /// Spiritual-state nudge applied to the NPC's cell when prayer is accepted.
+  /// Larger on easy, smaller on hard so territory change feels earned.
+  double calculatePrayerCellDelta() {
+    return switch (difficulty) {
+      Difficulty.easy => 0.04,
+      Difficulty.normal => 0.025,
+      Difficulty.hard => 0.015,
+    };
+  }
+
+  /// HP cost paid by the player when counseling an NPC (active listening is tiring).
+  /// Easy: 1, Normal: 2, Hard: 3.
+  int calculateCounselingHpCost() {
+    return switch (difficulty) {
+      Difficulty.easy => 1,
+      Difficulty.normal => 2,
+      Difficulty.hard => 3,
+    };
+  }
+
   /// Faith lost per time-unit spent in a darkness zone.
   int calculateDarknessLoss() {
     const baseLoss = 1;

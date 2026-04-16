@@ -55,6 +55,9 @@ class NPCModel {
   /// Materials change from the most recent interaction (negative = spent).
   double lastMaterialsDelta = 0.0;
 
+  /// Player health change from the most recent interaction (negative = HP spent).
+  double lastPlayerHealthDelta = 0.0;
+
   // ── Progressive faith reveal ───────────────────────────────────────────────
 
   /// After 3 conversations the player has a vague sense of the NPC's faith.
@@ -96,6 +99,7 @@ class NPCModel {
     lastNpcFaithDelta = 0.0;
     lastPlayerFaithDelta = 0.0;
     lastMaterialsDelta = 0.0;
+    lastPlayerHealthDelta = 0.0;
     // 35% chance to request material help when faith is low
     wantsGift = faith < 30 && Random().nextDouble() < 0.35;
   }

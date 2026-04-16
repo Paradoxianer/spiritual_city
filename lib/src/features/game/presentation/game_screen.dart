@@ -216,6 +216,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
   double _lastNpcDelta = 0.0;
   double _lastPlayerDelta = 0.0;
   double _lastMaterialsDelta = 0.0;
+  double _lastPlayerHealthDelta = 0.0;
   bool _showDelta = false;
 
   @override
@@ -265,6 +266,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
           _lastNpcDelta = model.lastNpcFaithDelta;
           _lastPlayerDelta = model.lastPlayerFaithDelta;
           _lastMaterialsDelta = model.lastMaterialsDelta;
+          _lastPlayerHealthDelta = model.lastPlayerHealthDelta;
           _showDelta = true;
         });
       } else {
@@ -306,6 +308,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
     final parts = <String>[];
     if (_lastNpcDelta != 0) parts.add('${_fmtDelta(_lastNpcDelta)}✝️');
     if (_lastPlayerDelta != 0) parts.add('${_fmtDelta(_lastPlayerDelta)}🙏');
+    if (_lastPlayerHealthDelta != 0) parts.add('${_fmtDelta(_lastPlayerHealthDelta)}❤️');
     if (_lastMaterialsDelta != 0) parts.add('${_fmtDelta(_lastMaterialsDelta)}📦');
     if (parts.isEmpty) return const SizedBox.shrink();
     return Text(
@@ -484,12 +487,12 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     ),
                     _EmojiChip(
                       emoji: '👂',
-                      hint: '→✝️🙏',
+                      hint: '−❤️→✝️',
                       onTap: () => _handleInteraction('counsel', '👂'),
                     ),
                     _EmojiChip(
                       emoji: '🙏',
-                      hint: '→✝️+🙏',
+                      hint: '−🙏→✝️🌍',
                       onTap: () => _handleInteraction('pray', '🙏'),
                     ),
                     _EmojiChip(

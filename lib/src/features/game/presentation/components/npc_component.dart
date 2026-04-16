@@ -115,6 +115,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     model.lastNpcFaithDelta = 0.0;
     model.lastPlayerFaithDelta = resonanceExchange;
     model.lastMaterialsDelta = 0.0;
+    model.lastPlayerHealthDelta = 0.0;
 
     if (type == 'talk') {
       final gain = _faithCalc.calculateConversationGain();
@@ -126,6 +127,13 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (type == 'counsel') {
+      final hpCost = _faithCalc.calculateCounselingHpCost();
+      if (game.health <= hpCost) {
+        model.currentSessionInteractions--;
+        return '🚫❤️';
+      }
+      game.gainHealth(-hpCost.toDouble());
+      model.lastPlayerHealthDelta = -hpCost.toDouble();
       final gain = _faithCalc.calculateCounselingGain();
       model.applyInfluence(gain.toDouble());
       model.conversationCount++;
@@ -136,6 +144,13 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     if (type == 'pray') {
       model.prayerCount++;
+      final faithCost = _faithCalc.calculatePrayerFaithCost();
+      if (game.faith < faithCost) {
+        model.currentSessionInteractions--;
+        return '🚫🙏';
+      }
+      game.gainFaith(-faithCost.toDouble());
+      model.lastPlayerFaithDelta -= faithCost.toDouble();
       final prayerGain = _faithCalc.calculatePrayerGain();
       // Base 20% acceptance probability that scales positively with faith.
       // Even the most hostile NPC has a realistic chance to accept prayer.
@@ -145,6 +160,11 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         model.lastNpcFaithDelta = prayerGain.toDouble();
         model.lastPlayerFaithDelta += 3.0;
         game.gainFaith(3.0);
+        // Nudge the spiritual state of the cell toward the light.
+        final cellDelta = _faithCalc.calculatePrayerCellDelta();
+        if (cell != null) {
+          cell.spiritualState = (cell.spiritualState + cellDelta).clamp(-1.0, 1.0);
+        }
         return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
       } else {
         model.applyInfluence(-8.0);
