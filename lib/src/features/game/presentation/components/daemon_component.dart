@@ -33,20 +33,20 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Seconds per move step – set in onLoad() based on difficulty.
   double _moveInterval = 2.5;
 
-  static const double _moveIntervalEasy   = 3.0;
-  static const double _moveIntervalNormal = 2.5;
-  static const double _moveIntervalHard   = 2.0;
+  static const double _moveIntervalEasy   = 1.8;
+  static const double _moveIntervalNormal = 1.4;
+  static const double _moveIntervalHard   = 1.0;
 
   double _moveTimer = 0.0;
   double _wobble = 0.0;
 
   // ── Prayer-attraction spiral constants ─────────────────────────────────────
 
-  /// Fraction by which the spiral radius shrinks each step (2.5× attraction).
-  static const double _spiralTighteningFactor = 0.75;
+  /// Fraction by which the spiral radius shrinks each step (stronger attraction).
+  static const double _spiralTighteningFactor = 0.60;
 
-  /// Angle advance per spiral step (60 °), giving one full orbit in 6 steps.
-  static const double _spiralAngleStep = math.pi / 3;
+  /// Angle advance per spiral step (90 °), giving one full orbit in 4 steps.
+  static const double _spiralAngleStep = math.pi / 2;
 
   /// Minimum spiral radius before the daemon is considered to have "arrived".
   static const double _spiralRadiusMin = 50.0;

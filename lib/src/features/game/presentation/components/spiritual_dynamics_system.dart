@@ -54,12 +54,14 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
 
   // ── Daemon spawning ───────────────────────────────────────────────────────
 
-  static const int _maxDaemonsEasy   = 5;
-  static const int _maxDaemonsNormal = 8;
-  static const int _maxDaemonsHard   = 12;
+  static const int _maxDaemonsEasy   = 10;
+  static const int _maxDaemonsNormal = 15;
+  static const int _maxDaemonsHard   = 20;
 
-  /// Base spawn chance per tick per strongly-negative region (difficulty-scaled).
+  /// Spawn chance per tick per strongly-negative region – scales with difficulty.
+  static const double _daemonSpawnChanceEasy   = 0.08;
   static const double _daemonSpawnChanceNormal = 0.15;
+  static const double _daemonSpawnChanceHard   = 0.28;
 
   /// Initial daemon energy by difficulty (negative; closer to 0 = weaker daemon).
   static const double _daemonEnergyEasy   = -60.0;
@@ -212,10 +214,17 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     int existingDaemons = game.world.children.whereType<DaemonComponent>().length;
     if (existingDaemons >= maxDaemons) return;
 
+    // Difficulty-scaled base spawn chance
+    final baseChance = switch (game.difficulty) {
+      Difficulty.easy   => _daemonSpawnChanceEasy,
+      Difficulty.normal => _daemonSpawnChanceNormal,
+      Difficulty.hard   => _daemonSpawnChanceHard,
+    };
+
     // Spawn chance boosted when the player has recently prayed (Issue #31)
     final spawnChance = isPrayerAttractionActive
-        ? _daemonSpawnChanceNormal * (1 + prayerAttractionSpawnBonus)
-        : _daemonSpawnChanceNormal;
+        ? baseChance * (1 + prayerAttractionSpawnBonus)
+        : baseChance;
 
     outer:
     for (final chunk in chunks) {
