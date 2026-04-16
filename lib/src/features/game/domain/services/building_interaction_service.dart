@@ -49,16 +49,12 @@ class BuildingInteractionService {
 
   /// Perform [actionType] inside [building] and return the result.
   ///
-  /// `'letter'` works for every building type.
-  /// All other actions are dispatched by [BuildingType].
+  /// Actions are dispatched by [BuildingType].
   BuildingInteractionResult performAction(
     String actionType,
     BuildingModel building,
     double playerFaith,
   ) {
-    // Letter is always available regardless of building type.
-    if (actionType == 'letter') return _letterAction(building);
-
     switch (building.type) {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
@@ -99,16 +95,6 @@ class BuildingInteractionService {
       default:
         return _genericAction(actionType, building);
     }
-  }
-
-  // ── Letter (universal) ────────────────────────────────────────────────────
-
-  BuildingInteractionResult _letterAction(BuildingModel building) {
-    building.influenceResidents(1.0);
-    return const BuildingInteractionResult(
-      playerFaithDelta: 3.0,
-      reactionEmoji: '✉️🙏',
-    );
   }
 
   // ── Pastor's house ────────────────────────────────────────────────────────

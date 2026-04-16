@@ -212,6 +212,12 @@ class _DialogOverlayState extends State<DialogOverlay> {
   bool _isWaiting = false;
   bool _isSessionOver = false;
 
+  // Delta snapshot captured after each interaction for header display.
+  double _lastNpcDelta = 0.0;
+  double _lastPlayerDelta = 0.0;
+  double _lastMaterialsDelta = 0.0;
+  bool _showDelta = false;
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -241,14 +247,29 @@ class _DialogOverlayState extends State<DialogOverlay> {
     if (_isWaiting || _isSessionOver) return;
 
     _addMessage(emoji, true);
-    setState(() => _isWaiting = true);
+    setState(() {
+      _isWaiting = true;
+      _showDelta = false;
+    });
 
     Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       final model = widget.game.activeDialog?.npcModel;
       final reaction = widget.game.handleInteraction(type);
       _addMessage(reaction, false);
-      setState(() => _isWaiting = false);
+
+      // Capture deltas for header display.
+      if (model != null) {
+        setState(() {
+          _isWaiting = false;
+          _lastNpcDelta = model.lastNpcFaithDelta;
+          _lastPlayerDelta = model.lastPlayerFaithDelta;
+          _lastMaterialsDelta = model.lastMaterialsDelta;
+          _showDelta = true;
+        });
+      } else {
+        setState(() => _isWaiting = false);
+      }
 
       // Conversion success → session ends
       if (reaction == '✝️🕊️') {
@@ -277,10 +298,105 @@ class _DialogOverlayState extends State<DialogOverlay> {
     });
   }
 
+  /// Formats a delta value as a signed string, e.g. "+3" or "-8".
+  String _fmtDelta(double v) => v >= 0 ? '+${v.toStringAsFixed(0)}' : v.toStringAsFixed(0);
+
+  /// Builds the delta text shown in the header after an interaction.
+  Widget _buildDeltaRow() {
+    final parts = <String>[];
+    if (_lastNpcDelta != 0) parts.add('${_fmtDelta(_lastNpcDelta)}✝️');
+    if (_lastPlayerDelta != 0) parts.add('${_fmtDelta(_lastPlayerDelta)}🙏');
+    if (_lastMaterialsDelta != 0) parts.add('${_fmtDelta(_lastMaterialsDelta)}📦');
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Text(
+      parts.join('  '),
+      style: const TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.w600),
+    );
+  }
+
+  /// Progressive faith bar shown to the right of the chat.
+  Widget _buildFaithBar(NPCModel model) {
+    if (!model.isFaithVague) {
+      // Not enough conversations yet – show a question mark placeholder.
+      return SizedBox(
+        width: 28,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('✝️', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 4),
+            Container(
+              width: 8,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white12,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Center(
+                child: Text('?', style: TextStyle(color: Colors.white38, fontSize: 9)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final faithNorm = ((model.faith + 100) / 200.0).clamp(0.0, 1.0);
+    final barColor = Color.lerp(Colors.red[700]!, Colors.green[600]!, faithNorm)!;
+
+    // Vague: round to nearest 25%; revealed: exact value.
+    final displayNorm = model.isFaithRevealed
+        ? faithNorm
+        : ((faithNorm * 4).round() / 4.0).clamp(0.0, 1.0);
+
+    const barHeight = 80.0;
+
+    return SizedBox(
+      width: 28,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('✝️', style: TextStyle(fontSize: 14)),
+          const SizedBox(height: 4),
+          Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              Container(
+                width: 8,
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Container(
+                width: 8,
+                height: barHeight * displayNorm,
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (model.isFaithRevealed)
+            Text(
+              model.faith.toStringAsFixed(0),
+              style: const TextStyle(color: Colors.white60, fontSize: 9),
+            )
+          else
+            const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dialog = widget.game.activeDialog;
     if (dialog == null) return const SizedBox.shrink();
+    final model = dialog.npcModel;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -305,9 +421,16 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 children: [
                   CircleAvatar(backgroundColor: Colors.white24, child: Text(dialog.npcEmoji)),
                   const SizedBox(width: 12),
-                  Text(
-                    dialog.npcName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        dialog.npcName,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      if (_showDelta) _buildDeltaRow(),
+                    ],
                   ),
                   const Spacer(),
                   IconButton(
@@ -318,23 +441,35 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
             ),
 
-            // ── Chat body ─────────────────────────────────────────────────────
+            // ── Chat body + faith bar ─────────────────────────────────────────
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
+                      ),
+                    ),
+                  ),
+                  // Progressive faith reveal bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: _buildFaithBar(model),
+                  ),
+                ],
               ),
             ),
 
             // ── Action chips ──────────────────────────────────────────────────
             if (!_isSessionOver)
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 decoration: const BoxDecoration(
                   color: Colors.black26,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
@@ -342,11 +477,35 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _EmojiChip(emoji: '💬', onTap: () => _handleInteraction('talk', '💬')),
-                    _EmojiChip(emoji: '🙏', onTap: () => _handleInteraction('pray', '🙏')),
-                    _EmojiChip(emoji: '📦', onTap: () => _handleInteraction('help', '📦')),
                     _EmojiChip(
-                      emoji: '✝️🕊️',
+                      emoji: '💬',
+                      hint: '→✝️',
+                      onTap: () => _handleInteraction('talk', '💬'),
+                    ),
+                    _EmojiChip(
+                      emoji: '👂',
+                      hint: '→✝️🙏',
+                      onTap: () => _handleInteraction('counsel', '👂'),
+                    ),
+                    _EmojiChip(
+                      emoji: '🙏',
+                      hint: '→✝️+🙏',
+                      onTap: () => _handleInteraction('pray', '🙏'),
+                    ),
+                    _EmojiChip(
+                      emoji: '📖',
+                      hint: '→🙏🙏+✝️',
+                      onTap: () => _handleInteraction('bible', '📖'),
+                    ),
+                    if (model.wantsGift)
+                      _EmojiChip(
+                        emoji: '📦',
+                        hint: '−8📦→✝️',
+                        onTap: () => _handleInteraction('help', '📦'),
+                      ),
+                    _EmojiChip(
+                      emoji: '✝️',
+                      hint: '→?',
                       isSpecial: true,
                       onTap: () => _handleInteraction('convert', '✝️?'),
                     ),
@@ -393,21 +552,36 @@ class _EmojiChip extends StatelessWidget {
   final String emoji;
   final VoidCallback onTap;
   final bool isSpecial;
+  /// Short cost/benefit hint shown below the emoji, e.g. "→✝️" or "−8📦→✝️".
+  final String? hint;
 
   const _EmojiChip({
     required this.emoji,
     required this.onTap,
     this.isSpecial = false,
+    this.hint,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(
-      label: Text(emoji, style: const TextStyle(fontSize: 22)),
-      backgroundColor: isSpecial ? Colors.amber[800] : Colors.white70,
-      onPressed: onTap,
-      shape: StadiumBorder(side: BorderSide(color: isSpecial ? Colors.amber : Colors.transparent)),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ActionChip(
+          label: Text(emoji, style: const TextStyle(fontSize: 22)),
+          backgroundColor: isSpecial ? Colors.amber[800] : Colors.white70,
+          onPressed: onTap,
+          shape: StadiumBorder(side: BorderSide(color: isSpecial ? Colors.amber : Colors.transparent)),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+        if (hint != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            hint!,
+            style: const TextStyle(color: Colors.white70, fontSize: 10),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -686,43 +860,18 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             _buildResidentChips(building, compact: true),
           ],
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber[700],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: const StadiumBorder(),
-                ),
-                icon: const Text('👊', style: TextStyle(fontSize: 22)),
-                label: const Text('Anklopfen', style: TextStyle(fontSize: 16)),
-                onPressed: _attemptKnock,
+          Center(
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: const StadiumBorder(),
               ),
-              const SizedBox(width: 12),
-              Tooltip(
-                message: 'Brief einwerfen (+3 Glauben)',
-                child: GestureDetector(
-                  onTap: () {
-                    _performAction('letter');
-                    widget.game.closeBuildingInterior();
-                  },
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white30),
-                    ),
-                    child: const Center(
-                      child: Text('✉️', style: TextStyle(fontSize: 24)),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              icon: const Text('👊', style: TextStyle(fontSize: 22)),
+              label: const Text('Anklopfen', style: TextStyle(fontSize: 16)),
+              onPressed: _attemptKnock,
+            ),
           ),
         ],
       ),
@@ -751,42 +900,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white70, fontSize: 16),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Du kannst trotzdem einen Brief einwerfen.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.5),
-              fontSize: 12,
-            ),
-          ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueGrey[700],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 10),
-                  shape: const StadiumBorder(),
-                ),
-                icon: const Text('✉️', style: TextStyle(fontSize: 18)),
-                label: const Text('Brief einwerfen',
-                    style: TextStyle(fontSize: 13)),
-                onPressed: () {
-                  _performAction('letter');
-                  widget.game.closeBuildingInterior();
-                },
-              ),
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: () => widget.game.closeBuildingInterior(),
-                child: const Text('Weggehen',
-                    style: TextStyle(color: Colors.amber)),
-              ),
-            ],
+          TextButton(
+            onPressed: () => widget.game.closeBuildingInterior(),
+            child: const Text('Weggehen', style: TextStyle(color: Colors.amber)),
           ),
         ],
       ),
@@ -865,16 +982,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   ///
   /// Each row shows: action emoji  →/←  effect emoji(s)
   /// A Tooltip (long-press mobile / hover desktop) reveals a German description.
-  /// The letter action is always the last entry.
   List<Widget> _buildActionMenuRows(BuildingModel building) {
-    final letter = _ActionMenuRow(
-      leadingEmoji: '✉️',
-      arrowText: '→',
-      trailingEmoji: '📬',
-      tooltip: 'Brief einwerfen (+3 Glauben)',
-      onTap: () => _performAction('letter'),
-    );
-
     switch (building.type) {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
@@ -882,7 +990,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Bibel lesen (+20 Glauben)', onTap: () => _performAction('readBible')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Beten (+15 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Ausruhen (+10 Glauben)', onTap: () => _performAction('rest')),
-          letter,
         ];
 
       // ── Residential ───────────────────────────────────────────────────────
@@ -893,7 +1000,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '❤️×5', tooltip: 'Für Familie beten (−5 HP, +15 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Hilfe anbieten (−10 Material, +10 Glauben)', onTap: () => _performAction('help')),
           _ActionMenuRow(leadingEmoji: '📖', arrowText: '←', trailingEmoji: '❤️×3💰×3', tooltip: 'Gemeinsam Bibel lesen (−3 HP, −3 Material, +10 Glauben)', onTap: () => _performAction('bible')),
-          letter,
         ];
 
       // ── Church ────────────────────────────────────────────────────────────
@@ -903,7 +1009,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '📖', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Bibel lesen (−3 Material, +10 Glauben)', onTap: () => _performAction('readBible')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Gemeinsam beten (−3 Material, +15 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '🎵', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Gottesdienst halten (−8 Material, +20 Glauben)', onTap: () => _performAction('worship')),
-          letter,
         ];
 
       // ── Hospital ──────────────────────────────────────────────────────────
@@ -912,7 +1017,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Kranke besuchen (−5 Material, +12 Glauben)', onTap: () => _performAction('visitSick')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Heilung beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '💊', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Heilen lassen (−10 Material, +20 Glauben)', onTap: () => _performAction('heal')),
-          letter,
         ];
 
       // ── School / University ───────────────────────────────────────────────
@@ -922,7 +1026,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '📚', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Glauben lehren (−5 Material, +8 Glauben)', onTap: () => _performAction('teach')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Schüler beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material spenden (−8 Material, +10 Glauben)', onTap: () => _performAction('distribute')),
-          letter,
         ];
 
       // ── Cemetery ──────────────────────────────────────────────────────────
@@ -930,7 +1033,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         return [
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Stille Andacht (−5 Material, +18 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Trauernde trösten (−3 Material, +10 Glauben)', onTap: () => _performAction('comfort')),
-          letter,
         ];
 
       // ── Commercial ────────────────────────────────────────────────────────
@@ -944,7 +1046,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👷✝️', tooltip: 'Mit Arbeiter sprechen (+5 Glauben)', onTap: () => _performAction('worker')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für den Betrieb beten (−3 Material, +10 Glauben)', onTap: () => _performAction('prayBusiness')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Material verteilen (−5 Material, +15 Glauben)', onTap: () => _performAction('distribute')),
-          letter,
         ];
 
       // ── Everything else ───────────────────────────────────────────────────
@@ -953,7 +1054,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🌿✝️', tooltip: 'Beten (+8 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '💬', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Zeugnis geben (−3 Material, +10 Glauben)', onTap: () => _performAction('witness')),
           _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material verteilen (−8 Material, +12 Glauben)', onTap: () => _performAction('distribute')),
-          letter,
         ];
     }
   }

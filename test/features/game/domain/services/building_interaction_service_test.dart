@@ -177,23 +177,6 @@ void main() {
       });
     });
 
-    group('letter – works for any building type', () {
-      test('letter: +3 faith, resident +1 faith', () {
-        final resident = npc();
-        for (final b in [
-          house(residents: [resident]),
-          shop(residents: [resident]),
-          hospital(residents: [resident]),
-        ]) {
-          resident.faith = 0;
-          final result = BuildingInteractionService().performAction('letter', b, 0.0);
-          expect(result.playerFaithDelta, 3.0);
-          expect(resident.faith, 1.0);
-          expect(result.success, isTrue);
-        }
-      });
-    });
-
     group('performAction – residential', () {
       test('talk: +5 faith, increments resident conversationCount', () {
         final resident = npc();
