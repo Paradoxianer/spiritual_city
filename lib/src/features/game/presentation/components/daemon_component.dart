@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../domain/models/daemon_model.dart';
 import '../../domain/models/city_cell.dart';
 import '../../../menu/domain/models/difficulty.dart';
+import '../../domain/services/faith_calculator_service.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
@@ -77,12 +78,11 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
       Difficulty.normal => _moveIntervalNormal,
       Difficulty.hard => _moveIntervalHard,
     };
-    // Difficulty-scaled cell darkening per move (hard daemons corrupt cells faster)
-    _cellDrainMultiplier = switch (game.difficulty) {
-      Difficulty.easy => 0.6,
-      Difficulty.normal => 1.0,
-      Difficulty.hard => 1.5,
-    };
+    // Difficulty-scaled cell darkening per move (hard daemons corrupt cells faster).
+    // Uses the inverse of the canonical difficultyFactor so that hard → more drain,
+    // consistent with all other difficulty scaling in FaithCalculatorService.
+    _cellDrainMultiplier =
+        1.0 / FaithCalculatorService.difficultyFactorFor(game.difficulty);
   }
 
   @override
