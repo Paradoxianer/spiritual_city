@@ -85,7 +85,11 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   Vector2 get interactionPosition => position;
 
   String _getNPCEmoji() {
-    if (model.isChristian) return '✝️'; // Geändert von 🕊️ zu ✝️
+    // Issue #45: reveal faith only after enough conversations
+    if (!model.isFaithVague) return '👤'; // unknown – neutral silhouette
+    if (!model.isFaithRevealed) return '🤔'; // vague impression
+    // Fully revealed
+    if (model.isChristian) return '✝️';
     if (model.faith < -30) return '😠';
     if (model.faith < 30) return '👤';
     return '🤔';
@@ -111,34 +115,83 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0);
     game.gainFaith(resonanceExchange);
 
+    // Reset deltas; resonance is included in player-faith running total.
+    model.lastNpcFaithDelta = 0.0;
+    model.lastPlayerFaithDelta = resonanceExchange;
+    model.lastMaterialsDelta = 0.0;
+
     if (type == 'talk') {
       final gain = _faithCalc.calculateConversationGain();
       model.applyInfluence(gain.toDouble());
       model.conversationCount++;
+      model.lastNpcFaithDelta = gain.toDouble();
       game.recordConversation();
       return _talkEmoji();
+    }
+
+    if (type == 'counsel') {
+      // Seelsorge: listen to NPC, reveal more about their faith.
+      final npcGain = _faithCalc.calculateCounselingGain();
+      const playerGain = 1.0;
+      model.counselingCount++;
+      model.conversationCount++;
+      model.applyInfluence(npcGain.toDouble());
+      game.gainFaith(playerGain);
+      model.lastNpcFaithDelta = npcGain.toDouble();
+      model.lastPlayerFaithDelta += playerGain;
+      return _counselEmoji();
     }
 
     if (type == 'pray') {
       model.prayerCount++;
       final prayerGain = _faithCalc.calculatePrayerGain();
-      if (interactionScore + _random.nextInt(40) > 20) {
+
+      // Issue #46: base 25 % acceptance even for hostile NPCs.
+      // faith maps -100→0 to +100→50 bonus points, giving 25–75 % range.
+      final faithBonus = ((model.faith + 100) / 4).clamp(0, 50).toInt();
+      final spiritualBonus = (spiritualState.clamp(0.0, 1.0) * 15).toInt();
+      final threshold = 25 + faithBonus + spiritualBonus; // 25 %–90 %
+
+      if (_random.nextInt(100) < threshold) {
         model.applyInfluence(prayerGain.toDouble());
-        game.gainFaith(3.0);
+        game.gainFaith(2.0);
+        // Prayer has a stronger effect on the invisible spiritual world.
+        if (cell != null) {
+          cell.spiritualState = (cell.spiritualState + 0.1).clamp(-1.0, 1.0);
+        }
+        model.lastNpcFaithDelta = prayerGain.toDouble();
+        model.lastPlayerFaithDelta += 2.0;
         return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
       } else {
         model.applyInfluence(-8.0);
+        model.lastNpcFaithDelta = -8.0;
         return interactionScore < -20 ? '💀😬' : '😠💭';
       }
     }
 
+    if (type == 'bible') {
+      // Reading the Bible: high player-faith gain, small NPC-faith gain.
+      final bibleGain = _faithCalc.calculateBibleGain();
+      final npcGain = _faithCalc.calculateConversationGain();
+      model.conversationCount++;
+      model.applyInfluence(npcGain.toDouble());
+      game.gainFaith(bibleGain.toDouble());
+      model.lastNpcFaithDelta = npcGain.toDouble();
+      model.lastPlayerFaithDelta += bibleGain.toDouble();
+      return ['📖✝️', '📖💛', '📖🙏'][_random.nextInt(3)];
+    }
+
     if (type == 'help') {
+      if (!model.wantsGift) return '🤷💭'; // guard: chip should not appear
       final giftGain = _faithCalc.calculateGiftGain();
       model.conversationCount++;
       model.hadGiftThisSession = true;
       model.applyInfluence(giftGain.toDouble());
       game.gainFaith(5.0);
       game.spendMaterials(8.0);
+      model.lastNpcFaithDelta = giftGain.toDouble();
+      model.lastPlayerFaithDelta += 5.0;
+      model.lastMaterialsDelta = -8.0;
       return ['📦🙏', '😊📦', '🙏😊'][_random.nextInt(3)];
     }
 
@@ -149,9 +202,12 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         model.applyInfluence(100);
         game.gainFaith(25.0);
         game.recordConversion();
+        model.lastNpcFaithDelta = 100.0;
+        model.lastPlayerFaithDelta += 25.0;
         return '✝️🕊️';
       } else {
         model.applyInfluence(3.0);
+        model.lastNpcFaithDelta = 3.0;
         if (interactionScore < 0) return '🚫😤';
         return '🤔💭';
       }
@@ -168,6 +224,15 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (model.faith > 0)  return ['🤔💬', '💭😊', '👀💬'][_random.nextInt(3)];
     if (model.faith > -30) return ['😐💬', '💭🤔', '😒💬'][_random.nextInt(3)];
     return ['😠💬', '😤🙅', '😡💭'][_random.nextInt(3)];
+  }
+
+  /// Returns a two-emoji response for a counselling (Seelsorge) interaction
+  /// that hints at the NPC's inner faith state without fully revealing it.
+  String _counselEmoji() {
+    if (model.faith > 30) return ['😊💭', '🙌💬', '😄💭'][_random.nextInt(3)];
+    if (model.faith > 0)  return ['🤔💭', '💭🤔', '👀💭'][_random.nextInt(3)];
+    if (model.faith > -30) return ['😔💭', '💭😐', '😒💭'][_random.nextInt(3)];
+    return ['😢💭', '😞💭', '💭😔'][_random.nextInt(3)];
   }
 
   @override
@@ -279,17 +344,24 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   @override
   void render(Canvas canvas) {
-    Color bodyColor;
-    if (model.isChristian) {
-      bodyColor = Colors.white;
-    } else if (model.faith < 0) {
-      bodyColor = Color.lerp(Colors.red[900]!, Colors.grey, (model.faith + 100) / 100)!;
+    // Issue #45: body colour and cross are hidden until faith is revealed.
+    final Color bodyColor;
+    if (!model.isFaithVague) {
+      // 0–2 conversations: neutral grey – faith completely unknown
+      bodyColor = Colors.grey[400]!;
     } else {
-      bodyColor = Color.lerp(Colors.grey, Colors.blue[100]!, model.faith / 50)!;
+      final trueColor = _resolvedBodyColor();
+      if (!model.isFaithRevealed) {
+        // 3–5 conversations: faint tint – vague impression only
+        bodyColor = Color.lerp(Colors.grey[400]!, trueColor, 0.35)!;
+      } else {
+        bodyColor = trueColor;
+      }
     }
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
 
-    if (model.isChristian) {
+    // Cross only drawn when NPC is Christian AND faith is fully revealed.
+    if (model.isChristian && model.isFaithRevealed) {
       final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
       final center = (size / 2).toOffset();
       canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);
@@ -297,6 +369,15 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
+  }
+
+  /// True colour of the NPC body, used once faith visibility allows it.
+  Color _resolvedBodyColor() {
+    if (model.isChristian) return Colors.white;
+    if (model.faith < 0) {
+      return Color.lerp(Colors.red[900]!, Colors.grey, (model.faith + 100) / 100)!;
+    }
+    return Color.lerp(Colors.grey, Colors.blue[100]!, model.faith / 50)!;
   }
 
   void _renderSpiritualAura(Canvas canvas) {

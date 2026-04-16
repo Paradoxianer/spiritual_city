@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flame/components.dart';
 
 enum NPCType {
@@ -21,7 +22,10 @@ class NPCModel {
   
   int conversationCount;
   int prayerCount;
-  
+
+  /// How many times the player counselled (Seelsorge) this NPC.
+  int counselingCount;
+
   /// Tracks interactions in the current active dialogue session
   int currentSessionInteractions = 0;
 
@@ -37,10 +41,26 @@ class NPCModel {
   String? currentMessage;
 
   /// ID of the building this NPC lives/works in.
-  /// Prepared for future house-entry feature: when the player enters a
-  /// building, all NPCs with a matching [homeBuildingId] can be interacted
-  /// with or prayed for at once.
   final String? homeBuildingId;
+
+  // ── Gift request (issue #46) ───────────────────────────────────────────────
+
+  /// True when the NPC has requested materials this session.
+  /// Set randomly in [resetSession]; the 📦 chip is only shown when true.
+  bool wantsGift = false;
+
+  // ── Delta tracking for header display (issue #46) ─────────────────────────
+
+  /// Change in NPC faith from the last interaction (✝️).
+  double lastNpcFaithDelta = 0.0;
+
+  /// Change in player faith from the last interaction (🙏).
+  double lastPlayerFaithDelta = 0.0;
+
+  /// Change in player materials from the last interaction (📦).
+  double lastMaterialsDelta = 0.0;
+
+  static final _rng = Random();
 
   NPCModel({
     required this.id,
@@ -51,11 +71,20 @@ class NPCModel {
     this.faith = 0.0,
     this.conversationCount = 0,
     this.prayerCount = 0,
+    this.counselingCount = 0,
     this.currentMessage,
   });
 
   /// An NPC is considered a Christian if faith is above 50 (Lastenheft 6.2)
   bool get isChristian => faith > 50;
+
+  // ── Faith visibility (issue #45) ──────────────────────────────────────────
+
+  /// After 6+ conversations the player knows the NPC's true faith.
+  bool get isFaithRevealed => conversationCount >= 6;
+
+  /// After 3–5 conversations the player has a vague sense of the NPC's faith.
+  bool get isFaithVague => conversationCount >= 3;
 
   /// Logic to update faith based on interaction and environment
   void applyInfluence(double amount) {
@@ -66,5 +95,10 @@ class NPCModel {
     currentSessionInteractions = 0;
     hadGiftThisSession = false;
     lastReactionEmoji = '';
+    lastNpcFaithDelta = 0.0;
+    lastPlayerFaithDelta = 0.0;
+    lastMaterialsDelta = 0.0;
+    // NPC randomly requests materials when their faith is not yet positive.
+    wantsGift = faith < 30 && _rng.nextInt(100) < 35;
   }
 }

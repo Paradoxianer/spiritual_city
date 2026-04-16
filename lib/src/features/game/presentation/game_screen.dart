@@ -213,6 +213,16 @@ class _DialogOverlayState extends State<DialogOverlay> {
   bool _isSessionOver = false;
 
   @override
+  void initState() {
+    super.initState();
+    // If the NPC is requesting materials this session, open with a request msg.
+    final model = widget.game.activeDialog?.npcModel;
+    if (model != null && model.wantsGift) {
+      _messages.add(_ChatMessage(content: '🙏📦❓', isPlayer: false));
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
@@ -247,6 +257,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
       if (!mounted) return;
       final model = widget.game.activeDialog?.npcModel;
       final reaction = widget.game.handleInteraction(type);
+      // setState also rebuilds the header with the updated deltas from model.
       _addMessage(reaction, false);
       setState(() => _isWaiting = false);
 
@@ -277,15 +288,32 @@ class _DialogOverlayState extends State<DialogOverlay> {
     });
   }
 
+  /// Builds a compact delta string for the header, e.g. "+3✝️ +2🙏 −8📦".
+  /// Uses the canonical stat emoji: ✝️=NPC faith, 🙏=player faith, 📦=materials.
+  String _deltaText(NPCModel model) {
+    final buf = StringBuffer();
+    void add(double v, String icon) {
+      if (v == 0) return;
+      buf.write(v > 0 ? '+${v.toStringAsFixed(0)}$icon' : '${v.toStringAsFixed(0)}$icon');
+      buf.write(' ');
+    }
+    add(model.lastNpcFaithDelta, '✝️');
+    add(model.lastPlayerFaithDelta, '🙏');
+    add(model.lastMaterialsDelta, '📦');
+    return buf.toString().trimRight();
+  }
+
   @override
   Widget build(BuildContext context) {
     final dialog = widget.game.activeDialog;
     if (dialog == null) return const SizedBox.shrink();
+    final model = dialog.npcModel;
 
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
-        height: MediaQuery.of(context).size.height * 0.45,
+        // Slightly taller to fit faith bar + annotated chips (issue #46 & #48)
+        height: MediaQuery.of(context).size.height * 0.52,
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF075E54).withValues(alpha: 0.95),
@@ -303,50 +331,119 @@ class _DialogOverlayState extends State<DialogOverlay> {
               ),
               child: Row(
                 children: [
-                  CircleAvatar(backgroundColor: Colors.white24, child: Text(dialog.npcEmoji)),
-                  const SizedBox(width: 12),
-                  Text(
-                    dialog.npcName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  // Issue #48: ensure emoji avatar has at least 4 px padding on all sides
+                  CircleAvatar(
+                    backgroundColor: Colors.white24,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Text(dialog.npcEmoji,
+                          style: const TextStyle(fontSize: 18)),
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          dialog.npcName,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
+                        // Delta feedback line (issue #46) – hidden until first action
+                        if (_messages.length > 1)
+                          Text(
+                            _deltaText(model),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 11,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close, color: Colors.white, size: 24),
                     onPressed: () => widget.game.closeDialog(),
                   ),
                 ],
               ),
             ),
 
-            // ── Chat body ─────────────────────────────────────────────────────
+            // ── Chat body + faith bar (side by side) ─────────────────────────
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Chat messages
+                  Expanded(
+                    child: Container(
+                      color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        // Issue #48: top padding prevents first message from
+                        // being hidden behind the header.
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) =>
+                            _ChatBubble(message: _messages[index]),
+                      ),
+                    ),
+                  ),
+                  // NPC faith bar (issue #46)
+                  _NpcFaithBar(model: model),
+                ],
               ),
             ),
 
             // ── Action chips ──────────────────────────────────────────────────
             if (!_isSessionOver)
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 decoration: const BoxDecoration(
                   color: Colors.black26,
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                  borderRadius:
+                      BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
-                    _EmojiChip(emoji: '💬', onTap: () => _handleInteraction('talk', '💬')),
-                    _EmojiChip(emoji: '🙏', onTap: () => _handleInteraction('pray', '🙏')),
-                    _EmojiChip(emoji: '📦', onTap: () => _handleInteraction('help', '📦')),
-                    _EmojiChip(
-                      emoji: '✝️🕊️',
+                    // ✝️/🙏/📦 hints use the game's canonical stat emoji
+                    _ActionChipWithHint(
+                      emoji: '💬',
+                      hint: '→✝️',
+                      onTap: () => _handleInteraction('talk', '💬'),
+                    ),
+                    _ActionChipWithHint(
+                      emoji: '👂',
+                      hint: '→✝️🙏',
+                      onTap: () => _handleInteraction('counsel', '👂'),
+                    ),
+                    _ActionChipWithHint(
+                      emoji: '🙏',
+                      hint: '→✝️+🙏',
+                      onTap: () => _handleInteraction('pray', '🙏'),
+                    ),
+                    _ActionChipWithHint(
+                      emoji: '📖',
+                      hint: '→🙏🙏+✝️',
+                      onTap: () => _handleInteraction('bible', '📖'),
+                    ),
+                    // 📦 chip only when NPC has asked for materials (issue #46)
+                    if (model.wantsGift && !model.hadGiftThisSession)
+                      _ActionChipWithHint(
+                        emoji: '📦',
+                        hint: '−8📦→✝️',
+                        onTap: () => _handleInteraction('help', '📦'),
+                      ),
+                    _ActionChipWithHint(
+                      emoji: '✝️',
+                      hint: '→✝️!',
                       isSpecial: true,
                       onTap: () => _handleInteraction('convert', '✝️?'),
                     ),
@@ -360,6 +457,129 @@ class _DialogOverlayState extends State<DialogOverlay> {
   }
 }
 
+// ── NPC faith bar (issue #46) ─────────────────────────────────────────────────
+
+/// Vertical faith-progress bar shown to the right of the chat window.
+///
+/// Reveals information progressively based on [NPCModel.conversationCount]:
+/// * 0–2 conversations: ❓ – completely unknown
+/// * 3–5 conversations: 🤔 – vague bar (no exact value)
+/// * 6+  conversations: ✝️/😊/😔 + exact bar with value
+class _NpcFaithBar extends StatelessWidget {
+  final NPCModel model;
+  const _NpcFaithBar({required this.model});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!model.isFaithVague) {
+      return Container(
+        width: 38,
+        color: Colors.black12,
+        child: const Center(
+          child: Text('❓', style: TextStyle(fontSize: 16)),
+        ),
+      );
+    }
+
+    if (!model.isFaithRevealed) {
+      return Container(
+        width: 38,
+        color: Colors.black12,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🤔', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 6),
+            Expanded(
+              child: Container(
+                width: 12,
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                // Approximate bar – deliberately blurry/opaque.
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: FractionallySizedBox(
+                    heightFactor: 0.5,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.orange.withValues(alpha: 0.7),
+                            Colors.orange.withValues(alpha: 0.3),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Fully revealed
+    final faithNorm = ((model.faith + 100) / 200.0).clamp(0.0, 1.0);
+    final barColor = model.faith > 0
+        ? Color.lerp(Colors.yellow[600]!, Colors.green[400]!, model.faith / 100)!
+        : Color.lerp(Colors.red[700]!, Colors.orange[400]!, (model.faith + 100) / 100)!;
+    // Use the canonical stat emoji ✝️ for NPC faith (from game memories).
+    final faithEmoji = model.isChristian ? '✝️' : model.faith > 0 ? '😊' : '😔';
+
+    return Container(
+      width: 38,
+      color: Colors.black12,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(faithEmoji, style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 4),
+          Expanded(
+            child: Container(
+              width: 12,
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: FractionallySizedBox(
+                  heightFactor: faithNorm,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: barColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            model.faith.toStringAsFixed(0),
+            style: const TextStyle(
+              fontSize: 8,
+              color: Colors.white70,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Chat widgets ──────────────────────────────────────────────────────────────
+
 class _ChatBubble extends StatelessWidget {
   final _ChatMessage message;
   const _ChatBubble({required this.message});
@@ -370,6 +590,7 @@ class _ChatBubble extends StatelessWidget {
       alignment: message.isPlayer ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
+        // Issue #48: minimum 4 px padding on all sides so emojis aren't clipped.
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: message.isPlayer ? const Color(0xFFDCF8C6) : Colors.white,
@@ -382,32 +603,66 @@ class _ChatBubble extends StatelessWidget {
         ),
         child: Text(
           message.content,
-          style: const TextStyle(fontSize: 22, color: Colors.black87),
+          // Issue #48: consistent 24 px icon/emoji size in chat bubbles.
+          style: const TextStyle(fontSize: 24, color: Colors.black87),
         ),
       ),
     );
   }
 }
 
-class _EmojiChip extends StatelessWidget {
+/// Action chip with the action emoji on top and a small cost/benefit hint below.
+///
+/// The hint uses only canonical game stat emoji:
+///   ✝️ = NPC faith   🙏 = player faith   📦 = materials   ❤️ = health
+///
+/// Issue #46 (cost/benefit under chips) + Issue #48 (min 48 px touch target).
+class _ActionChipWithHint extends StatelessWidget {
   final String emoji;
+  final String hint;
   final VoidCallback onTap;
   final bool isSpecial;
 
-  const _EmojiChip({
+  const _ActionChipWithHint({
     required this.emoji,
+    required this.hint,
     required this.onTap,
     this.isSpecial = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(
-      label: Text(emoji, style: const TextStyle(fontSize: 22)),
-      backgroundColor: isSpecial ? Colors.amber[800] : Colors.white70,
-      onPressed: onTap,
-      shape: StadiumBorder(side: BorderSide(color: isSpecial ? Colors.amber : Colors.transparent)),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    return Material(
+      color: isSpecial ? Colors.amber[800] : Colors.white70,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          // Issue #48: chip height ≥ 48 px (Material touch-target guideline).
+          constraints: const BoxConstraints(minHeight: 48, minWidth: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Issue #48: consistent 24 px icon size.
+              Text(emoji, style: const TextStyle(fontSize: 24)),
+              if (hint.isNotEmpty)
+                Text(
+                  hint,
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: isSpecial
+                        ? Colors.amber[100]
+                        : Colors.black54,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
