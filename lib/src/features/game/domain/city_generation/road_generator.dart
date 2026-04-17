@@ -16,6 +16,11 @@ class RoadGenerator {
     'Bachstr.', 'Amselweg', 'Buchenstr.', 'Eichenstr.', 'Wiesenweg',
   ];
 
+  /// Large prime used to distribute axis keys across the street-name pool.
+  /// Chosen to produce a good spread of indices for typical city coordinate
+  /// ranges (−1000…1000 cells).
+  static const int _nameHashMult = 1013904223;
+
   /// Returns a deterministic street name for a given road axis.
   ///
   /// Horizontal roads are keyed by their [wy] value; vertical by [wx].
@@ -24,7 +29,7 @@ class RoadGenerator {
   String? _streetName(int wx, int wy, bool isHorizontal, bool isBig) {
     if (!isBig) return null; // only name major boulevards for now
     final axisKey = isHorizontal ? wy : wx;
-    final hash = (axisKey * 1013904223) ^ (axisKey >> 16);
+    final hash = (axisKey * _nameHashMult) ^ (axisKey >> 16);
     return _streetNames[hash.abs() % _streetNames.length];
   }
 

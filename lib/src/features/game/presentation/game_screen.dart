@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show atan2, pi;
 import 'package:flame/components.dart' show Vector2;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -1052,18 +1053,14 @@ class _PastorhouseHud extends StatelessWidget {
       builder: (context, housePx, _) {
         if (housePx == null) return const SizedBox.shrink();
 
-        // Rebuild each frame – listen to player position via AnimatedBuilder
-        // by piggy-backing on the missions notifier (updated infrequently) is
-        // not frame-accurate.  Instead, just always show the indicator and
-        // hide when the player is within 200 px.
         final playerPos = game.player.position;
         final dx = housePx.x - playerPos.x;
         final dy = housePx.y - playerPos.y;
-        final dist = (dx * dx + dy * dy).abs();
-        if (dist < 200 * 200) return const SizedBox.shrink(); // very close
+        final distSq = dx * dx + dy * dy;
+        if (distSq < 200 * 200) return const SizedBox.shrink(); // very close
 
-        final angle = _radiansToDegrees(_atan2(dy, dx));
-        final arrow = _directionArrow(angle);
+        final angleDeg = atan2(dy, dx) * 180 / pi;
+        final arrow = _directionArrow(angleDeg);
 
         return Positioned(
           top: 60,
@@ -1109,32 +1106,6 @@ class _PastorhouseHud extends StatelessWidget {
     if (deg < 112.5)  return '↓';
     return '↙';
   }
-
-  double _atan2(double y, double x) {
-    if (x == 0 && y == 0) return 0;
-    return _atan2Impl(y, x);
-  }
-
-  // Simple atan2 approximation (accurate to ±1°).
-  double _atan2Impl(double y, double x) {
-    const pi = 3.141592653589793;
-    if (x > 0) return _atan(y / x);
-    if (x < 0 && y >= 0) return _atan(y / x) + pi;
-    if (x < 0 && y < 0)  return _atan(y / x) - pi;
-    if (x == 0 && y > 0)  return pi / 2;
-    return -pi / 2;
-  }
-
-  double _atan(double z) {
-    // Polynomial approximation of atan in [−1, 1]; range-reduce first.
-    const pi = 3.141592653589793;
-    if (z.abs() > 1) {
-      return (z > 0 ? 1 : -1) * pi / 2 - _atan(1 / z);
-    }
-    return z * (1.0 - z * z * (1.0 / 3.0 - z * z / 5.0));
-  }
-
-  double _radiansToDegrees(double r) => r * 180 / 3.141592653589793;
 }
 
 

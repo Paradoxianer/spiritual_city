@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -65,7 +66,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// World-pixel position of the pastor house once its chunk is first loaded.
   /// `null` until the first chunk containing the pastor house is generated.
   final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(null);
-
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
@@ -202,18 +202,24 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Gently pans the camera to the pastor house position and back so the
   /// player immediately knows where to return for missions.
   void _playCameraIntro() async {
-    // If the pastor house position is not yet known, wait briefly for the
-    // chunk to load (it is in the same chunk as the player spawn).
-    Vector2? target;
-    for (int i = 0; i < 20; i++) {
-      target = pastorhousePosition.value;
-      if (target != null) break;
-      await Future.delayed(const Duration(milliseconds: 100));
+    // Await the pastor house position using a completer attached to the notifier.
+    Vector2? target = pastorhousePosition.value;
+    if (target == null) {
+      // Listen for the first non-null update (pastor house is in spawn chunk).
+      final completer = Completer<Vector2?>();
+      void listener() {
+        if (pastorhousePosition.value != null && !completer.isCompleted) {
+          completer.complete(pastorhousePosition.value);
+        }
+      }
+      pastorhousePosition.addListener(listener);
+      target = await completer.future
+          .timeout(const Duration(seconds: 3), onTimeout: () => null);
+      pastorhousePosition.removeListener(listener);
     }
-    if (target == null) return; // house not found – skip intro
+    if (target == null) return;
 
     final origin = player.position.clone();
-    // Smooth interpolation: move towards target over 1 s, hold 1 s, return.
     const steps = 30;
     const stepMs = 33; // ~30 fps
     for (int i = 0; i <= steps; i++) {
@@ -563,8 +569,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
     activeLookData = GameLookData(descriptions: infos.toSet().toList());
     overlays.add('LookOverlay');
-    // Auto-close after 3 seconds
-    Future.delayed(const Duration(seconds: 3), closeLookOverlay);
+    // Auto-close after 3 seconds – only if the overlay is still active.
+    Future.delayed(const Duration(seconds: 3), () {
+      if (activeLookData != null) closeLookOverlay();
+    });
   }
 
   void closeLookOverlay() {

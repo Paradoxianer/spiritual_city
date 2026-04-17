@@ -74,7 +74,7 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
 
   @override
   void update(double dt) {
-    _pulseTimer = (_pulseTimer + dt) % (2 * 3.141592653589793);
+    _pulseTimer = (_pulseTimer + dt) % (2 * pi);
 
     // Respawn timer countdown
     for (final p in _pickups) {
