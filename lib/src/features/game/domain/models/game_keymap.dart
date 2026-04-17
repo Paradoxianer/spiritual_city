@@ -59,7 +59,7 @@ class GameKeymap {
   static const LogicalKeyboardKey prayerSizeAlt = LogicalKeyboardKey.shiftRight;
 
   // ── World toggle ───────────────────────────────────────────────────────────
-  static const LogicalKeyboardKey worldToggle = LogicalKeyboardKey.tab;
+  static const LogicalKeyboardKey worldToggle = LogicalKeyboardKey.keyQ;
 
   // ── Overlay ────────────────────────────────────────────────────────────────
   /// Show/hide the keymap overlay.
@@ -117,7 +117,7 @@ class GameKeymap {
 
     // Allgemein
     KeymapEntry(
-      keys: 'Tab / 🙏-Button',
+      keys: 'Q / 🙏-Button',
       action: 'Welt wechseln (−10 Glaube)',
       category: 'Allgemein',
     ),
