@@ -1,0 +1,29 @@
+name: "Copilot Setup Steps"
+
+on:
+    workflow_dispatch:
+    push:
+        paths:
+            - .github/workflows/copilot-setup-steps.yml
+    pull_request:
+        paths:
+            - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+    copilot-setup-steps:
+        runs-on: ubuntu-latest
+
+        permissions:
+            contents: read
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Flutter
+              uses: subosito/flutter-action@v2
+              with:
+                  flutter-version: '3.41.6'
+
+            - name: Install dependencies
+              run: flutter pub get
