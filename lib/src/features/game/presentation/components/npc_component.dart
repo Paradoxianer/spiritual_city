@@ -163,7 +163,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.lastPlayerHealthDelta = -hpCost.toDouble();
       final gain = (_faithCalc.calculateCounselingGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
-      model.conversationCount++;
+      // Counseling counts double: reveals faith information twice as fast as
+      // normal conversation and consumes two session interaction slots.
+      model.conversationCount += 2;
+      model.currentSessionInteractions++;
       model.counselingCount++;
       model.lastNpcFaithDelta = gain.toDouble();
       return ['👂💬', '👂🙏', '👂😊', '👂💛'][_random.nextInt(4)];
@@ -182,7 +185,12 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       // Base 20% acceptance probability that scales with the NPC's own faith
       // (0-100). A deeply believing NPC is far more likely to accept prayer
       // (100% at full faith), while a faithless NPC barely reacts (20% floor).
-      final acceptanceChance = (model.faith / 100.0 * 0.8 + 0.2).clamp(0.0, 1.0);
+      // Additional bonus up to +25% based on total interactions with this NPC:
+      // the more the player has invested in the relationship, the more the NPC
+      // opens up to prayer even if they still have low faith.
+      final totalInteractions = model.conversationCount + model.prayerCount;
+      final interactionBonus = (totalInteractions * 0.015).clamp(0.0, 0.25);
+      final acceptanceChance = (model.faith / 100.0 * 0.6 + 0.2 + interactionBonus).clamp(0.0, 1.0);
       if (_random.nextDouble() < acceptanceChance) {
         model.applyInfluence(prayerGain.toDouble());
         model.lastNpcFaithDelta = prayerGain.toDouble();
@@ -239,12 +247,30 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         model.lastPlayerFaithDelta += 25.0;
         game.gainFaith(25.0);
         game.recordConversion();
+        // Strong positive spiritual area effect on conversion (radius 5).
+        // Cells closer to the NPC are affected more strongly.
+        const conversionRadius = 5;
+        for (int dx = -conversionRadius; dx <= conversionRadius; dx++) {
+          for (int dy = -conversionRadius; dy <= conversionRadius; dy++) {
+            final distSq = dx * dx + dy * dy;
+            if (distSq <= conversionRadius * conversionRadius) {
+              final c = game.grid.getCell(gx + dx, gy + dy);
+              if (c != null) {
+                final distanceFactor = 1.0 - (distSq / (conversionRadius * conversionRadius + 1));
+                c.spiritualState = (c.spiritualState + 0.35 * distanceFactor).clamp(-1.0, 1.0);
+              }
+            }
+          }
+        }
         return '✝️🕊️';
       } else {
-        model.applyInfluence(3.0);
-        model.lastNpcFaithDelta = 3.0;
+        // Rejection: people are annoyed by conversion attempts – stronger faith
+        // penalty than a simple prayer refusal.
+        final rejectPenalty = interactionScore < 0 ? -20.0 : -12.0;
+        model.applyInfluence(rejectPenalty);
+        model.lastNpcFaithDelta = rejectPenalty;
         if (interactionScore < 0) return '🚫😤';
-        return '🤔💭';
+        return '🙅💭';
       }
     }
 
