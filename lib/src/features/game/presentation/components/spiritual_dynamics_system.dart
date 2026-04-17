@@ -37,18 +37,20 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   static const double churchBonus = 0.02;
 
   /// Fall-back rate (negative drift) for cells without neighbours or support.
-  static const double fallbackRate = 0.005;
+  /// Reduced from 0.005 → 0.002 so liberated areas hold longer (less frustrating).
+  static const double fallbackRate = 0.002;
 
   /// Extra negative pressure a strongly-dark cell (< [_darkBastion]) exerts
   /// on each of its neighbours that is less negative than it (boundary seepage).
-  static const double darkSeepageFactor = 0.008;
+  /// Reduced from 0.008 → 0.004 so darkness spreads more slowly.
+  static const double darkSeepageFactor = 0.004;
 
   /// Threshold below which a cell is considered a "dark bastion" that seeps.
   static const double _darkBastion = -0.55;
 
   /// How much of a positive delta a dark bastion absorbs (resistance to light).
-  /// 0.35 means only 35 % of the positive nudge is applied.
-  static const double darkResistanceFactor = 0.35;
+  /// Increased from 0.35 → 0.55 so prayer is noticeably effective on dark cells.
+  static const double darkResistanceFactor = 0.55;
 
   double _timer = 0.0;
 
@@ -58,10 +60,12 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   double _continuousSpawnTimer = 0.0;
 
   /// Next spawn fires after this many real seconds (re-randomised on each spawn).
-  double _nextSpawnInterval = 3.0;
+  double _nextSpawnInterval = 5.0;
 
-  static const double _continuousSpawnMin = 1.0; // s
-  static const double _continuousSpawnMax = 7.0; // s
+  /// Reduced min/max spawn interval so the world feels populated but not
+  /// overwhelming, especially at the start of a prayer session.
+  static const double _continuousSpawnMin = 3.0; // s
+  static const double _continuousSpawnMax = 12.0; // s
 
   // ── Daemon spawning ───────────────────────────────────────────────────────
 
@@ -92,7 +96,9 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   static const double prayerAttractionDuration = 30.0;
 
   /// Spawn-chance bonus while prayer attraction is active.
-  static const double prayerAttractionSpawnBonus = 0.40;
+  /// Reduced from 0.40 → 0.20 to keep daemon pressure noticeable but not
+  /// punishing during a prayer session.
+  static const double prayerAttractionSpawnBonus = 0.20;
 
   /// True while the prayer-attraction effect is active.
   bool get isPrayerAttractionActive => _prayerAttractionTimer > 0;

@@ -39,8 +39,10 @@ class PlayerComponent extends PositionComponent
   /// HINWEIS: Dies ist der Wert, der später durch Missionen/Upgrades erhöht wird!
   double modifierBasePower = 15.0;     
   
-  /// Maximaler Radius der Gebetszone.
-  double modifierMaxRadius = 450.0; 
+  /// Maximaler Radius der Gebetszone (in Pixeln).
+  /// Muss mit [PrayerZoneComponent.maxRadius] übereinstimmen, damit die visuelle
+  /// Zone exakt die betroffenen Zellen anzeigt.
+  double modifierMaxRadius = PrayerZoneComponent.maxRadius; 
 
   /// Globaler Widerstand-Multiplikator (Kann durch Missionen gesenkt werden)
   double modifierResistanceFactor = 1.0; 
@@ -50,8 +52,9 @@ class PlayerComponent extends PositionComponent
   // ── Directional prayer-zone geometry constants ─────────────────────────────
 
   /// The directional zone extends this multiple of [modifierMaxRadius] beyond
-  /// the base radius to allow a generous cone reach.
-  static const double _dirZoneRadiusMultiplier = 1.8;
+  /// the base radius.  Set to [PrayerZoneComponent._beamLengthMultiplier] so
+  /// the impact area matches the rendered beam exactly.
+  static const double _dirZoneRadiusMultiplier = PrayerZoneComponent.beamLengthMultiplier;
 
   /// Half-angle (radians) of the directional prayer cone (~40 °).
   static const double _dirZoneHalfAngle = math.pi / 4.5;
@@ -149,7 +152,9 @@ class PlayerComponent extends PositionComponent
   void _executePrayerImpact() {
     // rawIntensity determines what % of faith is spent (0.0 to 1.0).
     final rawIntensity = math.sin(_intensityPulseTime * modifierIntensitySpeed).abs();
-    final radiusFactor = math.sin(_sizePulseTime * modifierSizeSpeed).abs().clamp(0.001, 1.0);
+    // Use the currently displayed zone size so the impact area matches
+    // exactly what the player sees on screen.
+    final radiusFactor = prayerZone.sizeFactor.clamp(0.001, 1.0);
 
     // TIMING MULTIPLIER (Lastenheft 2.3)
     // Inbrunst modifier widens the optimal window
@@ -286,9 +291,12 @@ class PlayerComponent extends PositionComponent
   }
 
   void _updatePrayerMechanics(double dt) {
+    // Size grows when joystick is moved, keyboard direction held, Shift pressed,
+    // OR when the faith/intensity button is held (so the HUD action button alone
+    // is enough to see the growing prayer zone – Issue #32).
     _isChargingSize = !joystick.delta.isZero() ||
         _keyboardDirection.x != 0 || _keyboardDirection.y != 0 ||
-        _pressedShift;
+        _pressedShift || _isChargingIntensity;
 
     // Apply Ausdauer modifier to zone growth speed
     final effectiveSizeSpeed = modifierSizeSpeed * game.modifiers.zoneSizeSpeedMultiplier;
@@ -303,6 +311,9 @@ class PlayerComponent extends PositionComponent
         prayerZone.direction = joystick.relativeDelta;
       } else if (!_keyboardDirection.isZero()) {
         prayerZone.direction = _keyboardDirection;
+      } else {
+        // No directional input – show a centered circle (Issue #32).
+        prayerZone.direction = Vector2.zero();
       }
     } else {
       _sizePulseTime = 0;

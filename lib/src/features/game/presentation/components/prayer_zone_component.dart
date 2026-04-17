@@ -9,7 +9,14 @@ class PrayerZoneComponent extends PositionComponent with HasGameReference<Spirit
   Vector2 direction = Vector2.zero();
   bool isActive = false;
 
+  /// Maximum radius of the prayer zone in pixels.
+  /// Must be kept in sync with [PlayerComponent.modifierMaxRadius].
   static const double maxRadius = 180.0;
+
+  /// The directional beam extends this multiple of the current radius.
+  /// Exposed so [PlayerComponent] can use the exact same value for its
+  /// collision/impact check, keeping the visual zone and affected area aligned.
+  static const double beamLengthMultiplier = 1.6;
 
   PrayerZoneComponent() : super(anchor: Anchor.center, priority: 110);
 
@@ -60,7 +67,7 @@ class PrayerZoneComponent extends PositionComponent with HasGameReference<Spirit
     
     // Die Breite des Strahls ist schmaler, wenn er gerichtet ist
     final beamWidth = radius * 0.7;
-    final beamLength = radius * 1.6;
+    final beamLength = radius * beamLengthMultiplier;
 
     // Aura
     paint.color = aura;

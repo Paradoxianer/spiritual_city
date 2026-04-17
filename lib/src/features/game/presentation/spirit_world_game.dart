@@ -99,9 +99,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double worldToggleCost = 10.0;
 
   /// Number of daemons spawned around the player on spiritual-world entry.
-  static const int _entryDaemonsEasy   = 3;
-  static const int _entryDaemonsNormal = 5;
-  static const int _entryDaemonsHard   = 8;
+  /// Reduced so new players aren't overwhelmed immediately.
+  static const int _entryDaemonsEasy   = 2;
+  static const int _entryDaemonsNormal = 3;
+  static const int _entryDaemonsHard   = 5;
 
   // Passive resource timers
   double _hungerDrainTimer = 0.0;
