@@ -118,8 +118,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     // ── Restore save state ──────────────────────────────────────────────────
     final savedState = gameSave?.gameState;
-    if (savedState != null && savedState.isNotEmpty) {
-      _applyPlayerState(savedState);
+    final hasSavedState = savedState != null && savedState.isNotEmpty;
+    if (hasSavedState) {
+      _applyPlayerState(savedState!);
       _savedCellStates = _parseSavedCellStates(savedState);
       _savedNPCStates  = _parseSavedNPCStates(savedState);
     }
@@ -129,9 +130,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // pixel (7000, 7000) → grid cell (floor(7000/32), floor(7000/32)) = (218, 218).
     // The pastor's house is placed at grid cell (220, 222) — just a few cells
     // away — see SpecialBuildingRegistry._pastorHouseX/Y.
-    player.position = savedState != null && savedState.isNotEmpty
+    player.position = hasSavedState
         ? Vector2(
-            (savedState['playerX'] as num).toDouble(),
+            (savedState!['playerX'] as num).toDouble(),
             (savedState['playerY'] as num).toDouble(),
           )
         : Vector2(7000, 7000);
@@ -157,7 +158,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     camera.viewfinder.position = player.position.clone();
 
     await Future.delayed(const Duration(milliseconds: 1000));
-    if (gameSave?.gameState['isSpiritualWorld'] == true) {
+    if (hasSavedState && savedState!['isSpiritualWorld'] == true) {
       isSpiritualWorld = true;
       _updateButtonStyles();
     }
@@ -259,10 +260,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // ── NPC states ───────────────────────────────────────────────────────────
     final Map<String, Map<String, dynamic>> npcStates = {};
     for (final npc in chunkManager.allNPCModels) {
-      if (npc.faith             != 0.0 ||
-          npc.conversationCount != 0   ||
-          npc.prayerCount       != 0   ||
-          npc.counselingCount   != 0   ||
+      if (npc.faith != 0.0 ||
+          npc.conversationCount != 0 ||
+          npc.prayerCount != 0 ||
+          npc.counselingCount != 0 ||
           npc.isConverted) {
         npcStates[npc.id] = {
           'faith': npc.faith,
