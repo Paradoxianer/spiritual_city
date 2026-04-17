@@ -66,6 +66,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// World-pixel position of the pastor house once its chunk is first loaded.
   /// `null` until the first chunk containing the pastor house is generated.
   final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(null);
+
+  /// Current street / address label displayed top-center.
+  /// Updated in [update()] every ~0.5 s when the player moves cells.
+  final ValueNotifier<String> currentStreetLabel = ValueNotifier('');
+
+  int _lastStreetCellX = -999999;
+  int _lastStreetCellY = -999999;
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
@@ -548,29 +555,59 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Opens the look overlay, describing nearby cells around the player.
   void openLookOverlay() {
-    // Collect info about the 8 adjacent cells.
     const cellSize = 32.0;
     final px = (player.position.x / cellSize).floor();
     final py = (player.position.y / cellSize).floor();
-    final infos = <String>[];
+
+    // Player's own spiritual state
+    final selfCell = grid.getCell(px, py);
+    final selfState = selfCell?.spiritualState ?? 0.0;
+
+    final infos = <LookCellInfo>[];
+    final seen = <String>{};
+
     for (final d in const [
       [0, -1], [1, 0], [0, 1], [-1, 0],
+      [-1, -1], [1, -1], [1, 1], [-1, 1],
     ]) {
       final cell = grid.getCell(px + d[0], py + d[1]);
       if (cell == null) continue;
       final data = cell.data;
+
+      String? label;
+      String? npcName;
+
       if (data is BuildingData) {
         final name = BuildingComponent.buildingName(data.type);
-        final num  = data.houseNumber != null ? ' Nr. ${data.houseNumber}' : '';
-        infos.add('$name$num');
+        final num  = data.houseNumber != null ? ' ${data.houseNumber}' : '';
+        label = '$name$num';
       } else if (data is RoadData && data.streetName != null) {
-        infos.add(data.streetName!);
+        label = data.streetName!;
       }
+
+      if (label == null || !seen.add(label)) continue;
+
+      // Find an NPC in this cell
+      for (final npc in chunkManager.allActiveNPCs) {
+        final nx = (npc.interactionPosition.x / cellSize).floor();
+        final ny = (npc.interactionPosition.y / cellSize).floor();
+        if (nx == px + d[0] && ny == py + d[1]) {
+          npcName = npc.interactionLabel.split(' ').first;
+          break;
+        }
+      }
+
+      infos.add(LookCellInfo(
+        label: label,
+        spiritualState: cell.spiritualState,
+        npcName: npcName,
+      ));
     }
-    activeLookData = GameLookData(descriptions: infos.toSet().toList());
+
+    activeLookData = GameLookData(cells: infos, playerSpiritualState: selfState);
     overlays.add('LookOverlay');
-    // Auto-close after 3 seconds – only if the overlay is still active.
-    Future.delayed(const Duration(seconds: 3), () {
+    // Auto-close after 4 seconds – only if the overlay is still active.
+    Future.delayed(const Duration(seconds: 4), () {
       if (activeLookData != null) closeLookOverlay();
     });
   }
@@ -701,7 +738,48 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       _updateCamera(dt);
       _updateNearestInteractable();
       _updatePassiveResources(dt);
+      _updateStreetLabel();
     }
+  }
+
+  /// Updates [currentStreetLabel] whenever the player moves to a new cell.
+  void _updateStreetLabel() {
+    const cellSize = 32.0;
+    final cx = (player.position.x / cellSize).floor();
+    final cy = (player.position.y / cellSize).floor();
+    if (cx == _lastStreetCellX && cy == _lastStreetCellY) return;
+    _lastStreetCellX = cx;
+    _lastStreetCellY = cy;
+
+    // Try the player's own cell first, then the 4 cardinal neighbours.
+    String? label;
+    for (final d in const [
+      [0, 0], [0, -1], [1, 0], [0, 1], [-1, 0],
+    ]) {
+      final cell = grid.getCell(cx + d[0], cy + d[1]);
+      if (cell == null) continue;
+      final data = cell.data;
+      if (data is RoadData && data.streetName != null) {
+        label = data.streetName!;
+        break;
+      }
+      if (data is BuildingData && data.houseNumber != null) {
+        // Look for an adjacent road name to form a full address.
+        for (final rd in const [
+          [0, -1], [1, 0], [0, 1], [-1, 0],
+        ]) {
+          final roadCell = grid.getCell(cx + rd[0], cy + rd[1]);
+          if (roadCell?.data is RoadData &&
+              (roadCell!.data as RoadData).streetName != null) {
+            label =
+                '${(roadCell.data as RoadData).streetName!} ${data.houseNumber}';
+            break;
+          }
+        }
+        if (label != null) break;
+      }
+    }
+    currentStreetLabel.value = label ?? '';
   }
 
   void _updatePassiveResources(double dt) {

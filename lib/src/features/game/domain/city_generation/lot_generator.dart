@@ -30,19 +30,20 @@ class LotGenerator {
     final int modX = wx % grid;
     final int modY = wy % grid;
 
-    // Row/column 0 of each grid block = sidewalk (empty)
+    // Row/column 0 of each grid block = sidewalk (empty).
+    // Exception: special buildings are always placed regardless of their
+    // position within the grid block so they can never be silently dropped.
+    final BuildingType? special = _registry.getSpecialBuilding(wx, wy, district);
+    if (special != null) {
+      return _buildingData(special, wx, wy, grid, modX, modY, district, rand);
+    }
+
     if (modX == 0 || modY == 0) return null;
 
     // ---- 2. Chance to leave lot unpaved (nature / gap) ------------------
     final double buildChance = _buildChance(district);
     if (rand.nextDouble() > buildChance) {
       return _generateNature(district, rand);
-    }
-
-    // ---- 3. Special-building override -----------------------------------
-    final BuildingType? special = _registry.getSpecialBuilding(wx, wy, district);
-    if (special != null) {
-      return _buildingData(special, wx, wy, grid, modX, modY, district, rand);
     }
 
     // ---- 4. Ordinary building type from district rules ------------------

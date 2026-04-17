@@ -125,6 +125,14 @@ class _GameScreenState extends State<GameScreen> {
               return _PastorhouseHud(game: _game);
             },
           ),
+          // Street-name label – persistent top-center
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _StreetLabel(game: _game);
+            },
+          ),
           // Saving overlay – centered indicator shown while persisting to Hive.
           if (_isSaving)
             Container(
@@ -785,15 +793,74 @@ class GameDialogData {
 }
 
 /// Data passed to the [LookOverlay].
+class LookCellInfo {
+  final String label;           // e.g. "Hauptstraße" or "Rathaus Nr. 12"
+  final double spiritualState;  // -1..1
+  final String? npcName;        // first NPC name seen in that cell, or null
+
+  const LookCellInfo({
+    required this.label,
+    required this.spiritualState,
+    this.npcName,
+  });
+}
+
 class GameLookData {
-  final List<String> descriptions;
-  GameLookData({required this.descriptions});
+  final List<LookCellInfo> cells;
+  final double playerSpiritualState;
+  GameLookData({required this.cells, required this.playerSpiritualState});
+}
+
+// ── Street name HUD label ─────────────────────────────────────────────────────
+
+/// Persistent top-center label showing the current street / address.
+/// Only visible when there is a street name to display.
+class _StreetLabel extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _StreetLabel({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<String>(
+      valueListenable: game.currentStreetLabel,
+      builder: (context, label, _) {
+        if (label.isEmpty) return const SizedBox.shrink();
+        return Positioned(
+          top: 14,
+          left: 60,
+          right: 60,
+          child: SafeArea(
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 // ── Look Overlay ──────────────────────────────────────────────────────────────
 
-/// Shows a brief 3-second tooltip with information about adjacent cells
-/// (building names, street names) – activated by the 👀 radial-menu action.
+/// Rich look overlay – shows spiritual state, building/NPC info, and street
+/// info for all 8 neighbouring cells.  Activated by the 👀 radial-menu action.
 class LookOverlay extends StatelessWidget {
   final SpiritWorldGame game;
   const LookOverlay({super.key, required this.game});
@@ -802,25 +869,25 @@ class LookOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = game.activeLookData;
     if (data == null) return const SizedBox.shrink();
-    final lines = data.descriptions;
 
     return Positioned(
-      top: MediaQuery.of(context).size.height * 0.25,
-      left: 40,
-      right: 40,
+      top: MediaQuery.of(context).size.height * 0.20,
+      left: 24,
+      right: 24,
       child: Material(
         type: MaterialType.transparency,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.80),
-            borderRadius: BorderRadius.circular(14),
+            color: Colors.black.withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white24),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
               Row(
                 children: [
                   const Text('👀', style: TextStyle(fontSize: 18)),
@@ -833,25 +900,21 @@ class LookOverlay extends StatelessWidget {
                       fontSize: 15,
                     ),
                   ),
+                  const Spacer(),
+                  // Spiritual state indicator for the current cell
+                  _SpiritualDot(state: data.playerSpiritualState),
                 ],
               ),
               const SizedBox(height: 8),
-              if (lines.isEmpty)
+              if (data.cells.isEmpty)
                 Text(
-                  'Keine besonderen Gebäude in der Nähe.',
+                  'Nichts Besonderes in der Nähe.',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 13,
-                  ),
+                      color: Colors.white.withValues(alpha: 0.55),
+                      fontSize: 12),
                 )
               else
-                ...lines.map((l) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Text(
-                        '• $l',
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
-                    )),
+                ...data.cells.map((c) => _LookCellRow(cell: c)),
             ],
           ),
         ),
@@ -859,6 +922,64 @@ class LookOverlay extends StatelessWidget {
     );
   }
 }
+
+class _SpiritualDot extends StatelessWidget {
+  final double state; // -1..1
+  const _SpiritualDot({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color col = state > 0
+        ? Color.lerp(Colors.grey, Colors.amber, state)!
+        : Color.lerp(Colors.grey, Colors.red, state.abs())!;
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: col,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white30),
+      ),
+    );
+  }
+}
+
+class _LookCellRow extends StatelessWidget {
+  final LookCellInfo cell;
+  const _LookCellRow({required this.cell});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          _SpiritualDot(state: cell.spiritualState),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              cell.label,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (cell.npcName != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              cell.npcName!,
+              style: TextStyle(
+                color: Colors.amber.withValues(alpha: 0.8),
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 
 // ── Mission Board Overlay ─────────────────────────────────────────────────────
 
