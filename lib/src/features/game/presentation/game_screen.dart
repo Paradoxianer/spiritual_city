@@ -86,8 +86,7 @@ class _GameScreenState extends State<GameScreen> {
               return const _LoadingOverlay();
             },
           ),
-          // Save & Quit button – only shown when the world is ready and not
-          // while a save operation is in progress.
+          // Close (save & quit) button – only shown when the world is ready.
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
@@ -96,27 +95,40 @@ class _GameScreenState extends State<GameScreen> {
                 top: 12,
                 right: 12,
                 child: SafeArea(
-                  child: _isSaving
-                      ? const CircularProgressIndicator(
-                          color: Colors.white70,
-                          strokeWidth: 2,
-                        )
-                      : IconButton(
-                          onPressed: _saveAndQuit,
-                          tooltip: AppStrings.get('game.saveQuit'),
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.black54,
-                            foregroundColor: Colors.white70,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          icon: const Icon(Icons.save_outlined),
-                        ),
+                  child: IconButton(
+                    onPressed: _isSaving ? null : _saveAndQuit,
+                    tooltip: AppStrings.get('game.saveQuit'),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black54,
+                      foregroundColor: Colors.white70,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: const Icon(Icons.close),
+                  ),
                 ),
               );
             },
           ),
+          // Saving overlay – centered indicator shown while persisting to Hive.
+          if (_isSaving)
+            Container(
+              color: Colors.black45,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.save, size: 48, color: Colors.white70),
+                    SizedBox(height: 16),
+                    CircularProgressIndicator(
+                      color: Colors.white70,
+                      strokeWidth: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

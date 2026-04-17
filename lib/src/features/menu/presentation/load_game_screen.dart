@@ -135,6 +135,7 @@ class _SaveTile extends StatelessWidget {
         border: Border.all(color: Colors.blueGrey.shade700),
       ),
       child: ListTile(
+        onTap: onLoad,
         leading: Icon(
           hasState ? Icons.save : Icons.save_outlined,
           color: hasState ? Colors.lightBlueAccent : Colors.blueGrey,
@@ -147,20 +148,10 @@ class _SaveTile extends StatelessWidget {
           '$diffLabel · ${AppStrings.get('loadGame.lastPlayed')}: $dateStr',
           style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 12),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.play_arrow, color: Colors.greenAccent),
-              tooltip: AppStrings.get('loadGame.load'),
-              onPressed: onLoad,
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              tooltip: AppStrings.get('loadGame.delete'),
-              onPressed: onDelete,
-            ),
-          ],
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          tooltip: AppStrings.get('loadGame.delete'),
+          onPressed: onDelete,
         ),
       ),
     );
