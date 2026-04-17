@@ -741,6 +741,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Returns a formatted address string (e.g. "Lindenallee 14") for the cell
   /// at the given pixel position.  Returns null if no relevant data is found.
   String? _addressForPixelPos(Vector2 pixelPos) {
+    const cellSize = 32.0;
     final gx = (pixelPos.x / cellSize).floor();
     final gy = (pixelPos.y / cellSize).floor();
 
