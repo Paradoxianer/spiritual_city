@@ -202,9 +202,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3;
         canvas.drawRect(size.toRect().inflate(1.5), _dynamicPaint);
-        _dynamicPaint
-          ..style = PaintingStyle.fill
-          ..strokeWidth = 1;
+        _dynamicPaint.style = PaintingStyle.fill;
         break;
 
       // ---- Commercial ----------------------------------------------------

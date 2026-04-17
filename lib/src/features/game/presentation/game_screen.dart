@@ -1217,9 +1217,11 @@ class _PastorhouseHud extends StatelessWidget {
   }
 
   /// Maps an angle in degrees (−180…180) to an arrow Unicode character.
+  /// Uses screen-space atan2 where Y grows downward:
+  ///   0°=→  90°=↓  ±180°=←  −90°=↑
   String _directionArrow(double deg) {
     if (deg < -157.5 || deg >= 157.5) return '←';
-    if (deg < -112.5) return '↙';
+    if (deg < -112.5) return '↖';
     if (deg < -67.5)  return '↑';
     if (deg < -22.5)  return '↗';
     if (deg <  22.5)  return '→';

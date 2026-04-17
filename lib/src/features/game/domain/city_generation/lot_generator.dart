@@ -71,8 +71,8 @@ class LotGenerator {
     final String bId = 'b_${rootX}_$rootY';
     final bool isEntrance = (modX == grid ~/ 2 && modY == 1);
     // House number: deterministic from root coordinates.
-    // Even numbers on one side, odd on the other (classic European system).
-    final int num = ((rootX.abs() + rootY.abs()) % 99) * 2 + (rootX.isOdd ? 1 : 2);
+    // odd rootX → odd numbers (1, 3, …), even rootX → even numbers (2, 4, …).
+    final int num = ((rootX.abs() + rootY.abs()) % 99) * 2 + (rootX.isOdd ? 1 : 0);
     return BuildingData(
       type: type,
       buildingId: bId,
