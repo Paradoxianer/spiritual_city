@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame_noise/flame_noise.dart';
 import 'package:flutter/material.dart' hide Image;
+import 'package:logging/logging.dart';
 
 import '../../domain/models/city_chunk.dart';
 import '../../domain/models/city_cell.dart';
@@ -13,6 +14,8 @@ import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
 class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWorldGame> {
+  static final _log = Logger('SpiritualRenderer');
+
   final CityChunk chunk;
   static const double cellSize = CellComponent.cellSize;
 
@@ -25,6 +28,28 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
   /// Slow, large-scale noise – shapes the dark blobs inside negative zones.
   final PerlinNoise _blobNoise;
   double _blobTime = 0;
+
+  // ── Animation throttle ───────────────────────────────────────────────────
+  //
+  // Rebuilding the Picture (which calls Perlin-noise for 256 cells) every
+  // single frame was the primary cause of the ~1fps stutter when entering the
+  // invisible world.  We now regenerate at most [_refreshFps] times per second.
+  // The flowing animation is still clearly visible at 20 fps.
+
+  double _refreshTimer = 0.0;
+  static const double _refreshFps = 20.0;
+  static const double _refreshInterval = 1.0 / _refreshFps;
+
+  // ── Pre-allocated Paint objects (never create Paint() per cell) ──────────
+
+  final Paint _cellPaint = Paint();
+  final Paint _blobPaint = Paint();
+
+  // ── Debug counters ───────────────────────────────────────────────────────
+
+  int _rebuildCount = 0;
+  double _debugLogTimer = 0.0;
+  static const double _debugLogInterval = 5.0; // log every 5 s
 
   final TerritoryColorMapper _colorMapper = TerritoryColorMapper();
   final ParticleService _particleService;
@@ -45,11 +70,36 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
     _animationTime += dt * 0.5;  // fast flowing movement
     _blobTime += dt * 0.12;      // slow blob drifting
 
-    // Invalidate cache each frame for flowing animation
-    _cachedPicture = null;
-
-    _spawnParticles(dt);
+    // Particles always update at full frame rate so motion is smooth.
     _particleService.update(dt);
+
+    // Picture rebuild throttled to _refreshFps.  Previously this was set to
+    // null every frame, forcing a full Perlin-noise + Picture rebuild at 60 fps
+    // per chunk – the main performance killer.
+    _refreshTimer += dt;
+    if (_refreshTimer >= _refreshInterval) {
+      _refreshTimer -= _refreshInterval;
+      _cachedPicture = null; // mark dirty → rebuilt in render()
+      _spawnParticles(dt);   // sparkle spawning also throttled
+
+      _rebuildCount++;
+    }
+
+    // Periodic debug summary (only for chunk 0,0 to avoid log spam)
+    if (chunk.chunkX == 0 && chunk.chunkY == 0) {
+      _debugLogTimer += dt;
+      if (_debugLogTimer >= _debugLogInterval) {
+        _debugLogTimer = 0.0;
+        final rebuildsPerSec = _rebuildCount / _debugLogInterval;
+        _log.info(
+          '[SpiritualRenderer] chunk(0,0): '
+          '${rebuildsPerSec.toStringAsFixed(1)} rebuilds/s '
+          '(target $_refreshFps fps), '
+          '${_particleService.particleCount} particles',
+        );
+        _rebuildCount = 0;
+      }
+    }
   }
 
   void _spawnParticles(double dt) {
@@ -113,12 +163,14 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
       final pulseAlpha = _colorMapper.redPulseAlpha(baseState, _animationTime);
       final baseAlpha = (0.55 * pulseAlpha).clamp(0.0, 0.85);
 
-      canvas.drawRect(
-        rect,
-        Paint()
-          ..color = baseColor.withValues(alpha: baseAlpha)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
-      );
+      // NOTE: MaskFilter.blur was removed here.  Per-cell blur (10–16 px over a
+      // 32 px tile) forced 6 400+ separate GPU compositing passes per frame
+      // (25 chunks × 256 cells) and was the primary cause of <2 fps in the
+      // invisible world.  The flowing colour + alpha already conveys the visual
+      // effect; adding a single saveLayer blur per chunk (if desired) is far
+      // cheaper.
+      _cellPaint.color = baseColor.withValues(alpha: baseAlpha);
+      canvas.drawRect(rect, _cellPaint);
 
       // Layer 2: near-black blob (slow blobNoise shapes the dark masses)
       // blobNoise > 0 → darker region; depth scales with how strongly negative the cell is
@@ -130,12 +182,8 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
                 .clamp(0.0, 1.0);
         final blobAlpha = blobStrength * cellDarkness * 0.65;
 
-        canvas.drawRect(
-          rect,
-          Paint()
-            ..color = const Color(0xFF020001).withValues(alpha: blobAlpha) // near-black
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
-        );
+        _blobPaint.color = const Color(0xFF020001).withValues(alpha: blobAlpha);
+        canvas.drawRect(rect, _blobPaint);
       }
     } else {
       // ── POSITIVE / NEUTRAL ZONE ──────────────────────────────────────────
@@ -144,12 +192,8 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
       final pulseAlpha = _colorMapper.redPulseAlpha(state, _animationTime);
       final alpha = ((0.45 + lavaNoise.abs() * 0.2) * pulseAlpha).clamp(0.0, 0.85);
 
-      canvas.drawRect(
-        rect,
-        Paint()
-          ..color = color.withValues(alpha: alpha)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
-      );
+      _cellPaint.color = color.withValues(alpha: alpha);
+      canvas.drawRect(rect, _cellPaint);
     }
   }
 

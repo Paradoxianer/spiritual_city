@@ -61,6 +61,24 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   double _hitFlickerTimer = 0.0;
   static const double _hitFlickerDuration = 0.3;
 
+  // ── Cached paint objects (never allocate Paint() in render()) ────────────
+
+  /// Aura paint – colour is updated each render() call; maskFilter set once.
+  late final Paint _auraPaint;
+  final Paint _corePaint = Paint();
+  final Paint _arcPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.0;
+
+  // Pre-computed static colours that don't change (allocated once).
+  static final Color _auraFlicker   = Colors.white.withValues(alpha: 0.8);
+  static final Color _coreFlicker   = Colors.white.withValues(alpha: 0.9);
+  static final Color _coreNormal    = Colors.red[800]!.withValues(alpha: 0.9);
+  static final Color _arcColor      = Colors.deepOrange.withValues(alpha: 0.7);
+  // Lerp endpoints pre-allocated so Color.lerp() doesn't box them each frame.
+  static final Color _auraLerpFrom  = Colors.red[900]!.withValues(alpha: 0.6);
+  static final Color _auraLerpTo    = Colors.black.withValues(alpha: 0.9);
+
   DaemonComponent(this.model)
       : super(
           position: model.position.clone(),
@@ -78,6 +96,11 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     };
     _cellDrainMultiplier =
         1.0 / FaithCalculatorService.difficultyFactorFor(game.difficulty);
+
+    // Initialise paint that requires a const expression (can't be done in field).
+    _auraPaint = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    // Arc color never changes.
+    _arcPaint.color = _arcColor;
 
     // Give each daemon a unique starting angle and radius so they spread out.
     final rng = math.Random(model.id.hashCode);
@@ -267,43 +290,26 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final t = (math.sin(_orbitAngle * 2) + 1) / 2;
     final isFlickering = _hitFlickerTimer > 0;
 
-    // Aura
-    canvas.drawCircle(
-      center,
-      _daemonSize * 0.7,
-      Paint()
-        ..color = isFlickering
-            ? Colors.white.withValues(alpha: 0.8)
-            : Color.lerp(
-                Colors.red[900]!.withValues(alpha: 0.6),
-                Colors.black.withValues(alpha: 0.9),
-                t,
-              )!
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-    );
+    // Aura – reuse pre-allocated paint; only update the color.
+    _auraPaint.color = isFlickering
+        ? _auraFlicker
+        : Color.lerp(_auraLerpFrom, _auraLerpTo, t)!;
+    canvas.drawCircle(center, _daemonSize * 0.7, _auraPaint);
 
-    // Core
-    canvas.drawCircle(
-      center,
-      _daemonSize * 0.35,
-      Paint()
-        ..color = isFlickering
-            ? Colors.white.withValues(alpha: 0.9)
-            : Colors.red[800]!.withValues(alpha: 0.9),
-    );
+    // Core – reuse pre-allocated paint.
+    _corePaint.color = isFlickering ? _coreFlicker : _coreNormal;
+    canvas.drawCircle(center, _daemonSize * 0.35, _corePaint);
 
     // Energy arc (shows remaining life, always starts full)
     final energyFraction =
         (model.energy.abs() / model.initialEnergy.abs()).clamp(0.0, 1.0);
+    // _arcPaint color is set once in onLoad() and never changes.
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: _daemonSize * 0.45),
       -math.pi / 2,
       math.pi * 2 * energyFraction,
       false,
-      Paint()
-        ..color = Colors.deepOrange.withValues(alpha: 0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0,
+      _arcPaint,
     );
   }
 }
