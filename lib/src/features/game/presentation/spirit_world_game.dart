@@ -163,16 +163,19 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
 
     player = PlayerComponent(joystick: _createJoystick());
-    // Start in the suburbs so the player encounters residential streets first.
-    // pixel (7000, 7000) → grid cell (floor(7000/32), floor(7000/32)) = (218, 218).
-    // The pastor's house is placed at grid cell (220, 222) — just a few cells
-    // away — see SpecialBuildingRegistry._pastorHouseX/Y.
+    // Spawn on the boulevard at grid cell (220, 224) = pixel (7040, 7168).
+    // y=224 is always a boulevard road (224 % 32 == 0) so the cell is
+    // guaranteed walkable regardless of lot generation.  The pastor house is
+    // at (220, 222) — just 2 cells north — see SpecialBuildingRegistry.
+    // (Previously (7000, 7000) = cell (218, 218) which ended up inside the
+    // pastor-house lot block after the lot-wide special-building scan was
+    // introduced, making the player spawn inside a solid building.)
     player.position = hasSavedState
         ? Vector2(
             (savedState!['playerX'] as num).toDouble(),
             (savedState['playerY'] as num).toDouble(),
           )
-        : Vector2(7000, 7000);
+        : Vector2(7040, 7168);
     await world.add(player);
 
     chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
