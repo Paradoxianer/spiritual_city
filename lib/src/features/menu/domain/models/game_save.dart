@@ -8,7 +8,7 @@ class GameSave {
   final String id;
   final String name;
   final DateTime createdAt;
-  DateTime lastPlayed;
+  final DateTime lastPlayed;
   final Difficulty difficulty;
   final Map<String, dynamic> gameState;
 

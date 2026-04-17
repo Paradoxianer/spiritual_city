@@ -47,7 +47,8 @@ class _DifficultySelectorState extends State<DifficultySelector> {
   String _buildDefaultSaveName(DateTime dt) {
     final day   = dt.day.toString().padLeft(2, '0');
     final month = dt.month.toString().padLeft(2, '0');
-    return 'Spiel $day.$month.${dt.year}';
+    final prefix = AppStrings.get('game.saveName.prefix');
+    return '$prefix $day.$month.${dt.year}';
   }
 
   @override

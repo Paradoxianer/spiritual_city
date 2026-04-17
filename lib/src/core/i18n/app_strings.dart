@@ -34,6 +34,10 @@ class AppStrings {
       'loadGame.load': 'Laden',
       'loadGame.lastPlayed': 'Zuletzt gespielt',
 
+      // In-game
+      'game.saveQuit': 'Speichern & Beenden',
+      'game.saveName.prefix': 'Spiel',
+
       // Settings
       'settings.title': 'Einstellungen',
       'settings.placeholder': 'Einstellungen kommen in Phase 2',
@@ -81,6 +85,10 @@ class AppStrings {
       'loadGame.delete': 'Delete',
       'loadGame.load': 'Load',
       'loadGame.lastPlayed': 'Last played',
+
+      // In-game
+      'game.saveQuit': 'Save & Quit',
+      'game.saveName.prefix': 'Game',
 
       // Settings
       'settings.title': 'Settings',

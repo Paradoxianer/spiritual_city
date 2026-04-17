@@ -3,6 +3,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
@@ -102,7 +103,7 @@ class _GameScreenState extends State<GameScreen> {
                         )
                       : IconButton(
                           onPressed: _saveAndQuit,
-                          tooltip: 'Speichern & Beenden',
+                          tooltip: AppStrings.get('game.saveQuit'),
                           style: IconButton.styleFrom(
                             backgroundColor: Colors.black54,
                             foregroundColor: Colors.white70,
