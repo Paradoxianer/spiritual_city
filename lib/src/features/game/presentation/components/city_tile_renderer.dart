@@ -65,12 +65,12 @@ class CityTileRenderer {
   static final Paint _bellTowerPaint      = Paint()..color = const Color(0xFFBF360C);
   static final Paint _gothicArchPaint     = Paint()..color = Colors.pink..style = PaintingStyle.stroke..strokeWidth = 2;
   static final Paint _cathedralTowerPaint = Paint()..color = const Color(0xFFFFCC02);
-  static final Paint _libraryShelfPaint   = Paint()..color = Colors.purple[300]!..strokeWidth = 2;
+  static final Paint _libraryShelfPaint   = Paint()..color = Colors.purple[300]!..style = PaintingStyle.stroke..strokeWidth = 2;
   static final Paint _museumColumnPaint   = Paint()..color = Colors.deepPurple[300]!;
   static final Paint _museumPedimentPaint = Paint()..color = Colors.deepPurple[200]!;
   static final Paint _stadiumPitchStroke  = Paint()..color = const Color(0xFF2E7D32)..style = PaintingStyle.stroke..strokeWidth = 3;
   static final Paint _stadiumPitchFill    = Paint()..color = const Color(0xFF43A047);
-  static final Paint _cemeteryCrossPaint  = Paint()..color = Colors.grey[500]!..strokeWidth = 1.5;
+  static final Paint _cemeteryCrossPaint  = Paint()..color = Colors.grey[500]!..style = PaintingStyle.stroke..strokeWidth = 1.5;
   static final Paint _coolingTowerPaint   = Paint()..color = const Color(0xFF37474F);
   static final Paint _trainStationArch    = Paint()..color = Colors.grey..style = PaintingStyle.stroke..strokeWidth = 3;
 
