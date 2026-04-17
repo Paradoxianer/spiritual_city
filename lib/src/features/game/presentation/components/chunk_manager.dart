@@ -261,7 +261,9 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         );
       }
 
-      final residents = npcsByBuilding[bInfo.buildingId] ?? [];
+      final residents = bInfo.type == BuildingType.pastorHouse
+          ? <NPCModel>[]
+          : npcsByBuilding[bInfo.buildingId] ?? [];
       final model = BuildingModel(
         buildingId: bInfo.buildingId,
         type: bInfo.type,

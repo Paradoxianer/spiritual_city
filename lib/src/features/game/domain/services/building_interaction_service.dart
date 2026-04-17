@@ -10,6 +10,9 @@ class BuildingInteractionResult {
   /// How much the player's materials change (positive = gain, negative = cost).
   final double playerMaterialsDelta;
 
+  /// How much the player's hunger changes (positive = gain, negative = cost).
+  final double playerHungerDelta;
+
   /// How much the player's health changes (positive = heal, negative = cost).
   final double playerHealthDelta;
 
@@ -22,6 +25,7 @@ class BuildingInteractionResult {
   const BuildingInteractionResult({
     this.playerFaithDelta = 0,
     this.playerMaterialsDelta = 0,
+    this.playerHungerDelta = 0,
     this.playerHealthDelta = 0,
     required this.reactionEmoji,
     this.success = true,
@@ -105,19 +109,28 @@ class BuildingInteractionService {
   ) {
     switch (actionType) {
       case 'readBible':
+        // Completely restores faith (clamped to max by gainFaith in the game).
         return const BuildingInteractionResult(
-          playerFaithDelta: 20.0,
+          playerFaithDelta: 100.0,
           reactionEmoji: '📖✝️',
         );
-      case 'pray':
+      case 'eat':
+        // Completely restores hunger.
         return const BuildingInteractionResult(
-          playerFaithDelta: 15.0,
-          reactionEmoji: '🙏🏠',
+          playerHungerDelta: 100.0,
+          reactionEmoji: '🍽️😊',
         );
-      case 'rest':
+      case 'sleep':
+        // Completely restores health.
         return const BuildingInteractionResult(
-          playerFaithDelta: 10.0,
-          reactionEmoji: '😴✝️',
+          playerHealthDelta: 100.0,
+          reactionEmoji: '😴❤️',
+        );
+      case 'pray':
+        // Faith gain + massive area spiritual influence (handled in game layer).
+        return const BuildingInteractionResult(
+          playerFaithDelta: 30.0,
+          reactionEmoji: '🙏✨',
         );
       default:
         return const BuildingInteractionResult(

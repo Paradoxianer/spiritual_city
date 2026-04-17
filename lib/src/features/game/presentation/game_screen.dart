@@ -79,6 +79,8 @@ class _GameScreenState extends State<GameScreen> {
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
               'LookOverlay': (context, game) => LookOverlay(game: _game),
+              'MissionBoardOverlay': (context, game) =>
+                  MissionBoardOverlay(game: _game),
             },
           ),
           // Loading overlay – shown until the world is ready
@@ -794,11 +796,13 @@ class LookCellInfo {
   final String label;           // e.g. "Hauptstraße" or "Rathaus Nr. 12"
   final double spiritualState;  // -1..1
   final String? npcName;        // first NPC name seen in that cell, or null
+  final String? streetName;     // nearest named road, or null
 
   const LookCellInfo({
     required this.label,
     required this.spiritualState,
     this.npcName,
+    this.streetName,
   });
 }
 
@@ -947,30 +951,64 @@ class _LookCellRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spiritualPct = (cell.spiritualState * 100).round();
+    final spiritualLabel = cell.spiritualState >= 0
+        ? '+$spiritualPct%'
+        : '$spiritualPct%';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _SpiritualDot(state: cell.spiritualState),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              cell.label,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Row(
+            children: [
+              _SpiritualDot(state: cell.spiritualState),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  cell.label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                spiritualLabel,
+                style: TextStyle(
+                  color: cell.spiritualState >= 0
+                      ? Colors.amber.withValues(alpha: 0.85)
+                      : Colors.red.withValues(alpha: 0.85),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (cell.npcName != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  cell.npcName!,
+                  style: TextStyle(
+                    color: Colors.cyan.withValues(alpha: 0.8),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ],
           ),
-          if (cell.npcName != null) ...[
-            const SizedBox(width: 6),
-            Text(
-              cell.npcName!,
-              style: TextStyle(
-                color: Colors.amber.withValues(alpha: 0.8),
-                fontSize: 11,
+          if (cell.streetName != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 1),
+              child: Text(
+                '🛣️ ${cell.streetName}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.45),
+                  fontSize: 10,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ],
         ],
       ),
     );
@@ -978,10 +1016,183 @@ class _LookCellRow extends StatelessWidget {
 }
 
 
+// ── Mission board data classes ─────────────────────────────────────────────────
+
+/// A single mission entry shown in [MissionBoardOverlay].
+class MissionEntry {
+  final String targetEmoji;
+  final String targetName;
+  final String description;
+  final int faithReward;
+  final int materialsReward;
+
+  const MissionEntry({
+    required this.targetEmoji,
+    required this.targetName,
+    required this.description,
+    required this.faithReward,
+    required this.materialsReward,
+  });
+}
+
+/// Data passed to [MissionBoardOverlay].
+class MissionBoardData {
+  final List<MissionEntry> entries;
+  const MissionBoardData({required this.entries});
+}
+
 // ── Mission Board Overlay ─────────────────────────────────────────────────────
 
-/// Full mission board shown when the player opens '📋 Missionen' in the
-/// pastor house.  Lists active missions and lets the player claim completed ones.
+/// Shows all active missions as an emoji-styled list.
+/// Opened from inside the pastor house via the '📋 Missionen' action.
+class MissionBoardOverlay extends StatelessWidget {
+  final SpiritWorldGame game;
+  const MissionBoardOverlay({super.key, required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final data = game.activeMissionBoardData;
+    if (data == null) return const SizedBox.shrink();
+
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.82,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.65,
+        ),
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1B2A1B).withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFFD54F), width: 1.5),
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12)],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF2E4A2E),
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  const Text('📋', style: TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Aktive Missionen',
+                      style: TextStyle(
+                        color: Color(0xFFFFD54F),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => game.closeMissionBoard(),
+                  ),
+                ],
+              ),
+            ),
+            // Mission list
+            Flexible(
+              child: data.entries.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Derzeit keine aktiven Missionen.\nKomme wieder, um neue Aufgaben zu erhalten.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      shrinkWrap: true,
+                      itemCount: data.entries.length,
+                      separatorBuilder: (_, __) =>
+                          const Divider(color: Colors.white12),
+                      itemBuilder: (context, i) {
+                        final m = data.entries[i];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(m.targetEmoji,
+                                  style: const TextStyle(fontSize: 24)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      m.description,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '📍 ${m.targetName}',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                            alpha: 0.55),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '+${m.faithReward}🙏',
+                                    style: const TextStyle(
+                                      color: Colors.amber,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '+${m.materialsReward}📦',
+                                    style: const TextStyle(
+                                      color: Colors.lightBlue,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Pastorhouse HUD compass ────────────────────────────────────────────────────
 
 /// Shows a golden 🏠 icon + direction arrow when the pastor house is off-screen.
@@ -1011,8 +1222,9 @@ class _PastorhouseHud extends StatelessWidget {
         final arrow = _directionArrow(angleDeg);
 
         return Positioned(
-          top: 60,
-          left: 16,
+          // Position below the resource-bar panel (which ends at ≈ y 110).
+          top: 114,
+          left: 12,
           child: SafeArea(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1448,9 +1660,11 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         return [
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Bibel lesen (+20 Glauben)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Beten (+15 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Ausruhen (+10 Glauben)', onTap: () => _performAction('rest')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '🙏MAX', tooltip: 'Bibel lesen (Glauben komplett auffüllen)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞MAX', tooltip: 'Essen (Hunger komplett stillen)', onTap: () => _performAction('eat')),
+          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️MAX', tooltip: 'Schlafen (Leben komplett auffüllen)', onTap: () => _performAction('sleep')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✨🌍', tooltip: 'Beten (massiver Einfluss auf die unsichtbare Welt)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionsübersicht öffnen', onTap: () => _performAction('missions')),
         ];
 
       // ── Residential ───────────────────────────────────────────────────────

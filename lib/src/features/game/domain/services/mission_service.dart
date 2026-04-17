@@ -12,8 +12,12 @@ class MissionService {
   static final _log = Logger('MissionService');
 
   static const int _startMissionCount = 4;
-  static const int _faithReward    = 10;
-  static const int _materialReward = 5;
+  static const int faithReward    = 10;
+  static const int materialsReward = 5;
+
+  // Keep old private names as aliases so nothing else breaks.
+  static const int _faithReward    = faithReward;
+  static const int _materialReward = materialsReward;
 
   static const List<String> _missionTexts = [
     'Sprich mit diesem Bewohner',

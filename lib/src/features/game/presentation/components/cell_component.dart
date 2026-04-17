@@ -40,6 +40,7 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
   static final Paint _fillMall        = Paint()..color = const Color(0xFF1565C0); // blue[800]
   static final Paint _fillFactory     = Paint()..color = const Color(0xFF546E7A); // blueGrey[600]
   static final Paint _fillWarehouse   = Paint()..color = const Color(0xFF607D8B); // blueGrey[500]
+  static final Paint _fillPastorHouse = Paint()..color = const Color(0xFFFFF8E1); // amber[50]
   static final Paint _fillHospital    = Paint()..color = const Color(0xFFFFFFFF);
   static final Paint _fillChurch      = Paint()..color = const Color(0xFFFFF9C4); // amber[100]
   static final Paint _fillCathedral   = Paint()..color = const Color(0xFFFFE082); // amber[200]
@@ -190,18 +191,26 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         _drawWindows(canvas, 2);
         break;
       case BuildingType.pastorHouse:
-        canvas.drawRect(size.toRect(), _fillHouse);
-        // Larger, golden cross marks the pastor's home clearly.
-        canvas.drawLine(Offset(size.x * 0.5, size.y * 0.05),
-            Offset(size.x * 0.5, size.y * 0.55), _accentGoldStroke15);
-        canvas.drawLine(Offset(size.x * 0.28, size.y * 0.18),
-            Offset(size.x * 0.72, size.y * 0.18), _accentGoldStroke15);
-        // Golden glow ring around the building
-        _dynamicPaint
-          ..color = const Color(0x33FFD700)
+        // Distinctive amber/gold background – immediately stands out from
+        // regular brown houses and other buildings.
+        canvas.drawRect(size.toRect(), _fillPastorHouse);
+        // Bold golden cross – significantly bigger and brighter than churches
+        // so the building is unmistakable even at a glance.
+        final crossPaint = Paint()
+          ..color = const Color(0xFFFFB300) // amber[700]
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3;
-        canvas.drawRect(size.toRect().inflate(1.5), _dynamicPaint);
+          ..strokeWidth = 3.5
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(Offset(size.x * 0.5, size.y * 0.04),
+            Offset(size.x * 0.5, size.y * 0.80), crossPaint);
+        canvas.drawLine(Offset(size.x * 0.22, size.y * 0.26),
+            Offset(size.x * 0.78, size.y * 0.26), crossPaint);
+        // Bold golden glow border (2 px inset so it stays within the cell)
+        _dynamicPaint
+          ..color = const Color(0xCCFFD700)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5;
+        canvas.drawRect(size.toRect().deflate(1.25), _dynamicPaint);
         _dynamicPaint.style = PaintingStyle.fill;
         break;
 

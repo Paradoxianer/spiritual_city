@@ -642,13 +642,31 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
       String? label;
       String? npcName;
+      String? streetName;
 
       if (data is BuildingData) {
         final name = BuildingComponent.buildingName(data.type);
         final num  = data.houseNumber != null ? ' ${data.houseNumber}' : '';
         label = '$name$num';
-      } else if (data is RoadData && data.streetName != null) {
-        label = data.streetName!;
+        // Try to find a named road adjacent to this building cell.
+        for (final rd in const [
+          [0, -1], [1, 0], [0, 1], [-1, 0],
+        ]) {
+          final roadCell =
+              grid.getCell(px + d[0] + rd[0], py + d[1] + rd[1]);
+          if (roadCell?.data is RoadData) {
+            final rdata = roadCell!.data as RoadData;
+            if (rdata.streetName != null) {
+              streetName = rdata.streetName;
+              break;
+            }
+          }
+        }
+      } else if (data is RoadData) {
+        if (data.streetName != null) {
+          label = data.streetName!;
+          streetName = data.streetName;
+        }
       }
 
       if (label == null || !seen.add(label)) continue;
@@ -667,6 +685,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         label: label,
         spiritualState: cell.spiritualState,
         npcName: npcName,
+        streetName: streetName,
       ));
     }
 
@@ -681,6 +700,45 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void closeLookOverlay() {
     activeLookData = null;
     overlays.remove('LookOverlay');
+  }
+
+  // ── Mission board ─────────────────────────────────────────────────────────
+
+  /// Active data for the mission-board overlay (null when closed).
+  MissionBoardData? activeMissionBoardData;
+
+  /// Opens the mission board inline inside the current building overlay.
+  void openMissionBoard() {
+    final entries = <MissionEntry>[];
+    for (final npcComp in chunkManager.allActiveNPCs) {
+      final npc = npcComp.model;
+      if (npc.activeMissionDescription == null) continue;
+      entries.add(MissionEntry(
+        targetEmoji: npcComp.interactionEmoji,
+        targetName: npc.name,
+        description: npc.activeMissionDescription!,
+        faithReward: MissionService.faithReward,
+        materialsReward: MissionService.materialsReward,
+      ));
+    }
+    for (final bldComp in chunkManager.allActiveBuildings) {
+      final bld = bldComp.buildingModel;
+      if (bld.activeMissionDescription == null) continue;
+      entries.add(MissionEntry(
+        targetEmoji: BuildingComponent.buildingEmoji(bld.type),
+        targetName: BuildingComponent.buildingName(bld.type),
+        description: bld.activeMissionDescription!,
+        faithReward: MissionService.faithReward,
+        materialsReward: MissionService.materialsReward,
+      ));
+    }
+    activeMissionBoardData = MissionBoardData(entries: entries);
+    overlays.add('MissionBoardOverlay');
+  }
+
+  void closeMissionBoard() {
+    activeMissionBoardData = null;
+    overlays.remove('MissionBoardOverlay');
   }
 
   String handleInteraction(String type) {
@@ -720,6 +778,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (data == null) {
       return const BuildingInteractionResult(reactionEmoji: '❓', success: false);
     }
+
+    // 'missions' is handled at the game layer – open the mission board inline.
+    if (actionType == 'missions') {
+      openMissionBoard();
+      return const BuildingInteractionResult(reactionEmoji: '📋', success: true);
+    }
+
     final result = buildingInteractionService.performAction(
       actionType,
       data.building,
@@ -753,10 +818,22 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (result.playerHealthDelta != 0) {
       health = (health + result.playerHealthDelta).clamp(0.0, maxHealth);
     }
+    if (result.playerHungerDelta != 0) {
+      gainHunger(result.playerHungerDelta);
+    }
     // 'prayBusiness' also nudges the cell underneath the player positively
     if (actionType == 'prayBusiness') {
       _nudgeCellUnderPlayer(0.02);
       missionService.onVisitPrayed();
+    }
+    // Pastor house prayer: massively brightens spiritual world in the area.
+    if (actionType == 'pray' &&
+        data.building.type == BuildingType.pastorHouse) {
+      _brightenspiritualAreaAroundPosition(
+        pastorhousePosition.value ?? player.position,
+        radius: 12,
+        amount: 0.12,
+      );
     }
     return result;
   }
@@ -778,6 +855,34 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final cell = grid.getCell(gx, gy);
     if (cell != null) {
       cell.spiritualState = (cell.spiritualState + delta).clamp(-1.0, 1.0);
+    }
+  }
+
+  /// Brightens all cells within [radius] grid cells of [centre] by [amount].
+  ///
+  /// Used for the pastor-house prayer which should have a massive positive
+  /// effect on the surrounding area in the invisible world.
+  void _brightenspiritualAreaAroundPosition(
+    Vector2 centre, {
+    required int radius,
+    required double amount,
+  }) {
+    const cellSize = 32.0;
+    final gx = (centre.x / cellSize).floor();
+    final gy = (centre.y / cellSize).floor();
+    for (int dy = -radius; dy <= radius; dy++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        // Fade the effect linearly with distance (strongest at centre).
+        final dist = (dx * dx + dy * dy).toDouble();
+        final maxDist = (radius * radius).toDouble();
+        if (dist > maxDist) continue;
+        final fade = 1.0 - (dist / maxDist);
+        final cell = grid.getCell(gx + dx, gy + dy);
+        if (cell != null) {
+          cell.spiritualState =
+              (cell.spiritualState + amount * fade).clamp(-1.0, 1.0);
+        }
+      }
     }
   }
 
@@ -845,6 +950,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       label = '$nearestRoadName $nearestHouseNumber';
     } else if (nearestRoadName != null) {
       label = nearestRoadName;
+    } else if (nearestHouseNumber != null) {
+      // Unnamed secondary street: still show the house number so the player
+      // always gets some address feedback.
+      label = 'Nr.\u00a0$nearestHouseNumber';
     }
     // If still no name, keep empty so the label stays hidden.
     currentStreetLabel.value = label ?? '';
