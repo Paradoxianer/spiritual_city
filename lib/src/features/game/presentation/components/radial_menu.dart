@@ -27,6 +27,14 @@ class RadialMenu extends PositionComponent with HasGameReference<SpiritWorldGame
     required Vector2 position,
   }) : super(position: position, anchor: Anchor.center, priority: 200);
 
+  /// Selects the radial action at [zeroBasedIndex] as if the player had
+  /// tapped it.  Does nothing when the index is out of range.
+  void selectByIndex(int zeroBasedIndex) {
+    if (zeroBasedIndex < 0 || zeroBasedIndex >= actions.length) return;
+    actions[zeroBasedIndex].onSelect();
+    removeFromParent();
+  }
+
   @override
   Future<void> onLoad() async {
     if (actions.isEmpty) {

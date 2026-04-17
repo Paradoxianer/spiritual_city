@@ -926,6 +926,50 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   void closeMenu() { _currentMenu?.removeFromParent(); _currentMenu = null; }
 
+  // ── Keymap overlay ────────────────────────────────────────────────────────
+
+  bool _keymapOpen = false;
+
+  void openKeymapOverlay() {
+    if (_keymapOpen) return;
+    _keymapOpen = true;
+    overlays.add('KeymapOverlay');
+  }
+
+  void closeKeymapOverlay() {
+    if (!_keymapOpen) return;
+    _keymapOpen = false;
+    overlays.remove('KeymapOverlay');
+  }
+
+  void toggleKeymapOverlay() {
+    if (_keymapOpen) {
+      closeKeymapOverlay();
+    } else {
+      openKeymapOverlay();
+    }
+  }
+
+  // ── Escape / close helper ─────────────────────────────────────────────────
+
+  /// Closes whichever overlay or menu is currently open, in priority order.
+  void handleEscape() {
+    if (_keymapOpen)          { closeKeymapOverlay();    return; }
+    if (activeDialog != null) { closeDialog();            return; }
+    if (activeBuildingData != null) { closeBuildingInterior(); return; }
+    if (activeLookData != null)     { closeLookOverlay();      return; }
+    if (activeMissionBoardData != null) { closeMissionBoard(); return; }
+    if (_currentMenu != null) { closeMenu();              return; }
+  }
+
+  // ── Radial-menu keyboard selection ────────────────────────────────────────
+
+  /// Selects the radial-menu action at [zeroBasedIndex] via keyboard (1–5).
+  void selectRadialMenuAction(int zeroBasedIndex) {
+    _currentMenu?.selectByIndex(zeroBasedIndex);
+    _currentMenu = null; // selectByIndex removes the component already
+  }
+
   @override
   void update(double dt) {
     super.update(dt);

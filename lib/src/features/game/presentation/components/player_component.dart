@@ -4,6 +4,7 @@ import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../../../menu/domain/models/difficulty.dart';
+import '../domain/models/game_keymap.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 import 'daemon_component.dart';
@@ -109,19 +110,59 @@ class PlayerComponent extends PositionComponent
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
     _keyboardDirection.setZero();
-    if (keysPressed.contains(LogicalKeyboardKey.keyW) || keysPressed.contains(LogicalKeyboardKey.arrowUp)) _keyboardDirection.y -= 1;
-    if (keysPressed.contains(LogicalKeyboardKey.keyS) || keysPressed.contains(LogicalKeyboardKey.arrowDown)) _keyboardDirection.y += 1;
-    if (keysPressed.contains(LogicalKeyboardKey.keyA) || keysPressed.contains(LogicalKeyboardKey.arrowLeft)) _keyboardDirection.x -= 1;
-    if (keysPressed.contains(LogicalKeyboardKey.keyD) || keysPressed.contains(LogicalKeyboardKey.arrowRight)) _keyboardDirection.x += 1;
+    if (keysPressed.contains(GameKeymap.moveUp)    || keysPressed.contains(GameKeymap.moveUpAlt))    _keyboardDirection.y -= 1;
+    if (keysPressed.contains(GameKeymap.moveDown)  || keysPressed.contains(GameKeymap.moveDownAlt))  _keyboardDirection.y += 1;
+    if (keysPressed.contains(GameKeymap.moveLeft)  || keysPressed.contains(GameKeymap.moveLeftAlt))  _keyboardDirection.x -= 1;
+    if (keysPressed.contains(GameKeymap.moveRight) || keysPressed.contains(GameKeymap.moveRightAlt)) _keyboardDirection.x += 1;
     if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
 
-    _pressedShift = keysPressed.contains(LogicalKeyboardKey.shiftLeft) ||
-        keysPressed.contains(LogicalKeyboardKey.shiftRight);
+    _pressedShift = keysPressed.contains(GameKeymap.prayerSize) ||
+        keysPressed.contains(GameKeymap.prayerSizeAlt);
 
-    if (keysPressed.contains(LogicalKeyboardKey.space)) {
+    // ── Action button (Space) ─────────────────────────────────────────────────
+    if (keysPressed.contains(GameKeymap.action)) {
       game.handleActionDown();
-    } else if (event is KeyUpEvent && event.logicalKey == LogicalKeyboardKey.space) {
+    } else if (event is KeyUpEvent && event.logicalKey == GameKeymap.action) {
       game.handleActionUp();
+    }
+
+    // ── Interact key (E) – open radial menu / close dialog (real world only) ──
+    if (event is KeyUpEvent &&
+        event.logicalKey == GameKeymap.interact &&
+        !game.isSpiritualWorld) {
+      game.handleActionUp();
+    }
+
+    // ── World toggle (Tab) ────────────────────────────────────────────────────
+    if (event is KeyUpEvent && event.logicalKey == GameKeymap.worldToggle) {
+      game.toggleWorld();
+    }
+
+    // ── Close (Escape) ────────────────────────────────────────────────────────
+    if (event is KeyUpEvent && event.logicalKey == GameKeymap.close) {
+      game.handleEscape();
+    }
+
+    // ── Keymap overlay (F1 / ?) ───────────────────────────────────────────────
+    if (event is KeyUpEvent &&
+        (event.logicalKey == GameKeymap.keymapOverlay ||
+            event.logicalKey == GameKeymap.keymapOverlayAlt)) {
+      game.toggleKeymapOverlay();
+    }
+
+    // ── Radial-menu quick-select (1–5) ────────────────────────────────────────
+    if (event is KeyUpEvent) {
+      final radialKeys = [
+        GameKeymap.radial1,
+        GameKeymap.radial2,
+        GameKeymap.radial3,
+        GameKeymap.radial4,
+        GameKeymap.radial5,
+      ];
+      final idx = radialKeys.indexOf(event.logicalKey);
+      if (idx != -1) {
+        game.selectRadialMenuAction(idx);
+      }
     }
 
     _isChargingSize = _pressedShift || !joystick.delta.isZero();
