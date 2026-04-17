@@ -44,9 +44,10 @@ class SpecialBuildingRegistry {
   static const int _museumOffY     =   8;
   static const int _powerPlantOffX = 200;
   static const int _powerPlantOffY = 180;
-  // Player spawn is at pixel (7000, 7000) = grid cell (218, 218).
-  // The pastor house is placed a few cells east so the player can immediately
-  // walk up to it.  (220 % 8 = 4, 222 % 8 = 6 → valid non-sidewalk lot cells.)
+  // Player spawn is at pixel (7040, 7168) = grid cell (220, 224) — on the
+  // boulevard at y=224 (always a road, guaranteed walkable).
+  // The pastor house is placed 2 cells north at (220, 222) so the player
+  // can walk straight to it.  (220 % 8 = 4, 222 % 8 = 6 → valid non-sidewalk lot cells.)
   static const int _pastorHouseX   = 220;
   static const int _pastorHouseY   = 222;
 

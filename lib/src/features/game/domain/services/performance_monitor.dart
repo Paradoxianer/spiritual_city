@@ -4,9 +4,11 @@ import 'package:logging/logging.dart';
 /// debugging.  Attach it to the game loop by calling [startFrame] at the
 /// beginning of every [update] call and [endFrame] at the end.
 ///
-/// Metrics are logged at [logInterval] real seconds.  Set [lowFpsThreshold]
-/// to receive a [Logger.warning] whenever the instantaneous FPS drops below
-/// that value.
+/// Metrics are logged at [logInterval] real seconds at [Level.FINE] so they
+/// are hidden at the default [Level.CONFIG] and only appear when the developer
+/// explicitly lowers the log level.  Set [lowFpsThreshold] to receive a
+/// [Logger.warning] when sustained FPS is low; warnings are throttled to at
+/// most once per [_warnCooldown] seconds to avoid log spam.
 class PerformanceMonitor {
   static final _log = Logger('PerformanceMonitor');
 
@@ -27,9 +29,13 @@ class PerformanceMonitor {
   int _activeNPCCount = 0;
   int _loadedChunkCount = 0;
 
+  /// How many seconds must pass before another low-FPS warning is emitted.
+  static const double _warnCooldown = 10.0;
+  double _timeSinceLastWarn = _warnCooldown; // ready to warn immediately
+
   PerformanceMonitor({
-    this.lowFpsThreshold = 55.0,
-    this.logInterval = 5.0,
+    this.lowFpsThreshold = 30.0,
+    this.logInterval = 30.0,
   });
 
   // ─── Public API ────────────────────────────────────────────────────────────
@@ -55,6 +61,7 @@ class PerformanceMonitor {
 
     _frameCount++;
     _elapsedSinceLog += dt;
+    _timeSinceLastWarn += dt;
 
     // Instantaneous FPS from game-loop delta (real rendered frame rate).
     _currentFps = 1.0 / dt;
@@ -62,7 +69,8 @@ class PerformanceMonitor {
     // Smoothed FPS for stable display / warning decisions.
     _smoothFps = _smoothFps * (1.0 - _smoothAlpha) + _currentFps * _smoothAlpha;
 
-    if (_smoothFps < lowFpsThreshold) {
+    if (_smoothFps < lowFpsThreshold && _timeSinceLastWarn >= _warnCooldown) {
+      _timeSinceLastWarn = 0.0;
       _log.warning(
         'Low FPS: ${_smoothFps.toStringAsFixed(1)} '
         '(dt: ${(dt * 1000).toStringAsFixed(2)} ms)',
@@ -94,7 +102,8 @@ class PerformanceMonitor {
 
   void _logMetrics() {
     final avgFps = _elapsedSinceLog > 0 ? _frameCount / _elapsedSinceLog : 0.0;
-    _log.info(
+    // Use FINE so this only appears when the developer explicitly enables it.
+    _log.fine(
       'Performance | avgFPS: ${avgFps.toStringAsFixed(1)} '
       '| smoothFPS: ${_smoothFps.toStringAsFixed(1)} '
       '| Active NPCs: $_activeNPCCount '

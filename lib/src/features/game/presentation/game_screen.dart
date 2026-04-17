@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' show atan2, pi;
+import 'package:flame/components.dart' show Vector2;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -76,6 +78,9 @@ class _GameScreenState extends State<GameScreen> {
               'DialogOverlay': (context, game) => DialogOverlay(game: _game),
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
+              'LookOverlay': (context, game) => LookOverlay(game: _game),
+              'MissionBoardOverlay': (context, game) =>
+                  MissionBoardOverlay(game: _game),
             },
           ),
           // Loading overlay – shown until the world is ready
@@ -109,6 +114,22 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ),
               );
+            },
+          ),
+          // Pastorhouse HUD compass (shown when world is ready and house is far)
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _PastorhouseHud(game: _game);
+            },
+          ),
+          // Street-name label – persistent top-center
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _StreetLabel(game: _game);
             },
           ),
           // Saving overlay – centered indicator shown while persisting to Hive.
@@ -770,6 +791,493 @@ class GameDialogData {
   GameDialogData({required this.npcName, required this.npcEmoji, required this.npcModel});
 }
 
+/// Data passed to the [LookOverlay].
+class LookCellInfo {
+  final String label;           // e.g. "Hauptstraße" or "Rathaus Nr. 12"
+  final double spiritualState;  // -1..1
+  final String? npcName;        // first NPC name seen in that cell, or null
+  final String? streetName;     // nearest named road, or null
+
+  const LookCellInfo({
+    required this.label,
+    required this.spiritualState,
+    this.npcName,
+    this.streetName,
+  });
+}
+
+class GameLookData {
+  final List<LookCellInfo> cells;
+  final double playerSpiritualState;
+  GameLookData({required this.cells, required this.playerSpiritualState});
+}
+
+// ── Street name HUD label ─────────────────────────────────────────────────────
+
+/// Persistent top-center label showing the current street / address.
+/// Only visible when there is a street name to display.
+class _StreetLabel extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _StreetLabel({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<String>(
+      valueListenable: game.currentStreetLabel,
+      builder: (context, label, _) {
+        if (label.isEmpty) return const SizedBox.shrink();
+        return Positioned(
+          top: 14,
+          left: 60,
+          right: 60,
+          child: SafeArea(
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Look Overlay ──────────────────────────────────────────────────────────────
+
+/// Rich look overlay – shows spiritual state, building/NPC info, and street
+/// info for all 8 neighbouring cells.  Activated by the 👀 radial-menu action.
+class LookOverlay extends StatelessWidget {
+  final SpiritWorldGame game;
+  const LookOverlay({super.key, required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final data = game.activeLookData;
+    if (data == null) return const SizedBox.shrink();
+
+    return Positioned(
+      top: MediaQuery.of(context).size.height * 0.20,
+      left: 24,
+      right: 24,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  const Text('👀', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Umgebung',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Spiritual state indicator for the current cell
+                  _SpiritualDot(state: data.playerSpiritualState),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (data.cells.isEmpty)
+                Text(
+                  'Nichts Besonderes in der Nähe.',
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.55),
+                      fontSize: 12),
+                )
+              else
+                ...data.cells.map((c) => _LookCellRow(cell: c)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SpiritualDot extends StatelessWidget {
+  final double state; // -1..1
+  const _SpiritualDot({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color col = state > 0
+        ? Color.lerp(Colors.grey, Colors.amber, state)!
+        : Color.lerp(Colors.grey, Colors.red, state.abs())!;
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: col,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white30),
+      ),
+    );
+  }
+}
+
+class _LookCellRow extends StatelessWidget {
+  final LookCellInfo cell;
+  const _LookCellRow({required this.cell});
+
+  @override
+  Widget build(BuildContext context) {
+    final spiritualPct = (cell.spiritualState * 100).round();
+    final spiritualLabel = cell.spiritualState >= 0
+        ? '+$spiritualPct%'
+        : '$spiritualPct%';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              _SpiritualDot(state: cell.spiritualState),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  cell.label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                spiritualLabel,
+                style: TextStyle(
+                  color: cell.spiritualState >= 0
+                      ? Colors.amber.withValues(alpha: 0.85)
+                      : Colors.red.withValues(alpha: 0.85),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (cell.npcName != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  cell.npcName!,
+                  style: TextStyle(
+                    color: Colors.cyan.withValues(alpha: 0.8),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (cell.streetName != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 1),
+              child: Text(
+                '🛣️ ${cell.streetName}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.45),
+                  fontSize: 10,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ── Mission board data classes ─────────────────────────────────────────────────
+
+/// A single mission entry shown in [MissionBoardOverlay].
+class MissionEntry {
+  final String targetEmoji;
+  final String targetName;
+  final String description;
+  final int faithReward;
+  final int materialsReward;
+  /// Formatted address, e.g. "Lindenallee 14" or "Nr. 22". May be null.
+  final String? address;
+
+  const MissionEntry({
+    required this.targetEmoji,
+    required this.targetName,
+    required this.description,
+    required this.faithReward,
+    required this.materialsReward,
+    this.address,
+  });
+}
+
+/// Data passed to [MissionBoardOverlay].
+class MissionBoardData {
+  final List<MissionEntry> entries;
+  const MissionBoardData({required this.entries});
+}
+
+// ── Mission Board Overlay ─────────────────────────────────────────────────────
+
+/// Shows all active missions as an emoji-styled list.
+/// Opened from inside the pastor house via the '📋 Missionen' action.
+class MissionBoardOverlay extends StatelessWidget {
+  final SpiritWorldGame game;
+  const MissionBoardOverlay({super.key, required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final data = game.activeMissionBoardData;
+    if (data == null) return const SizedBox.shrink();
+
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.82,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.65,
+        ),
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1B2A1B).withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFFD54F), width: 1.5),
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12)],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF2E4A2E),
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  const Text('📋', style: TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Aktive Missionen',
+                      style: TextStyle(
+                        color: Color(0xFFFFD54F),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => game.closeMissionBoard(),
+                  ),
+                ],
+              ),
+            ),
+            // Mission list
+            Flexible(
+              child: data.entries.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Derzeit keine aktiven Missionen.\nKomme wieder, um neue Aufgaben zu erhalten.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      shrinkWrap: true,
+                      itemCount: data.entries.length,
+                      separatorBuilder: (_, __) =>
+                          const Divider(color: Colors.white12),
+                      itemBuilder: (context, i) {
+                        final m = data.entries[i];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(m.targetEmoji,
+                                  style: const TextStyle(fontSize: 24)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      m.description,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                    if (m.address != null) ...[
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        '📍 ${m.address}',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                              alpha: 0.60),
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '+${m.faithReward}🙏',
+                                    style: const TextStyle(
+                                      color: Colors.amber,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '+${m.materialsReward}📦',
+                                    style: const TextStyle(
+                                      color: Colors.lightBlue,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Pastorhouse HUD compass ────────────────────────────────────────────────────
+
+/// Shows a golden 🏠 icon + direction arrow when the pastor house is off-screen.
+/// Renders as a [Positioned] overlay in the top-left corner with a subtle glow.
+class _PastorhouseHud extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _PastorhouseHud({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    // Rebuild whenever the player moves (playerWorldPosition updates every frame
+    // via game.update()) so the compass direction is always current.
+    return ValueListenableBuilder<Vector2>(
+      valueListenable: game.playerWorldPosition,
+      builder: (context, playerPx, _) {
+        final housePx = game.pastorhousePosition.value;
+        if (housePx == null) return const SizedBox.shrink();
+
+        final dx = housePx.x - playerPx.x;
+        final dy = housePx.y - playerPx.y;
+        final distSq = dx * dx + dy * dy;
+        // Hide only when the player is almost on top of the pastor house
+        // (within 64 px ≈ 2 cells).
+        if (distSq < 64 * 64) return const SizedBox.shrink();
+
+        final angleDeg = atan2(dy, dx) * 180 / pi;
+        final arrow = _directionArrow(angleDeg);
+
+        return Positioned(
+          // Position below the resource-bar panel (which ends at ≈ y 110).
+          top: 114,
+          left: 12,
+          child: SafeArea(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.7)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🏠', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  Text(
+                    arrow,
+                    style: const TextStyle(
+                      color: Color(0xFFFFD54F),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Maps an angle in degrees (−180…180) to an arrow Unicode character.
+  /// Uses screen-space atan2 where Y grows downward:
+  ///   0°=→  90°=↓  ±180°=←  −90°=↑
+  String _directionArrow(double deg) {
+    if (deg < -157.5 || deg >= 157.5) return '←';
+    if (deg < -112.5) return '↖';
+    if (deg < -67.5)  return '↑';
+    if (deg < -22.5)  return '↗';
+    if (deg <  22.5)  return '→';
+    if (deg <  67.5)  return '↘';
+    if (deg < 112.5)  return '↓';
+    return '↙';
+  }
+}
+
+
+
 // ── Interior art abstraction ──────────────────────────────────────────────────
 
 /// Sealed type for a building's interior visual.
@@ -1158,9 +1666,11 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         return [
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Bibel lesen (+20 Glauben)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Beten (+15 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Ausruhen (+10 Glauben)', onTap: () => _performAction('rest')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '🙏MAX', tooltip: 'Bibel lesen (Glauben komplett auffüllen)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞MAX', tooltip: 'Essen (Hunger komplett stillen)', onTap: () => _performAction('eat')),
+          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️MAX', tooltip: 'Schlafen (Leben komplett auffüllen)', onTap: () => _performAction('sleep')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✨🌍', tooltip: 'Beten (massiver Einfluss auf die unsichtbare Welt)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionsübersicht öffnen', onTap: () => _performAction('missions')),
         ];
 
       // ── Residential ───────────────────────────────────────────────────────

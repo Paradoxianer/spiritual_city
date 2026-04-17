@@ -58,6 +58,13 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   final Paint _auraPaint = Paint()
     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
 
+  /// Mission marker – pre-allocated paint for the background circle.
+  final Paint _missionBadgePaint = Paint()..color = const Color(0xFFFFD700);
+  final Paint _missionBadgeBorderPaint = Paint()
+    ..color = const Color(0xFF8B6914)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.0;
+
   // ─────────────────────────────────────────────────────────────────────────
 
   NPCComponent({required NPCModel model})
@@ -215,6 +222,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.lastMaterialsDelta = -8.0;
       game.gainFaith(5.0);
       game.spendMaterials(8.0);
+      game.missionService.onServiceCompleted();
       return ['📦🙏', '😊📦', '🙏😊'][_random.nextInt(3)];
     }
 
@@ -396,6 +404,22 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
+
+    // Mission marker: small golden circle above the NPC head
+    if (model.activeMissionDescription != null) {
+      const r = 5.0;
+      final cx = size.x / 2;
+      final cy = -r - 3;
+      canvas.drawCircle(Offset(cx, cy), r, _missionBadgePaint);
+      canvas.drawCircle(Offset(cx, cy), r, _missionBadgeBorderPaint);
+      // Draw the '!' character inside the badge using a simple line+dot.
+      final linePaint = Paint()
+        ..color = const Color(0xFF5A3A00)
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(Offset(cx, cy - 2.5), Offset(cx, cy + 0.5), linePaint);
+      canvas.drawCircle(Offset(cx, cy + 2.5), 0.8, Paint()..color = const Color(0xFF5A3A00));
+    }
   }
 
   void _renderSpiritualAura(Canvas canvas) {

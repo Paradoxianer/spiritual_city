@@ -29,6 +29,9 @@ class BuildingModel {
   /// (Lastenheft §7.4 / Issue §A).
   int totalConversations = 0;
 
+  /// Active mission attached to this building (null = no mission).
+  String? activeMissionDescription;
+
   BuildingModel({
     required this.buildingId,
     required this.type,

@@ -12,11 +12,17 @@ class GameSave {
   final Difficulty difficulty;
   final Map<String, dynamic> gameState;
 
+  /// World-generation seed used for this save.  Stored so that loaded games
+  /// always regenerate the exact same city layout.  Null only for saves
+  /// created before seed support was added (they fall back to 42).
+  final int? seed;
+
   GameSave({
     required this.id,
     required this.name,
     required this.createdAt,
     required this.difficulty,
+    this.seed,
     DateTime? lastPlayed,
     this.gameState = const {},
   }) : lastPlayed = lastPlayed ?? createdAt;
@@ -27,6 +33,7 @@ class GameSave {
         name: name,
         createdAt: createdAt,
         difficulty: difficulty,
+        seed: seed,
         lastPlayed: DateTime.now(),
         gameState: newState,
       );
@@ -37,6 +44,7 @@ class GameSave {
         'createdAt': createdAt.toIso8601String(),
         'lastPlayed': lastPlayed.toIso8601String(),
         'difficulty': difficulty.index,
+        if (seed != null) 'seed': seed,
         'gameState': gameState,
       };
 
@@ -48,6 +56,7 @@ class GameSave {
             ? DateTime.parse(map['lastPlayed'] as String)
             : null,
         difficulty: Difficulty.values[map['difficulty'] as int],
+        seed: map['seed'] as int?,
         gameState: (map['gameState'] as Map?)?.cast<String, dynamic>() ?? {},
       );
 }
