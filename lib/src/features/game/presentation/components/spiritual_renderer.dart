@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart' hide Image;
 import 'package:logging/logging.dart';
 
 import '../../domain/models/city_chunk.dart';

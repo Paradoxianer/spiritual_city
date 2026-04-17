@@ -269,6 +269,11 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       // Notify the game once we know where the pastor's house is.
       if (model.isHomebase && game.pastorhousePosition.value == null) {
         game.pastorhousePosition.value = pos.clone();
+        _log.info(
+          'Pastor house placed at pixel (${pos.x.toInt()}, ${pos.y.toInt()}) '
+          '= grid cell (${(pos.x / CellComponent.cellSize).floor()}, '
+          '${(pos.y / CellComponent.cellSize).floor()})',
+        );
       }
     }
   }

@@ -1,4 +1,3 @@
-import 'package:flame/components.dart';
 import 'package:logging/logging.dart';
 import '../../domain/models/npc_model.dart';
 import 'npc_component.dart';

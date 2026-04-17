@@ -203,7 +203,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       _updateButtonStyles();
     }
     isWorldReady.value = true;
-    _log.info('--- GAME READY ---');
+    _log.info(
+      '--- GAME READY --- '
+      'pastorhousePos=${pastorhousePosition.value} '
+      'playerPos=${player.position}',
+    );
 
     // Assign starting missions to NPCs / buildings in the spawn chunk.
     // Run after a short delay so chunk NPCs/buildings are all registered.
