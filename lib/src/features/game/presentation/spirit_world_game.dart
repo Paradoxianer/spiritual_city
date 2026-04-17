@@ -15,9 +15,11 @@ import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
 import '../domain/services/building_interaction_service.dart';
+import '../domain/services/mission_service.dart';
 import '../domain/models/cell_object.dart';
 import 'components/building_component.dart';
 import 'components/chunk_manager.dart';
+import 'components/loot_system.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
 import 'components/prayer_hud_component.dart';
@@ -55,6 +57,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final HudButton actionButton;
   late final HudButton worldToggleButton;
   late final PrayerHudComponent prayerHud;
+  late final LootSystem lootSystem;
+
+  /// Mission system – wired to all interaction hooks.
+  final MissionService missionService = MissionService();
+
+  /// World-pixel position of the pastor house once its chunk is first loaded.
+  /// `null` until the first chunk containing the pastor house is generated.
+  final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(null);
 
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
@@ -95,6 +105,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Active building interior session (null when no building is open).
   GameBuildingData? activeBuildingData;
+
+  /// Data for the look overlay (cell neighbourhood info).
+  GameLookData? activeLookData;
 
   /// Building interaction logic (shared instance).
   final BuildingInteractionService buildingInteractionService =
@@ -166,6 +179,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     prayerHud = PrayerHudComponent();
     await camera.viewport.add(prayerHud);
 
+    lootSystem = LootSystem(seed: seedManager.seed);
+    await world.add(lootSystem);
+
     camera.viewfinder.anchor = Anchor.center;
     camera.viewfinder.position = player.position.clone();
 
@@ -176,11 +192,52 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
     isWorldReady.value = true;
     _log.info('--- GAME READY ---');
+
+    // ── Camera intro: pan to pastor house then back ───────────────────────
+    // The pastor house is only a few cells away from spawn, so the intro is
+    // a gentle reveal rather than a dramatic sweep.
+    _playCameraIntro();
   }
 
-  // ── Save / Restore helpers ────────────────────────────────────────────────
+  /// Gently pans the camera to the pastor house position and back so the
+  /// player immediately knows where to return for missions.
+  void _playCameraIntro() async {
+    // If the pastor house position is not yet known, wait briefly for the
+    // chunk to load (it is in the same chunk as the player spawn).
+    Vector2? target;
+    for (int i = 0; i < 20; i++) {
+      target = pastorhousePosition.value;
+      if (target != null) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    if (target == null) return; // house not found – skip intro
 
-  // ── Migration ─────────────────────────────────────────────────────────────
+    final origin = player.position.clone();
+    // Smooth interpolation: move towards target over 1 s, hold 1 s, return.
+    const steps = 30;
+    const stepMs = 33; // ~30 fps
+    for (int i = 0; i <= steps; i++) {
+      await Future.delayed(const Duration(milliseconds: stepMs));
+      if (!isLoaded) return;
+      final t = i / steps;
+      camera.viewfinder.position = Vector2(
+        origin.x + (target.x - origin.x) * t,
+        origin.y + (target.y - origin.y) * t,
+      );
+    }
+    await Future.delayed(const Duration(milliseconds: 1000));
+    for (int i = 0; i <= steps; i++) {
+      await Future.delayed(const Duration(milliseconds: stepMs));
+      if (!isLoaded) return;
+      final t = i / steps;
+      camera.viewfinder.position = Vector2(
+        target.x + (origin.x - target.x) * t,
+        target.y + (origin.y - target.y) * t,
+      );
+    }
+  }
+
+
 
   /// Upgrades a raw [state] map from any previous schema version to the
   /// current [kSaveDataVersion] schema, returning the upgraded map.
@@ -396,7 +453,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   void _openRadialMenu() {
     final actions = <RadialAction>[
-      RadialAction(label: '👀', icon: Icons.search, onSelect: () => _log.info('Looking around')),
+      RadialAction(label: '👀', icon: Icons.search, onSelect: openLookOverlay),
     ];
 
     // Collect all interactables within range, sorted by distance (closest first)
@@ -481,6 +538,53 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     paused = true; 
   }
 
+  // ── Look overlay ──────────────────────────────────────────────────────────
+
+  /// Opens the look overlay, describing nearby cells around the player.
+  void openLookOverlay() {
+    // Collect info about the 8 adjacent cells.
+    const cellSize = 32.0;
+    final px = (player.position.x / cellSize).floor();
+    final py = (player.position.y / cellSize).floor();
+    final infos = <String>[];
+    for (final d in const [
+      [0, -1], [1, 0], [0, 1], [-1, 0],
+    ]) {
+      final cell = grid.getCell(px + d[0], py + d[1]);
+      if (cell == null) continue;
+      final data = cell.data;
+      if (data is BuildingData) {
+        final name = BuildingComponent.buildingName(data.type);
+        final num  = data.houseNumber != null ? ' Nr. ${data.houseNumber}' : '';
+        infos.add('$name$num');
+      } else if (data is RoadData && data.streetName != null) {
+        infos.add(data.streetName!);
+      }
+    }
+    activeLookData = GameLookData(descriptions: infos.toSet().toList());
+    overlays.add('LookOverlay');
+    // Auto-close after 3 seconds
+    Future.delayed(const Duration(seconds: 3), closeLookOverlay);
+  }
+
+  void closeLookOverlay() {
+    activeLookData = null;
+    overlays.remove('LookOverlay');
+  }
+
+  // ── Mission board ─────────────────────────────────────────────────────────
+
+  void openMissionBoard() {
+    missionService.generateForPastorhouseVisit();
+    overlays.add('MissionBoardOverlay');
+    paused = true;
+  }
+
+  void closeMissionBoard() {
+    overlays.remove('MissionBoardOverlay');
+    paused = false;
+  }
+
   String handleInteraction(String type) {
     if (_nearestInteractable != null) {
       return _nearestInteractable!.handleInteraction(type);
@@ -554,6 +658,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // 'prayBusiness' also nudges the cell underneath the player positively
     if (actionType == 'prayBusiness') {
       _nudgeCellUnderPlayer(0.02);
+      missionService.onVisitPrayed();
     }
     return result;
   }
@@ -620,12 +725,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Record a completed prayer combat and check modifier unlocks
   void recordPrayerCombat() {
     progress.recordPrayerCombat();
+    missionService.onPrayerCombat();
     _checkAndApplyModifiers();
   }
 
   /// Record a completed conversation
   void recordConversation() {
     progress.recordConversation();
+    missionService.onDialogCompleted();
     _checkAndApplyModifiers();
   }
 

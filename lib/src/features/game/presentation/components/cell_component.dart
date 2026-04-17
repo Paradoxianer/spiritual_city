@@ -191,11 +191,20 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
         break;
       case BuildingType.pastorHouse:
         canvas.drawRect(size.toRect(), _fillHouse);
-        // Small cross above door to distinguish from regular house
-        canvas.drawLine(Offset(size.x * 0.5, size.y * 0.1),
-            Offset(size.x * 0.5, size.y * 0.4), _accentBrownStroke2);
-        canvas.drawLine(Offset(size.x * 0.35, size.y * 0.2),
-            Offset(size.x * 0.65, size.y * 0.2), _accentBrownStroke2);
+        // Larger, golden cross marks the pastor's home clearly.
+        canvas.drawLine(Offset(size.x * 0.5, size.y * 0.05),
+            Offset(size.x * 0.5, size.y * 0.55), _accentGoldStroke15);
+        canvas.drawLine(Offset(size.x * 0.28, size.y * 0.18),
+            Offset(size.x * 0.72, size.y * 0.18), _accentGoldStroke15);
+        // Golden glow ring around the building
+        _dynamicPaint
+          ..color = const Color(0x33FFD700)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3;
+        canvas.drawRect(size.toRect().inflate(1.5), _dynamicPaint);
+        _dynamicPaint
+          ..style = PaintingStyle.fill
+          ..strokeWidth = 1;
         break;
 
       // ---- Commercial ----------------------------------------------------

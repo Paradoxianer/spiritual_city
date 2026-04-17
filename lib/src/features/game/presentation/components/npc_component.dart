@@ -215,6 +215,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.lastMaterialsDelta = -8.0;
       game.gainFaith(5.0);
       game.spendMaterials(8.0);
+      game.missionService.onServiceCompleted();
       return ['📦🙏', '😊📦', '🙏😊'][_random.nextInt(3)];
     }
 

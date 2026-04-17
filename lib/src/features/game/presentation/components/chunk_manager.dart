@@ -265,6 +265,11 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       final comp = BuildingComponent(buildingModel: model, position: pos);
       _allBuildings.add(comp);
       parent?.add(comp);
+
+      // Notify the game once we know where the pastor's house is.
+      if (model.isHomebase && game.pastorhousePosition.value == null) {
+        game.pastorhousePosition.value = pos.clone();
+      }
     }
   }
 

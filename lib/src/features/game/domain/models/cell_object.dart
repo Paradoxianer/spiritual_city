@@ -56,7 +56,16 @@ class RoadData extends CellData {
   final bool isIntersection;
   final int connections; // Bitmask for auto-tiling (N:1, E:2, S:4, W:8)
 
-  RoadData({required this.type, this.isIntersection = false, this.connections = 0});
+  /// Human-readable street name assigned by [RoadGenerator] – null for minor
+  /// roads that share a boulevard's name via proximity.
+  final String? streetName;
+
+  RoadData({
+    required this.type,
+    this.isIntersection = false,
+    this.connections = 0,
+    this.streetName,
+  });
   
   @override
   String get categoryId => 'road_${type.name}';
@@ -69,12 +78,16 @@ class BuildingData extends CellData {
   final int floorCount;
   final bool isEntrance;
 
+  /// House / building number derived from position along the nearest road.
+  final int? houseNumber;
+
   BuildingData({
     required this.type, 
     required this.buildingId,
     this.hasInterior = true,
     this.floorCount = 1,
     this.isEntrance = false,
+    this.houseNumber,
   });
 
   @override

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flame/components.dart' show Vector2;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
+import '../domain/models/mission_model.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/services/faith_calculator_service.dart';
@@ -76,6 +78,9 @@ class _GameScreenState extends State<GameScreen> {
               'DialogOverlay': (context, game) => DialogOverlay(game: _game),
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
+              'LookOverlay': (context, game) => LookOverlay(game: _game),
+              'MissionBoardOverlay': (context, game) =>
+                  MissionBoardOverlay(game: _game),
             },
           ),
           // Loading overlay – shown until the world is ready
@@ -109,6 +114,14 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ),
               );
+            },
+          ),
+          // Pastorhouse HUD compass (shown when world is ready and house is far)
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _PastorhouseHud(game: _game);
             },
           ),
           // Saving overlay – centered indicator shown while persisting to Hive.
@@ -770,6 +783,362 @@ class GameDialogData {
   GameDialogData({required this.npcName, required this.npcEmoji, required this.npcModel});
 }
 
+/// Data passed to the [LookOverlay].
+class GameLookData {
+  final List<String> descriptions;
+  GameLookData({required this.descriptions});
+}
+
+// ── Look Overlay ──────────────────────────────────────────────────────────────
+
+/// Shows a brief 3-second tooltip with information about adjacent cells
+/// (building names, street names) – activated by the 👀 radial-menu action.
+class LookOverlay extends StatelessWidget {
+  final SpiritWorldGame game;
+  const LookOverlay({super.key, required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final data = game.activeLookData;
+    if (data == null) return const SizedBox.shrink();
+    final lines = data.descriptions;
+
+    return Positioned(
+      top: MediaQuery.of(context).size.height * 0.25,
+      left: 40,
+      right: 40,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.80),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('👀', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Umgebung',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (lines.isEmpty)
+                Text(
+                  'Keine besonderen Gebäude in der Nähe.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 13,
+                  ),
+                )
+              else
+                ...lines.map((l) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        '• $l',
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                    )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mission Board Overlay ─────────────────────────────────────────────────────
+
+/// Full mission board shown when the player opens '📋 Missionen' in the
+/// pastor house.  Lists active missions and lets the player claim completed ones.
+class MissionBoardOverlay extends StatefulWidget {
+  final SpiritWorldGame game;
+  const MissionBoardOverlay({super.key, required this.game});
+
+  @override
+  State<MissionBoardOverlay> createState() => _MissionBoardOverlayState();
+}
+
+class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
+  void _claim(String id) {
+    final m = widget.game.missionService.claimReward(id);
+    if (m == null) return;
+    widget.game.gainFaith(m.rewardFaith);
+    if (m.rewardMaterials > 0) widget.game.gainMaterials(m.rewardMaterials);
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: widget.game.missionService.missionsNotifier,
+      builder: (context, missions, _) {
+        return Align(
+          alignment: Alignment.center,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.70,
+            ),
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3E2723).withValues(alpha: 0.97),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFFD54F), width: 2),
+              boxShadow: [
+                const BoxShadow(color: Colors.black54, blurRadius: 12),
+                BoxShadow(
+                  color: const Color(0xFFFFD54F).withValues(alpha: 0.25),
+                  blurRadius: 20,
+                  spreadRadius: 3,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF4E342E),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('📋', style: TextStyle(fontSize: 26)),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Missionen',
+                        style: TextStyle(
+                          color: Color(0xFFFFD54F),
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white70),
+                        onPressed: () => widget.game.closeMissionBoard(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Mission list
+                Flexible(
+                  child: missions.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Text(
+                            'Keine aktiven Missionen.',
+                            style: TextStyle(color: Colors.white54, fontSize: 14),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.all(12),
+                          itemCount: missions.length,
+                          separatorBuilder: (_, __) =>
+                              const Divider(color: Colors.white12),
+                          itemBuilder: (context, i) =>
+                              _MissionTile(
+                                mission: missions[i],
+                                onClaim: missions[i].isCompleted
+                                    ? () => _claim(missions[i].id)
+                                    : null,
+                              ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MissionTile extends StatelessWidget {
+  final MissionModel mission;
+  final VoidCallback? onClaim;
+  const _MissionTile({required this.mission, this.onClaim});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool done = mission.isCompleted;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mission.description,
+                  style: TextStyle(
+                    color: done ? Colors.green[300] : Colors.white70,
+                    fontSize: 13,
+                    decoration: done ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Progress bar
+                if (!done)
+                  LinearProgressIndicator(
+                    value: mission.targetCount > 0
+                        ? mission.progress / mission.targetCount
+                        : 0.0,
+                    backgroundColor: Colors.white12,
+                    color: Colors.amber,
+                    minHeight: 4,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                const SizedBox(height: 3),
+                Text(
+                  done
+                      ? '✅ Abgeschlossen — Belohnung: +${mission.rewardFaith.toInt()}🙏'
+                          '${mission.rewardMaterials > 0 ? ' +${mission.rewardMaterials.toInt()}📦' : ''}'
+                      : '${mission.progress}/${mission.targetCount}',
+                  style: const TextStyle(color: Colors.amber, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          if (done && onClaim != null) ...[
+            const SizedBox(width: 10),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                shape: const StadiumBorder(),
+                textStyle: const TextStyle(fontSize: 12),
+              ),
+              onPressed: onClaim,
+              child: const Text('Einlösen'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pastorhouse HUD compass ────────────────────────────────────────────────────
+
+/// Shows a golden 🏠 icon + direction arrow when the pastor house is off-screen.
+/// Renders as a [Positioned] overlay in the top-left corner with a subtle glow.
+class _PastorhouseHud extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _PastorhouseHud({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Vector2?>(
+      valueListenable: game.pastorhousePosition,
+      builder: (context, housePx, _) {
+        if (housePx == null) return const SizedBox.shrink();
+
+        // Rebuild each frame – listen to player position via AnimatedBuilder
+        // by piggy-backing on the missions notifier (updated infrequently) is
+        // not frame-accurate.  Instead, just always show the indicator and
+        // hide when the player is within 200 px.
+        final playerPos = game.player.position;
+        final dx = housePx.x - playerPos.x;
+        final dy = housePx.y - playerPos.y;
+        final dist = (dx * dx + dy * dy).abs();
+        if (dist < 200 * 200) return const SizedBox.shrink(); // very close
+
+        final angle = _radiansToDegrees(_atan2(dy, dx));
+        final arrow = _directionArrow(angle);
+
+        return Positioned(
+          top: 60,
+          left: 16,
+          child: SafeArea(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.7)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🏠', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  Text(
+                    arrow,
+                    style: const TextStyle(
+                      color: Color(0xFFFFD54F),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Maps an angle in degrees (−180…180) to an arrow Unicode character.
+  String _directionArrow(double deg) {
+    if (deg < -157.5 || deg >= 157.5) return '←';
+    if (deg < -112.5) return '↙';
+    if (deg < -67.5)  return '↑';
+    if (deg < -22.5)  return '↗';
+    if (deg <  22.5)  return '→';
+    if (deg <  67.5)  return '↘';
+    if (deg < 112.5)  return '↓';
+    return '↙';
+  }
+
+  double _atan2(double y, double x) {
+    if (x == 0 && y == 0) return 0;
+    return _atan2Impl(y, x);
+  }
+
+  // Simple atan2 approximation (accurate to ±1°).
+  double _atan2Impl(double y, double x) {
+    const pi = 3.141592653589793;
+    if (x > 0) return _atan(y / x);
+    if (x < 0 && y >= 0) return _atan(y / x) + pi;
+    if (x < 0 && y < 0)  return _atan(y / x) - pi;
+    if (x == 0 && y > 0)  return pi / 2;
+    return -pi / 2;
+  }
+
+  double _atan(double z) {
+    // Polynomial approximation of atan in [−1, 1]; range-reduce first.
+    const pi = 3.141592653589793;
+    if (z.abs() > 1) {
+      return (z > 0 ? 1 : -1) * pi / 2 - _atan(1 / z);
+    }
+    return z * (1.0 - z * z * (1.0 / 3.0 - z * z / 5.0));
+  }
+
+  double _radiansToDegrees(double r) => r * 180 / 3.141592653589793;
+}
+
+
+
 // ── Interior art abstraction ──────────────────────────────────────────────────
 
 /// Sealed type for a building's interior visual.
@@ -1158,6 +1527,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         return [
+          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '🎯', tooltip: 'Missionen annehmen', onTap: () => widget.game.openMissionBoard()),
           _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Bibel lesen (+20 Glauben)', onTap: () => _performAction('readBible')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Beten (+15 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Ausruhen (+10 Glauben)', onTap: () => _performAction('rest')),
