@@ -666,43 +666,65 @@ class _DialogOverlayState extends State<DialogOverlay> {
                         ],
                       )
                     // ── Normal action chips ────────────────────────────────────
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _EmojiChip(
-                            emoji: '💬',
-                            hint: '→✝️',
-                            onTap: () => _handleInteraction('talk', '💬'),
-                          ),
-                          _EmojiChip(
-                            emoji: '👂',
-                            hint: '−❤️→✝️',
-                            onTap: () => _handleInteraction('counsel', '👂'),
-                          ),
-                          _EmojiChip(
-                            emoji: '🙏',
-                            hint: '−🙏→✝️🌍',
-                            onTap: () => _handleInteraction('pray', '🙏'),
-                          ),
-                          _EmojiChip(
-                            emoji: '📖',
-                            hint: '→🙏🙏+✝️',
-                            onTap: () => _handleInteraction('bible', '📖'),
-                          ),
-                          if (model.wantsGift)
+                    : Builder(builder: (context) {
+                        // Compute resource costs once for disabled-state checks.
+                        final factor = FaithCalculatorService.difficultyFactorFor(
+                            widget.game.difficulty);
+                        final counselHpCost =
+                            (2.0 / factor).round().clamp(1, 99);
+                        final prayFaithCost =
+                            (2.0 / factor).round().clamp(1, 99);
+                        const helpMaterialCost = 8.0;
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
                             _EmojiChip(
-                              emoji: '📦',
-                              hint: '−8📦→✝️',
-                              onTap: () => _handleInteraction('help', '📦'),
+                              emoji: '💬',
+                              hint: '→✝️',
+                              onTap: () => _handleInteraction('talk', '💬'),
                             ),
-                          _EmojiChip(
-                            emoji: '✝️🕊️',
-                            hint: '→?',
-                            isSpecial: true,
-                            onTap: () => _handleInteraction('convert', '✝️?'),
-                          ),
-                        ],
-                      ),
+                            _EmojiChip(
+                              emoji: '👂',
+                              hint: '−❤️→✝️',
+                              isDisabled:
+                                  widget.game.health <= counselHpCost,
+                              onTap: () =>
+                                  _handleInteraction('counsel', '👂'),
+                            ),
+                            _EmojiChip(
+                              emoji: '🙏',
+                              hint: '−🙏→✝️🌍',
+                              isDisabled:
+                                  widget.game.faith < prayFaithCost,
+                              onTap: () => _handleInteraction('pray', '🙏'),
+                            ),
+                            _EmojiChip(
+                              emoji: '📖',
+                              hint: '→🙏🙏+✝️',
+                              onTap: () =>
+                                  _handleInteraction('bible', '📖'),
+                            ),
+                            if (model.wantsGift)
+                              _EmojiChip(
+                                emoji: '📦',
+                                hint: '−8📦→✝️',
+                                isDisabled: widget.game.materials <
+                                    helpMaterialCost,
+                                onTap: () =>
+                                    _handleInteraction('help', '📦'),
+                              ),
+                            if (!model.isChristian)
+                              _EmojiChip(
+                                emoji: '✝️🕊️',
+                                hint: '→?',
+                                isSpecial: true,
+                                onTap: () =>
+                                    _handleInteraction('convert', '✝️?'),
+                              ),
+                          ],
+                        );
+                      }),
               ),
           ],
         ),
@@ -744,6 +766,7 @@ class _EmojiChip extends StatelessWidget {
   final String emoji;
   final VoidCallback onTap;
   final bool isSpecial;
+  final bool isDisabled;
   /// Short cost/benefit hint shown below the emoji, e.g. "→✝️" or "−8📦→✝️".
   final String? hint;
 
@@ -751,6 +774,7 @@ class _EmojiChip extends StatelessWidget {
     required this.emoji,
     required this.onTap,
     this.isSpecial = false,
+    this.isDisabled = false,
     this.hint,
   });
 
@@ -761,16 +785,27 @@ class _EmojiChip extends StatelessWidget {
       children: [
         ActionChip(
           label: Text(emoji, style: const TextStyle(fontSize: 22)),
-          backgroundColor: isSpecial ? Colors.amber[800] : Colors.white70,
-          onPressed: onTap,
-          shape: StadiumBorder(side: BorderSide(color: isSpecial ? Colors.amber : Colors.transparent)),
+          backgroundColor: isDisabled
+              ? Colors.red[900]?.withValues(alpha: 0.35)
+              : (isSpecial ? Colors.amber[800] : Colors.white70),
+          onPressed: isDisabled ? null : onTap,
+          shape: StadiumBorder(
+            side: BorderSide(
+              color: isDisabled
+                  ? Colors.red
+                  : (isSpecial ? Colors.amber : Colors.transparent),
+            ),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 8),
         ),
         if (hint != null) ...[
           const SizedBox(height: 2),
           Text(
             hint!,
-            style: const TextStyle(color: Colors.white70, fontSize: 10),
+            style: TextStyle(
+              color: isDisabled ? Colors.red[300] : Colors.white70,
+              fontSize: 10,
+            ),
           ),
         ],
       ],
