@@ -78,7 +78,7 @@ class GameKeymap {
 
     // Interaktion (reale Welt)
     KeymapEntry(
-      keys: 'E / Leertaste',
+      keys: 'Leertaste / E',
       action: 'Radialmenü öffnen / Interagieren',
       category: 'Interaktion',
     ),
@@ -117,7 +117,7 @@ class GameKeymap {
 
     // Allgemein
     KeymapEntry(
-      keys: 'Tab',
+      keys: 'Tab / 🙏-Button',
       action: 'Welt wechseln (−10 Glaube)',
       category: 'Allgemein',
     ),
