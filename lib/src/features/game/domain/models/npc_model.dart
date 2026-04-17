@@ -67,14 +67,14 @@ class NPCModel {
   bool get isFaithRevealed => conversationCount >= 6;
 
   /// ID of the building this NPC lives/works in.
-  /// Prepared for future house-entry feature: when the player enters a
-  /// building, all NPCs with a matching [homeBuildingId] can be interacted
-  /// with or prayed for at once.
   final String? homeBuildingId;
 
   /// Whether this NPC has gone through the conversion prayer (Übergabegebet).
-  /// Only true NPCs show the cross badge and influence the spiritual world.
   bool isConverted;
+
+  /// Active mission attached to this NPC (null = no mission).
+  /// When non-null the radial menu offers a "📋" action to complete it.
+  String? activeMissionDescription;
 
   NPCModel({
     required this.id,

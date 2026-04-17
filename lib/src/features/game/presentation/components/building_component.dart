@@ -1,3 +1,4 @@
+import 'dart:ui' show Canvas, Paint, PaintingStyle, StrokeCap;
 import 'package:flame/components.dart';
 import '../../domain/models/building_model.dart';
 import '../../domain/models/cell_object.dart';
@@ -40,6 +41,31 @@ class BuildingComponent extends PositionComponent
 
   @override
   String handleInteraction(String type) => buildingEmoji(buildingModel.type);
+
+  // ── Mission marker ────────────────────────────────────────────────────────
+
+  static final _missionBadgePaint = Paint()..color = const Color(0xFFFFD700);
+  static final _missionBadgeBorderPaint = Paint()
+    ..color = const Color(0xFF8B6914)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.0;
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (buildingModel.activeMissionDescription == null) return;
+    const r = 6.0;
+    canvas.drawCircle(const Offset(0, -r - 2), r, _missionBadgePaint);
+    canvas.drawCircle(const Offset(0, -r - 2), r, _missionBadgeBorderPaint);
+    final linePaint = Paint()
+      ..color = const Color(0xFF5A3A00)
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+        const Offset(0, -r - 2 - 3), const Offset(0, -r - 2 + 0.5), linePaint);
+    canvas.drawCircle(const Offset(0, -r - 2 + 2.5), 0.9,
+        Paint()..color = const Color(0xFF5A3A00));
+  }
 
   // ── Static helpers (reused by the overlay) ────────────────────────────────
 

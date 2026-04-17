@@ -1,134 +1,109 @@
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
-import '../models/mission_model.dart';
+import '../models/npc_model.dart';
+import '../models/building_model.dart';
 
-/// Generates, tracks, and completes missions for the player.
+/// Lightweight mission service.
 ///
-/// Missions are generated lazily the first time the pastor house is visited
-/// and whenever the active list drops below [_minActive].
-///
-/// The service is intentionally lightweight: no persistence between sessions
-/// (missions reset on each new game) and no complex dependency graph.
+/// Missions are short tasks attached directly to a specific NPC or building.
+/// When the player approaches the target they see a 📋 icon in-world and can
+/// complete the mission via the radial menu for an instant reward.
 class MissionService {
   static final _log = Logger('MissionService');
 
-  static const int _minActive = 2;
-  static const int _maxMissions = 5;
+  static const int _startMissionCount = 4;
+  static const int _faithReward    = 10;
+  static const int _materialReward = 5;
+
+  static const List<String> _missionTexts = [
+    'Sprich mit diesem Bewohner',
+    'Bete für diesen Ort',
+    'Bring Hilfe hierher',
+    'Besuche diesen Ort',
+    'Bitte um ein Gespräch',
+    'Teile gute Neuigkeiten',
+    'Hör diesem Menschen zu',
+    'Segne diesen Ort',
+  ];
 
   final Random _rng;
-
-  final List<MissionModel> _missions = [];
-  int _nextId = 0;
-
-  /// Notifies listeners whenever a mission is added or completed.
-  final ValueNotifier<List<MissionModel>> missionsNotifier =
-      ValueNotifier(const []);
-
   MissionService({int? seed}) : _rng = Random(seed);
 
-  List<MissionModel> get activeMissions =>
-      _missions.where((m) => !m.isCompleted).toList();
+  // ── Startup ───────────────────────────────────────────────────────────────
 
-  List<MissionModel> get allMissions => List.unmodifiable(_missions);
-
-  // ── Generation ────────────────────────────────────────────────────────────
-
-  /// Called when the player enters the pastor house.
-  /// Tops up the mission list to [_minActive] active missions.
-  void generateForPastorhouseVisit() {
-    final active = activeMissions.length;
-    if (active >= _minActive) return;
-    final toAdd = _minActive - active;
-    for (int i = 0; i < toAdd; i++) {
-      if (_missions.length < _maxMissions) _addRandomMission();
-    }
-    _notify();
-  }
-
-  void _addRandomMission() {
-    final type = MissionType.values[_rng.nextInt(MissionType.values.length)];
-    final m = _buildMission(type);
-    _missions.add(m);
-    _log.fine('New mission: ${m.description}');
-  }
-
-  MissionModel _buildMission(MissionType type) {
-    final id = 'mission_${_nextId++}';
-    return switch (type) {
-      MissionType.dialog => MissionModel(
-          id: id,
-          type: type,
-          description: 'Sprich mit 3 Bewohnern der Stadt',
-          targetCount: 3,
-          rewardFaith: 10,
-        ),
-      MissionType.service => MissionModel(
-          id: id,
-          type: type,
-          description: 'Hilf 2 Bewohnern (📦 Hilfe-Aktion)',
-          targetCount: 2,
-          rewardFaith: 10,
-          rewardMaterials: 10,
-        ),
-      MissionType.visit => MissionModel(
-          id: id,
-          type: type,
-          description: 'Bete in einem Gebäude (🙏 Gebet-Aktion)',
-          targetCount: 1,
-          rewardFaith: 15,
-        ),
-      MissionType.prayer => MissionModel(
-          id: id,
-          type: type,
-          description: '5× Gebet-Kampf gegen Dämonen',
-          targetCount: 5,
-          rewardFaith: 50,
-        ),
-      MissionType.collect => MissionModel(
-          id: id,
-          type: type,
-          description: 'Sammle 10 Material-Pakete',
-          targetCount: 10,
-          rewardFaith: 15,
-          rewardMaterials: 30,
-        ),
-    };
-  }
-
-  // ── Progress hooks (called by SpiritWorldGame) ────────────────────────────
-
-  void onDialogCompleted() => _advanceType(MissionType.dialog);
-  void onServiceCompleted() => _advanceType(MissionType.service);
-  void onVisitPrayed()      => _advanceType(MissionType.visit);
-  void onPrayerCombat()     => _advanceType(MissionType.prayer);
-  void onMaterialCollected()=> _advanceType(MissionType.collect);
-
-  void _advanceType(MissionType type) {
-    for (final m in _missions) {
-      if (m.type == type && !m.isCompleted) {
-        if (m.advance()) {
-          _log.info('Mission completed: ${m.description}');
-          _notify();
-        }
-        return;
-      }
+  /// Assigns [_startMissionCount] missions to random NPCs and buildings.
+  /// Call once after the spawn chunk is loaded.
+  void assignStartMissions(
+    List<NPCModel> npcs,
+    List<BuildingModel> buildings,
+  ) {
+    final targets = <_Target>[
+      for (final n in npcs) _Target.npc(n),
+      for (final b in buildings) _Target.building(b),
+    ];
+    if (targets.isEmpty) return;
+    targets.shuffle(_rng);
+    for (int i = 0; i < _startMissionCount && i < targets.length; i++) {
+      final text = _missionTexts[_rng.nextInt(_missionTexts.length)];
+      targets[i].assign(text);
+      _log.fine('Mission assigned: "$text"');
     }
   }
 
-  // ── Reward claim ──────────────────────────────────────────────────────────
+  // ── Completion ────────────────────────────────────────────────────────────
 
-  /// Returns the reward of a completed mission and removes it from the list.
-  /// Returns null if the mission is not found or not completed.
-  MissionModel? claimReward(String missionId) {
-    final idx = _missions.indexWhere((m) => m.id == missionId && m.isCompleted);
-    if (idx < 0) return null;
-    final m = _missions.removeAt(idx);
-    _notify();
-    return m;
+  /// Returns the faith reward and clears the mission from the target.
+  /// After completion a new mission is assigned to a random idle target.
+  (int faithDelta, int materialsDelta) completeNpcMission(
+    NPCModel npc,
+    List<NPCModel> allNpcs,
+    List<BuildingModel> allBuildings,
+  ) {
+    npc.activeMissionDescription = null;
+    _assignOneRandomMission(allNpcs, allBuildings);
+    return (_faithReward, _materialReward);
   }
 
-  void _notify() {
-    missionsNotifier.value = List.unmodifiable(_missions);
+  (int faithDelta, int materialsDelta) completeBuildingMission(
+    BuildingModel building,
+    List<NPCModel> allNpcs,
+    List<BuildingModel> allBuildings,
+  ) {
+    building.activeMissionDescription = null;
+    _assignOneRandomMission(allNpcs, allBuildings);
+    return (_faithReward, _materialReward);
+  }
+
+  void _assignOneRandomMission(
+    List<NPCModel> npcs,
+    List<BuildingModel> buildings,
+  ) {
+    final targets = <_Target>[
+      for (final n in npcs) if (n.activeMissionDescription == null) _Target.npc(n),
+      for (final b in buildings)
+        if (b.activeMissionDescription == null) _Target.building(b),
+    ];
+    if (targets.isEmpty) return;
+    final t = targets[_rng.nextInt(targets.length)];
+    t.assign(_missionTexts[_rng.nextInt(_missionTexts.length)]);
+  }
+
+  // ── Legacy hooks (kept for backward compatibility) ────────────────────────
+  void onDialogCompleted()   {}
+  void onServiceCompleted()  {}
+  void onVisitPrayed()       {}
+  void onPrayerCombat()      {}
+  void onMaterialCollected() {}
+  void generateForPastorhouseVisit() {}
+}
+
+class _Target {
+  final NPCModel? npc;
+  final BuildingModel? building;
+  _Target.npc(this.npc) : building = null;
+  _Target.building(this.building) : npc = null;
+  void assign(String text) {
+    npc?.activeMissionDescription = text;
+    building?.activeMissionDescription = text;
   }
 }

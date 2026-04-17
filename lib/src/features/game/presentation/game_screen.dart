@@ -11,7 +11,6 @@ import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
-import '../domain/models/mission_model.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/services/faith_calculator_service.dart';
@@ -80,8 +79,6 @@ class _GameScreenState extends State<GameScreen> {
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
               'LookOverlay': (context, game) => LookOverlay(game: _game),
-              'MissionBoardOverlay': (context, game) =>
-                  MissionBoardOverlay(game: _game),
             },
           ),
           // Loading overlay – shown until the world is ready
@@ -985,180 +982,6 @@ class _LookCellRow extends StatelessWidget {
 
 /// Full mission board shown when the player opens '📋 Missionen' in the
 /// pastor house.  Lists active missions and lets the player claim completed ones.
-class MissionBoardOverlay extends StatefulWidget {
-  final SpiritWorldGame game;
-  const MissionBoardOverlay({super.key, required this.game});
-
-  @override
-  State<MissionBoardOverlay> createState() => _MissionBoardOverlayState();
-}
-
-class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
-  void _claim(String id) {
-    final m = widget.game.missionService.claimReward(id);
-    if (m == null) return;
-    widget.game.gainFaith(m.rewardFaith);
-    if (m.rewardMaterials > 0) widget.game.gainMaterials(m.rewardMaterials);
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: widget.game.missionService.missionsNotifier,
-      builder: (context, missions, _) {
-        return Align(
-          alignment: Alignment.center,
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.85,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.70,
-            ),
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3E2723).withValues(alpha: 0.97),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFFFD54F), width: 2),
-              boxShadow: [
-                const BoxShadow(color: Colors.black54, blurRadius: 12),
-                BoxShadow(
-                  color: const Color(0xFFFFD54F).withValues(alpha: 0.25),
-                  blurRadius: 20,
-                  spreadRadius: 3,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF4E342E),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Text('📋', style: TextStyle(fontSize: 26)),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'Missionen',
-                        style: TextStyle(
-                          color: Color(0xFFFFD54F),
-                          fontSize: 19,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        onPressed: () => widget.game.closeMissionBoard(),
-                      ),
-                    ],
-                  ),
-                ),
-                // Mission list
-                Flexible(
-                  child: missions.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Text(
-                            'Keine aktiven Missionen.',
-                            style: TextStyle(color: Colors.white54, fontSize: 14),
-                          ),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          padding: const EdgeInsets.all(12),
-                          itemCount: missions.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(color: Colors.white12),
-                          itemBuilder: (context, i) =>
-                              _MissionTile(
-                                mission: missions[i],
-                                onClaim: missions[i].isCompleted
-                                    ? () => _claim(missions[i].id)
-                                    : null,
-                              ),
-                        ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _MissionTile extends StatelessWidget {
-  final MissionModel mission;
-  final VoidCallback? onClaim;
-  const _MissionTile({required this.mission, this.onClaim});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool done = mission.isCompleted;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  mission.description,
-                  style: TextStyle(
-                    color: done ? Colors.green[300] : Colors.white70,
-                    fontSize: 13,
-                    decoration: done ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Progress bar
-                if (!done)
-                  LinearProgressIndicator(
-                    value: mission.targetCount > 0
-                        ? mission.progress / mission.targetCount
-                        : 0.0,
-                    backgroundColor: Colors.white12,
-                    color: Colors.amber,
-                    minHeight: 4,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                const SizedBox(height: 3),
-                Text(
-                  done
-                      ? '✅ Abgeschlossen — Belohnung: +${mission.rewardFaith.toInt()}🙏'
-                          '${mission.rewardMaterials > 0 ? ' +${mission.rewardMaterials.toInt()}📦' : ''}'
-                      : '${mission.progress}/${mission.targetCount}',
-                  style: const TextStyle(color: Colors.amber, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          if (done && onClaim != null) ...[
-            const SizedBox(width: 10),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                shape: const StadiumBorder(),
-                textStyle: const TextStyle(fontSize: 12),
-              ),
-              onPressed: onClaim,
-              child: const Text('Einlösen'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 // ── Pastorhouse HUD compass ────────────────────────────────────────────────────
 
 /// Shows a golden 🏠 icon + direction arrow when the pastor house is off-screen.
@@ -1169,16 +992,20 @@ class _PastorhouseHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Vector2?>(
-      valueListenable: game.pastorhousePosition,
-      builder: (context, housePx, _) {
+    // Rebuild whenever the player moves (playerWorldPosition updates every frame
+    // via game.update()) so the compass direction is always current.
+    return ValueListenableBuilder<Vector2>(
+      valueListenable: game.playerWorldPosition,
+      builder: (context, playerPx, _) {
+        final housePx = game.pastorhousePosition.value;
         if (housePx == null) return const SizedBox.shrink();
 
-        final playerPos = game.player.position;
-        final dx = housePx.x - playerPos.x;
-        final dy = housePx.y - playerPos.y;
+        final dx = housePx.x - playerPx.x;
+        final dy = housePx.y - playerPx.y;
         final distSq = dx * dx + dy * dy;
-        if (distSq < 200 * 200) return const SizedBox.shrink(); // very close
+        // Hide only when the player is almost on top of the pastor house
+        // (within 64 px ≈ 2 cells).
+        if (distSq < 64 * 64) return const SizedBox.shrink();
 
         final angleDeg = atan2(dy, dx) * 180 / pi;
         final arrow = _directionArrow(angleDeg);
@@ -1621,7 +1448,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         return [
-          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '🎯', tooltip: 'Missionen annehmen', onTap: () => widget.game.openMissionBoard()),
           _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Bibel lesen (+20 Glauben)', onTap: () => _performAction('readBible')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Beten (+15 Glauben)', onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '✝️↑', tooltip: 'Ausruhen (+10 Glauben)', onTap: () => _performAction('rest')),

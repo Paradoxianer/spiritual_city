@@ -71,6 +71,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Updated in [update()] every ~0.5 s when the player moves cells.
   final ValueNotifier<String> currentStreetLabel = ValueNotifier('');
 
+  /// Player position in world pixels – updated every frame so Flutter HUD
+  /// widgets (compass, street label) can react to movement.
+  final ValueNotifier<Vector2> playerWorldPosition = ValueNotifier(Vector2.zero());
+
   int _lastStreetCellX = -999999;
   int _lastStreetCellY = -999999;
   RadialMenu? _currentMenu;
@@ -199,6 +203,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
     isWorldReady.value = true;
     _log.info('--- GAME READY ---');
+
+    // Assign starting missions to NPCs / buildings in the spawn chunk.
+    // Run after a short delay so chunk NPCs/buildings are all registered.
+    Future.delayed(const Duration(milliseconds: 500), _tryAssignStartMissions);
 
     // ── Camera intro: pan to pastor house then back ───────────────────────
     // The pastor house is only a few cells away from spawn, so the intro is
@@ -488,6 +496,27 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     // Up to 3 enter/interact actions (NPCs + buildings)
     for (final (target, _) in nearby.take(3)) {
+      // Mission action – shown before the normal enter action when the target
+      // has an active mission so the player can complete it directly.
+      if (target is NPCComponent &&
+          target.model.activeMissionDescription != null) {
+        final desc = target.model.activeMissionDescription!;
+        actions.add(RadialAction(
+          label: '📋',
+          sublabel: desc.split(' ').first,
+          icon: Icons.task_alt,
+          onSelect: () => _completeMissionForNpc(target.model),
+        ));
+      } else if (target is BuildingComponent &&
+          target.buildingModel.activeMissionDescription != null) {
+        final desc = target.buildingModel.activeMissionDescription!;
+        actions.add(RadialAction(
+          label: '📋',
+          sublabel: desc.split(' ').first,
+          icon: Icons.task_alt,
+          onSelect: () => _completeMissionForBuilding(target.buildingModel),
+        ));
+      }
       actions.add(RadialAction(
         label: target.interactionEmoji,
         sublabel: target.interactionLabel.split(' ').first,
@@ -549,6 +578,38 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     activeDialog = GameDialogData(npcName: name, npcEmoji: emoji, npcModel: model);
     overlays.add('DialogOverlay');
     paused = true; 
+  }
+
+  // ── Mission helpers ───────────────────────────────────────────────────────
+
+  void _completeMissionForNpc(NPCModel npc) {
+    final (faith, mats) = missionService.completeNpcMission(
+      npc,
+      chunkManager.allActiveNPCs.map((c) => c.model).toList(),
+      chunkManager.allActiveBuildings.map((c) => c.buildingModel).toList(),
+    );
+    gainFaith(faith.toDouble());
+    gainMaterials(mats.toDouble());
+    _log.info('Mission completed for NPC ${npc.name} → +$faith🙏 +$mats📦');
+  }
+
+  void _completeMissionForBuilding(BuildingModel building) {
+    final (faith, mats) = missionService.completeBuildingMission(
+      building,
+      chunkManager.allActiveNPCs.map((c) => c.model).toList(),
+      chunkManager.allActiveBuildings.map((c) => c.buildingModel).toList(),
+    );
+    gainFaith(faith.toDouble());
+    gainMaterials(mats.toDouble());
+    _log.info('Mission completed for building ${building.buildingId} → +$faith🙏 +$mats📦');
+  }
+
+  /// Called once the first chunk is loaded and we have NPCs + buildings.
+  void _tryAssignStartMissions() {
+    final npcs = chunkManager.allActiveNPCs.map((c) => c.model).toList();
+    final buildings = chunkManager.allActiveBuildings.map((c) => c.buildingModel).toList();
+    if (npcs.isEmpty && buildings.isEmpty) return;
+    missionService.assignStartMissions(npcs, buildings);
   }
 
   // ── Look overlay ──────────────────────────────────────────────────────────
@@ -615,19 +676,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void closeLookOverlay() {
     activeLookData = null;
     overlays.remove('LookOverlay');
-  }
-
-  // ── Mission board ─────────────────────────────────────────────────────────
-
-  void openMissionBoard() {
-    missionService.generateForPastorhouseVisit();
-    overlays.add('MissionBoardOverlay');
-    paused = true;
-  }
-
-  void closeMissionBoard() {
-    overlays.remove('MissionBoardOverlay');
-    paused = false;
   }
 
   String handleInteraction(String type) {
@@ -740,6 +788,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       _updatePassiveResources(dt);
       _updateStreetLabel();
     }
+    // Always push player position so the Flutter HUD compass stays live.
+    playerWorldPosition.value = player.position.clone();
   }
 
   /// Updates [currentStreetLabel] whenever the player moves to a new cell.
@@ -752,33 +802,46 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     _lastStreetCellY = cy;
 
     // Try the player's own cell first, then the 4 cardinal neighbours.
+    // Accept ANY road cell (named or unnamed) for address lookup so the
+    // label also appears on secondary streets with a house number.
     String? label;
+    String? nearestRoadName;
+    int? nearestHouseNumber;
+
     for (final d in const [
       [0, 0], [0, -1], [1, 0], [0, 1], [-1, 0],
     ]) {
       final cell = grid.getCell(cx + d[0], cy + d[1]);
       if (cell == null) continue;
       final data = cell.data;
-      if (data is RoadData && data.streetName != null) {
-        label = data.streetName!;
-        break;
-      }
-      if (data is BuildingData && data.houseNumber != null) {
-        // Look for an adjacent road name to form a full address.
-        for (final rd in const [
-          [0, -1], [1, 0], [0, 1], [-1, 0],
-        ]) {
-          final roadCell = grid.getCell(cx + rd[0], cy + rd[1]);
-          if (roadCell?.data is RoadData &&
-              (roadCell!.data as RoadData).streetName != null) {
-            label =
-                '${(roadCell.data as RoadData).streetName!} ${data.houseNumber}';
-            break;
+      if (data is RoadData) {
+        if (data.streetName != null && nearestRoadName == null) {
+          nearestRoadName = data.streetName;
+        }
+      } else if (data is BuildingData && nearestHouseNumber == null) {
+        nearestHouseNumber = data.houseNumber;
+        // Also look for a named road adjacent to this building.
+        if (nearestRoadName == null) {
+          for (final rd in const [
+            [0, -1], [1, 0], [0, 1], [-1, 0],
+          ]) {
+            final roadCell = grid.getCell(cx + d[0] + rd[0], cy + d[1] + rd[1]);
+            if (roadCell?.data is RoadData &&
+                (roadCell!.data as RoadData).streetName != null) {
+              nearestRoadName = (roadCell.data as RoadData).streetName;
+              break;
+            }
           }
         }
-        if (label != null) break;
       }
     }
+
+    if (nearestRoadName != null && nearestHouseNumber != null) {
+      label = '$nearestRoadName $nearestHouseNumber';
+    } else if (nearestRoadName != null) {
+      label = nearestRoadName;
+    }
+    // If still no name, keep empty so the label stays hidden.
     currentStreetLabel.value = label ?? '';
   }
 
