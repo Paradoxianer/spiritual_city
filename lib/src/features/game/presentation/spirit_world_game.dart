@@ -27,6 +27,14 @@ import 'game_screen.dart';
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
 
+  // ── Save-data schema versioning ───────────────────────────────────────────
+  /// Increment this constant whenever the structure of [captureGameState]
+  /// changes in a way that is incompatible with older saved data.
+  ///
+  /// Migration logic lives in [_migrateGameState]:
+  ///   • version 0 (missing key) → version 1: initial schema.
+  static const int kSaveDataVersion = 1;
+
   /// Difficulty level selected in the main menu.
   final Difficulty difficulty;
 
@@ -117,7 +125,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     modifiers = ModifierManager(progress: progress);
 
     // ── Restore save state ──────────────────────────────────────────────────
-    final savedState = gameSave?.gameState;
+    final rawState = gameSave?.gameState;
+    // Run migration so the rest of onLoad always sees the current schema.
+    final savedState = rawState != null && rawState.isNotEmpty
+        ? _migrateGameState(Map<String, dynamic>.from(rawState))
+        : null;
     final hasSavedState = savedState != null && savedState.isNotEmpty;
     if (hasSavedState) {
       _applyPlayerState(savedState!);
@@ -167,6 +179,46 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   // ── Save / Restore helpers ────────────────────────────────────────────────
+
+  // ── Migration ─────────────────────────────────────────────────────────────
+
+  /// Upgrades a raw [state] map from any previous schema version to the
+  /// current [kSaveDataVersion] schema, returning the upgraded map.
+  ///
+  /// Migration steps are applied sequentially so a save can be upgraded
+  /// across multiple versions in a single load.  Add a new `if` block here
+  /// whenever [kSaveDataVersion] is bumped:
+  ///
+  /// ```dart
+  /// // v1 → v2: example – rename 'faith' to 'playerFaith'
+  /// if (version < 2) {
+  ///   state['playerFaith'] = state.remove('faith');
+  ///   version = 2;
+  /// }
+  /// ```
+  Map<String, dynamic> _migrateGameState(Map<String, dynamic> state) {
+    // A missing key means the save pre-dates versioning — treat as v0.
+    int version = (state['schemaVersion'] as int?) ?? 0;
+    final originalVersion = version;
+
+    // v0 → v1: initial schema (no structural changes needed, just stamp the
+    // version so the save is recognised as current on next load).
+    if (version < 1) {
+      version = 1;
+    }
+
+    // ── Add future migration blocks here, in order ─────────────────────────
+    // if (version < 2) { … version = 2; }
+
+    if (originalVersion != kSaveDataVersion) {
+      _log.info(
+        'Save schema migrated: v$originalVersion → v$kSaveDataVersion',
+      );
+    }
+
+    state['schemaVersion'] = kSaveDataVersion;
+    return state;
+  }
 
   /// Applies player-resource fields from a previously serialised [state] map.
   void _applyPlayerState(Map<String, dynamic> state) {
@@ -276,6 +328,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
 
     return {
+      'schemaVersion':    kSaveDataVersion,
       'faith':            faith,
       'health':           health,
       'hunger':           hunger,
