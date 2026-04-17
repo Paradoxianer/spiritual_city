@@ -52,8 +52,8 @@ class _MaterialPickup {
 /// - Only spawn on [RoadData] cells visible in the current render zone.
 /// - Auto-pickup when player enters < [_pickupRadius] world units.
 /// - Picked-up items respawn after a random 60–120 s delay.
-/// - Each pickup gives +[LootTypeExt.reward] materials to the player and
-///   nudges the cell's spiritual state upward (+0.10, i.e. "+1 Grün-Einfluss").
+/// - Each pickup gives +[LootTypeExt.reward] materials to the player (real-world
+///   resource only – no effect on the spiritual world).
 /// - Pickups are always visible as a dim golden dot; they pulse brightly when
 ///   the pastor is within [_pickupRadius] world units (highlighting mechanic).
 class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
@@ -178,16 +178,12 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     p.isPickedUp = true;
     p.respawnTimer = _respawnMin + _rng.nextDouble() * (_respawnMax - _respawnMin);
 
-    // Give materials to player
+    // Give materials to player (real-world resource only – no spiritual effect).
     game.gainMaterials(p.type.reward);
 
-    // Nudge spiritual state of the cell underneath (+1 Grün-Einfluss)
-    final cx = (p.worldPos.x / CellComponent.cellSize).floor();
-    final cy = (p.worldPos.y / CellComponent.cellSize).floor();
-    final cell = game.grid.getCell(cx, cy);
-    if (cell != null) {
-      cell.spiritualState = (cell.spiritualState + 0.10).clamp(-1.0, 1.0);
-    }
+    // Show pickup toast in HUD.
+    final mp = p.type.reward.toInt();
+    game.lootPickupMessage.value = '📦 +$mp MP';
 
     // Notify mission service
     game.missionService.onMaterialCollected();

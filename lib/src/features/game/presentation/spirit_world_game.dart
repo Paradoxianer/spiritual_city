@@ -72,6 +72,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Updated in [update()] every ~0.5 s when the player moves cells.
   final ValueNotifier<String> currentStreetLabel = ValueNotifier('');
 
+  /// Short pickup-toast message shown when the player collects a material
+  /// package on the street (e.g. "📦 +10 MP").  Set to null after the toast
+  /// has been dismissed.
+  final ValueNotifier<String?> lootPickupMessage = ValueNotifier(null);
+
   /// Player position in world pixels – updated every frame so Flutter HUD
   /// widgets (compass, street label) can react to movement.
   final ValueNotifier<Vector2> playerWorldPosition = ValueNotifier(Vector2.zero());
