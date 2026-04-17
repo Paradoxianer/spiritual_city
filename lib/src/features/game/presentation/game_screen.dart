@@ -487,38 +487,29 @@ class _DialogOverlayState extends State<DialogOverlay> {
   }
 
   /// Progressive faith bar shown to the right of the chat.
-  ///
-  /// Uses [LayoutBuilder] to measure the available height and fills the bar
-  /// accordingly, preventing RenderFlex overflow on small screens.
   Widget _buildFaithBar(NPCModel model) {
-    // Fixed overhead: emoji (≈18px) + gap (4) + bottom gap (4) + label (≈13px)
-    const _overhead = 39.0;
-
     if (!model.isFaithVague) {
       // Not enough conversations yet – show a question mark placeholder.
       return SizedBox(
         width: 28,
-        child: LayoutBuilder(builder: (context, constraints) {
-          final barHeight = (constraints.maxHeight - _overhead).clamp(40.0, 200.0);
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('✝️', style: TextStyle(fontSize: 14)),
-              const SizedBox(height: 4),
-              Container(
-                width: 8,
-                height: barHeight,
-                decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Center(
-                  child: Text('?', style: TextStyle(color: Colors.white38, fontSize: 9)),
-                ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('✝️', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 4),
+            Container(
+              width: 8,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white12,
+                borderRadius: BorderRadius.circular(4),
               ),
-            ],
-          );
-        }),
+              child: const Center(
+                child: Text('?', style: TextStyle(color: Colors.white38, fontSize: 9)),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -530,47 +521,46 @@ class _DialogOverlayState extends State<DialogOverlay> {
         ? faithNorm
         : ((faithNorm * 4).round() / 4.0).clamp(0.0, 1.0);
 
+    const barHeight = 80.0;
+
     return SizedBox(
       width: 28,
-      child: LayoutBuilder(builder: (context, constraints) {
-        final barHeight = (constraints.maxHeight - _overhead).clamp(40.0, 200.0);
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('✝️', style: TextStyle(fontSize: 14)),
-            const SizedBox(height: 4),
-            Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                Container(
-                  width: 8,
-                  height: barHeight,
-                  decoration: BoxDecoration(
-                    color: Colors.white12,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('✝️', style: TextStyle(fontSize: 14)),
+          const SizedBox(height: 4),
+          Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              Container(
+                width: 8,
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                Container(
-                  width: 8,
-                  height: barHeight * displayNorm,
-                  decoration: BoxDecoration(
-                    color: barColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+              ),
+              Container(
+                width: 8,
+                height: barHeight * displayNorm,
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            if (model.isFaithRevealed)
-              Text(
-                model.faith.toStringAsFixed(0),
-                style: const TextStyle(color: Colors.white60, fontSize: 9),
-              )
-            else
-              const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
-          ],
-        );
-      }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (model.isFaithRevealed)
+            Text(
+              model.faith.toStringAsFixed(0),
+              style: const TextStyle(color: Colors.white60, fontSize: 9),
+            )
+          else
+            const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
+        ],
+      ),
     );
   }
 
