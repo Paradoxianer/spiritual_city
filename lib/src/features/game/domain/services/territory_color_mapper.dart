@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 /// Maps spiritual-state values (−1.0..+1.0) to overlay colours.
 ///
 /// Colour scheme (Lastenheft §5.1):
-///   +0.3..+1.0 – green spectrum (God's presence, Psalm 23,2)
-///   −0.3..+0.3 – beige / neutral (contested territory)
-///   −1.0..−0.3 – red spectrum  (darkness, Jes 1,18)
+///   +0.3..+1.0 – green spectrum (liberated, God's presence, Psalm 23,2)
+///   −0.3..+0.3 – grey / neutral (contested territory)
+///   −1.0..−0.3 – red spectrum  (demonic darkness, Jes 1,18)
 class TerritoryColorMapper {
   /// Threshold above which a cell is considered a positive (green) zone.
   static const double positiveThreshold = 0.3;
@@ -19,19 +19,12 @@ class TerritoryColorMapper {
   Color stateToColor(double spiritualState) {
     final s = spiritualState.clamp(-1.0, 1.0);
     if (s > positiveThreshold) {
-      // light-green → lime-green → gold
+      // light-green → dark-green (liberated zone)
       final t = ((s - positiveThreshold) / (1.0 - positiveThreshold)).clamp(0.0, 1.0);
-      if (t < 0.5) {
-        return Color.lerp(
-          const Color(0xFF90EE90), // lightgreen
-          const Color(0xFF32CD32), // limegreen
-          t * 2,
-        )!;
-      }
       return Color.lerp(
-        const Color(0xFF32CD32), // limegreen
-        const Color(0xFFFFD700), // gold
-        (t - 0.5) * 2,
+        const Color(0xFF90EE90), // lightgreen
+        const Color(0xFF006400), // darkgreen
+        t,
       )!;
     } else if (s < negativeThreshold) {
       // dark-red → crimson → near-black
@@ -49,7 +42,7 @@ class TerritoryColorMapper {
         (t - 0.5) * 2,
       )!;
     }
-    return const Color(0xFFF5DEB3); // wheat / beige (neutral)
+    return const Color(0xFF808080); // grey (neutral)
   }
 
   /// Returns an alpha multiplier in [0.6, 1.0] that creates a pulsing glow

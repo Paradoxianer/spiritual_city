@@ -20,9 +20,9 @@ void main() {
       expect(color.red, greaterThan(color.green));
     });
 
-    test('neutral state maps to beige (wheat)', () {
+    test('neutral state maps to grey', () {
       final color = mapper.stateToColor(0.0);
-      expect(color, const Color(0xFFF5DEB3));
+      expect(color, const Color(0xFF808080));
     });
 
     test('values outside range are clamped', () {
@@ -30,11 +30,11 @@ void main() {
       expect(mapper.stateToColor(-2.0), mapper.stateToColor(-1.0));
     });
 
-    test('strongly positive state approaches gold', () {
+    test('strongly positive state approaches dark green', () {
       final color = mapper.stateToColor(1.0);
-      // gold (#FFD700): high red, high green, low blue
-      expect(color.red, greaterThan(200));
-      expect(color.green, greaterThan(150));
+      // dark green (#006400): high green, near-zero red and blue
+      expect(color.green, greaterThan(color.red));
+      expect(color.green, greaterThan(50));
     });
 
     test('strongly negative state approaches near-black red', () {

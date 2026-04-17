@@ -204,22 +204,22 @@ class SpiritualRenderer extends PositionComponent
   static Color _stateToBaseColor(double state) {
     final s = state.clamp(-1.0, 1.0);
     if (s > 0.25) {
-      // Positive territory: very dark blue → slightly lighter teal.
+      // Positive territory: very dark green → slightly lighter green.
       return Color.lerp(
-        const Color(0xFF060A14),
-        const Color(0xFF0A2035),
+        const Color(0xFF091509),
+        const Color(0xFF0A3D0A),
         (s - 0.25) / 0.75,
       )!;
     } else if (s < -0.25) {
-      // Negative territory: deep near-black → deep crimson.
+      // Negative territory: deep near-black red → deep crimson.
       return Color.lerp(
         const Color(0xFF100408),
-        const Color(0xFF3A0505),
+        const Color(0xFF4A0505),
         (-s - 0.25) / 0.75,
       )!;
     }
-    // Neutral: near-black with a slight warm tint.
-    return const Color(0xFF0E0B0B);
+    // Neutral: dark grey.
+    return const Color(0xFF252525);
   }
 
   // ── Particle spawning ────────────────────────────────────────────────────
@@ -272,6 +272,15 @@ class SpiritualRenderer extends PositionComponent
 
   void _drawOrbs(Canvas canvas) {
     for (final orb in _orbs) {
+      // Shadow orbs only appear in demonic (red/negative) zones.
+      // Convert chunk-local pixel position to cell index and check state.
+      final cx = (orb.x / cellSize).floor().clamp(0, CityChunk.chunkSize - 1);
+      final cy = (orb.y / cellSize).floor().clamp(0, CityChunk.chunkSize - 1);
+      final cell = chunk.cells['$cx,$cy'];
+      if (cell == null || cell.spiritualState >= TerritoryColorMapper.negativeThreshold) {
+        continue;
+      }
+
       // Gentle breathing: ±20 % alpha modulation.
       final breathe = 0.80 + 0.20 * math.sin(_time * 1.1 + orb.breathPhase);
       _orbPaint.color = const Color(0xFF030005).withValues(
