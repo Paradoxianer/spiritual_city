@@ -1,4 +1,4 @@
-import 'dart:ui' show Canvas, Paint, PaintingStyle, StrokeCap;
+import 'dart:ui' show Canvas, Color, Offset, Paint, PaintingStyle, StrokeCap;
 import 'package:flame/components.dart';
 import '../../domain/models/building_model.dart';
 import '../../domain/models/cell_object.dart';

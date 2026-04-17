@@ -21,6 +21,7 @@ import '../domain/models/cell_object.dart';
 import 'components/building_component.dart';
 import 'components/chunk_manager.dart';
 import 'components/loot_system.dart';
+import 'components/npc_component.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
 import 'components/prayer_hud_component.dart';
