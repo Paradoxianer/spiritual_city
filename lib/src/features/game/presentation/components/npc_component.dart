@@ -256,7 +256,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
             if (distSq <= conversionRadius * conversionRadius) {
               final c = game.grid.getCell(gx + dx, gy + dy);
               if (c != null) {
-                final distanceFactor = 1.0 - (distSq / (conversionRadius * conversionRadius + 1));
+                final distanceFactor = 1.0 - distSq / (conversionRadius * conversionRadius);
                 c.spiritualState = (c.spiritualState + 0.35 * distanceFactor).clamp(-1.0, 1.0);
               }
             }
