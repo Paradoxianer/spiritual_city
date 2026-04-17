@@ -119,6 +119,31 @@ class _GameScreenState extends State<GameScreen> {
               );
             },
           ),
+          // Keymap help button – small "?" icon, bottom-right, only when world is ready.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return Positioned(
+                bottom: 12,
+                right: 12,
+                child: SafeArea(
+                  child: IconButton(
+                    onPressed: _game.toggleKeymapOverlay,
+                    tooltip: 'Tastenbelegung (F1 / ?)',
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black54,
+                      foregroundColor: Colors.white70,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: const Icon(Icons.help_outline),
+                  ),
+                ),
+              );
+            },
+          ),
           // Pastorhouse HUD compass (shown when world is ready and house is far)
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,

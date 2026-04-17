@@ -55,6 +55,7 @@ class RadialMenu extends PositionComponent with HasGameReference<SpiritWorldGame
       add(RadialItem(
         action: action,
         position: iconPos,
+        keyIndex: i + 1,
       ));
     }
   }
@@ -71,11 +72,14 @@ class RadialMenu extends PositionComponent with HasGameReference<SpiritWorldGame
 
 class RadialItem extends PositionComponent with TapCallbacks {
   final RadialAction action;
+  /// 1-based keyboard shortcut number shown as a badge (null = no badge).
+  final int? keyIndex;
   static const double itemSize = 44.0;
 
   RadialItem({
     required this.action,
     required Vector2 position,
+    this.keyIndex,
   }) : super(
           position: position,
           size: Vector2.all(itemSize),
@@ -107,6 +111,31 @@ class RadialItem extends PositionComponent with TapCallbacks {
       canvas,
       Offset(size.x / 2 - textPainter.width / 2, size.y / 2 - textPainter.height / 2),
     );
+
+    // Key-number badge (top-right corner of the circle)
+    if (keyIndex != null) {
+      const badgeRadius = 8.0;
+      final badgeCx = size.x - badgeRadius * 0.7;
+      final badgeCy = badgeRadius * 0.7;
+      final badgePaint = Paint()..color = Colors.amber.shade700;
+      canvas.drawCircle(Offset(badgeCx, badgeCy), badgeRadius, badgePaint);
+      final numPainter = TextPainter(
+        text: TextSpan(
+          text: '$keyIndex',
+          style: const TextStyle(
+            fontSize: 9,
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      numPainter.layout();
+      numPainter.paint(
+        canvas,
+        Offset(badgeCx - numPainter.width / 2, badgeCy - numPainter.height / 2),
+      );
+    }
 
     // Sublabel (e.g. NPC first name) rendered below the circle
     if (action.sublabel != null) {
