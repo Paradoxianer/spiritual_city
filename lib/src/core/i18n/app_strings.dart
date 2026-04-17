@@ -25,6 +25,8 @@ class AppStrings {
       'difficulty.hard.desc': 'Widerstand +30%, härterer Weg',
       'difficulty.start': 'Spiel starten',
       'difficulty.back': 'Zurück',
+      'difficulty.seed': 'Seed',
+      'difficulty.seed.hint': 'random',
 
       // Load Game
       'loadGame.title': 'Spiel laden',
@@ -77,6 +79,8 @@ class AppStrings {
       'difficulty.hard.desc': 'Opposition +30%, harder path',
       'difficulty.start': 'Start Game',
       'difficulty.back': 'Back',
+      'difficulty.seed': 'Seed',
+      'difficulty.seed.hint': 'random',
 
       // Load Game
       'loadGame.title': 'Load Game',
