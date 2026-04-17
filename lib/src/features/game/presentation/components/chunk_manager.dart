@@ -214,13 +214,21 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         if (cell == null) continue;
         final data = cell.data;
         if (data is BuildingData) {
-          buildings
-              .putIfAbsent(
-                data.buildingId,
-                () => _ChunkBuildingInfo(data.type, data.buildingId),
-              )
-              .cells
-              .add([x, y]);
+          final info = buildings.putIfAbsent(
+            data.buildingId,
+            () => _ChunkBuildingInfo(data.type, data.buildingId),
+          );
+          // Multiple cells in the same lot share a buildingId.  The first cell
+          // encountered sets the type via putIfAbsent, but lot cells are scanned
+          // in raster order so an ordinary cell (house, shop…) may register
+          // before the one designated cell that carries a special type
+          // (e.g. pastorHouse).  Promote the type whenever a later cell reveals
+          // a more specific classification so the BuildingModel is always
+          // created with the correct type.
+          if (_isSpecialBuildingType(data.type) && !_isSpecialBuildingType(info.type)) {
+            info.type = data.type;
+          }
+          info.cells.add([x, y]);
         }
       }
     }
@@ -311,6 +319,25 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     final y = cell[1];
     final s = CityChunk.chunkSize - 1;
     return [x, s - x, y, s - y].reduce((m, v) => v < m ? v : m);
+  }
+
+  /// Returns true for building types placed by [SpecialBuildingRegistry] at a
+  /// deterministic position rather than generated randomly from district rules.
+  /// When multiple cells in the same lot share a [buildingId], the special
+  /// type must win over any ordinary type recorded earlier in the scan.
+  static bool _isSpecialBuildingType(BuildingType type) {
+    switch (type) {
+      case BuildingType.house:
+      case BuildingType.apartment:
+      case BuildingType.shop:
+      case BuildingType.office:
+      case BuildingType.skyscraper:
+      case BuildingType.factory:
+      case BuildingType.warehouse:
+        return false; // ordinary / district-generated
+      default:
+        return true; // everything else is registry-placed
+    }
   }
 
   // ─── Async predictive preloading ──────────────────────────────────────────
@@ -412,7 +439,7 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
 // ── Private helper ────────────────────────────────────────────────────────────
 
 class _ChunkBuildingInfo {
-  final BuildingType type;
+  BuildingType type; // mutable so a later special-building cell can promote it
   final String buildingId;
   final List<List<int>> cells = [];
   _ChunkBuildingInfo(this.type, this.buildingId);
