@@ -37,7 +37,12 @@ class PerformanceMonitor {
   /// Called at the very start of a game update tick.
   /// Previously used a Stopwatch to measure update() duration – which only
   /// measured the logic time (e.g. 0.4 ms → 2500 "fps"), NOT the real rendered
-  /// frame rate.  Nothing needs to happen here now; kept for API compatibility.
+  /// frame rate.  Nothing needs to happen here now; the method is kept only
+  /// for API compatibility with existing call sites.
+  @Deprecated(
+    'startFrame() is a no-op since FPS is now derived from the game-loop dt. '
+    'Remove call sites at your convenience.',
+  )
   void startFrame() {}
 
   /// Call at the very end of a game update tick.  [dt] is the delta-time in
