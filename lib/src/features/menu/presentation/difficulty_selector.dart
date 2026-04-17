@@ -89,100 +89,81 @@ class _DifficultySelectorState extends State<DifficultySelector> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Difficulty cards — clicking one immediately starts the game
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _DifficultyCard(
-                            difficulty: Difficulty.easy,
-                            icon: '☁️',
-                            onTap: () => _startGame(Difficulty.easy),
-                            isLoading: _isStarting,
-                          ),
-                          const SizedBox(height: 10),
-                          _DifficultyCard(
-                            difficulty: Difficulty.normal,
-                            icon: '⚔️',
-                            onTap: () => _startGame(Difficulty.normal),
-                            isLoading: _isStarting,
-                          ),
-                          const SizedBox(height: 10),
-                          _DifficultyCard(
-                            difficulty: Difficulty.hard,
-                            icon: '🔥',
-                            onTap: () => _startGame(Difficulty.hard),
-                            isLoading: _isStarting,
-                          ),
-                        ],
+                  // Difficulty cards — clicking one immediately starts the game
+                  _DifficultyCard(
+                    difficulty: Difficulty.easy,
+                    icon: '☁️',
+                    onTap: () => _startGame(Difficulty.easy),
+                    isLoading: _isStarting,
+                  ),
+                  const SizedBox(height: 10),
+                  _DifficultyCard(
+                    difficulty: Difficulty.normal,
+                    icon: '⚔️',
+                    onTap: () => _startGame(Difficulty.normal),
+                    isLoading: _isStarting,
+                  ),
+                  const SizedBox(height: 10),
+                  _DifficultyCard(
+                    difficulty: Difficulty.hard,
+                    icon: '🔥',
+                    onTap: () => _startGame(Difficulty.hard),
+                    isLoading: _isStarting,
+                  ),
+                  const SizedBox(height: 20),
+                  // Seed input — shared for all difficulties, below the cards
+                  SizedBox(
+                    width: 280,
+                    child: TextField(
+                      controller: _seedController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
                       ),
-                      const SizedBox(width: 16),
-                      // Seed input — "random" by default, accepts a specific number
-                      SizedBox(
-                        width: 110,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppStrings.get('difficulty.seed'),
-                              style: TextStyle(
-                                color: Colors.blueGrey.shade300,
-                                fontSize: 12,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            TextField(
-                              controller: _seedController,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: AppStrings.get('difficulty.seed.hint'),
-                                hintStyle: TextStyle(
-                                  color: Colors.blueGrey.shade400,
-                                  fontSize: 13,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                                filled: true,
-                                fillColor: Colors.blueGrey.shade900,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: Colors.blueGrey.shade700,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: Colors.blueGrey.shade700,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: Colors.blueGrey.shade400,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ],
+                      decoration: InputDecoration(
+                        labelText: AppStrings.get('difficulty.seed'),
+                        labelStyle: TextStyle(
+                          color: Colors.blueGrey.shade400,
+                          fontSize: 13,
+                        ),
+                        hintText: AppStrings.get('difficulty.seed.hint'),
+                        hintStyle: TextStyle(
+                          color: Colors.blueGrey.shade600,
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.casino_outlined,
+                          color: Colors.blueGrey.shade400,
+                          size: 20,
+                        ),
+                        filled: true,
+                        fillColor: Colors.blueGrey.shade900,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.blueGrey.shade700),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.blueGrey.shade700),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Colors.blueGrey.shade400,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 32),
                   MenuButton(
@@ -231,8 +212,8 @@ class _DifficultyCard extends StatelessWidget {
     return GestureDetector(
       onTap: isLoading ? null : onTap,
       child: Container(
-        width: 200,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        width: 280,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.blueGrey.shade900.withAlpha(220),
           borderRadius: BorderRadius.circular(10),
