@@ -38,6 +38,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   double _orbitAngle  = 0.0;
   double _orbitRadius = 260.0;
 
+  /// Orbit radius at which the daemon strikes the player on contact.
   static const double _orbitRadiusMin = 50.0;
 
   /// How fast the orbit shrinks per second (continuous inward spiral).
@@ -103,7 +104,14 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final spiralSpeed = game.spiritualDynamics.isPrayerAttractionActive
         ? _spiralSpeedPrayer
         : _spiralSpeedNormal;
-    _orbitRadius = math.max(_orbitRadiusMin, _orbitRadius - spiralSpeed * dt);
+    final newRadius = _orbitRadius - spiralSpeed * dt;
+
+    // ── Contact strike: daemon reached the player ─────────────────────────────
+    if (newRadius <= _orbitRadiusMin) {
+      _strikePlayer();
+      return; // component is removed inside _strikePlayer
+    }
+    _orbitRadius = newRadius;
 
     // ── Position = exact orbit point around the player ────────────────────────
     final p = game.player.position;
@@ -198,6 +206,52 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     model.dissolved = true;
     cell.spiritualState = (cell.spiritualState - 0.05).clamp(-1.0, 1.0);
     cell.hasResiduum = true;
+    removeFromParent();
+  }
+
+  /// Contact strike: daemon spiralled all the way to the player without being
+  /// destroyed by prayer.  Damages the player and paints the surrounding area
+  /// dark red.
+  ///
+  /// Damage is scaled by the fraction of energy remaining (0.0–1.0), so a
+  /// daemon that has been weakened by positive territory deals less damage.
+  /// All three player stats are affected: ❤️ HP, 🙏 faith, 🍞 hunger.
+  void _strikePlayer() {
+    model.dissolved = true;
+
+    // Strength fraction: 1.0 = full energy, 0.0 = almost dissolved.
+    final strength =
+        (model.energy.abs() / model.initialEnergy.abs()).clamp(0.0, 1.0);
+
+    // Difficulty amplifier: hard daemons hit harder.
+    final amp = _cellDrainMultiplier; // easy=0.67, normal=1.0, hard=2.0
+
+    final hpDamage     = (8.0 * strength * amp).clamp(1.0, 30.0);
+    final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0);
+    final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0);
+
+    game.health = (game.health - hpDamage).clamp(0.0, SpiritWorldGame.maxHealth);
+    game.gainFaith(-faithDamage);
+    game.hunger = (game.hunger - hungerDamage).clamp(0.0, SpiritWorldGame.maxHunger);
+
+    // Paint a 4-cell radius around the player dark red (negative influence).
+    final gx = (game.player.position.x / CellComponent.cellSize).floor();
+    final gy = (game.player.position.y / CellComponent.cellSize).floor();
+    const int blastRadius = 4;
+    for (int dy = -blastRadius; dy <= blastRadius; dy++) {
+      for (int dx = -blastRadius; dx <= blastRadius; dx++) {
+        final dist = math.sqrt(dx * dx + dy * dy);
+        if (dist > blastRadius) continue;
+        final cell = game.grid.getCell(gx + dx, gy + dy);
+        if (cell != null) {
+          final falloff = 1.0 - (dist / blastRadius).clamp(0.0, 1.0);
+          cell.spiritualState =
+              (cell.spiritualState - 0.35 * strength * falloff)
+                  .clamp(-1.0, 1.0);
+        }
+      }
+    }
+
     removeFromParent();
   }
 
