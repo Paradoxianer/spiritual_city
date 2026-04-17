@@ -2,64 +2,242 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flame_noise/flame_noise.dart';
 import 'package:flutter/material.dart' hide Image;
+import 'package:logging/logging.dart';
 
 import '../../domain/models/city_chunk.dart';
-import '../../domain/models/city_cell.dart';
 import '../../domain/services/territory_color_mapper.dart';
 import '../../domain/services/particle_service.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
-class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWorldGame> {
+// ─────────────────────────────────────────────────────────────────────────────
+// Rendering architecture (v3) – "Shadow-Orbs + Layer-Blur"
+//
+// The invisible (spiritual) world background is built from two cheap layers
+// that together create the organic, "living darkness" required by the spec:
+//
+//   Layer A – Base colour grid (per-cell static colour from spiritualState).
+//             Very cheap to rebuild; throttled to ≤ 1 Hz since cell values
+//             change slowly.  Cached as a dart:ui Picture.
+//
+//   Layer B – Shadow orbs.  Each chunk owns a handful of dark, slowly-drifting
+//             circles.  They are drawn directly in render() every frame so
+//             their movement is sub-pixel-smooth even on slow hardware.
+//             Count and opacity are proportional to the chunk's darkness.
+//
+//   Both layers are enclosed in a single canvas.saveLayer() call with an
+//   ImageFilter.blur.  One GPU blur operation per rendered chunk per frame –
+//   orders of magnitude cheaper than the previous per-cell MaskFilter.blur.
+//
+//   Layer C – Sparkle particles (positive zones only).  Drawn AFTER restore()
+//             so they appear sharp above the blurred background.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class SpiritualRenderer extends PositionComponent
+    with HasGameReference<SpiritWorldGame> {
+  static final _log = Logger('SpiritualRenderer');
+
   final CityChunk chunk;
   static const double cellSize = CellComponent.cellSize;
 
-  Picture? _cachedPicture;
+  /// Pixel size of one full chunk side (16 cells × 32 px = 512 px).
+  static const double _chunkPx = CityChunk.chunkSize * cellSize;
 
-  /// Fast, small-scale noise – drives the flowing lava-lamp movement.
-  final PerlinNoise _lavaNoise;
-  double _animationTime = 0;
+  // ── Base colour layer ───────────────────────────────────────────────────
 
-  /// Slow, large-scale noise – shapes the dark blobs inside negative zones.
-  final PerlinNoise _blobNoise;
-  double _blobTime = 0;
+  Picture? _basePicture;
+  double _baseRebuildTimer = 0.0;
 
-  final TerritoryColorMapper _colorMapper = TerritoryColorMapper();
+  /// How often (seconds) the base colour layer is rebuilt.
+  /// Cell states change slowly so 1 Hz is plenty.
+  static const double _baseRebuildInterval = 1.0;
+
+  // ── Shadow orbs ─────────────────────────────────────────────────────────
+
+  late final List<_ShadowOrb> _orbs;
+  double _time = 0.0; // accumulated for orb "breathing" effect
+
+  // ── Blur layer ──────────────────────────────────────────────────────────
+
+  /// One blur operation per chunk per rendered frame.
+  /// sigma = 8 px gives a soft organic look without visible cell edges.
+  /// TileMode.decal fades to transparent at the chunk boundary, keeping
+  /// visual seams minimal where adjacent chunks share similar colours.
+  static final Paint _blurLayerPaint = Paint()
+    ..imageFilter =
+        ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0, tileMode: TileMode.decal);
+
+  // ── Pre-allocated draw paints (never create Paint() in render) ──────────
+
+  final Paint _cellPaint = Paint();
+  final Paint _orbPaint = Paint();
+
+  // ── Particles ───────────────────────────────────────────────────────────
+
   final ParticleService _particleService;
-  final math.Random _rng = math.Random();
+  double _particleSpawnTimer = 0.0;
+  static const double _particleSpawnInterval = 1.0 / 15.0; // 15 Hz
+
+  static final TerritoryColorMapper _colorMapper = TerritoryColorMapper();
+
+  // ── RNG ─────────────────────────────────────────────────────────────────
+
+  final math.Random _rng;
+
+  // ── Debug ────────────────────────────────────────────────────────────────
+
+  double _debugTimer = 0.0;
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   SpiritualRenderer(this.chunk)
-      : _lavaNoise = PerlinNoise(seed: chunk.chunkX * 31 + chunk.chunkY * 7),
-        _blobNoise = PerlinNoise(seed: chunk.chunkX * 53 + chunk.chunkY * 29),
-        _particleService = ParticleService(seed: chunk.chunkX * 17 + chunk.chunkY * 13) {
-    size = Vector2.all(CityChunk.chunkSize * cellSize);
+      : _rng = math.Random(chunk.chunkX * 97 + chunk.chunkY * 31),
+        _particleService =
+            ParticleService(seed: chunk.chunkX * 17 + chunk.chunkY * 13) {
+    size = Vector2.all(_chunkPx);
   }
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    _initOrbs();
+  }
+
+  // ── Initialisation ───────────────────────────────────────────────────────
+
+  void _initOrbs() {
+    // Compute average darkness (0 = fully positive, 1 = fully negative).
+    double totalDark = 0;
+    int count = 0;
+    for (int y = 0; y < CityChunk.chunkSize; y++) {
+      for (int x = 0; x < CityChunk.chunkSize; x++) {
+        final cell = chunk.cells['$x,$y'];
+        if (cell != null) {
+          totalDark += (-cell.spiritualState).clamp(0.0, 1.0);
+          count++;
+        }
+      }
+    }
+    final avgDark = count > 0 ? totalDark / count : 0.3;
+
+    // 4–14 orbs; darker chunks get more.
+    final orbCount = 4 + (avgDark * 10).round().clamp(0, 10);
+    _orbs = List.generate(orbCount, (i) {
+      return _ShadowOrb(
+        x: _rng.nextDouble() * _chunkPx,
+        y: _rng.nextDouble() * _chunkPx,
+        radius: 24.0 + _rng.nextDouble() * 34.0,
+        baseAlpha: (0.18 + avgDark * 0.48).clamp(0.0, 0.85),
+        breathPhase: i / orbCount * math.pi * 2,
+        rng: math.Random(_rng.nextInt(0x7FFFFFFF)),
+      );
+    });
+  }
+
+  // ── Update ───────────────────────────────────────────────────────────────
 
   @override
   void update(double dt) {
     super.update(dt);
     if (!game.isSpiritualWorld) return;
 
-    _animationTime += dt * 0.5;  // fast flowing movement
-    _blobTime += dt * 0.12;      // slow blob drifting
+    _time += dt;
 
-    // Invalidate cache each frame for flowing animation
-    _cachedPicture = null;
+    // Orbs: full frame rate → smooth sub-pixel movement.
+    for (final orb in _orbs) {
+      orb.update(dt, _chunkPx, _chunkPx);
+    }
 
-    _spawnParticles(dt);
+    // Particles: update at full rate for smooth flight.
     _particleService.update(dt);
+
+    // Particle spawn: throttled to 15 Hz (iterating all 256 cells is cheap
+    // but pointless at 60 Hz).
+    _particleSpawnTimer += dt;
+    if (_particleSpawnTimer >= _particleSpawnInterval) {
+      _particleSpawnTimer -= _particleSpawnInterval;
+      _spawnParticles(_particleSpawnInterval);
+    }
+
+    // Base colour rebuild: 1 Hz (cell states change slowly).
+    _baseRebuildTimer += dt;
+    if (_baseRebuildTimer >= _baseRebuildInterval) {
+      _baseRebuildTimer = 0.0;
+      _basePicture = null; // mark dirty; rebuilt in render()
+    }
+
+    // Debug – log once per 10 s for the chunk nearest (0,0) only.
+    if (chunk.chunkX == 0 && chunk.chunkY == 0) {
+      _debugTimer += dt;
+      if (_debugTimer >= 10.0) {
+        _debugTimer = 0.0;
+        _log.fine(
+          '[SpiritualRenderer] chunk(0,0): ${_orbs.length} shadow-orbs, '
+          '${_particleService.particleCount} particles',
+        );
+      }
+    }
   }
+
+  // ── Base colour cache ────────────────────────────────────────────────────
+
+  void _buildBaseCache() {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    for (int y = 0; y < CityChunk.chunkSize; y++) {
+      for (int x = 0; x < CityChunk.chunkSize; x++) {
+        final cell = chunk.cells['$x,$y'];
+        if (cell == null) continue;
+        _cellPaint.color = _stateToBaseColor(cell.spiritualState);
+        canvas.drawRect(
+          Rect.fromLTWH(x * cellSize, y * cellSize, cellSize, cellSize),
+          _cellPaint,
+        );
+      }
+    }
+    _basePicture = recorder.endRecording();
+  }
+
+  /// Maps spiritualState to a base colour.
+  /// Colours are deliberately dark so the overlay layer reads clearly.
+  static Color _stateToBaseColor(double state) {
+    final s = state.clamp(-1.0, 1.0);
+    if (s > 0.25) {
+      // Positive territory: very dark blue → slightly lighter teal.
+      return Color.lerp(
+        const Color(0xFF060A14),
+        const Color(0xFF0A2035),
+        (s - 0.25) / 0.75,
+      )!;
+    } else if (s < -0.25) {
+      // Negative territory: deep near-black → deep crimson.
+      return Color.lerp(
+        const Color(0xFF100408),
+        const Color(0xFF3A0505),
+        (-s - 0.25) / 0.75,
+      )!;
+    }
+    // Neutral: near-black with a slight warm tint.
+    return const Color(0xFF0E0B0B);
+  }
+
+  // ── Particle spawning ────────────────────────────────────────────────────
 
   void _spawnParticles(double dt) {
     for (int y = 0; y < CityChunk.chunkSize; y++) {
       for (int x = 0; x < CityChunk.chunkSize; x++) {
         final cell = chunk.cells['$x,$y'];
-        // Skip non-positive cells early to avoid unnecessary RNG calls
-        if (cell == null || cell.spiritualState <= TerritoryColorMapper.positiveThreshold) continue;
-
-        if (_colorMapper.shouldSpawnSparkle(cell.spiritualState, _rng.nextDouble(), dt: dt)) {
+        if (cell == null ||
+            cell.spiritualState <= TerritoryColorMapper.positiveThreshold) {
+          continue;
+        }
+        if (_colorMapper.shouldSpawnSparkle(
+          cell.spiritualState,
+          _rng.nextDouble(),
+          dt: dt,
+        )) {
           _particleService.spawnSparkle(
             x * cellSize + cellSize / 2,
             y * cellSize + cellSize / 2,
@@ -69,102 +247,109 @@ class SpiritualRenderer extends PositionComponent with HasGameReference<SpiritWo
     }
   }
 
-  void _createCache() {
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder);
-
-    final worldOffsetX = chunk.chunkX * CityChunk.chunkSize;
-    final worldOffsetY = chunk.chunkY * CityChunk.chunkSize;
-
-    for (int y = 0; y < CityChunk.chunkSize; y++) {
-      for (int x = 0; x < CityChunk.chunkSize; x++) {
-        final cell = chunk.cells['$x,$y'];
-        if (cell == null) continue;
-
-        final wx = (worldOffsetX + x).toDouble();
-        final wy = (worldOffsetY + y).toDouble();
-
-        final lavaNoise = _lavaNoise.getNoise3(wx * 0.1, wy * 0.1, _animationTime);
-        // Larger scale (0.035) = bigger blobs; separate time axis for independent movement
-        final blobNoise = _blobNoise.getNoise3(wx * 0.035, wy * 0.035, _blobTime);
-
-        final offset = Offset(x * cellSize, y * cellSize);
-        _renderSpiritualCell(canvas, cell, offset, lavaNoise, blobNoise);
-      }
-    }
-    _cachedPicture = recorder.endRecording();
-  }
-
-  void _renderSpiritualCell(
-    Canvas canvas,
-    CityCell cell,
-    Offset offset,
-    double lavaNoise,
-    double blobNoise,
-  ) {
-    final rect = Rect.fromLTWH(offset.dx, offset.dy, cellSize, cellSize);
-
-    if (cell.spiritualState < TerritoryColorMapper.negativeThreshold) {
-      // ── DARK ZONE – two-layer rendering ──────────────────────────────────
-      //
-      // Layer 1: flowing crimson base (fast lavaNoise animates the movement)
-      final baseState = (cell.spiritualState + lavaNoise * 0.2).clamp(-1.0, 1.0);
-      final baseColor = _colorMapper.stateToColor(baseState);
-      final pulseAlpha = _colorMapper.redPulseAlpha(baseState, _animationTime);
-      final baseAlpha = (0.55 * pulseAlpha).clamp(0.0, 0.85);
-
-      canvas.drawRect(
-        rect,
-        Paint()
-          ..color = baseColor.withValues(alpha: baseAlpha)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
-      );
-
-      // Layer 2: near-black blob (slow blobNoise shapes the dark masses)
-      // blobNoise > 0 → darker region; depth scales with how strongly negative the cell is
-      if (blobNoise > 0.05) {
-        final blobStrength = ((blobNoise - 0.05) / 0.95).clamp(0.0, 1.0);
-        final cellDarkness =
-            ((-cell.spiritualState - TerritoryColorMapper.negativeThreshold.abs()) /
-                    (1.0 - TerritoryColorMapper.negativeThreshold.abs()))
-                .clamp(0.0, 1.0);
-        final blobAlpha = blobStrength * cellDarkness * 0.65;
-
-        canvas.drawRect(
-          rect,
-          Paint()
-            ..color = const Color(0xFF020001).withValues(alpha: blobAlpha) // near-black
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
-        );
-      }
-    } else {
-      // ── POSITIVE / NEUTRAL ZONE ──────────────────────────────────────────
-      final state = (cell.spiritualState + lavaNoise * 0.3).clamp(-1.0, 1.0);
-      final color = _colorMapper.stateToColor(state);
-      final pulseAlpha = _colorMapper.redPulseAlpha(state, _animationTime);
-      final alpha = ((0.45 + lavaNoise.abs() * 0.2) * pulseAlpha).clamp(0.0, 0.85);
-
-      canvas.drawRect(
-        rect,
-        Paint()
-          ..color = color.withValues(alpha: alpha)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
-      );
-    }
-  }
+  // ── Render ───────────────────────────────────────────────────────────────
 
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) return;
 
-    if (_cachedPicture == null) {
-      _createCache();
-    }
-    if (_cachedPicture != null) {
-      canvas.drawPicture(_cachedPicture!);
-    }
+    // ── Blurred background layer ──────────────────────────────────────────
+    // saveLayer + ImageFilter.blur = ONE GPU operation for the whole chunk.
+    canvas.saveLayer(size.toRect(), _blurLayerPaint);
 
-    // Sparkle particles rendered on top with additive blending
+    // 1. Base cell colours (slowly updated, cached as a Picture).
+    if (_basePicture == null) _buildBaseCache();
+    canvas.drawPicture(_basePicture!);
+
+    // 2. Shadow orbs (current-frame positions → always smooth).
+    _drawOrbs(canvas);
+
+    canvas.restore(); // blur executes here
+
+    // ── Sparkles above blur ───────────────────────────────────────────────
+    // Particles are drawn AFTER restore() so they appear sharp.
     _particleService.render(canvas);
+  }
+
+  void _drawOrbs(Canvas canvas) {
+    for (final orb in _orbs) {
+      // Gentle breathing: ±20 % alpha modulation.
+      final breathe = 0.80 + 0.20 * math.sin(_time * 1.1 + orb.breathPhase);
+      _orbPaint.color = const Color(0xFF030005).withValues(
+        alpha: (orb.baseAlpha * breathe).clamp(0.0, 1.0),
+      );
+      canvas.drawCircle(Offset(orb.x, orb.y), orb.radius, _orbPaint);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shadow Orb
+//
+// A single slowly-wandering dark blob within a chunk.  Positions are tracked
+// in chunk-local pixel coordinates.  Direction is updated via smooth steering
+// every [_steerInterval] seconds so the movement feels organic, not robotic.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ShadowOrb {
+  double x, y;
+  double vx = 0, vy = 0;
+  final double radius;
+  final double baseAlpha;
+  final double breathPhase;
+
+  double _steerTimer = 0.0;
+  double _steerInterval;
+  double _tvx = 0, _tvy = 0; // target velocity
+
+  final math.Random _rng;
+
+  static const double _minSpeed = 5.0;
+  static const double _maxSpeed = 22.0;
+
+  _ShadowOrb({
+    required this.x,
+    required this.y,
+    required this.radius,
+    required this.baseAlpha,
+    required this.breathPhase,
+    required math.Random rng,
+  })  : _rng = rng,
+        _steerInterval = 3.0 + rng.nextDouble() * 5.0 {
+    _pickNewTarget();
+    // Start already moving in the chosen direction.
+    vx = _tvx;
+    vy = _tvy;
+  }
+
+  void _pickNewTarget() {
+    final angle = _rng.nextDouble() * math.pi * 2;
+    final speed = _minSpeed + _rng.nextDouble() * (_maxSpeed - _minSpeed);
+    _tvx = math.cos(angle) * speed;
+    _tvy = math.sin(angle) * speed;
+    _steerInterval = 3.0 + _rng.nextDouble() * 5.0;
+  }
+
+  void update(double dt, double w, double h) {
+    // Smooth steering: gradually blend current velocity toward target.
+    const steerRate = 1.5; // higher → snappier turns
+    vx += (_tvx - vx) * (steerRate * dt).clamp(0.0, 1.0);
+    vy += (_tvy - vy) * (steerRate * dt).clamp(0.0, 1.0);
+
+    x += vx * dt;
+    y += vy * dt;
+
+    // Wrap-around at chunk boundaries so orbs never disappear.
+    if (x < -radius) x += w + radius * 2;
+    else if (x > w + radius) x -= w + radius * 2;
+    if (y < -radius) y += h + radius * 2;
+    else if (y > h + radius) y -= h + radius * 2;
+
+    // Pick a new direction after the current interval expires.
+    _steerTimer += dt;
+    if (_steerTimer >= _steerInterval) {
+      _steerTimer = 0;
+      _pickNewTarget();
+    }
   }
 }

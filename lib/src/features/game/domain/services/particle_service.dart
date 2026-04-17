@@ -12,6 +12,8 @@ class ParticleService {
   /// Hard cap to prevent unbounded growth.
   static const int maxParticles = 300;
 
+  final Paint _paint = Paint()..blendMode = BlendMode.screen;
+
   ParticleService({int seed = 0}) : _rng = math.Random(seed);
 
   int get particleCount => _particles.length;
@@ -50,13 +52,12 @@ class ParticleService {
   void render(Canvas canvas) {
     if (_particles.isEmpty) return;
 
-    final paint = Paint()..blendMode = BlendMode.screen;
     for (final p in _particles) {
       final progress = (p.lifetime / p.maxLifetime).clamp(0.0, 1.0);
       final alpha = progress * 0.78; // fade to transparent
       final radius = 1.5 + progress * 2.0;
-      paint.color = const Color(0xFFFFFF99).withValues(alpha: alpha);
-      canvas.drawCircle(Offset(p.x, p.y), radius, paint);
+      _paint.color = const Color(0xFFFFFF99).withValues(alpha: alpha);
+      canvas.drawCircle(Offset(p.x, p.y), radius, _paint);
     }
   }
 }

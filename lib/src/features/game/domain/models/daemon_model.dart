@@ -15,6 +15,9 @@ class DaemonModel {
   /// Darkness energy (starts negative, drains toward 0, then dissolves)
   double energy;
 
+  /// The energy value at spawn time – used for normalising the health arc.
+  final double initialEnergy;
+
   /// Whether this daemon has dissolved
   bool dissolved = false;
 
@@ -22,5 +25,5 @@ class DaemonModel {
     required this.id,
     required this.position,
     required this.energy,
-  });
+  }) : initialEnergy = energy;
 }

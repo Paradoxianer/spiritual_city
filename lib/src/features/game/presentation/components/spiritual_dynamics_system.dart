@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:logging/logging.dart';
 import '../../../../core/utils/game_time.dart';
+import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import '../../domain/models/city_chunk.dart';
 import '../../domain/models/city_cell.dart';
@@ -51,11 +52,58 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
 
   double _timer = 0.0;
 
-  // Daemon spawning
-  static const int maxDaemons = 8;
-  static const double daemonSpawnChance = 0.15; // per tick, per strongly-negative region
+  // ── Continuous daemon spawning ────────────────────────────────────────────
+
+  /// Counts up while the player is in the invisible world.
+  double _continuousSpawnTimer = 0.0;
+
+  /// Next spawn fires after this many real seconds (re-randomised on each spawn).
+  double _nextSpawnInterval = 3.0;
+
+  static const double _continuousSpawnMin = 1.0; // s
+  static const double _continuousSpawnMax = 7.0; // s
+
+  // ── Daemon spawning ───────────────────────────────────────────────────────
+
+  static const int _maxDaemonsEasy   = 10;
+  static const int _maxDaemonsNormal = 15;
+  static const int _maxDaemonsHard   = 20;
+
+  /// Spawn chance per tick per strongly-negative region – scales with difficulty.
+  static const double _daemonSpawnChanceEasy   = 0.08;
+  static const double _daemonSpawnChanceNormal = 0.15;
+  static const double _daemonSpawnChanceHard   = 0.28;
+
+  /// Initial daemon energy by difficulty (negative; closer to 0 = weaker daemon).
+  /// Tripled vs. original values so daemons persist long enough to feel threatening.
+  static const double _daemonEnergyEasy   = -180.0;
+  static const double _daemonEnergyNormal = -300.0;
+  static const double _daemonEnergyHard   = -420.0;
+
   int _daemonIdCounter = 0;
   final math.Random _rng = math.Random(77);
+
+  // ── Prayer-attraction state ───────────────────────────────────────────────
+
+  /// Remaining seconds of the prayer-attraction effect.
+  double _prayerAttractionTimer = 0.0;
+
+  /// How long the prayer-attraction effect lasts (seconds).
+  static const double prayerAttractionDuration = 30.0;
+
+  /// Spawn-chance bonus while prayer attraction is active.
+  static const double prayerAttractionSpawnBonus = 0.40;
+
+  /// True while the prayer-attraction effect is active.
+  bool get isPrayerAttractionActive => _prayerAttractionTimer > 0;
+
+  /// Activates the 30-second prayer-attraction window.
+  ///
+  /// Called by the player component whenever a prayer is released.
+  void activatePrayerAttraction() {
+    _prayerAttractionTimer = prayerAttractionDuration;
+    _log.fine('Prayer attraction activated');
+  }
 
   // Modifier support – injected by the ModifierManager
   double modifierSpreadMultiplier = 1.0;  // Wachstum modifier
@@ -64,10 +112,25 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   @override
   void update(double dt) {
     super.update(dt);
+    if (_prayerAttractionTimer > 0) {
+      _prayerAttractionTimer -= dt;
+      if (_prayerAttractionTimer < 0) _prayerAttractionTimer = 0;
+    }
     _timer += dt;
     if (_timer >= tickInterval) {
       _timer = 0.0;
       _tick();
+    }
+
+    // ── Continuous spawn while in the invisible world ─────────────────────────
+    if (game.isSpiritualWorld) {
+      _continuousSpawnTimer += dt;
+      if (_continuousSpawnTimer >= _nextSpawnInterval) {
+        _continuousSpawnTimer = 0.0;
+        _nextSpawnInterval = _continuousSpawnMin +
+            _rng.nextDouble() * (_continuousSpawnMax - _continuousSpawnMin);
+        _maybeContinuousSpawn();
+      }
     }
   }
 
@@ -164,8 +227,27 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   }
 
   void _maybeSpawnDaemons(List<CityChunk> chunks) {
+    // Difficulty-scaled daemon cap
+    final maxDaemons = switch (game.difficulty) {
+      Difficulty.easy   => _maxDaemonsEasy,
+      Difficulty.normal => _maxDaemonsNormal,
+      Difficulty.hard   => _maxDaemonsHard,
+    };
+
     int existingDaemons = game.world.children.whereType<DaemonComponent>().length;
     if (existingDaemons >= maxDaemons) return;
+
+    // Difficulty-scaled base spawn chance
+    final baseChance = switch (game.difficulty) {
+      Difficulty.easy   => _daemonSpawnChanceEasy,
+      Difficulty.normal => _daemonSpawnChanceNormal,
+      Difficulty.hard   => _daemonSpawnChanceHard,
+    };
+
+    // Spawn chance boosted when the player has recently prayed (Issue #31)
+    final spawnChance = isPrayerAttractionActive
+        ? baseChance * (1 + prayerAttractionSpawnBonus)
+        : baseChance;
 
     outer:
     for (final chunk in chunks) {
@@ -174,7 +256,7 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
           if (existingDaemons >= maxDaemons) break outer;
           final cell = chunk.cells['$x,$y'];
           if (cell == null) continue;
-          if (cell.spiritualState < -0.8 && _rng.nextDouble() < daemonSpawnChance) {
+          if (cell.spiritualState < -0.8 && _rng.nextDouble() < spawnChance) {
             _spawnDaemon(cell);
             existingDaemons++;
           }
@@ -189,11 +271,100 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       cell.x * CellComponent.cellSize + CellComponent.cellSize / 2,
       cell.y * CellComponent.cellSize + CellComponent.cellSize / 2,
     );
-    // Energy starts at -100 (strong) and drains toward 0
-    final model = DaemonModel(id: id, position: spawnPos, energy: -100.0);
+    final model = DaemonModel(id: id, position: spawnPos, energy: _initialEnergy());
     final component = DaemonComponent(model);
     game.world.add(component);
     _log.fine('Spawned daemon $id at (${cell.x}, ${cell.y})');
+  }
+
+  /// Spawns a single daemon near the player, weighted by cell darkness.
+  ///
+  /// Called every [_nextSpawnInterval] seconds while the player is in the
+  /// invisible world.  Dark cells (state < −0.3) are preferred so daemons
+  /// tend to emerge from shadow rather than light.
+  void _maybeContinuousSpawn() {
+    final maxDaemons = switch (game.difficulty) {
+      Difficulty.easy   => _maxDaemonsEasy,
+      Difficulty.normal => _maxDaemonsNormal,
+      Difficulty.hard   => _maxDaemonsHard,
+    };
+    if (game.world.children.whereType<DaemonComponent>().length >= maxDaemons) {
+      return;
+    }
+
+    final playerPos = game.player.position;
+    final pgx = (playerPos.x / CellComponent.cellSize).floor();
+    final pgy = (playerPos.y / CellComponent.cellSize).floor();
+
+    // Collect candidate cells weighted by darkness within a 20-cell radius.
+    final List<CityCell> candidates = [];
+    final List<double> weights = [];
+    const int searchR = 20;
+
+    for (int dy = -searchR; dy <= searchR; dy += 2) {
+      for (int dx = -searchR; dx <= searchR; dx += 2) {
+        if (dx * dx + dy * dy > searchR * searchR) continue;
+        final cell = game.grid.getCell(pgx + dx, pgy + dy);
+        if (cell == null) continue;
+        if (cell.spiritualState < -0.3) {
+          candidates.add(cell);
+          weights.add(-cell.spiritualState); // darker → higher weight
+        }
+      }
+    }
+
+    if (candidates.isEmpty) return;
+
+    // Weighted random pick.
+    double totalWeight = weights.fold(0.0, (a, b) => a + b);
+    double pick = _rng.nextDouble() * totalWeight;
+    CityCell chosen = candidates.last;
+    for (int i = 0; i < candidates.length; i++) {
+      pick -= weights[i];
+      if (pick <= 0) {
+        chosen = candidates[i];
+        break;
+      }
+    }
+
+    _spawnDaemon(chosen);
+    _log.fine('Continuous spawn at (${chosen.x}, ${chosen.y})');
+  }
+
+  /// Returns difficulty-scaled initial energy for a newly spawned daemon.
+  double _initialEnergy() => switch (game.difficulty) {
+    Difficulty.easy   => _daemonEnergyEasy,
+    Difficulty.normal => _daemonEnergyNormal,
+    Difficulty.hard   => _daemonEnergyHard,
+  };
+
+  /// Spawns [count] daemons in a random ring (100–300 px) around the player.
+  ///
+  /// Called when the player enters the invisible world so that daemons are
+  /// immediately visible rather than waiting for the next tick.
+  void spawnDaemonsAroundPlayer(int count) {
+    final playerPos = game.player.position;
+    const double minDist = 100.0;
+    const double maxDist = 300.0;
+    final energy = _initialEnergy();
+
+    for (int i = 0; i < count; i++) {
+      // Spread daemons evenly around the player (+ small random jitter)
+      final baseAngle = (i / count) * math.pi * 2;
+      final angle = baseAngle + (_rng.nextDouble() - 0.5) * (math.pi / count);
+      final dist = minDist + _rng.nextDouble() * (maxDist - minDist);
+
+      final spawnPos = Vector2(
+        playerPos.x + math.cos(angle) * dist,
+        playerPos.y + math.sin(angle) * dist,
+      );
+
+      final id = 'daemon_entry_${_daemonIdCounter++}';
+      final model = DaemonModel(id: id, position: spawnPos, energy: energy);
+      final component = DaemonComponent(model);
+      game.world.add(component);
+      _log.fine('Entry-spawned daemon $id around player');
+    }
   }
 
   static const List<List<int>> _dirs = [

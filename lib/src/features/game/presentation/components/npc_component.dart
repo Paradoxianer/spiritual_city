@@ -44,6 +44,22 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   /// One in-game day = [GameTime.gameDaySeconds] real seconds.
   static const double _spiritualInfluenceInterval = GameTime.gameDaySeconds;
 
+  // ─── Pre-allocated paints (never create Paint() in render()) ─────────────
+
+  /// Body fill – colour updated each render, object reused.
+  final Paint _bodyPaint = Paint();
+
+  /// Christian cross stroke – style/width set once.
+  final Paint _crossPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.2;
+
+  /// Spiritual aura in the invisible world – blur set once, colour per render.
+  final Paint _auraPaint = Paint()
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   NPCComponent({required NPCModel model})
       : _model = model,
         super(
@@ -248,6 +264,17 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     super.update(dt);
     if (game.paused) return;
 
+    // ── Spiritual world: cheap movement-only pass ─────────────────────────
+    // NPCs keep gliding toward their last waypoint so they still visibly
+    // wander, but all expensive operations (pathfinding, grid lookups,
+    // spiritual-influence writes) are skipped to give the daemon rendering
+    // a stable, stutter-free dt budget.
+    if (game.isSpiritualWorld) {
+      if (_targetPosition != null) _moveTowardsTarget(dt);
+      return;
+    }
+    // ── Normal world: full AI ─────────────────────────────────────────────
+
     switch (detailLevel) {
       case NPCDetailLevel.high:
         _updateAI(dt);
@@ -357,13 +384,15 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     } else {
       bodyColor = Color.lerp(Colors.grey, Colors.blue[100]!, model.faith / 50)!;
     }
-    canvas.drawCircle((size / 2).toOffset(), size.x / 2, Paint()..color = bodyColor);
+    // Reuse pre-allocated paint – no new object allocation per frame.
+    _bodyPaint.color = bodyColor;
+    canvas.drawCircle((size / 2).toOffset(), size.x / 2, _bodyPaint);
 
     if (model.isChristian) {
-      final paint = Paint()..color = Colors.amber..style = PaintingStyle.stroke..strokeWidth = 1.2;
+      _crossPaint.color = Colors.amber;
       final center = (size / 2).toOffset();
-      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), paint);
-      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), paint);
+      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), _crossPaint);
+      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), _crossPaint);
     }
 
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
@@ -371,9 +400,9 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
   void _renderSpiritualAura(Canvas canvas) {
     final faithFactor = (model.faith + 100) / 200.0;
-    final auraColor = Color.lerp(Colors.red, Colors.green, faithFactor)!
+    // Update only the color; the pre-allocated MaskFilter.blur stays intact.
+    _auraPaint.color = Color.lerp(Colors.red, Colors.green, faithFactor)!
         .withValues(alpha: 0.3 + (faithFactor * 0.4));
-    canvas.drawCircle((size / 2).toOffset(), size.x * 0.8,
-        Paint()..color = auraColor..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+    canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, _auraPaint);
   }
 }

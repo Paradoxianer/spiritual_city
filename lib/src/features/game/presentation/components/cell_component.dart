@@ -106,6 +106,12 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
     ..style = PaintingStyle.stroke
     ..color = Colors.white10;
 
+  // Residuum ash mark (daemon natural dissolution imprint)
+  static final Paint _residuumPaint = Paint()
+    ..color = const Color(0x99616161) // grey[700] at 60 % alpha
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5;
+
   // Shared paint for dynamic colors (spiritual world)
   static final Paint _dynamicPaint = Paint();
 
@@ -153,6 +159,14 @@ class CellComponent extends PositionComponent with HasGameReference<SpiritWorldG
       
       // Reset for next use
       _dynamicPaint.style = PaintingStyle.fill;
+    }
+
+    // Residuum mark: ash-grey 'X' left by a naturally dissolved daemon
+    if (cell.hasResiduum) {
+      canvas.drawLine(Offset(size.x * 0.2, size.y * 0.2),
+          Offset(size.x * 0.8, size.y * 0.8), _residuumPaint);
+      canvas.drawLine(Offset(size.x * 0.8, size.y * 0.2),
+          Offset(size.x * 0.2, size.y * 0.8), _residuumPaint);
     }
   }
 

@@ -3,8 +3,10 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
+import 'daemon_component.dart';
 import 'prayer_zone_component.dart';
 
 class PlayerComponent extends PositionComponent 
@@ -44,6 +46,19 @@ class PlayerComponent extends PositionComponent
   double modifierResistanceFactor = 1.0; 
 
   // ===========================================================================
+
+  // ── Directional prayer-zone geometry constants ─────────────────────────────
+
+  /// The directional zone extends this multiple of [modifierMaxRadius] beyond
+  /// the base radius to allow a generous cone reach.
+  static const double _dirZoneRadiusMultiplier = 1.8;
+
+  /// Half-angle (radians) of the directional prayer cone (~40 °).
+  static const double _dirZoneHalfAngle = math.pi / 4.5;
+
+  /// Converts normalized impact power to daemon energy damage.
+  /// Tuned so a full optimal prayer kills a normal-difficulty daemon in ~3 hits.
+  static const double _daemonDamageScale = 50.0;
 
   // Getters für das HUD
   double get faithPulse => prayerZone.pulseValue;
@@ -127,6 +142,8 @@ class PlayerComponent extends PositionComponent
     _isChargingIntensity = false;
     _intensityPulseTime = 0;
     game.recordPrayerCombat();
+    // Praying attracts daemons for 30 seconds (Issue #31)
+    game.spiritualDynamics.activatePrayerAttraction();
   }
 
   void _executePrayerImpact() {
@@ -180,19 +197,48 @@ class PlayerComponent extends PositionComponent
           } else {
             final toCell = cellPos - center;
             final dist = toCell.length;
-            if (dist <= radius * 1.8) {
+            if (dist <= radius * _dirZoneRadiusMultiplier) {
               final angle = toCell.angleTo(prayerZone.direction);
-              if (angle.abs() < math.pi / 4.5) inZone = true;
+              if (angle.abs() < _dirZoneHalfAngle) inZone = true;
             }
           }
 
           if (inZone) {
             final dist = center.distanceTo(cellPos);
-            final falloff = 1.0 - (dist / (radius * 1.8)).clamp(0.0, 1.0);
+            final falloff = 1.0 - (dist / (radius * _dirZoneRadiusMultiplier)).clamp(0.0, 1.0);
             final finalImpact = (impactPower / 100.0) * falloff / modifierResistanceFactor;
             cell.spiritualState = (cell.spiritualState + finalImpact).clamp(-1.0, 1.0);
           }
         }
+      }
+    }
+
+    // ── Daemon combat (Issue #31) ────────────────────────────────────────────
+    // Daemons inside the impact zone take direct damage.
+    // On easy the player deals more damage; on hard daemons are more resistant.
+    final daemonDamageMultiplier = switch (game.difficulty) {
+      Difficulty.easy   => 1.5,
+      Difficulty.normal => 1.0,
+      Difficulty.hard   => 0.7,
+    };
+
+    for (final daemon
+        in List.of(game.world.children.whereType<DaemonComponent>())) {
+      if (daemon.model.dissolved) continue;
+      final dist = center.distanceTo(daemon.position);
+      bool inZone;
+      if (prayerZone.direction.isZero()) {
+        inZone = dist <= radius;
+      } else {
+        final toTarget = daemon.position - center;
+        inZone = toTarget.length <= radius * _dirZoneRadiusMultiplier &&
+            toTarget.angleTo(prayerZone.direction).abs() < _dirZoneHalfAngle;
+      }
+      if (inZone) {
+        final falloff = 1.0 - (dist / (radius * _dirZoneRadiusMultiplier)).clamp(0.0, 1.0);
+        // Scale damage so that a full optimal prayer kills a daemon in ~3 hits.
+        daemon.takeDamage(
+            impactPower * _daemonDamageScale * falloff * daemonDamageMultiplier);
       }
     }
   }

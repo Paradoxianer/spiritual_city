@@ -61,6 +61,13 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   int _preloadCenterX = 0;
   int _preloadCenterY = 0;
 
+  /// Throttle timer for LOD + spatial-grid refresh.
+  double _lodSpatialTimer = 0.0;
+
+  /// How often (seconds) LOD levels and the spatial grid are refreshed.
+  /// 10 Hz is plenty – NPCs move slowly and LOD doesn't need frame accuracy.
+  static const double _lodSpatialInterval = 0.1;
+
   ChunkManager({
     required this.grid,
     required this.generator,
@@ -90,11 +97,19 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       }
     }
 
-    // Update LOD for all NPCs based on distance to target
-    _updateNPCDetailLevels();
-
-    // Refresh spatial grid with current NPC positions
-    _spatialGrid.update(_allNPCs);
+    // LOD + spatial grid: skipped entirely in the spiritual world (NPCs are
+    // frozen there, so these operations are wasted work that creates dt spikes
+    // and makes daemon orbital movement appear jerky).
+    // Outside the spiritual world, throttle to 10 Hz – LOD doesn't need
+    // frame-rate accuracy.
+    if (!game.isSpiritualWorld) {
+      _lodSpatialTimer += dt;
+      if (_lodSpatialTimer >= _lodSpatialInterval) {
+        _lodSpatialTimer = 0.0;
+        _updateNPCDetailLevels();
+        _spatialGrid.update(_allNPCs);
+      }
+    }
 
     _perfMonitor.updateCounters(
       activeNPCs: _allNPCs.length,
