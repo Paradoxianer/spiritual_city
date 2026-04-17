@@ -20,14 +20,14 @@ class MissionService {
   static const int _materialReward = materialsReward;
 
   static const List<String> _missionTexts = [
-    'Sprich mit diesem Bewohner',
-    'Bete für diesen Ort',
-    'Bring Hilfe hierher',
-    'Besuche diesen Ort',
-    'Bitte um ein Gespräch',
-    'Teile gute Neuigkeiten',
-    'Hör diesem Menschen zu',
-    'Segne diesen Ort',
+    '🚶 ➡️ 👤 💬 😊',   // go and talk to someone
+    '🙏 ✨ 🌍 💫',        // pray for the area
+    '📦 ➡️ 👤 🤝',        // bring supplies to someone
+    '🏃 ➡️ 🏠 👁️ ✝️',    // visit and bless a place
+    '👂 💬 ❤️ 👤',        // listen and encourage
+    '📖 ➡️ 👤 🌟',        // share good news
+    '💡 ➡️ 🏢 🙌',        // bring light to a building
+    '🌱 ➡️ 🏘️ 🙏 ✨',    // plant faith in the neighbourhood
   ];
 
   final Random _rng;

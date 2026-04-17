@@ -1025,6 +1025,8 @@ class MissionEntry {
   final String description;
   final int faithReward;
   final int materialsReward;
+  /// Formatted address, e.g. "Lindenallee 14" or "Nr. 22". May be null.
+  final String? address;
 
   const MissionEntry({
     required this.targetEmoji,
@@ -1032,6 +1034,7 @@ class MissionEntry {
     required this.description,
     required this.faithReward,
     required this.materialsReward,
+    this.address,
   });
 }
 
@@ -1142,19 +1145,22 @@ class MissionBoardOverlay extends StatelessWidget {
                                       m.description,
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 13,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w500,
+                                        letterSpacing: 1.2,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '📍 ${m.targetName}',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                            alpha: 0.55),
-                                        fontSize: 11,
+                                    if (m.address != null) ...[
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        '📍 ${m.address}',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                              alpha: 0.60),
+                                          fontSize: 11,
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ],
                                 ),
                               ),

@@ -29,18 +29,41 @@ class LotGenerator {
     final int grid = _gridPitch(district);
     final int modX = wx % grid;
     final int modY = wy % grid;
+    // Lot root (top-left corner of this grid block)
+    final int rootX = wx - modX;
+    final int rootY = wy - modY;
 
-    // Row/column 0 of each grid block = sidewalk (empty).
-    // Exception: special buildings are always placed regardless of their
-    // position within the grid block so they can never be silently dropped.
-    final BuildingType? special = _registry.getSpecialBuilding(wx, wy, district);
-    if (special != null) {
-      return _buildingData(special, wx, wy, grid, modX, modY, district, rand);
+    // Check if THIS exact cell is a special building.
+    // Special cells bypass the sidewalk filter so they are never dropped.
+    final BuildingType? exactSpecial =
+        _registry.getSpecialBuilding(wx, wy, district);
+    if (exactSpecial != null) {
+      return _buildingData(exactSpecial, wx, wy, grid, modX, modY, district, rand);
     }
 
+    // Row/column 0 of each grid block = sidewalk (empty).
     if (modX == 0 || modY == 0) return null;
 
-    // ---- 2. Chance to leave lot unpaved (nature / gap) ------------------
+    // ---- 2. Lot-wide special building scan --------------------------------
+    // If any cell in this lot block is a special building, ALL non-sidewalk
+    // cells in the lot use that type so the whole building renders correctly
+    // (e.g. the pastor house appears amber/gold on every cell, not just one).
+    BuildingType? lotSpecial;
+    _scanLot:
+    for (int dy = 0; dy < grid; dy++) {
+      for (int dx = 0; dx < grid; dx++) {
+        final s = _registry.getSpecialBuilding(rootX + dx, rootY + dy, district);
+        if (s != null) {
+          lotSpecial = s;
+          break _scanLot;
+        }
+      }
+    }
+    if (lotSpecial != null) {
+      return _buildingData(lotSpecial, wx, wy, grid, modX, modY, district, rand);
+    }
+
+    // ---- 3. Chance to leave lot unpaved (nature / gap) ------------------
     final double buildChance = _buildChance(district);
     if (rand.nextDouble() > buildChance) {
       return _generateNature(district, rand);

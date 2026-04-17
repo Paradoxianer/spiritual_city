@@ -719,6 +719,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         description: npc.activeMissionDescription!,
         faithReward: MissionService.faithReward,
         materialsReward: MissionService.materialsReward,
+        address: _addressForPixelPos(npcComp.position),
       ));
     }
     for (final bldComp in chunkManager.allActiveBuildings) {
@@ -730,10 +731,42 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         description: bld.activeMissionDescription!,
         faithReward: MissionService.faithReward,
         materialsReward: MissionService.materialsReward,
+        address: _addressForPixelPos(bldComp.position),
       ));
     }
     activeMissionBoardData = MissionBoardData(entries: entries);
     overlays.add('MissionBoardOverlay');
+  }
+
+  /// Returns a formatted address string (e.g. "Lindenallee 14") for the cell
+  /// at the given pixel position.  Returns null if no relevant data is found.
+  String? _addressForPixelPos(Vector2 pixelPos) {
+    final gx = (pixelPos.x / cellSize).floor();
+    final gy = (pixelPos.y / cellSize).floor();
+
+    int? houseNumber;
+    String? streetName;
+
+    // Check the cell itself and its 4 cardinal neighbours for building/road data.
+    for (final offset in const [
+      [0, 0], [-1, 0], [1, 0], [0, -1], [0, 1],
+    ]) {
+      final c = grid.getCell(gx + offset[0], gy + offset[1]);
+      if (c == null) continue;
+      if (c.data is BuildingData && houseNumber == null) {
+        houseNumber = (c.data as BuildingData).houseNumber;
+      }
+      if (c.data is RoadData && streetName == null) {
+        final rn = (c.data as RoadData).streetName;
+        if (rn != null) streetName = rn;
+      }
+      if (houseNumber != null && streetName != null) break;
+    }
+
+    if (streetName != null && houseNumber != null) return '$streetName $houseNumber';
+    if (streetName != null) return streetName;
+    if (houseNumber != null) return 'Nr. $houseNumber';
+    return null;
   }
 
   void closeMissionBoard() {
