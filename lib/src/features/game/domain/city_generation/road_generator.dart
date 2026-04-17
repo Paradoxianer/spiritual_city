@@ -23,11 +23,10 @@ class RoadGenerator {
 
   /// Returns a deterministic street name for a given road axis.
   ///
-  /// Horizontal roads are keyed by their [wy] value; vertical by [wx].
-  /// Major boulevards (multiple of 32) always get a name; secondary streets
-  /// only get one on every alternate interval so minor lanes stay unnamed.
-  String? _streetName(int wx, int wy, bool isHorizontal, bool isBig) {
-    if (!isBig) return null; // only name major boulevards for now
+  /// Every road gets a name.  Horizontal roads are keyed by their [wy] value;
+  /// vertical roads by [wx].  The hash spreads the axis key across the name
+  /// pool so adjacent streets almost always get different names.
+  String _streetName(int wx, int wy, bool isHorizontal) {
     final axisKey = isHorizontal ? wy : wx;
     final hash = (axisKey * _nameHashMult) ^ (axisKey >> 16);
     return _streetNames[hash.abs() % _streetNames.length];
@@ -41,7 +40,7 @@ class RoadGenerator {
       return RoadData(
         type: RoadType.big,
         isIntersection: isBothAxes,
-        streetName: _streetName(wx, wy, isHorizontal, true),
+        streetName: _streetName(wx, wy, isHorizontal),
       );
     }
 
@@ -73,7 +72,11 @@ class RoadGenerator {
             : 0;
 
     if ((wx + jitterX) % interval == 0 || wy % interval == 0) {
-      return RoadData(type: RoadType.small);
+      final isHorizontal = wy % interval == 0;
+      return RoadData(
+        type: RoadType.small,
+        streetName: _streetName(wx, wy, isHorizontal),
+      );
     }
 
     return null;
