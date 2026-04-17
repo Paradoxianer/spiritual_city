@@ -55,15 +55,17 @@ class BuildingComponent extends PositionComponent
     super.render(canvas);
     if (buildingModel.activeMissionDescription == null) return;
     const r = 6.0;
-    canvas.drawCircle(const Offset(0, -r - 2), r, _missionBadgePaint);
-    canvas.drawCircle(const Offset(0, -r - 2), r, _missionBadgeBorderPaint);
+    // x = size.x/2 centers over the 4px component; y offset puts it above.
+    final cx = size.x / 2;
+    const cy = -r - 2.0;
+    canvas.drawCircle(Offset(cx, cy), r, _missionBadgePaint);
+    canvas.drawCircle(Offset(cx, cy), r, _missionBadgeBorderPaint);
     final linePaint = Paint()
       ..color = const Color(0xFF5A3A00)
       ..strokeWidth = 1.5
       ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-        const Offset(0, -r - 2 - 3), const Offset(0, -r - 2 + 0.5), linePaint);
-    canvas.drawCircle(const Offset(0, -r - 2 + 2.5), 0.9,
+    canvas.drawLine(Offset(cx, cy - 2.5), Offset(cx, cy + 0.5), linePaint);
+    canvas.drawCircle(Offset(cx, cy + 2.5), 0.9,
         Paint()..color = const Color(0xFF5A3A00));
   }
 
