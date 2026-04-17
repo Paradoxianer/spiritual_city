@@ -52,7 +52,7 @@ class PlayerComponent extends PositionComponent
   // ── Directional prayer-zone geometry constants ─────────────────────────────
 
   /// The directional zone extends this multiple of [modifierMaxRadius] beyond
-  /// the base radius.  Set to [PrayerZoneComponent._beamLengthMultiplier] so
+  /// the base radius.  Set to [PrayerZoneComponent.beamLengthMultiplier] so
   /// the impact area matches the rendered beam exactly.
   static const double _dirZoneRadiusMultiplier = PrayerZoneComponent.beamLengthMultiplier;
 
