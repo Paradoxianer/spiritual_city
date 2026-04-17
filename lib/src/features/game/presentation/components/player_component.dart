@@ -4,7 +4,7 @@ import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../../../menu/domain/models/difficulty.dart';
-import '../domain/models/game_keymap.dart';
+import '../../domain/models/game_keymap.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 import 'daemon_component.dart';
