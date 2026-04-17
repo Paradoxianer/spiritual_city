@@ -52,6 +52,17 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
 
   double _timer = 0.0;
 
+  // ── Continuous daemon spawning ────────────────────────────────────────────
+
+  /// Counts up while the player is in the invisible world.
+  double _continuousSpawnTimer = 0.0;
+
+  /// Next spawn fires after this many real seconds (re-randomised on each spawn).
+  double _nextSpawnInterval = 3.0;
+
+  static const double _continuousSpawnMin = 1.0; // s
+  static const double _continuousSpawnMax = 7.0; // s
+
   // ── Daemon spawning ───────────────────────────────────────────────────────
 
   static const int _maxDaemonsEasy   = 10;
@@ -109,6 +120,17 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     if (_timer >= tickInterval) {
       _timer = 0.0;
       _tick();
+    }
+
+    // ── Continuous spawn while in the invisible world ─────────────────────────
+    if (game.isSpiritualWorld) {
+      _continuousSpawnTimer += dt;
+      if (_continuousSpawnTimer >= _nextSpawnInterval) {
+        _continuousSpawnTimer = 0.0;
+        _nextSpawnInterval = _continuousSpawnMin +
+            _rng.nextDouble() * (_continuousSpawnMax - _continuousSpawnMin);
+        _maybeContinuousSpawn();
+      }
     }
   }
 
@@ -253,6 +275,60 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     final component = DaemonComponent(model);
     game.world.add(component);
     _log.fine('Spawned daemon $id at (${cell.x}, ${cell.y})');
+  }
+
+  /// Spawns a single daemon near the player, weighted by cell darkness.
+  ///
+  /// Called every [_nextSpawnInterval] seconds while the player is in the
+  /// invisible world.  Dark cells (state < −0.3) are preferred so daemons
+  /// tend to emerge from shadow rather than light.
+  void _maybeContinuousSpawn() {
+    final maxDaemons = switch (game.difficulty) {
+      Difficulty.easy   => _maxDaemonsEasy,
+      Difficulty.normal => _maxDaemonsNormal,
+      Difficulty.hard   => _maxDaemonsHard,
+    };
+    if (game.world.children.whereType<DaemonComponent>().length >= maxDaemons) {
+      return;
+    }
+
+    final playerPos = game.player.position;
+    final pgx = (playerPos.x / CellComponent.cellSize).floor();
+    final pgy = (playerPos.y / CellComponent.cellSize).floor();
+
+    // Collect candidate cells weighted by darkness within a 20-cell radius.
+    final List<CityCell> candidates = [];
+    final List<double> weights = [];
+    const int searchR = 20;
+
+    for (int dy = -searchR; dy <= searchR; dy += 2) {
+      for (int dx = -searchR; dx <= searchR; dx += 2) {
+        if (dx * dx + dy * dy > searchR * searchR) continue;
+        final cell = game.grid.getCell(pgx + dx, pgy + dy);
+        if (cell == null) continue;
+        if (cell.spiritualState < -0.3) {
+          candidates.add(cell);
+          weights.add(-cell.spiritualState); // darker → higher weight
+        }
+      }
+    }
+
+    if (candidates.isEmpty) return;
+
+    // Weighted random pick.
+    double totalWeight = weights.fold(0.0, (a, b) => a + b);
+    double pick = _rng.nextDouble() * totalWeight;
+    CityCell chosen = candidates.last;
+    for (int i = 0; i < candidates.length; i++) {
+      pick -= weights[i];
+      if (pick <= 0) {
+        chosen = candidates[i];
+        break;
+      }
+    }
+
+    _spawnDaemon(chosen);
+    _log.fine('Continuous spawn at (${chosen.x}, ${chosen.y})');
   }
 
   /// Returns difficulty-scaled initial energy for a newly spawned daemon.
