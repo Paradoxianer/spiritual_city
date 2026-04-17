@@ -8,6 +8,7 @@ class GameSave {
   final String id;
   final String name;
   final DateTime createdAt;
+  DateTime lastPlayed;
   final Difficulty difficulty;
   final Map<String, dynamic> gameState;
 
@@ -16,13 +17,25 @@ class GameSave {
     required this.name,
     required this.createdAt,
     required this.difficulty,
+    DateTime? lastPlayed,
     this.gameState = const {},
-  });
+  }) : lastPlayed = lastPlayed ?? createdAt;
+
+  /// Returns a copy of this save with [gameState] and [lastPlayed] updated.
+  GameSave copyWithState(Map<String, dynamic> newState) => GameSave(
+        id: id,
+        name: name,
+        createdAt: createdAt,
+        difficulty: difficulty,
+        lastPlayed: DateTime.now(),
+        gameState: newState,
+      );
 
   Map<String, dynamic> toMap() => {
         'id': id,
         'name': name,
         'createdAt': createdAt.toIso8601String(),
+        'lastPlayed': lastPlayed.toIso8601String(),
         'difficulty': difficulty.index,
         'gameState': gameState,
       };
@@ -31,6 +44,9 @@ class GameSave {
         id: map['id'] as String,
         name: map['name'] as String,
         createdAt: DateTime.parse(map['createdAt'] as String),
+        lastPlayed: map['lastPlayed'] != null
+            ? DateTime.parse(map['lastPlayed'] as String)
+            : null,
         difficulty: Difficulty.values[map['difficulty'] as int],
         gameState: (map['gameState'] as Map?)?.cast<String, dynamic>() ?? {},
       );

@@ -65,7 +65,28 @@ class MenuService {
     _log.info('Created save: ${save.id}');
   }
 
+  /// Persists a fully constructed [GameSave] directly.
+  Future<void> writeSave(GameSave save) async {
+    await _repository.writeSave(save);
+    _log.info('Wrote save: ${save.id}');
+  }
+
   Future<void> deleteSave(String id) => _repository.deleteSave(id);
+
+  /// Updates the [gameState] of an existing save identified by [id].
+  ///
+  /// If the save no longer exists (deleted in another session), this is a
+  /// no-op so the game can still exit cleanly.
+  Future<void> updateSaveState(String id, Map<String, dynamic> gameState) async {
+    final saves = await _repository.loadAllSaves();
+    final existing = saves.where((s) => s.id == id).firstOrNull;
+    if (existing == null) {
+      _log.warning('updateSaveState: save $id not found – skipping');
+      return;
+    }
+    await _repository.writeSave(existing.copyWithState(gameState));
+    _log.info('Updated save state for ${existing.id}');
+  }
 
   // --------------- Internal -------------------------------------------------
 

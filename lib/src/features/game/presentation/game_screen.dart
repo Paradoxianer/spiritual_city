@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../features/menu/domain/menu_service.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
+import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/npc_model.dart';
@@ -13,7 +17,15 @@ import 'spirit_world_game.dart';
 class GameScreen extends StatefulWidget {
   final Difficulty difficulty;
 
-  const GameScreen({super.key, this.difficulty = Difficulty.normal});
+  /// The save slot associated with this session.  Non-null for both new and
+  /// loaded games (a fresh save is created before the screen is pushed).
+  final GameSave? gameSave;
+
+  const GameScreen({
+    super.key,
+    this.difficulty = Difficulty.normal,
+    this.gameSave,
+  });
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -21,11 +33,35 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final SpiritWorldGame _game;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _game = SpiritWorldGame(difficulty: widget.difficulty);
+    _game = SpiritWorldGame(
+      difficulty: widget.difficulty,
+      gameSave: widget.gameSave,
+    );
+  }
+
+  /// Captures the current game state, persists it to Hive and returns to the
+  /// main menu.
+  Future<void> _saveAndQuit() async {
+    final save = _game.gameSave;
+    if (save == null) {
+      if (mounted) context.go('/menu');
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      final state = _game.captureGameState();
+      await getIt<MenuService>().updateSaveState(save.id, state);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        context.go('/menu');
+      }
+    }
   }
 
   @override
@@ -47,6 +83,37 @@ class _GameScreenState extends State<GameScreen> {
             builder: (context, isReady, _) {
               if (isReady) return const SizedBox.shrink();
               return const _LoadingOverlay();
+            },
+          ),
+          // Save & Quit button – only shown when the world is ready and not
+          // while a save operation is in progress.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return Positioned(
+                top: 12,
+                right: 12,
+                child: SafeArea(
+                  child: _isSaving
+                      ? const CircularProgressIndicator(
+                          color: Colors.white70,
+                          strokeWidth: 2,
+                        )
+                      : IconButton(
+                          onPressed: _saveAndQuit,
+                          tooltip: 'Speichern & Beenden',
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black54,
+                            foregroundColor: Colors.white70,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          icon: const Icon(Icons.save_outlined),
+                        ),
+                ),
+              );
             },
           ),
         ],

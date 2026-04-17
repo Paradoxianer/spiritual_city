@@ -145,6 +145,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
 
     if (chunk.cells.isEmpty) {
       generator.generateChunk(chunk);
+      // Apply any saved spiritual-state overrides for these cells.
+      game.applySavedCellStatesToChunk(chunk);
     }
 
     final chunkComp = ChunkComponent(chunk);
@@ -156,6 +158,11 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     if (!_chunksWithNPCs.contains(chunk.id)) {
       _chunksWithNPCs.add(chunk.id);
       final npcs = npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
+
+      // Restore saved NPC states (faith, conversation counts, etc.).
+      for (final npcModel in npcs) {
+        game.applySavedNPCState(npcModel);
+      }
 
       // Group NPCs by their home building for BuildingModel construction.
       final Map<String, List<NPCModel>> npcsByBuilding = {};
@@ -333,7 +340,11 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
           final chunk = grid.getOrCreateChunk(x, y);
           if (chunk.cells.isEmpty) {
             // Yield to event loop between each chunk generation
-            await Future.microtask(() => generator.generateChunk(chunk));
+            await Future.microtask(() {
+              generator.generateChunk(chunk);
+              // Apply saved cell states so they are ready before the chunk renders.
+              game.applySavedCellStatesToChunk(chunk);
+            });
             _log.fine('Preloaded chunk ($x,$y)');
           }
         }
@@ -371,6 +382,10 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
 
   /// All NPC components currently active in the world.
   List<NPCComponent> get allActiveNPCs => List.unmodifiable(_allNPCs);
+
+  /// All NPC *models* currently tracked in the world (for save-state capture).
+  List<NPCModel> get allNPCModels =>
+      List.unmodifiable(_allNPCs.map((c) => c.model));
 
   /// Number of NPCs created so far.
   int get npcCount => _allNPCs.length;

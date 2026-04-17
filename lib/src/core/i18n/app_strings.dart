@@ -32,6 +32,7 @@ class AppStrings {
       'loadGame.back': 'Zurück',
       'loadGame.delete': 'Löschen',
       'loadGame.load': 'Laden',
+      'loadGame.lastPlayed': 'Zuletzt gespielt',
 
       // Settings
       'settings.title': 'Einstellungen',
@@ -79,6 +80,7 @@ class AppStrings {
       'loadGame.back': 'Back',
       'loadGame.delete': 'Delete',
       'loadGame.load': 'Load',
+      'loadGame.lastPlayed': 'Last played',
 
       // Settings
       'settings.title': 'Settings',

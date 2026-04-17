@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../domain/menu_service.dart';
+import '../domain/models/game_save.dart';
 import 'widgets/menu_button.dart';
 
 /// Difficulty selection screen. Navigates to `/game` with the chosen difficulty.
@@ -27,9 +28,26 @@ class _DifficultySelectorState extends State<DifficultySelector> {
     setState(() => _selected = d);
   }
 
-  void _startGame() {
-    widget.menuService.setDifficulty(_selected);
-    context.go('/game', extra: _selected);
+  Future<void> _startGame() async {
+    await widget.menuService.setDifficulty(_selected);
+    // Create a new save slot immediately so the game always has a save ID.
+    final now = DateTime.now();
+    final name = _buildDefaultSaveName(now);
+    final save = GameSave(
+      id: now.millisecondsSinceEpoch.toString(),
+      name: name,
+      createdAt: now,
+      difficulty: _selected,
+    );
+    await widget.menuService.writeSave(save);
+    if (mounted) context.go('/game', extra: save);
+  }
+
+  /// Generates a human-readable default save name, e.g. "Spiel 17.04.2026".
+  String _buildDefaultSaveName(DateTime dt) {
+    final day   = dt.day.toString().padLeft(2, '0');
+    final month = dt.month.toString().padLeft(2, '0');
+    return 'Spiel $day.$month.${dt.year}';
   }
 
   @override
@@ -86,7 +104,7 @@ class _DifficultySelectorState extends State<DifficultySelector> {
                     MenuButton(
                       icon: Icons.play_arrow,
                       label: AppStrings.get('difficulty.start'),
-                      onPressed: _startGame,
+                      onPressed: () => _startGame(),
                       color: Colors.lightGreenAccent.shade100,
                     ),
                   ],

@@ -4,6 +4,7 @@ import 'core/di/service_locator.dart';
 import 'features/game/presentation/game_screen.dart';
 import 'features/menu/domain/menu_service.dart';
 import 'features/menu/domain/models/difficulty.dart';
+import 'features/menu/domain/models/game_save.dart';
 import 'features/menu/presentation/difficulty_selector.dart';
 import 'features/menu/presentation/load_game_screen.dart';
 import 'features/menu/presentation/menu_screen.dart';
@@ -49,7 +50,11 @@ final _router = GoRouter(
     GoRoute(
       path: '/game',
       builder: (context, state) {
-        final difficulty = state.extra as Difficulty? ?? Difficulty.normal;
+        final extra = state.extra;
+        if (extra is GameSave) {
+          return GameScreen(difficulty: extra.difficulty, gameSave: extra);
+        }
+        final difficulty = extra as Difficulty? ?? Difficulty.normal;
         return GameScreen(difficulty: difficulty);
       },
     ),

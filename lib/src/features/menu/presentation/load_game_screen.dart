@@ -34,7 +34,7 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
   }
 
   void _load(GameSave save) {
-    context.go('/game', extra: save.difficulty);
+    context.go('/game', extra: save);
   }
 
   @override
@@ -122,10 +122,11 @@ class _SaveTile extends StatelessWidget {
       Difficulty.normal => AppStrings.get('difficulty.normal'),
       Difficulty.hard => AppStrings.get('difficulty.hard'),
     };
-    final d = save.createdAt;
+    final d = save.lastPlayed;
     final dateStr =
         '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year} '
         '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    final hasState = save.gameState.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -134,13 +135,16 @@ class _SaveTile extends StatelessWidget {
         border: Border.all(color: Colors.blueGrey.shade700),
       ),
       child: ListTile(
-        leading: const Icon(Icons.save, color: Colors.blueGrey),
+        leading: Icon(
+          hasState ? Icons.save : Icons.save_outlined,
+          color: hasState ? Colors.lightBlueAccent : Colors.blueGrey,
+        ),
         title: Text(
           save.name,
           style: const TextStyle(color: Colors.white),
         ),
         subtitle: Text(
-          '$diffLabel · $dateStr',
+          '$diffLabel · ${AppStrings.get('loadGame.lastPlayed')}: $dateStr',
           style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 12),
         ),
         trailing: Row(

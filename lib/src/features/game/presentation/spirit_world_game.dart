@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
+import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/building_model.dart';
+import '../domain/models/city_chunk.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
 import '../domain/models/modifier_manager.dart';
@@ -28,7 +30,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Difficulty level selected in the main menu.
   final Difficulty difficulty;
 
-  SpiritWorldGame({this.difficulty = Difficulty.normal});
+  /// The [GameSave] associated with this session.  Non-null for both new and
+  /// loaded games once [onLoad] has run.  Used to persist cell / NPC state
+  /// back to Hive when the player saves and quits.
+  GameSave? gameSave;
+
+  SpiritWorldGame({this.difficulty = Difficulty.normal, this.gameSave});
   
   late final CityGrid grid;
   late final SeedManager seedManager;
@@ -85,6 +92,16 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   final BuildingInteractionService buildingInteractionService =
       BuildingInteractionService();
 
+  // ── Save / restore state ──────────────────────────────────────────────────
+
+  /// Saved cell spiritual-state overrides loaded from Hive.
+  /// Key: 'worldX,worldY'  Value: {s: double, r: bool}
+  Map<String, Map<String, dynamic>>? _savedCellStates;
+
+  /// Saved NPC-property overrides loaded from Hive.
+  /// Key: npc.id  Value: {faith, conv, pray, counsel, converted}
+  Map<String, Map<String, dynamic>>? _savedNPCStates;
+
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
 
@@ -99,12 +116,25 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     progress = PlayerProgress();
     modifiers = ModifierManager(progress: progress);
 
+    // ── Restore save state ──────────────────────────────────────────────────
+    final savedState = gameSave?.gameState;
+    if (savedState != null && savedState.isNotEmpty) {
+      _applyPlayerState(savedState);
+      _savedCellStates = _parseSavedCellStates(savedState);
+      _savedNPCStates  = _parseSavedNPCStates(savedState);
+    }
+
     player = PlayerComponent(joystick: _createJoystick());
     // Start in the suburbs so the player encounters residential streets first.
     // pixel (7000, 7000) → grid cell (floor(7000/32), floor(7000/32)) = (218, 218).
     // The pastor's house is placed at grid cell (220, 222) — just a few cells
     // away — see SpecialBuildingRegistry._pastorHouseX/Y.
-    player.position = Vector2(7000, 7000);
+    player.position = savedState != null && savedState.isNotEmpty
+        ? Vector2(
+            (savedState['playerX'] as num).toDouble(),
+            (savedState['playerY'] as num).toDouble(),
+          )
+        : Vector2(7000, 7000);
     await world.add(player);
 
     chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
@@ -127,8 +157,134 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     camera.viewfinder.position = player.position.clone();
 
     await Future.delayed(const Duration(milliseconds: 1000));
+    if (gameSave?.gameState['isSpiritualWorld'] == true) {
+      isSpiritualWorld = true;
+      _updateButtonStyles();
+    }
     isWorldReady.value = true;
     _log.info('--- GAME READY ---');
+  }
+
+  // ── Save / Restore helpers ────────────────────────────────────────────────
+
+  /// Applies player-resource fields from a previously serialised [state] map.
+  void _applyPlayerState(Map<String, dynamic> state) {
+    faith     = (state['faith']     as num?)?.toDouble() ?? faith;
+    health    = (state['health']    as num?)?.toDouble() ?? health;
+    hunger    = (state['hunger']    as num?)?.toDouble() ?? hunger;
+    materials = (state['materials'] as num?)?.toDouble() ?? materials;
+  }
+
+  /// Parses the `cells` sub-map from a serialised save into a flat lookup.
+  Map<String, Map<String, dynamic>> _parseSavedCellStates(
+      Map<String, dynamic> state) {
+    final raw = state['cells'] as Map?;
+    if (raw == null) return {};
+    return {
+      for (final e in raw.entries)
+        e.key as String: (e.value as Map).cast<String, dynamic>(),
+    };
+  }
+
+  /// Parses the `npcs` sub-map from a serialised save into a flat lookup.
+  Map<String, Map<String, dynamic>> _parseSavedNPCStates(
+      Map<String, dynamic> state) {
+    final raw = state['npcs'] as Map?;
+    if (raw == null) return {};
+    return {
+      for (final e in raw.entries)
+        e.key as String: (e.value as Map).cast<String, dynamic>(),
+    };
+  }
+
+  // ── ChunkManager callbacks (called when a chunk / NPC is first generated) ─
+
+  /// Called by [ChunkManager] immediately after a chunk's cells are generated.
+  ///
+  /// Applies any saved spiritual-state overrides so the world looks exactly as
+  /// the player left it.
+  void applySavedCellStatesToChunk(CityChunk chunk) {
+    final overrides = _savedCellStates;
+    if (overrides == null || overrides.isEmpty) return;
+    for (final entry in chunk.cells.entries) {
+      final localKey = entry.key; // 'lx,ly'
+      final parts    = localKey.split(',');
+      final wx       = chunk.getWorldX(int.parse(parts[0]));
+      final wy       = chunk.getWorldY(int.parse(parts[1]));
+      final saved    = overrides['$wx,$wy'];
+      if (saved != null) {
+        final cell = entry.value;
+        cell.spiritualState =
+            (saved['s'] as num?)?.toDouble() ?? cell.spiritualState;
+        if (saved['r'] == true) cell.hasResiduum = true;
+      }
+    }
+  }
+
+  /// Called by [ChunkManager] for every [NPCModel] after generation.
+  ///
+  /// Restores faith, conversation counts and conversion status so NPC
+  /// relationships are preserved across sessions.
+  void applySavedNPCState(NPCModel npc) {
+    final saved = _savedNPCStates?[npc.id];
+    if (saved == null) return;
+    npc.faith             = (saved['faith']   as num?)?.toDouble() ?? npc.faith;
+    npc.conversationCount = saved['conv']     as int?  ?? npc.conversationCount;
+    npc.prayerCount       = saved['pray']     as int?  ?? npc.prayerCount;
+    npc.counselingCount   = saved['counsel']  as int?  ?? npc.counselingCount;
+    npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
+  }
+
+  // ── State capture (called when the player saves and quits) ────────────────
+
+  /// Serialises the full game state into a [Map] suitable for storing in
+  /// [GameSave.gameState].
+  ///
+  /// Only cells and NPCs whose values differ from generated defaults are
+  /// included to keep the save file small.
+  Map<String, dynamic> captureGameState() {
+    // ── Cell states ──────────────────────────────────────────────────────────
+    final Map<String, Map<String, dynamic>> cellStates = {};
+    for (final chunk in grid.getLoadedChunks()) {
+      for (final entry in chunk.cells.entries) {
+        final cell = entry.value;
+        if (cell.spiritualState != 0.0 || cell.hasResiduum) {
+          final s = <String, dynamic>{'s': cell.spiritualState};
+          if (cell.hasResiduum) s['r'] = true;
+          cellStates['${cell.x},${cell.y}'] = s;
+        }
+      }
+    }
+
+    // ── NPC states ───────────────────────────────────────────────────────────
+    final Map<String, Map<String, dynamic>> npcStates = {};
+    for (final npc in chunkManager.allNPCModels) {
+      if (npc.faith             != 0.0 ||
+          npc.conversationCount != 0   ||
+          npc.prayerCount       != 0   ||
+          npc.counselingCount   != 0   ||
+          npc.isConverted) {
+        npcStates[npc.id] = {
+          'faith': npc.faith,
+          if (npc.conversationCount != 0) 'conv':      npc.conversationCount,
+          if (npc.prayerCount       != 0) 'pray':      npc.prayerCount,
+          if (npc.counselingCount   != 0) 'counsel':   npc.counselingCount,
+          if (npc.isConverted)            'converted': true,
+        };
+      }
+    }
+
+    return {
+      'faith':            faith,
+      'health':           health,
+      'hunger':           hunger,
+      'materials':        materials,
+      'playerX':          player.position.x,
+      'playerY':          player.position.y,
+      'isSpiritualWorld': isSpiritualWorld,
+      'cells':            cellStates,
+      'npcs':             npcStates,
+    };
   }
 
   void toggleWorld() {
