@@ -33,7 +33,7 @@ extension LootTypeExt on LootType {
 // ── Single pickup data ─────────────────────────────────────────────────────
 
 class _MaterialPickup {
-  final Vector2 worldPos; // centre of the cell in pixels
+  Vector2 worldPos; // centre of the cell in pixels – mutable for relocation
   final LootType type;
 
   bool isPickedUp = false;
@@ -60,7 +60,8 @@ class _MaterialPickup {
 class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   static const int _maxPickups = 15;
   static const int _minPickups = 5;
-  static const double _pickupRadius = 64.0; // 2 cells – easy to collect
+  static const double _pickupRadius = 96.0; // 3 cells – easy to walk through
+  static const double _staleDistance = 300.0; // relocate when player walks this far away
   static const double _respawnMin = 60.0;
   static const double _respawnMax = 120.0;
 
@@ -110,6 +111,15 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
       if (p.isPickedUp) continue;
       if (p.worldPos.distanceTo(playerPos) < _pickupRadius) {
         _collect(p);
+      }
+    }
+
+    // Stale-relocation: move active pickups that are too far away to a new
+    // road cell near the current player position so they stay reachable.
+    for (final p in _pickups) {
+      if (p.isPickedUp) continue;
+      if (p.worldPos.distanceTo(playerPos) > _staleDistance) {
+        _relocate(p);
       }
     }
 
@@ -198,65 +208,63 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     tp.paint(canvas, Offset(offset.dx - tp.width / 2, offset.dy - 28));
   }
 
-  // ── Spawning ──────────────────────────────────────────────────────────────
+  // ── Spawning / relocation ─────────────────────────────────────────────────
 
-  void _trySpawn() {
-    if (_pickups.length >= _maxPickups) return;
-
-    // Sample random road cells near the player within a radius of 15 chunks
+  /// Returns a world-pixel centre for a random road cell within ±6 cells of
+  /// the player, or `null` if no suitable cell was found in 30 attempts.
+  Vector2? _findRoadCellNear() {
     final playerCell = game.player.position / CellComponent.cellSize;
     final px = playerCell.x.floor();
     final py = playerCell.y.floor();
 
-    int nullCells = 0;
-    int nonRoadCells = 0;
-    int stackedCells = 0;
-
     for (int attempt = 0; attempt < 30; attempt++) {
-      final dx = _rng.nextInt(30) - 15;
-      final dy = _rng.nextInt(30) - 15;
-      final cx = px + dx;
-      final cy = py + dy;
+      final cx = px + _rng.nextInt(12) - 6;
+      final cy = py + _rng.nextInt(12) - 6;
       final cell = game.grid.getCell(cx, cy);
-      if (cell == null) {
-        nullCells++;
-        continue;
-      }
-      if (cell.data is! RoadData) {
-        nonRoadCells++;
-        continue;
-      }
+      if (cell == null || cell.data is! RoadData) continue;
 
-      // Don't stack pickups on the same cell
-      final wx = cx * CellComponent.cellSize + CellComponent.cellSize / 2;
-      final wy = cy * CellComponent.cellSize + CellComponent.cellSize / 2;
-      final pos = Vector2(wx, wy);
-      if (_pickups.any((p) => !p.isPickedUp && p.worldPos.distanceTo(pos) < 8)) {
-        stackedCells++;
-        continue;
-      }
-
-      final type = LootTypeExt.random(_rng);
-      _pickups.add(_MaterialPickup(pos, type));
-      _log.info(
-        '[LootSystem] spawned pickup #${_pickups.length} '
-        '(${type.name} +${type.reward.toInt()} MP) '
-        'at cell ($cx,$cy) = world pixel (${pos.x},${pos.y}) | '
-        'playerCell=($px,$py)',
+      final pos = Vector2(
+        cx * CellComponent.cellSize + CellComponent.cellSize / 2,
+        cy * CellComponent.cellSize + CellComponent.cellSize / 2,
       );
+      // Don't stack on an occupied cell.
+      if (_pickups.any((p) => !p.isPickedUp && p.worldPos.distanceTo(pos) < 8)) continue;
+
+      return pos;
+    }
+    return null;
+  }
+
+  void _trySpawn() {
+    if (_pickups.length >= _maxPickups) return;
+
+    final pos = _findRoadCellNear();
+    if (pos == null) {
+      _log.warning('[LootSystem] _trySpawn: no road cell found near player');
       return;
     }
 
-    // All 30 attempts failed – log the breakdown so we know why.
-    _log.warning(
-      '[LootSystem] _trySpawn FAILED after 30 attempts: '
-      'nullCells=$nullCells, nonRoadCells=$nonRoadCells, stacked=$stackedCells | '
-      'playerCell=($px,$py) playerPx=${game.player.position}',
-    );
+    final type = LootTypeExt.random(_rng);
+    _pickups.add(_MaterialPickup(pos, type));
+    final cx = (pos.x / CellComponent.cellSize).floor();
+    final cy = (pos.y / CellComponent.cellSize).floor();
+    _log.info('[LootSystem] spawned ${type.name} +${type.reward.toInt()} MP at ($cx,$cy)');
+  }
+
+  /// Move a stale pickup to a new road cell near the current player position.
+  void _relocate(_MaterialPickup p) {
+    final pos = _findRoadCellNear();
+    if (pos == null) return;
+
+    final oldCx = (p.worldPos.x / CellComponent.cellSize).floor();
+    final oldCy = (p.worldPos.y / CellComponent.cellSize).floor();
+    final cx = (pos.x / CellComponent.cellSize).floor();
+    final cy = (pos.y / CellComponent.cellSize).floor();
+    p.worldPos = pos;
+    _log.info('[LootSystem] relocated ${p.type.name} ($oldCx,$oldCy) → ($cx,$cy)');
   }
 
   void _collect(_MaterialPickup p) {
-    p.isPickedUp = true;
     p.respawnTimer = _respawnMin + _rng.nextDouble() * (_respawnMax - _respawnMin);
 
     // Give materials to player (real-world resource only – no spiritual effect).
