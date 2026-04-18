@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
+import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
@@ -28,6 +28,15 @@ import 'components/radial_menu.dart';
 import 'components/prayer_hud_component.dart';
 import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
+
+/// Whether keyboard shortcut hint badges should be shown on HUD buttons.
+/// True on desktop (Windows / Linux / macOS) and web; false on mobile.
+bool _shouldShowKeyHints() {
+  if (kIsWeb) return true;
+  return defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+}
 
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
@@ -1203,6 +1212,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       color: Colors.blue.withValues(alpha: 0.6),
       onDown: handleActionDown, 
       onUp: handleActionUp, 
+      keyLabel: 'E',
       position: Vector2(size.x - 80, size.y - 80)
     );
     await camera.viewport.add(actionButton);
@@ -1211,6 +1221,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       icon: '🙏',
       color: Colors.purple.withValues(alpha: 0.6),
       onDown: toggleWorld,
+      keyLabel: 'Q',
       position: Vector2(size.x - 170, size.y - 80)
     );
     await camera.viewport.add(worldToggleButton);
@@ -1231,12 +1242,15 @@ class HudButton extends PositionComponent with TapCallbacks {
   final VoidCallback? onUp;
   String icon;
   Color color;
+  /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
+  final String? keyLabel;
   
   HudButton({
     required this.icon,
     required this.color,
     this.onDown, 
-    this.onUp, 
+    this.onUp,
+    this.keyLabel,
     required super.position
   }) : super(anchor: Anchor.center, size: Vector2.all(75)); // Einheitliche Größe
 
@@ -1270,6 +1284,27 @@ class HudButton extends PositionComponent with TapCallbacks {
       text: TextSpan(text: icon, style: const TextStyle(fontSize: 30)),
       textDirection: TextDirection.ltr
     )..layout()..paint(canvas, Offset(size.x / 2 - 15, size.y / 2 - 19));
+
+    // 5. Keyboard shortcut badge (amber circle, top-right corner, desktop/web only)
+    if (keyLabel != null && _shouldShowKeyHints()) {
+      const badgeRadius = 11.0;
+      final badgeCenter = Offset(size.x - badgeRadius + 2, badgeRadius - 2);
+      canvas.drawCircle(badgeCenter, badgeRadius, Paint()..color = const Color(0xFFFFA000));
+      TextPainter(
+        text: TextSpan(
+          text: keyLabel,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout()..paint(
+        canvas,
+        Offset(badgeCenter.dx - 5.5, badgeCenter.dy - 7),
+      );
+    }
   }
 
   @override
