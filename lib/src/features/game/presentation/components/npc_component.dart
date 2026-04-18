@@ -147,7 +147,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (type == 'talk') {
       final gain = (_faithCalc.calculateConversationGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
-      model.conversationCount++;
+      model.interactionCount++;
       model.lastNpcFaithDelta = gain.toDouble();
       game.recordConversation();
       return _talkEmoji();
@@ -164,16 +164,16 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       final gain = (_faithCalc.calculateCounselingGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
       // Counseling counts double: reveals faith information twice as fast as
-      // normal conversation and consumes two session interaction slots.
-      model.conversationCount += 2;
-      model.currentSessionInteractions++;
-      model.counselingCount++;
+      // normal conversation and consumes two session interaction slots
+      // (one already incremented at the top of handleInteraction, one here).
+      model.interactionCount += 2;
+      model.currentSessionInteractions++; // total = 2 for this action
       model.lastNpcFaithDelta = gain.toDouble();
       return ['👂💬', '👂🙏', '👂😊', '👂💛'][_random.nextInt(4)];
     }
 
     if (type == 'pray') {
-      model.prayerCount++;
+      model.interactionCount++;
       final faithCost = _faithCalc.calculatePrayerFaithCost();
       if (game.faith < faithCost) {
         model.currentSessionInteractions--;
@@ -188,8 +188,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       // Additional bonus up to +25% based on total interactions with this NPC:
       // the more the player has invested in the relationship, the more the NPC
       // opens up to prayer even if they still have low faith.
-      final totalInteractions = model.conversationCount + model.prayerCount;
-      final interactionBonus = (totalInteractions * 0.015).clamp(0.0, 0.25);
+      final interactionBonus = (model.interactionCount * 0.015).clamp(0.0, 0.25);
       final acceptanceChance = (model.faith / 100.0 * 0.6 + 0.2 + interactionBonus).clamp(0.0, 1.0);
       if (_random.nextDouble() < acceptanceChance) {
         model.applyInfluence(prayerGain.toDouble());
@@ -212,7 +211,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (type == 'bible') {
       final gain = (_faithCalc.calculateBibleGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
-      model.conversationCount++;
+      model.interactionCount++;
       model.lastNpcFaithDelta = gain.toDouble();
       model.lastPlayerFaithDelta += 2.0;
       game.gainFaith(2.0);
@@ -221,7 +220,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     if (type == 'help') {
       final giftGain = (_faithCalc.calculateGiftGain() * spiritualBonus).round();
-      model.conversationCount++;
+      model.interactionCount++;
       model.hadGiftThisSession = true;
       model.wantsGift = false;
       model.applyInfluence(giftGain.toDouble());

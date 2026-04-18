@@ -178,12 +178,12 @@ void main() {
     });
 
     group('performAction – residential', () {
-      test('talk: +5 faith, increments resident conversationCount', () {
+      test('talk: +5 faith, increments resident interactionCount', () {
         final resident = npc();
         final b = house(residents: [resident]);
         final result = BuildingInteractionService().performAction('talk', b, 0.0);
         expect(result.playerFaithDelta, 5.0);
-        expect(resident.conversationCount, 1);
+        expect(resident.interactionCount, 1);
       });
 
       test('pray: +15 faith, +5 materials, residents influenced', () {
