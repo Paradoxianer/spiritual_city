@@ -46,12 +46,13 @@ class GameKeymap {
   /// Close the current menu, dialog or overlay.
   static const LogicalKeyboardKey close       = LogicalKeyboardKey.escape;
 
-  // ── Radial-menu quick-select (1–5) ─────────────────────────────────────────
+  // ── Radial-menu / dialog / building quick-select (1–6) ────────────────────
   static const LogicalKeyboardKey radial1 = LogicalKeyboardKey.digit1;
   static const LogicalKeyboardKey radial2 = LogicalKeyboardKey.digit2;
   static const LogicalKeyboardKey radial3 = LogicalKeyboardKey.digit3;
   static const LogicalKeyboardKey radial4 = LogicalKeyboardKey.digit4;
   static const LogicalKeyboardKey radial5 = LogicalKeyboardKey.digit5;
+  static const LogicalKeyboardKey radial6 = LogicalKeyboardKey.digit6;
 
   // ── Prayer / spiritual world ───────────────────────────────────────────────
   /// Hold Shift to grow the prayer zone (same as joystick held without direction).
@@ -83,8 +84,8 @@ class GameKeymap {
       category: 'Interaktion',
     ),
     KeymapEntry(
-      keys: '1 – 5',
-      action: 'Radialmenü-Aktion auswählen',
+      keys: '1 – 6',
+      action: 'Radialmenü / Dialog / Gebäude-Aktion auswählen',
       category: 'Interaktion',
     ),
     KeymapEntry(

@@ -150,18 +150,26 @@ class PlayerComponent extends PositionComponent
       game.toggleKeymapOverlay();
     }
 
-    // ── Radial-menu quick-select (1–5) ────────────────────────────────────────
+    // ── Digit quick-select (1–6): context-sensitive ───────────────────────────
+    // Priority: chat dialog > building interior > radial menu.
     if (event is KeyUpEvent) {
-      final radialKeys = [
+      final allDigitKeys = [
         GameKeymap.radial1,
         GameKeymap.radial2,
         GameKeymap.radial3,
         GameKeymap.radial4,
         GameKeymap.radial5,
+        GameKeymap.radial6,
       ];
-      final idx = radialKeys.indexOf(event.logicalKey);
+      final idx = allDigitKeys.indexOf(event.logicalKey);
       if (idx != -1) {
-        game.selectRadialMenuAction(idx);
+        if (game.activeDialog != null) {
+          game.selectDialogAction(idx);
+        } else if (game.activeBuildingData != null) {
+          game.selectBuildingAction(idx);
+        } else {
+          game.selectRadialMenuAction(idx);
+        }
       }
     }
 

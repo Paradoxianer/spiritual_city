@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' show atan2, pi;
 import 'package:flame/components.dart' show Vector2;
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
@@ -17,6 +19,17 @@ import '../domain/models/npc_reaction.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../presentation/components/building_component.dart';
 import 'spirit_world_game.dart';
+
+/// Whether keyboard shortcut hint badges should be shown on action buttons.
+/// True on desktop (Windows / Linux / macOS) and web; false on mobile.
+bool _shouldShowKeyHints() {
+  if (kIsWeb) return true;
+  try {
+    return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  } catch (_) {
+    return false;
+  }
+}
 
 class GameScreen extends StatefulWidget {
   final Difficulty difficulty;
@@ -365,10 +378,43 @@ class _DialogOverlayState extends State<DialogOverlay> {
   bool get _isReadingBible => _bibleSecondsLeft > 0;
 
   @override
+  void initState() {
+    super.initState();
+    widget.game.dialogActionIndex.addListener(_onDialogKey);
+  }
+
+  @override
   void dispose() {
+    widget.game.dialogActionIndex.removeListener(_onDialogKey);
     _bibleTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Called when the player presses digit 1–6 while the dialog is open.
+  void _onDialogKey() {
+    final idx = widget.game.dialogActionIndex.value;
+    if (idx < 0) return;
+    final model = widget.game.activeDialog?.npcModel;
+    if (model == null) return;
+    final chips = _buildChipActions(model);
+    if (idx < chips.length) {
+      final (type, emoji) = chips[idx];
+      _handleInteraction(type, emoji);
+    }
+  }
+
+  /// Returns the ordered list of (interactionType, emoji) for the current NPC,
+  /// matching exactly what is rendered as chips in the action bar.
+  List<(String, String)> _buildChipActions(NPCModel model) {
+    return [
+      ('talk',    '💬'),  // always visible
+      ('counsel', '👂'),  // always visible (may be disabled)
+      ('pray',    '🙏'),  // always visible (may be disabled)
+      ('bible',   '📖'),  // always visible
+      if (model.wantsGift)    ('help',    '📦'),
+      if (!model.isChristian) ('convert', '✝️?'),
+    ];
   }
 
   void _scrollToBottom() {
@@ -704,17 +750,24 @@ class _DialogOverlayState extends State<DialogOverlay> {
                             (2.0 / factor).round().clamp(1, 99);
                         const helpMaterialCost = 8.0;
 
+                        // Build chips in the same order as _buildChipActions so
+                        // the key badges (1-N) always match keyboard dispatch.
+                        var idx = 0;
+                        int nextKey() => ++idx;
+
                         return Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             _EmojiChip(
                               emoji: '💬',
                               hint: '→✝️',
+                              keyIndex: nextKey(),
                               onTap: () => _handleInteraction('talk', '💬'),
                             ),
                             _EmojiChip(
                               emoji: '👂',
                               hint: '−❤️→✝️',
+                              keyIndex: nextKey(),
                               isDisabled:
                                   widget.game.health <= counselHpCost,
                               onTap: () =>
@@ -723,6 +776,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                             _EmojiChip(
                               emoji: '🙏',
                               hint: '−🙏→✝️🌍',
+                              keyIndex: nextKey(),
                               isDisabled:
                                   widget.game.faith < prayFaithCost,
                               onTap: () => _handleInteraction('pray', '🙏'),
@@ -730,6 +784,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                             _EmojiChip(
                               emoji: '📖',
                               hint: '→🙏🙏+✝️',
+                              keyIndex: nextKey(),
                               onTap: () =>
                                   _handleInteraction('bible', '📖'),
                             ),
@@ -737,6 +792,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                               _EmojiChip(
                                 emoji: '📦',
                                 hint: '−8📦→✝️',
+                                keyIndex: nextKey(),
                                 isDisabled: widget.game.materials <
                                     helpMaterialCost,
                                 onTap: () =>
@@ -746,6 +802,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                               _EmojiChip(
                                 emoji: '✝️🕊️',
                                 hint: '→?',
+                                keyIndex: nextKey(),
                                 isSpecial: true,
                                 onTap: () =>
                                     _handleInteraction('convert', '✝️?'),
@@ -797,6 +854,8 @@ class _EmojiChip extends StatelessWidget {
   final bool isDisabled;
   /// Short cost/benefit hint shown below the emoji, e.g. "→✝️" or "−8📦→✝️".
   final String? hint;
+  /// 1-based keyboard shortcut shown as an amber badge (null = no badge).
+  final int? keyIndex;
 
   const _EmojiChip({
     required this.emoji,
@@ -804,27 +863,57 @@ class _EmojiChip extends StatelessWidget {
     this.isSpecial = false,
     this.isDisabled = false,
     this.hint,
+    this.keyIndex,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showBadge = keyIndex != null && _shouldShowKeyHints();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ActionChip(
-          label: Text(emoji, style: const TextStyle(fontSize: 22)),
-          backgroundColor: isDisabled
-              ? Colors.red[900]?.withValues(alpha: 0.35)
-              : (isSpecial ? Colors.amber[800] : Colors.white70),
-          onPressed: isDisabled ? null : onTap,
-          shape: StadiumBorder(
-            side: BorderSide(
-              color: isDisabled
-                  ? Colors.red
-                  : (isSpecial ? Colors.amber : Colors.transparent),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ActionChip(
+              label: Text(emoji, style: const TextStyle(fontSize: 22)),
+              backgroundColor: isDisabled
+                  ? Colors.red[900]?.withValues(alpha: 0.35)
+                  : (isSpecial ? Colors.amber[800] : Colors.white70),
+              onPressed: isDisabled ? null : onTap,
+              shape: StadiumBorder(
+                side: BorderSide(
+                  color: isDisabled
+                      ? Colors.red
+                      : (isSpecial ? Colors.amber : Colors.transparent),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+            if (showBadge)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFA000), // amber 700
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$keyIndex',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         if (hint != null) ...[
           const SizedBox(height: 2),
@@ -1552,16 +1641,67 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   /// Latest action reaction emoji to display as feedback.
   String? _lastReaction;
 
+  /// Ordered list of action types for the current building – populated when
+  /// [_accessGranted] becomes true and used for keyboard dispatch.
+  List<String> _actionTypes = [];
+
   @override
   void initState() {
     super.initState();
+    widget.game.buildingActionIndex.addListener(_onBuildingKey);
     final data = widget.game.activeBuildingData;
     if (data == null) return;
 
     if (data.building.isAlwaysOpen) {
       _accessGranted = true;
+      _actionTypes = _actionsFor(data.building.type);
     }
     // For residential buildings we show a knock screen first.
+  }
+
+  @override
+  void dispose() {
+    widget.game.buildingActionIndex.removeListener(_onBuildingKey);
+    super.dispose();
+  }
+
+  /// Called when the player presses digit 1–6 while the building is open.
+  void _onBuildingKey() {
+    final idx = widget.game.buildingActionIndex.value;
+    if (idx < 0 || _accessGranted != true) return;
+    if (idx < _actionTypes.length) {
+      _performAction(_actionTypes[idx]);
+    }
+  }
+
+  /// Returns the ordered list of action-type strings for a building type,
+  /// matching the order returned by [_buildActionMenuRows].
+  static List<String> _actionsFor(BuildingType type) {
+    switch (type) {
+      case BuildingType.pastorHouse:
+        return ['readBible', 'eat', 'sleep', 'pray', 'missions'];
+      case BuildingType.house:
+      case BuildingType.apartment:
+        return ['talk', 'pray', 'help', 'bible'];
+      case BuildingType.church:
+      case BuildingType.cathedral:
+        return ['readBible', 'pray', 'worship'];
+      case BuildingType.hospital:
+        return ['visitSick', 'pray', 'heal'];
+      case BuildingType.school:
+      case BuildingType.university:
+        return ['teach', 'pray', 'distribute'];
+      case BuildingType.cemetery:
+        return ['pray', 'comfort'];
+      case BuildingType.shop:
+      case BuildingType.supermarket:
+      case BuildingType.mall:
+      case BuildingType.office:
+      case BuildingType.skyscraper:
+        return ['donate', 'worker', 'prayBusiness', 'distribute'];
+      default:
+        return ['pray', 'witness', 'distribute'];
+    }
   }
 
   void _attemptKnock() {
@@ -1571,6 +1711,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     setState(() {
       _accessGranted = granted;
       _lastReaction = null;
+      if (granted) _actionTypes = _actionsFor(data.building.type);
     });
   }
 
@@ -1872,59 +2013,60 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   ///
   /// Each row shows: action emoji  →/←  effect emoji(s)
   /// A Tooltip (long-press mobile / hover desktop) reveals a German description.
+  /// Rows are numbered 1-N so keyboard badges match [_actionsFor] order.
   List<Widget> _buildActionMenuRows(BuildingModel building) {
     switch (building.type) {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         return [
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '→', trailingEmoji: '🙏MAX', tooltip: 'Bibel lesen (Glauben komplett auffüllen)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞MAX', tooltip: 'Essen (Hunger komplett stillen)', onTap: () => _performAction('eat')),
-          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️MAX', tooltip: 'Schlafen (Leben komplett auffüllen)', onTap: () => _performAction('sleep')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✨🌍', tooltip: 'Beten (massiver Einfluss auf die unsichtbare Welt)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionsübersicht öffnen', onTap: () => _performAction('missions')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📖', arrowText: '→', trailingEmoji: '🙏MAX', tooltip: 'Bibel lesen (Glauben komplett auffüllen)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞MAX', tooltip: 'Essen (Hunger komplett stillen)', onTap: () => _performAction('eat')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️MAX', tooltip: 'Schlafen (Leben komplett auffüllen)', onTap: () => _performAction('sleep')),
+          _ActionMenuRow(keyIndex: 4, leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✨🌍', tooltip: 'Beten (massiver Einfluss auf die unsichtbare Welt)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 5, leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionsübersicht öffnen', onTap: () => _performAction('missions')),
         ];
 
       // ── Residential ───────────────────────────────────────────────────────
       case BuildingType.house:
       case BuildingType.apartment:
         return [
-          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Gespräch führen (+5 Glauben)', onTap: () => _performAction('talk')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '❤️×5', tooltip: 'Für Familie beten (−5 HP, +15 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Hilfe anbieten (−10 Material, +10 Glauben)', onTap: () => _performAction('help')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '←', trailingEmoji: '❤️×3💰×3', tooltip: 'Gemeinsam Bibel lesen (−3 HP, −3 Material, +10 Glauben)', onTap: () => _performAction('bible')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Gespräch führen (+5 Glauben)', onTap: () => _performAction('talk')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '❤️×5', tooltip: 'Für Familie beten (−5 HP, +15 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Hilfe anbieten (−10 Material, +10 Glauben)', onTap: () => _performAction('help')),
+          _ActionMenuRow(keyIndex: 4, leadingEmoji: '📖', arrowText: '←', trailingEmoji: '❤️×3💰×3', tooltip: 'Gemeinsam Bibel lesen (−3 HP, −3 Material, +10 Glauben)', onTap: () => _performAction('bible')),
         ];
 
       // ── Church ────────────────────────────────────────────────────────────
       case BuildingType.church:
       case BuildingType.cathedral:
         return [
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Bibel lesen (−3 Material, +10 Glauben)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Gemeinsam beten (−3 Material, +15 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '🎵', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Gottesdienst halten (−8 Material, +20 Glauben)', onTap: () => _performAction('worship')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📖', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Bibel lesen (−3 Material, +10 Glauben)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Gemeinsam beten (−3 Material, +15 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '🎵', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Gottesdienst halten (−8 Material, +20 Glauben)', onTap: () => _performAction('worship')),
         ];
 
       // ── Hospital ──────────────────────────────────────────────────────────
       case BuildingType.hospital:
         return [
-          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Kranke besuchen (−5 Material, +12 Glauben)', onTap: () => _performAction('visitSick')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Heilung beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '💊', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Heilen lassen (−10 Material, +20 Glauben)', onTap: () => _performAction('heal')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Kranke besuchen (−5 Material, +12 Glauben)', onTap: () => _performAction('visitSick')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Heilung beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '💊', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Heilen lassen (−10 Material, +20 Glauben)', onTap: () => _performAction('heal')),
         ];
 
       // ── School / University ───────────────────────────────────────────────
       case BuildingType.school:
       case BuildingType.university:
         return [
-          _ActionMenuRow(leadingEmoji: '📚', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Glauben lehren (−5 Material, +8 Glauben)', onTap: () => _performAction('teach')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Schüler beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material spenden (−8 Material, +10 Glauben)', onTap: () => _performAction('distribute')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📚', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Glauben lehren (−5 Material, +8 Glauben)', onTap: () => _performAction('teach')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Schüler beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material spenden (−8 Material, +10 Glauben)', onTap: () => _performAction('distribute')),
         ];
 
       // ── Cemetery ──────────────────────────────────────────────────────────
       case BuildingType.cemetery:
         return [
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Stille Andacht (−5 Material, +18 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Trauernde trösten (−3 Material, +10 Glauben)', onTap: () => _performAction('comfort')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Stille Andacht (−5 Material, +18 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Trauernde trösten (−3 Material, +10 Glauben)', onTap: () => _performAction('comfort')),
         ];
 
       // ── Commercial ────────────────────────────────────────────────────────
@@ -1934,18 +2076,18 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.office:
       case BuildingType.skyscraper:
         return [
-          _ActionMenuRow(leadingEmoji: '💸', arrowText: '←', trailingEmoji: '💰↑↑', tooltip: 'Um Spende bitten (+20–40 Material)', onTap: () => _performAction('donate')),
-          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👷✝️', tooltip: 'Mit Arbeiter sprechen (+5 Glauben)', onTap: () => _performAction('worker')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für den Betrieb beten (−3 Material, +10 Glauben)', onTap: () => _performAction('prayBusiness')),
-          _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Material verteilen (−5 Material, +15 Glauben)', onTap: () => _performAction('distribute')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '💸', arrowText: '←', trailingEmoji: '💰↑↑', tooltip: 'Um Spende bitten (+20–40 Material)', onTap: () => _performAction('donate')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👷✝️', tooltip: 'Mit Arbeiter sprechen (+5 Glauben)', onTap: () => _performAction('worker')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für den Betrieb beten (−3 Material, +10 Glauben)', onTap: () => _performAction('prayBusiness')),
+          _ActionMenuRow(keyIndex: 4, leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Material verteilen (−5 Material, +15 Glauben)', onTap: () => _performAction('distribute')),
         ];
 
       // ── Everything else ───────────────────────────────────────────────────
       default:
         return [
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🌿✝️', tooltip: 'Beten (+8 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '💬', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Zeugnis geben (−3 Material, +10 Glauben)', onTap: () => _performAction('witness')),
-          _ActionMenuRow(leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material verteilen (−8 Material, +12 Glauben)', onTap: () => _performAction('distribute')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🌿✝️', tooltip: 'Beten (+8 Glauben)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '💬', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Zeugnis geben (−3 Material, +10 Glauben)', onTap: () => _performAction('witness')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material verteilen (−8 Material, +12 Glauben)', onTap: () => _performAction('distribute')),
         ];
     }
   }
@@ -2276,6 +2418,8 @@ class _ActionMenuRow extends StatelessWidget {
   final String trailingEmoji;
   final String tooltip;
   final VoidCallback onTap;
+  /// 1-based keyboard shortcut shown as an amber badge (null = no badge).
+  final int? keyIndex;
 
   const _ActionMenuRow({
     required this.leadingEmoji,
@@ -2283,10 +2427,12 @@ class _ActionMenuRow extends StatelessWidget {
     required this.trailingEmoji,
     required this.tooltip,
     required this.onTap,
+    this.keyIndex,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showBadge = keyIndex != null && _shouldShowKeyHints();
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -2296,6 +2442,26 @@ class _ActionMenuRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
           child: Row(
             children: [
+              if (showBadge)
+                Container(
+                  width: 16,
+                  height: 16,
+                  margin: const EdgeInsets.only(right: 4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFA000), // amber 700
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$keyIndex',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      height: 1,
+                    ),
+                  ),
+                ),
               Text(leadingEmoji, style: const TextStyle(fontSize: 20)),
               const SizedBox(width: 6),
               Text(

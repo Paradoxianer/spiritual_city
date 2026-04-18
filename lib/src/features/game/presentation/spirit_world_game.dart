@@ -110,6 +110,16 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double hungerDrainAmount = 1.0;
   static const double healthFromHungerThreshold = 20.0;
 
+  /// Fired when the player presses digit 1–6 while a chat dialog is open.
+  /// Value is the 0-based index of the action to trigger; -1 = idle.
+  final ValueNotifier<int> _dialogActionIndex = ValueNotifier(-1);
+  ValueListenable<int> get dialogActionIndex => _dialogActionIndex;
+
+  /// Fired when the player presses digit 1–6 while a building interior is open.
+  /// Value is the 0-based index of the action to trigger; -1 = idle.
+  final ValueNotifier<int> _buildingActionIndex = ValueNotifier(-1);
+  ValueListenable<int> get buildingActionIndex => _buildingActionIndex;
+
   Interactable? _nearestInteractable;
   Interactable? get nearestInteractable => _nearestInteractable;
   static const double interactionRange = 60.0;
@@ -964,10 +974,29 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   // ── Radial-menu keyboard selection ────────────────────────────────────────
 
-  /// Selects the radial-menu action at [zeroBasedIndex] via keyboard (1–5).
+  /// Selects the radial-menu action at [zeroBasedIndex] via keyboard (1–6).
   void selectRadialMenuAction(int zeroBasedIndex) {
     _currentMenu?.selectByIndex(zeroBasedIndex);
     _currentMenu = null; // selectByIndex removes the component already
+  }
+
+  // ── Dialog / building keyboard selection ──────────────────────────────────
+
+  /// Triggers the chat-dialog action at [zeroBasedIndex] via keyboard (1–6).
+  /// The [DialogOverlay] listens to [dialogActionIndex] and dispatches the
+  /// interaction that corresponds to the visible chip at that position.
+  void selectDialogAction(int zeroBasedIndex) {
+    _dialogActionIndex.value = zeroBasedIndex;
+    // Reset on the next microtask so the same index can fire multiple times.
+    Future.microtask(() => _dialogActionIndex.value = -1);
+  }
+
+  /// Triggers the building-interior action at [zeroBasedIndex] via keyboard.
+  /// The [BuildingInteriorOverlay] listens to [buildingActionIndex] and
+  /// dispatches the action row at that position.
+  void selectBuildingAction(int zeroBasedIndex) {
+    _buildingActionIndex.value = zeroBasedIndex;
+    Future.microtask(() => _buildingActionIndex.value = -1);
   }
 
   @override
