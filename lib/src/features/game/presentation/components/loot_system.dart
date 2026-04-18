@@ -33,7 +33,7 @@ extension LootTypeExt on LootType {
 // ── Single pickup data ─────────────────────────────────────────────────────
 
 class _MaterialPickup {
-  final Vector2 worldPos; // centre of the cell in pixels
+  Vector2 worldPos; // centre of the cell in pixels – mutable for relocation
   final LootType type;
 
   bool isPickedUp = false;
@@ -60,7 +60,8 @@ class _MaterialPickup {
 class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   static const int _maxPickups = 15;
   static const int _minPickups = 5;
-  static const double _pickupRadius = 64.0; // 2 cells – easy to collect
+  static const double _pickupRadius = 96.0; // 3 cells – easy to walk through
+  static const double _staleDistance = 300.0; // relocate when player walks this far away
   static const double _respawnMin = 60.0;
   static const double _respawnMax = 120.0;
 
@@ -110,6 +111,15 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
       if (p.isPickedUp) continue;
       if (p.worldPos.distanceTo(playerPos) < _pickupRadius) {
         _collect(p);
+      }
+    }
+
+    // Stale-relocation: move active pickups that are too far away to a new
+    // road cell near the current player position so they stay reachable.
+    for (final p in _pickups) {
+      if (p.isPickedUp) continue;
+      if (p.worldPos.distanceTo(playerPos) > _staleDistance) {
+        _relocate(p);
       }
     }
 
@@ -213,8 +223,8 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     int stackedCells = 0;
 
     for (int attempt = 0; attempt < 30; attempt++) {
-      final dx = _rng.nextInt(30) - 15;
-      final dy = _rng.nextInt(30) - 15;
+      final dx = _rng.nextInt(12) - 6; // ±6 cells – just outside immediate view
+      final dy = _rng.nextInt(12) - 6;
       final cx = px + dx;
       final cy = py + dy;
       final cell = game.grid.getCell(cx, cy);
@@ -255,8 +265,36 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     );
   }
 
-  void _collect(_MaterialPickup p) {
-    p.isPickedUp = true;
+  /// Move a stale pickup to a new road cell near the current player position.
+  void _relocate(_MaterialPickup p) {
+    final playerCell = game.player.position / CellComponent.cellSize;
+    final px = playerCell.x.floor();
+    final py = playerCell.y.floor();
+
+    for (int attempt = 0; attempt < 30; attempt++) {
+      final dx = _rng.nextInt(12) - 6;
+      final dy = _rng.nextInt(12) - 6;
+      final cx = px + dx;
+      final cy = py + dy;
+      final cell = game.grid.getCell(cx, cy);
+      if (cell == null || cell.data is! RoadData) continue;
+
+      final wx = cx * CellComponent.cellSize + CellComponent.cellSize / 2;
+      final wy = cy * CellComponent.cellSize + CellComponent.cellSize / 2;
+      final newPos = Vector2(wx, wy);
+      if (_pickups.any((q) => q != p && !q.isPickedUp && q.worldPos.distanceTo(newPos) < 8)) continue;
+
+      final oldCx = (p.worldPos.x / CellComponent.cellSize).floor();
+      final oldCy = (p.worldPos.y / CellComponent.cellSize).floor();
+      p.worldPos = newPos;
+      _log.info(
+        '[LootSystem] relocated ${p.type.name} from ($oldCx,$oldCy) → ($cx,$cy) | playerCell=($px,$py)',
+      );
+      return;
+    }
+  }
+
+  void _collect(_MaterialPickup p) {    p.isPickedUp = true;
     p.respawnTimer = _respawnMin + _rng.nextDouble() * (_respawnMax - _respawnMin);
 
     // Give materials to player (real-world resource only – no spiritual effect).
