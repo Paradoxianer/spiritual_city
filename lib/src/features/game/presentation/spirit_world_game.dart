@@ -816,7 +816,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Opens the building-interior overlay for [building].
   void openBuildingInterior(BuildingModel building) {
-    building.resetSession();
     activeBuildingData = GameBuildingData(building: building);
     overlays.add('BuildingInteriorOverlay');
     paused = true;

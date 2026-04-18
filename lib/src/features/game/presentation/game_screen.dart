@@ -16,6 +16,7 @@ import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
+import '../domain/services/building_interaction_service.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../presentation/components/building_component.dart';
 import 'spirit_world_game.dart';
@@ -1645,6 +1646,47 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   /// [_accessGranted] becomes true and used for keyboard dispatch.
   List<String> _actionTypes = [];
 
+  // ── Action countdown timer ────────────────────────────────────────────────
+
+  /// Remaining seconds for the current timed action (0 = no action in progress).
+  int _actionSecondsLeft = 0;
+
+  /// The action type currently being processed by the timer.
+  String? _pendingActionType;
+
+  Timer? _actionTimer;
+
+  /// Whether an action countdown is currently running.
+  bool get _isActionBusy => _actionSecondsLeft > 0;
+
+  /// Returns the duration [baseSeconds] scaled by the current difficulty level.
+  ///
+  /// Easy difficulty (factor 1.5) shortens durations; hard difficulty (factor 0.5)
+  /// lengthens them. Result is clamped to [1, 60] seconds.
+  /// Uses the same formula as the dialog's bible-reading timer.
+  int _scaledDuration(int baseSeconds) {
+    final factor = FaithCalculatorService.difficultyFactorFor(
+      widget.game.difficulty,
+    );
+    return (baseSeconds / factor).round().clamp(1, 60);
+  }
+
+  /// Returns the countdown duration for [actionType], or 0 for instant actions.
+  int _durationFor(String actionType) {
+    switch (actionType) {
+      case 'readBible':
+        return _scaledDuration(BuildingInteractionService.pastorHouseReadBibleSeconds);
+      case 'eat':
+        return _scaledDuration(BuildingInteractionService.pastorHouseEatSeconds);
+      case 'sleep':
+        return _scaledDuration(BuildingInteractionService.pastorHouseSleepSeconds);
+      case 'pray':
+        return _scaledDuration(BuildingInteractionService.pastorHousePraySeconds);
+      default:
+        return 0;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1662,13 +1704,14 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   @override
   void dispose() {
     widget.game.buildingActionIndex.removeListener(_onBuildingKey);
+    _actionTimer?.cancel();
     super.dispose();
   }
 
   /// Called when the player presses digit 1–6 while the building is open.
   void _onBuildingKey() {
     final idx = widget.game.buildingActionIndex.value;
-    if (idx < 0 || _accessGranted != true) return;
+    if (idx < 0 || _accessGranted != true || _isActionBusy) return;
     if (idx < _actionTypes.length) {
       _performAction(_actionTypes[idx]);
     }
@@ -1716,6 +1759,41 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   }
 
   void _performAction(String actionType) {
+    if (_isActionBusy) return;
+    final duration = _durationFor(actionType);
+    if (duration > 0) {
+      // Start countdown; the actual game action fires when the timer expires.
+      setState(() {
+        _actionSecondsLeft = duration;
+        _pendingActionType = actionType;
+        _lastReaction = null;
+      });
+      _actionTimer?.cancel();
+      _actionTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!mounted) { t.cancel(); return; }
+        setState(() => _actionSecondsLeft--);
+        if (_actionSecondsLeft <= 0) {
+          t.cancel();
+          _applyPendingAction();
+        }
+      });
+    } else {
+      _executeAction(actionType);
+    }
+  }
+
+  /// Fires when the countdown timer expires: executes the pending action.
+  void _applyPendingAction() {
+    final pending = _pendingActionType;
+    setState(() {
+      _pendingActionType = null;
+      _actionSecondsLeft = 0;
+    });
+    if (pending != null) _executeAction(pending);
+  }
+
+  /// Calls the game layer to execute [actionType] and updates the UI.
+  void _executeAction(String actionType) {
     final result = widget.game.handleBuildingAction(actionType);
     setState(() => _lastReaction = result.reactionEmoji);
     // Auto-leave on success – but NOT for the pastor's own home (homebase),
@@ -1960,18 +2038,20 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Left: action menu ─────────────────────────────────────────
+              // ── Left: action menu or countdown ────────────────────────────
               SizedBox(
                 width: 162,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 8, 16),
                   child: Material(
                     type: MaterialType.transparency,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: _buildActionMenuRows(building),
-                    ),
+                    child: _isActionBusy
+                        ? _buildActionCountdown()
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: _buildActionMenuRows(building),
+                          ),
                   ),
                 ),
               ),
@@ -2007,6 +2087,57 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     );
   }
 
+  /// Countdown widget shown in the action panel while an action is in progress.
+  Widget _buildActionCountdown() {
+    final emoji = _actionEmojiFor(_pendingActionType ?? '');
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 32)),
+          const SizedBox(height: 8),
+          Text(
+            '${_actionSecondsLeft}s',
+            style: const TextStyle(
+              color: Colors.amber,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _actionLabelFor(_pendingActionType ?? ''),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _actionEmojiFor(String actionType) {
+    switch (actionType) {
+      case 'readBible': return '📖';
+      case 'eat':       return '🍽️';
+      case 'sleep':     return '😴';
+      case 'pray':      return '🙏';
+      default:          return '⏳';
+    }
+  }
+
+  static String _actionLabelFor(String actionType) {
+    switch (actionType) {
+      case 'readBible': return 'Bibel lesen …';
+      case 'eat':       return 'Essen …';
+      case 'sleep':     return 'Schlafen …';
+      case 'pray':      return 'Beten …';
+      default:          return 'Warten …';
+    }
+  }
+
   // ── Action menu rows (left panel) ─────────────────────────────────────────
 
   /// Returns a vertical list of [_ActionMenuRow] widgets for [building].
@@ -2019,10 +2150,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20 ❤️-5', tooltip: 'Bibel lesen (+20 Glauben, −5 HP; max 3×/Besuch)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🍽️', arrowText: '↔', trailingEmoji: '🍞+50 💰-5', tooltip: 'Essen (+50 Hunger, −5 Material; max 2×/Besuch)', onTap: () => _performAction('eat')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen (+50 HP; max 1×/Besuch)', onTap: () => _performAction('sleep')),
-          _ActionMenuRow(keyIndex: 4, leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '✨+15 ❤️-5 🌍', tooltip: 'Beten (+15 Glauben, −5 HP, Einfluss auf die unsichtbare Welt; max 3×/Besuch)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20 ❤️-5', tooltip: 'Bibel lesen (+20 Glauben, −5 HP; ~5s)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen (+50 Hunger, kostenlos; ~3s)', onTap: () => _performAction('eat')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen (+50 HP; ~8s)', onTap: () => _performAction('sleep')),
+          _ActionMenuRow(keyIndex: 4, leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '✨+15 ❤️-5 🌍', tooltip: 'Beten (+15 Glauben, −5 HP, Einfluss auf die unsichtbare Welt; ~5s)', onTap: () => _performAction('pray')),
           _ActionMenuRow(keyIndex: 5, leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionsübersicht öffnen', onTap: () => _performAction('missions')),
         ];
 

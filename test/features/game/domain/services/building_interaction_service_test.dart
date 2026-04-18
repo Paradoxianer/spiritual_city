@@ -392,76 +392,53 @@ void main() {
         expect(BuildingModel(buildingId: 'ph', type: BuildingType.pastorHouse).isAlwaysOpen, isTrue);
       });
 
-      test('readBible: +20 faith, −5 health', () {
+      test('readBible: +20 faith, −5 health, has duration', () {
         final result = BuildingInteractionService().performAction('readBible', pastorHouse(), 0.0);
         expect(result.playerFaithDelta, 20.0);
         expect(result.playerHealthDelta, -5.0);
+        expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);
       });
 
-      test('eat: +50 hunger, −5 materials', () {
+      test('eat: +50 hunger, no material cost, has duration', () {
         final result = BuildingInteractionService().performAction('eat', pastorHouse(), 0.0);
         expect(result.playerHungerDelta, 50.0);
-        expect(result.playerMaterialsDelta, -5.0);
+        expect(result.playerMaterialsDelta, 0.0);
+        expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);
       });
 
-      test('sleep: +50 health', () {
+      test('sleep: +50 health, has duration', () {
         final result = BuildingInteractionService().performAction('sleep', pastorHouse(), 0.0);
         expect(result.playerHealthDelta, 50.0);
+        expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);
       });
 
-      test('pray: +15 faith, −5 health', () {
+      test('pray: +15 faith, −5 health, has duration', () {
         final result = BuildingInteractionService().performAction('pray', pastorHouse(), 0.0);
         expect(result.playerFaithDelta, 15.0);
         expect(result.playerHealthDelta, -5.0);
+        expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);
       });
 
-      test('readBible: blocked after 3 uses per session', () {
+      test('sleep is repeatable (no per-session limit)', () {
         final ph = pastorHouse();
         final svc = BuildingInteractionService();
-        for (var i = 0; i < 3; i++) {
-          expect(svc.performAction('readBible', ph, 0.0).success, isTrue);
+        for (var i = 0; i < 5; i++) {
+          expect(svc.performAction('sleep', ph, 0.0).success, isTrue,
+              reason: 'sleep attempt $i should succeed');
         }
-        expect(svc.performAction('readBible', ph, 0.0).success, isFalse);
       });
 
-      test('eat: blocked after 2 uses per session', () {
+      test('readBible is repeatable (no per-session limit)', () {
         final ph = pastorHouse();
         final svc = BuildingInteractionService();
-        for (var i = 0; i < 2; i++) {
-          expect(svc.performAction('eat', ph, 0.0).success, isTrue);
+        for (var i = 0; i < 5; i++) {
+          expect(svc.performAction('readBible', ph, 0.0).success, isTrue,
+              reason: 'readBible attempt $i should succeed');
         }
-        expect(svc.performAction('eat', ph, 0.0).success, isFalse);
-      });
-
-      test('sleep: blocked after 1 use per session', () {
-        final ph = pastorHouse();
-        final svc = BuildingInteractionService();
-        expect(svc.performAction('sleep', ph, 0.0).success, isTrue);
-        expect(svc.performAction('sleep', ph, 0.0).success, isFalse);
-      });
-
-      test('pray: blocked after 3 uses per session', () {
-        final ph = pastorHouse();
-        final svc = BuildingInteractionService();
-        for (var i = 0; i < 3; i++) {
-          expect(svc.performAction('pray', ph, 0.0).success, isTrue);
-        }
-        expect(svc.performAction('pray', ph, 0.0).success, isFalse);
-      });
-
-      test('session limits reset after resetSession()', () {
-        final ph = pastorHouse();
-        final svc = BuildingInteractionService();
-        // Use up sleep limit
-        expect(svc.performAction('sleep', ph, 0.0).success, isTrue);
-        expect(svc.performAction('sleep', ph, 0.0).success, isFalse);
-        // Reset session (simulates re-entering the building)
-        ph.resetSession();
-        expect(svc.performAction('sleep', ph, 0.0).success, isTrue);
       });
 
       test('unknown action returns failure', () {
