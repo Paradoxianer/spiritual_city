@@ -243,55 +243,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // Assign starting missions to NPCs / buildings in the spawn chunk.
     // Run after a short delay so chunk NPCs/buildings are all registered.
     Future.delayed(const Duration(milliseconds: 500), _tryAssignStartMissions);
-
-    // ── Camera intro: pan to pastor house then back ───────────────────────
-    // The pastor house is only a few cells away from spawn, so the intro is
-    // a gentle reveal rather than a dramatic sweep.
-    _playCameraIntro();
-  }
-
-  /// Gently pans the camera to the pastor house position and back so the
-  /// player immediately knows where to return for missions.
-  void _playCameraIntro() async {
-    // Await the pastor house position using a completer attached to the notifier.
-    Vector2? target = pastorhousePosition.value;
-    if (target == null) {
-      // Listen for the first non-null update (pastor house is in spawn chunk).
-      final completer = Completer<Vector2?>();
-      void listener() {
-        if (pastorhousePosition.value != null && !completer.isCompleted) {
-          completer.complete(pastorhousePosition.value);
-        }
-      }
-      pastorhousePosition.addListener(listener);
-      target = await completer.future
-          .timeout(const Duration(seconds: 3), onTimeout: () => null);
-      pastorhousePosition.removeListener(listener);
-    }
-    if (target == null) return;
-
-    final origin = player.position.clone();
-    const steps = 30;
-    const stepMs = 33; // ~30 fps
-    for (int i = 0; i <= steps; i++) {
-      await Future.delayed(const Duration(milliseconds: stepMs));
-      if (!isLoaded) return;
-      final t = i / steps;
-      camera.viewfinder.position = Vector2(
-        origin.x + (target.x - origin.x) * t,
-        origin.y + (target.y - origin.y) * t,
-      );
-    }
-    await Future.delayed(const Duration(milliseconds: 1000));
-    for (int i = 0; i <= steps; i++) {
-      await Future.delayed(const Duration(milliseconds: stepMs));
-      if (!isLoaded) return;
-      final t = i / steps;
-      camera.viewfinder.position = Vector2(
-        target.x + (origin.x - target.x) * t,
-        target.y + (origin.y - target.y) * t,
-      );
-    }
   }
 
 
