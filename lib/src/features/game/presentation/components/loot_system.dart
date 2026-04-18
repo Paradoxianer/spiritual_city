@@ -115,9 +115,10 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
       }
     }
 
-    // Maintain minimum count by trying to spawn on road cells
-    final active = _pickups.where((p) => !p.isPickedUp).length;
-    if (active < _minPickups) {
+    // Only spawn genuinely new pickups when the total pool hasn't reached the
+    // minimum yet.  Collected items already have a respawn timer running – they
+    // will reappear on their own, so we must NOT create an extra entry here.
+    if (_pickups.length < _minPickups) {
       _trySpawn();
     }
 
