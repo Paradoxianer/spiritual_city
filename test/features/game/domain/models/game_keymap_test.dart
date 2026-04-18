@@ -35,12 +35,13 @@ void main() {
       expect(unique.length, actionKeys.length);
     });
 
-    test('radial keys cover 1 through 5', () {
+    test('radial keys cover 1 through 6', () {
       expect(GameKeymap.radial1, equals(LogicalKeyboardKey.digit1));
       expect(GameKeymap.radial2, equals(LogicalKeyboardKey.digit2));
       expect(GameKeymap.radial3, equals(LogicalKeyboardKey.digit3));
       expect(GameKeymap.radial4, equals(LogicalKeyboardKey.digit4));
       expect(GameKeymap.radial5, equals(LogicalKeyboardKey.digit5));
+      expect(GameKeymap.radial6, equals(LogicalKeyboardKey.digit6));
     });
 
     test('entries list is non-empty and all entries have non-empty fields', () {
