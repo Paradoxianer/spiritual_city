@@ -265,6 +265,7 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   }
 
   void _collect(_MaterialPickup p) {
+    p.isPickedUp = true;
     p.respawnTimer = _respawnMin + _rng.nextDouble() * (_respawnMax - _respawnMin);
 
     // Give materials to player (real-world resource only – no spiritual effect).
