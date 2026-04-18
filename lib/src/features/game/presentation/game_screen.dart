@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:math' show atan2, min, pi, sqrt;
+import 'dart:math' show atan2, pi;
 import 'package:flame/components.dart' show Vector2;
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -1605,9 +1605,9 @@ class _KeyRow extends StatelessWidget {
 
 // ── Pastorhouse HUD compass ────────────────────────────────────────────────────
 
-/// Shows a golden 🏠 icon + direction arrow pinned to the screen edge pointing
-/// toward the pastor house. The indicator slides around the screen boundary so
-/// it always points in the correct direction and is never occluded by distance.
+/// Shows a golden 🏠 icon + direction arrow at a fixed position below the
+/// resource-bar panel.  Always visible as long as the player is more than
+/// 64 px (≈ 2 cells) away from the pastor house.
 class _PastorhouseHud extends StatelessWidget {
   final SpiritWorldGame game;
   const _PastorhouseHud({required this.game});
@@ -1632,90 +1632,38 @@ class _PastorhouseHud extends StatelessWidget {
         final angleDeg = atan2(dy, dx) * 180 / pi;
         final arrow = _directionArrow(angleDeg);
 
-        // Pin the indicator to the screen edge in the direction of the target.
-        final screenSize = MediaQuery.of(context).size;
-        final (left, top) = _edgePosition(dx, dy, screenSize);
-
         return Positioned(
-          left: left,
-          top: top,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.7)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('🏠', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 4),
-                Text(
-                  arrow,
-                  style: const TextStyle(
-                    color: Color(0xFFFFD54F),
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+          // Fixed position below the resource-bar panel (which ends at ≈ y 110).
+          top: 114,
+          left: 12,
+          child: SafeArea(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.7)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🏠', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  Text(
+                    arrow,
+                    style: const TextStyle(
+                      color: Color(0xFFFFD54F),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
       },
     );
-  }
-
-  /// Returns the [left, top] position for a [Positioned] indicator that is
-  /// pinned to the screen edge in the direction from player to target.
-  ///
-  /// [dx]/[dy] is the world-space direction vector from player to target
-  /// (magnitude does not matter, only the angle is used).
-  (double, double) _edgePosition(double dx, double dy, Size screen) {
-    // Approximate indicator dimensions (px) – slightly oversized for safety.
-    const iW = 80.0;
-    const iH = 38.0;
-    // Minimum distance from the physical screen boundary.
-    const margin = 14.0;
-    // Extra clearance at the top so the indicator stays below the resource-bar
-    // panel that occupies roughly the top 100 px of the screen.
-    const topExtra = 100.0;
-
-    final cx = screen.width / 2;
-    final cy = screen.height / 2;
-
-    // Valid placement range for the indicator's top-left corner.
-    const minX = margin;
-    final maxX = screen.width - margin - iW;
-    const minY = margin + topExtra;
-    final maxY = screen.height - margin - iH;
-
-    // Normalize direction.
-    final len = sqrt(dx * dx + dy * dy);
-    final nx = dx / len;
-    final ny = dy / len;
-
-    // Half-distances from screen centre to each effective boundary
-    // (measured to the centre of the indicator, not its edge).
-    final halfW = cx - margin - iW / 2;
-    final halfHTop = cy - margin - topExtra - iH / 2;
-    final halfHBot = screen.height - cy - margin - iH / 2;
-
-    // Choose the smallest scale that brings the indicator centre to a boundary.
-    double scaleW = double.infinity;
-    double scaleH = double.infinity;
-    if (nx.abs() > 1e-6) scaleW = halfW / nx.abs();
-    if (ny.abs() > 1e-6) scaleH = (ny < 0 ? halfHTop : halfHBot) / ny.abs();
-    final scale = min(scaleW, scaleH);
-
-    // Indicator centre on the boundary → convert to top-left, then clamp.
-    final icx = cx + nx * scale;
-    final icy = cy + ny * scale;
-    final left = (icx - iW / 2).clamp(minX, maxX);
-    final top = (icy - iH / 2).clamp(minY, maxY);
-
-    return (left, top);
   }
 
   /// Maps an angle in degrees (−180…180) to an arrow Unicode character.
