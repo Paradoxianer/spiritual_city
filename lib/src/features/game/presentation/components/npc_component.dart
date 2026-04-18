@@ -163,10 +163,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.lastPlayerHealthDelta = -hpCost.toDouble();
       final gain = (_faithCalc.calculateCounselingGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
-      // Counseling counts double: reveals faith information twice as fast as
-      // normal conversation and consumes two session interaction slots
-      // (one already incremented at the top of handleInteraction, one here).
-      model.interactionCount += 2;
+      // Counseling directly unlocks the full 6-interaction threshold so that
+      // isFaithRevealed becomes true immediately.  The health cost is much
+      // higher than a regular action to balance this shortcut.
+      model.interactionCount = model.interactionCount < 6 ? 6 : model.interactionCount;
       model.currentSessionInteractions++; // total = 2 for this action
       model.lastNpcFaithDelta = gain.toDouble();
       return ['👂💬', '👂🙏', '👂😊', '👂💛'][_random.nextInt(4)];
@@ -191,8 +191,14 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       final interactionBonus = (model.interactionCount * 0.015).clamp(0.0, 0.25);
       final acceptanceChance = (model.faith / 100.0 * 0.6 + 0.2 + interactionBonus).clamp(0.0, 1.0);
       if (_random.nextDouble() < acceptanceChance) {
-        model.applyInfluence(prayerGain.toDouble());
-        model.lastNpcFaithDelta = prayerGain.toDouble();
+        // Interaction multiplier: the more the player has invested in the
+        // relationship, the stronger the positive prayer effect.
+        // 0 interactions = 1.0×, 6 = 1.3×, 20+ = 2.0× (capped).
+        final interactionMultiplier =
+            (1.0 + model.interactionCount / 20.0).clamp(1.0, 2.0);
+        final boostedGain = (prayerGain * interactionMultiplier).round();
+        model.applyInfluence(boostedGain.toDouble());
+        model.lastNpcFaithDelta = boostedGain.toDouble();
         model.lastPlayerFaithDelta += 3.0;
         game.gainFaith(3.0);
         // Nudge the spiritual state of the cell toward the light.
