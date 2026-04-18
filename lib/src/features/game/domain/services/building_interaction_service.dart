@@ -103,33 +103,67 @@ class BuildingInteractionService {
 
   // ── Pastor's house ────────────────────────────────────────────────────────
 
+  /// Maximum uses per action allowed during a single visit to the pastor house.
+  static const int _maxReadBible = 3;
+  static const int _maxEat = 2;
+  static const int _maxSleep = 1;
+  static const int _maxPray = 3;
+
   BuildingInteractionResult _pastorHouseAction(
     String actionType,
     BuildingModel building,
   ) {
     switch (actionType) {
       case 'readBible':
-        // Completely restores faith (clamped to max by gainFaith in the game).
+        if (building.getSessionCount('readBible') >= _maxReadBible) {
+          return const BuildingInteractionResult(
+            reactionEmoji: '⏰📖',
+            success: false,
+          );
+        }
+        building.incrementSessionAction('readBible');
         return const BuildingInteractionResult(
-          playerFaithDelta: 100.0,
+          playerFaithDelta: 20.0,
+          playerHealthDelta: -5.0,
           reactionEmoji: '📖✝️',
         );
       case 'eat':
-        // Completely restores hunger.
+        if (building.getSessionCount('eat') >= _maxEat) {
+          return const BuildingInteractionResult(
+            reactionEmoji: '⏰🍽️',
+            success: false,
+          );
+        }
+        building.incrementSessionAction('eat');
         return const BuildingInteractionResult(
-          playerHungerDelta: 100.0,
+          playerHungerDelta: 50.0,
+          playerMaterialsDelta: -5.0,
           reactionEmoji: '🍽️😊',
         );
       case 'sleep':
-        // Completely restores health.
+        if (building.getSessionCount('sleep') >= _maxSleep) {
+          return const BuildingInteractionResult(
+            reactionEmoji: '⏰😴',
+            success: false,
+          );
+        }
+        building.incrementSessionAction('sleep');
         return const BuildingInteractionResult(
-          playerHealthDelta: 100.0,
+          playerHealthDelta: 50.0,
           reactionEmoji: '😴❤️',
         );
       case 'pray':
+        if (building.getSessionCount('pray') >= _maxPray) {
+          return const BuildingInteractionResult(
+            reactionEmoji: '⏰🙏',
+            success: false,
+          );
+        }
+        building.incrementSessionAction('pray');
         // Faith gain + massive area spiritual influence (handled in game layer).
         return const BuildingInteractionResult(
-          playerFaithDelta: 30.0,
+          playerFaithDelta: 15.0,
+          playerHealthDelta: -5.0,
           reactionEmoji: '🙏✨',
         );
       default:

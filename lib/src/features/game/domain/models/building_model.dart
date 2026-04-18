@@ -32,6 +32,10 @@ class BuildingModel {
   /// Active mission attached to this building (null = no mission).
   String? activeMissionDescription;
 
+  /// Tracks how many times each action has been used during the current visit.
+  /// Cleared by [resetSession] when the player re-enters the building.
+  final Map<String, int> sessionActionCounts = {};
+
   BuildingModel({
     required this.buildingId,
     required this.type,
@@ -92,4 +96,19 @@ class BuildingModel {
       npc.applyInfluence(amount);
     }
   }
+
+  // ── Per-session action tracking ───────────────────────────────────────────
+
+  /// Returns how many times [actionType] has been used in this session.
+  int getSessionCount(String actionType) =>
+      sessionActionCounts[actionType] ?? 0;
+
+  /// Increments the session counter for [actionType].
+  void incrementSessionAction(String actionType) {
+    sessionActionCounts[actionType] = (sessionActionCounts[actionType] ?? 0) + 1;
+  }
+
+  /// Clears all session action counters. Call when the player re-enters the
+  /// building so limits reset with each new visit.
+  void resetSession() => sessionActionCounts.clear();
 }

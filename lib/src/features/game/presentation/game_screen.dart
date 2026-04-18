@@ -2019,10 +2019,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       // ── Pastor's house ────────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📖', arrowText: '→', trailingEmoji: '🙏MAX', tooltip: 'Bibel lesen (Glauben komplett auffüllen)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞MAX', tooltip: 'Essen (Hunger komplett stillen)', onTap: () => _performAction('eat')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️MAX', tooltip: 'Schlafen (Leben komplett auffüllen)', onTap: () => _performAction('sleep')),
-          _ActionMenuRow(keyIndex: 4, leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✨🌍', tooltip: 'Beten (massiver Einfluss auf die unsichtbare Welt)', onTap: () => _performAction('pray')),
+          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20 ❤️-5', tooltip: 'Bibel lesen (+20 Glauben, −5 HP; max 3×/Besuch)', onTap: () => _performAction('readBible')),
+          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🍽️', arrowText: '↔', trailingEmoji: '🍞+50 💰-5', tooltip: 'Essen (+50 Hunger, −5 Material; max 2×/Besuch)', onTap: () => _performAction('eat')),
+          _ActionMenuRow(keyIndex: 3, leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen (+50 HP; max 1×/Besuch)', onTap: () => _performAction('sleep')),
+          _ActionMenuRow(keyIndex: 4, leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '✨+15 ❤️-5 🌍', tooltip: 'Beten (+15 Glauben, −5 HP, Einfluss auf die unsichtbare Welt; max 3×/Besuch)', onTap: () => _performAction('pray')),
           _ActionMenuRow(keyIndex: 5, leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionsübersicht öffnen', onTap: () => _performAction('missions')),
         ];
 
