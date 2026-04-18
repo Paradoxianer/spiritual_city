@@ -22,6 +22,12 @@ class BuildingInteractionResult {
   /// Whether the action succeeded (e.g. donation may fail).
   final bool success;
 
+  /// How many seconds the action takes to complete (0 = instant).
+  ///
+  /// When > 0 the UI should show a countdown and delay applying the result
+  /// until the timer expires.
+  final int actionDurationSeconds;
+
   const BuildingInteractionResult({
     this.playerFaithDelta = 0,
     this.playerMaterialsDelta = 0,
@@ -29,6 +35,7 @@ class BuildingInteractionResult {
     this.playerHealthDelta = 0,
     required this.reactionEmoji,
     this.success = true,
+    this.actionDurationSeconds = 0,
   });
 }
 
@@ -103,34 +110,46 @@ class BuildingInteractionService {
 
   // ── Pastor's house ────────────────────────────────────────────────────────
 
+  /// Base action durations (in seconds) for the pastor house.
+  /// Easy difficulty shortens these; hard difficulty lengthens them.
+  /// These are exposed as public constants so the UI layer can scale them.
+  static const int pastorHouseReadBibleSeconds = 5;
+  static const int pastorHouseEatSeconds = 3;
+  static const int pastorHouseSleepSeconds = 8;
+  static const int pastorHousePraySeconds = 5;
+
   BuildingInteractionResult _pastorHouseAction(
     String actionType,
     BuildingModel building,
   ) {
     switch (actionType) {
       case 'readBible':
-        // Completely restores faith (clamped to max by gainFaith in the game).
         return const BuildingInteractionResult(
-          playerFaithDelta: 100.0,
+          playerFaithDelta: 20.0,
+          playerHealthDelta: -5.0,
           reactionEmoji: '📖✝️',
+          actionDurationSeconds: pastorHouseReadBibleSeconds,
         );
       case 'eat':
-        // Completely restores hunger.
+        // Eating at home is free – materials come from the loot system.
         return const BuildingInteractionResult(
-          playerHungerDelta: 100.0,
+          playerHungerDelta: 50.0,
           reactionEmoji: '🍽️😊',
+          actionDurationSeconds: pastorHouseEatSeconds,
         );
       case 'sleep':
-        // Completely restores health.
         return const BuildingInteractionResult(
-          playerHealthDelta: 100.0,
+          playerHealthDelta: 50.0,
           reactionEmoji: '😴❤️',
+          actionDurationSeconds: pastorHouseSleepSeconds,
         );
       case 'pray':
         // Faith gain + massive area spiritual influence (handled in game layer).
         return const BuildingInteractionResult(
-          playerFaithDelta: 30.0,
+          playerFaithDelta: 15.0,
+          playerHealthDelta: -5.0,
           reactionEmoji: '🙏✨',
+          actionDurationSeconds: pastorHousePraySeconds,
         );
       default:
         return const BuildingInteractionResult(
