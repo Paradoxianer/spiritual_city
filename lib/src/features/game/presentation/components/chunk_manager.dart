@@ -177,6 +177,11 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       // Spawn NPC components.
       for (final npcModel in npcs) {
         final npcComp = NPCComponent(model: npcModel);
+        // Restore last-saved wander position when available; fall back to
+        // homePosition (set in the NPCComponent constructor).
+        if (npcModel.savedPosition != null) {
+          npcComp.position.setFrom(npcModel.savedPosition!);
+        }
         _allNPCs.add(npcComp);
         parent?.add(npcComp);
       }
