@@ -67,9 +67,11 @@ class FaithCalculatorService {
   }
 
   /// HP cost paid by the player when counseling an NPC (active listening is tiring).
-  /// Base 2 × inverse factor: easy ≈ 1, normal = 2, hard = 4.
+  /// Counseling directly unlocks the full 6-interaction relationship threshold,
+  /// so the health cost is intentionally high.
+  /// Base 8 × inverse factor: easy ≈ 5, normal = 8, hard = 16.
   int calculateCounselingHpCost() {
-    return (2.0 / _difficultyFactor).round().clamp(1, 99);
+    return (8.0 / _difficultyFactor).round().clamp(1, 99);
   }
 
   /// Faith lost per time-unit spent in a darkness zone.

@@ -47,7 +47,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   ///
   /// Migration logic lives in [_migrateGameState]:
   ///   • version 0 (missing key) → version 1: initial schema.
-  static const int kSaveDataVersion = 1;
+  ///   • version 1 → version 2: NPC counters unified into interactionCount
+  ///     ('conv' key); separate 'pray' and 'counsel' keys removed.
+  static const int kSaveDataVersion = 2;
 
   /// Difficulty level selected in the main menu.
   final Difficulty difficulty;
@@ -320,7 +322,27 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
 
     // ── Add future migration blocks here, in order ─────────────────────────
-    // if (version < 2) { … version = 2; }
+    // v1 → v2: merge separate 'pray' and 'counsel' NPC counters into 'conv'
+    // (unified interactionCount), then remove the now-obsolete keys.
+    if (version < 2) {
+      final npcs = state['npcs'] as Map?;
+      if (npcs != null) {
+        for (final npcState in npcs.values) {
+          if (npcState is Map) {
+            final conv    = (npcState['conv']    as int?) ?? 0;
+            final pray    = (npcState['pray']    as int?) ?? 0;
+            final counsel = (npcState['counsel'] as int?) ?? 0;
+            final merged  = conv + pray + counsel;
+            // Only write 'conv' when non-zero; absent key is equivalent to 0
+            // (consistent with how the original save code omits zero-value keys).
+            if (merged != 0) npcState['conv'] = merged;
+            npcState.remove('pray');
+            npcState.remove('counsel');
+          }
+        }
+      }
+      version = 2;
+    }
 
     if (originalVersion != kSaveDataVersion) {
       _log.info(
@@ -395,9 +417,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final saved = _savedNPCStates?[npc.id];
     if (saved == null) return;
     npc.faith             = (saved['faith']   as num?)?.toDouble() ?? npc.faith;
-    npc.conversationCount = saved['conv']     as int?  ?? npc.conversationCount;
-    npc.prayerCount       = saved['pray']     as int?  ?? npc.prayerCount;
-    npc.counselingCount   = saved['counsel']  as int?  ?? npc.counselingCount;
+    npc.interactionCount  = saved['conv']     as int?  ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
     final posX = (saved['posX'] as num?)?.toDouble();
     final posY = (saved['posY'] as num?)?.toDouble();
@@ -434,16 +454,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     for (final npcComp in chunkManager.allActiveNPCs) {
       final npc = npcComp.model;
       if (npc.faith != 0.0 ||
-          npc.conversationCount != 0 ||
-          npc.prayerCount != 0 ||
-          npc.counselingCount != 0 ||
+          npc.interactionCount != 0 ||
           npc.isConverted) {
         npcStates[npc.id] = {
           'faith': npc.faith,
-          if (npc.conversationCount != 0) 'conv':      npc.conversationCount,
-          if (npc.prayerCount       != 0) 'pray':      npc.prayerCount,
-          if (npc.counselingCount   != 0) 'counsel':   npc.counselingCount,
-          if (npc.isConverted)            'converted': true,
+          if (npc.interactionCount != 0) 'conv': npc.interactionCount,
+          if (npc.isConverted)           'converted': true,
           'posX': npcComp.position.x,
           'posY': npcComp.position.y,
         };

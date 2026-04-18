@@ -170,7 +170,7 @@ class BuildingInteractionService {
     switch (actionType) {
       case 'talk':
         for (final npc in building.residents) {
-          npc.conversationCount++;
+          npc.interactionCount++;
         }
         return const BuildingInteractionResult(
           playerFaithDelta: 5.0,

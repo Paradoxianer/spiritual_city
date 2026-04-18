@@ -20,11 +20,10 @@ class NPCModel {
   /// > 50: Christian/Believer
   double faith; 
   
-  int conversationCount;
-  int prayerCount;
-
-  /// Number of counseling (Seelsorge) sessions applied.
-  int counselingCount = 0;
+  /// Unified interaction counter: incremented by every interaction type
+  /// (talk, counsel, pray, bible, help).  Used in all probability calculations
+  /// (e.g. prayer acceptance chance, faith reveal thresholds).
+  int interactionCount;
   
   /// Tracks interactions in the current active dialogue session
   int currentSessionInteractions = 0;
@@ -60,11 +59,11 @@ class NPCModel {
 
   // ── Progressive faith reveal ───────────────────────────────────────────────
 
-  /// After 3 conversations the player has a vague sense of the NPC's faith.
-  bool get isFaithVague => conversationCount >= 3;
+  /// After 3 interactions the player has a vague sense of the NPC's faith.
+  bool get isFaithVague => interactionCount >= 3;
 
-  /// After 6 conversations the player knows the NPC's exact faith level.
-  bool get isFaithRevealed => conversationCount >= 6;
+  /// After 6 interactions the player knows the NPC's exact faith level.
+  bool get isFaithRevealed => interactionCount >= 6;
 
   /// ID of the building this NPC lives/works in.
   final String? homeBuildingId;
@@ -88,8 +87,7 @@ class NPCModel {
     required this.homePosition,
     this.homeBuildingId,
     this.faith = 0.0,
-    this.conversationCount = 0,
-    this.prayerCount = 0,
+    this.interactionCount = 0,
     this.currentMessage,
     this.isConverted = false,
   });
