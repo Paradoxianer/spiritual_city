@@ -208,93 +208,63 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     tp.paint(canvas, Offset(offset.dx - tp.width / 2, offset.dy - 28));
   }
 
-  // ── Spawning ──────────────────────────────────────────────────────────────
+  // ── Spawning / relocation ─────────────────────────────────────────────────
+
+  /// Returns a world-pixel centre for a random road cell within ±6 cells of
+  /// the player, or `null` if no suitable cell was found in 30 attempts.
+  Vector2? _findRoadCellNear() {
+    final playerCell = game.player.position / CellComponent.cellSize;
+    final px = playerCell.x.floor();
+    final py = playerCell.y.floor();
+
+    for (int attempt = 0; attempt < 30; attempt++) {
+      final cx = px + _rng.nextInt(12) - 6;
+      final cy = py + _rng.nextInt(12) - 6;
+      final cell = game.grid.getCell(cx, cy);
+      if (cell == null || cell.data is! RoadData) continue;
+
+      final pos = Vector2(
+        cx * CellComponent.cellSize + CellComponent.cellSize / 2,
+        cy * CellComponent.cellSize + CellComponent.cellSize / 2,
+      );
+      // Don't stack on an occupied cell.
+      if (_pickups.any((p) => !p.isPickedUp && p.worldPos.distanceTo(pos) < 8)) continue;
+
+      return pos;
+    }
+    return null;
+  }
 
   void _trySpawn() {
     if (_pickups.length >= _maxPickups) return;
 
-    // Sample random road cells near the player within a radius of 15 chunks
-    final playerCell = game.player.position / CellComponent.cellSize;
-    final px = playerCell.x.floor();
-    final py = playerCell.y.floor();
-
-    int nullCells = 0;
-    int nonRoadCells = 0;
-    int stackedCells = 0;
-
-    for (int attempt = 0; attempt < 30; attempt++) {
-      final dx = _rng.nextInt(12) - 6; // ±6 cells – just outside immediate view
-      final dy = _rng.nextInt(12) - 6;
-      final cx = px + dx;
-      final cy = py + dy;
-      final cell = game.grid.getCell(cx, cy);
-      if (cell == null) {
-        nullCells++;
-        continue;
-      }
-      if (cell.data is! RoadData) {
-        nonRoadCells++;
-        continue;
-      }
-
-      // Don't stack pickups on the same cell
-      final wx = cx * CellComponent.cellSize + CellComponent.cellSize / 2;
-      final wy = cy * CellComponent.cellSize + CellComponent.cellSize / 2;
-      final pos = Vector2(wx, wy);
-      if (_pickups.any((p) => !p.isPickedUp && p.worldPos.distanceTo(pos) < 8)) {
-        stackedCells++;
-        continue;
-      }
-
-      final type = LootTypeExt.random(_rng);
-      _pickups.add(_MaterialPickup(pos, type));
-      _log.info(
-        '[LootSystem] spawned pickup #${_pickups.length} '
-        '(${type.name} +${type.reward.toInt()} MP) '
-        'at cell ($cx,$cy) = world pixel (${pos.x},${pos.y}) | '
-        'playerCell=($px,$py)',
-      );
+    final pos = _findRoadCellNear();
+    if (pos == null) {
+      _log.warning('[LootSystem] _trySpawn: no road cell found near player');
       return;
     }
 
-    // All 30 attempts failed – log the breakdown so we know why.
-    _log.warning(
-      '[LootSystem] _trySpawn FAILED after 30 attempts: '
-      'nullCells=$nullCells, nonRoadCells=$nonRoadCells, stacked=$stackedCells | '
-      'playerCell=($px,$py) playerPx=${game.player.position}',
-    );
+    final type = LootTypeExt.random(_rng);
+    _pickups.add(_MaterialPickup(pos, type));
+    final cx = (pos.x / CellComponent.cellSize).floor();
+    final cy = (pos.y / CellComponent.cellSize).floor();
+    _log.info('[LootSystem] spawned ${type.name} +${type.reward.toInt()} MP at ($cx,$cy)');
   }
 
   /// Move a stale pickup to a new road cell near the current player position.
   void _relocate(_MaterialPickup p) {
-    final playerCell = game.player.position / CellComponent.cellSize;
-    final px = playerCell.x.floor();
-    final py = playerCell.y.floor();
+    final pos = _findRoadCellNear();
+    if (pos == null) return;
 
-    for (int attempt = 0; attempt < 30; attempt++) {
-      final dx = _rng.nextInt(12) - 6;
-      final dy = _rng.nextInt(12) - 6;
-      final cx = px + dx;
-      final cy = py + dy;
-      final cell = game.grid.getCell(cx, cy);
-      if (cell == null || cell.data is! RoadData) continue;
-
-      final wx = cx * CellComponent.cellSize + CellComponent.cellSize / 2;
-      final wy = cy * CellComponent.cellSize + CellComponent.cellSize / 2;
-      final newPos = Vector2(wx, wy);
-      if (_pickups.any((q) => q != p && !q.isPickedUp && q.worldPos.distanceTo(newPos) < 8)) continue;
-
-      final oldCx = (p.worldPos.x / CellComponent.cellSize).floor();
-      final oldCy = (p.worldPos.y / CellComponent.cellSize).floor();
-      p.worldPos = newPos;
-      _log.info(
-        '[LootSystem] relocated ${p.type.name} from ($oldCx,$oldCy) → ($cx,$cy) | playerCell=($px,$py)',
-      );
-      return;
-    }
+    final oldCx = (p.worldPos.x / CellComponent.cellSize).floor();
+    final oldCy = (p.worldPos.y / CellComponent.cellSize).floor();
+    final cx = (pos.x / CellComponent.cellSize).floor();
+    final cy = (pos.y / CellComponent.cellSize).floor();
+    p.worldPos = pos;
+    _log.info('[LootSystem] relocated ${p.type.name} ($oldCx,$oldCy) → ($cx,$cy)');
   }
 
-  void _collect(_MaterialPickup p) {    p.isPickedUp = true;
+  void _collect(_MaterialPickup p) {
     p.respawnTimer = _respawnMin + _rng.nextDouble() * (_respawnMax - _respawnMin);
 
     // Give materials to player (real-world resource only – no spiritual effect).
