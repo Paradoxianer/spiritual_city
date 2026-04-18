@@ -60,7 +60,7 @@ class _MaterialPickup {
 class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   static const int _maxPickups = 15;
   static const int _minPickups = 5;
-  static const double _pickupRadius = 40.0;
+  static const double _pickupRadius = 64.0; // 2 cells – easy to collect
   static const double _respawnMin = 60.0;
   static const double _respawnMax = 120.0;
 
@@ -119,10 +119,20 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
       final total = _pickups.length;
       final activeNow = _pickups.where((p) => !p.isPickedUp).length;
       final respawning = total - activeNow;
+      // Build a compact list of active pickup cell coords for easy inspection.
+      final positions = _pickups
+          .where((p) => !p.isPickedUp)
+          .map((p) {
+            final cx = (p.worldPos.x / CellComponent.cellSize).floor();
+            final cy = (p.worldPos.y / CellComponent.cellSize).floor();
+            return '(${p.type.name[0].toUpperCase()}:$cx,$cy)';
+          })
+          .join(' ');
       _log.info(
         '[LootSystem] pickups: $activeNow active, $respawning respawning, '
         '$total total | isSpiritualWorld=${game.isSpiritualWorld} | '
-        'playerPos=${game.player.position}',
+        'playerPos=${game.player.position}\n'
+        '  active positions: $positions',
       );
     }
   }
@@ -149,27 +159,43 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   bool _hasLoggedFirstRender = false;
 
   void _renderPickup(Canvas canvas, _MaterialPickup p, double pulse, bool highlighted) {
-    // Convert world position to local canvas coordinates (relative to world origin)
+    final cx = (p.worldPos.x / CellComponent.cellSize).floor();
+    final cy = (p.worldPos.y / CellComponent.cellSize).floor();
     final offset = Offset(p.worldPos.x, p.worldPos.y);
 
     if (highlighted) {
       // Bright pulsing gold glow when pastor is near (< _pickupRadius units).
-      const baseR = 6.0;
-      final r = baseR + pulse * 3;
-      final alpha = (0.6 + pulse * 0.4).clamp(0.0, 1.0);
-      _bgPaint.color = Color.fromRGBO(255, 215, 0, alpha); // pulsing gold
+      final r = 14.0 + pulse * 6.0;
+      final alpha = (0.7 + pulse * 0.3).clamp(0.0, 1.0);
+      _bgPaint.color = Color.fromRGBO(255, 215, 0, alpha);
       canvas.drawCircle(offset, r, _bgPaint);
-      canvas.drawCircle(offset, r + 3, _glowPaint);
+      canvas.drawCircle(offset, r + 4, _glowPaint);
     } else {
-      // Dim, static indicator so the player can spot pickups from afar.
-      _bgPaint.color = _dimGoldColor; // muted gold
-      canvas.drawCircle(offset, 5.0, _bgPaint);
+      // Clearly visible dim indicator even from afar.
+      _bgPaint.color = _dimGoldColor;
+      canvas.drawCircle(offset, 16.0, _bgPaint);
+      canvas.drawCircle(offset, 18.0, _glowPaint);
     }
 
-    // Inner package symbol: small box (always shown)
-    final box = Rect.fromCenter(center: offset, width: 8, height: 8);
+    // Inner package symbol: box
+    final box = Rect.fromCenter(center: offset, width: 14, height: 14);
     final boxPaint = Paint()..color = const Color(0xFF5D4037);
     canvas.drawRect(box, boxPaint);
+
+    // Cell-coordinate label above the dot so the player can spot & navigate to it.
+    final label = '📦($cx,$cy)';
+    final tp = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: highlighted ? const Color(0xFFFFD700) : const Color(0xAAFFD700),
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(offset.dx - tp.width / 2, offset.dy - 28));
   }
 
   // ── Spawning ──────────────────────────────────────────────────────────────
