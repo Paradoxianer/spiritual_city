@@ -76,6 +76,11 @@ class NPCModel {
   /// When non-null the radial menu offers a "📋" action to complete it.
   String? activeMissionDescription;
 
+  /// Last saved world-pixel position.  Set by [SpiritWorldGame.applySavedNPCState]
+  /// when loading a game; consumed once by [NPCComponent] to restore the NPC's
+  /// position and then left in place.  Null for freshly-generated NPCs.
+  Vector2? savedPosition;
+
   NPCModel({
     required this.id,
     required this.name,
