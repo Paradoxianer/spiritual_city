@@ -173,6 +173,14 @@ class _GameScreenState extends State<GameScreen> {
               return _StreetLabel(game: _game);
             },
           ),
+          // Loot pickup toast – briefly shown when a material package is collected
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _LootToast(game: _game);
+            },
+          ),
           // Saving overlay – centered indicator shown while persisting to Hive.
           if (_isSaving)
             Container(
@@ -1006,6 +1014,101 @@ class _StreetLabel extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ── Loot Pickup Toast ─────────────────────────────────────────────────────────
+
+/// Brief bottom-center toast shown when the player auto-collects a material
+/// package on the street.  It fades in, stays for 2 s, then fades out.
+/// Tapping it (or any key that fires a tap) dismisses it immediately.
+class _LootToast extends StatefulWidget {
+  final SpiritWorldGame game;
+  const _LootToast({required this.game});
+
+  @override
+  State<_LootToast> createState() => _LootToastState();
+}
+
+class _LootToastState extends State<_LootToast>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  Timer? _dismissTimer;
+  String? _message;
+
+  static const Duration _fadeDuration = Duration(milliseconds: 250);
+  static const Duration _visibleDuration = Duration(seconds: 2);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: _fadeDuration);
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    widget.game.lootPickupMessage.addListener(_onMessage);
+  }
+
+  void _onMessage() {
+    final msg = widget.game.lootPickupMessage.value;
+    if (msg == null || !mounted) return;
+    _dismissTimer?.cancel();
+    setState(() => _message = msg);
+    _ctrl.forward(from: 0.0);
+    _dismissTimer = Timer(_visibleDuration, _dismiss);
+  }
+
+  void _dismiss() {
+    _dismissTimer?.cancel();
+    _ctrl.reverse().then((_) {
+      if (mounted) {
+        widget.game.lootPickupMessage.value = null;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    widget.game.lootPickupMessage.removeListener(_onMessage);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_message == null) return const SizedBox.shrink();
+    return Positioned(
+      bottom: 120,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: FadeTransition(
+          opacity: _opacity,
+          child: GestureDetector(
+            onTap: _dismiss,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xCC1B2A1B),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFFFD54F), width: 1.5),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black54, blurRadius: 8),
+                ],
+              ),
+              child: Text(
+                _message!,
+                style: const TextStyle(
+                  color: Color(0xFFFFD54F),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
