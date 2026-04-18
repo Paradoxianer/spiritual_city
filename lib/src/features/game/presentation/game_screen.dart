@@ -1605,8 +1605,9 @@ class _KeyRow extends StatelessWidget {
 
 // ── Pastorhouse HUD compass ────────────────────────────────────────────────────
 
-/// Shows a golden 🏠 icon + direction arrow when the pastor house is off-screen.
-/// Renders as a [Positioned] overlay in the top-left corner with a subtle glow.
+/// Shows a golden 🏠 icon + direction arrow at a fixed position below the
+/// resource-bar panel.  Always visible as long as the player is more than
+/// 64 px (≈ 2 cells) away from the pastor house.
 class _PastorhouseHud extends StatelessWidget {
   final SpiritWorldGame game;
   const _PastorhouseHud({required this.game});
@@ -1632,7 +1633,7 @@ class _PastorhouseHud extends StatelessWidget {
         final arrow = _directionArrow(angleDeg);
 
         return Positioned(
-          // Position below the resource-bar panel (which ends at ≈ y 110).
+          // Fixed position below the resource-bar panel (which ends at ≈ y 110).
           top: 114,
           left: 12,
           child: SafeArea(
