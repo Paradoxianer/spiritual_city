@@ -388,8 +388,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Called by [ChunkManager] for every [NPCModel] after generation.
   ///
-  /// Restores faith, conversation counts and conversion status so NPC
-  /// relationships are preserved across sessions.
+  /// Restores faith, conversation counts, conversion status and last known
+  /// world-pixel position so NPC relationships and locations are preserved
+  /// across sessions.
   void applySavedNPCState(NPCModel npc) {
     final saved = _savedNPCStates?[npc.id];
     if (saved == null) return;
@@ -398,6 +399,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     npc.prayerCount       = saved['pray']     as int?  ?? npc.prayerCount;
     npc.counselingCount   = saved['counsel']  as int?  ?? npc.counselingCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
+    final posX = (saved['posX'] as num?)?.toDouble();
+    final posY = (saved['posY'] as num?)?.toDouble();
+    if (posX != null && posY != null) {
+      npc.savedPosition = Vector2(posX, posY);
+    }
   }
 
   // ── State capture (called when the player saves and quits) ────────────────
@@ -422,8 +428,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
 
     // ── NPC states ───────────────────────────────────────────────────────────
+    // Iterate over NPCComponent instances so we can capture the current
+    // world-pixel position (not just the fixed homePosition on the model).
     final Map<String, Map<String, dynamic>> npcStates = {};
-    for (final npc in chunkManager.allNPCModels) {
+    for (final npcComp in chunkManager.allActiveNPCs) {
+      final npc = npcComp.model;
       if (npc.faith != 0.0 ||
           npc.conversationCount != 0 ||
           npc.prayerCount != 0 ||
@@ -435,6 +444,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           if (npc.prayerCount       != 0) 'pray':      npc.prayerCount,
           if (npc.counselingCount   != 0) 'counsel':   npc.counselingCount,
           if (npc.isConverted)            'converted': true,
+          'posX': npcComp.position.x,
+          'posY': npcComp.position.y,
         };
       }
     }
