@@ -7,6 +7,7 @@ import '../../domain/models/npc_model.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
 import '../../domain/services/faith_calculator_service.dart';
+import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
@@ -339,8 +340,25 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (cell == null) return;
 
     if (model.isChristian) {
-      // Converted Christians radiate positive influence.
-      cell.spiritualState = (cell.spiritualState + model.faith * 0.003).clamp(-1.0, 1.0);
+      // Converted Christians radiate positive influence on the cell they
+      // occupy and on the four directly adjacent cells. The per-faith-point
+      // multipliers are tuned per difficulty so that, at max faith (100),
+      // the centre-cell delta is easy=0.7 / normal=0.5 / hard=0.3 and
+      // the adjacent-cell delta is easy=0.3 / normal=0.25 / hard=0.2.
+      final (centreK, adjacentK) = switch (game.difficulty) {
+        Difficulty.easy   => (0.0150, 0.0075),
+        Difficulty.normal => (0.0100, 0.0050),
+        Difficulty.hard   => (0.0050, 0.0025),
+      };
+      cell.spiritualState = (cell.spiritualState + model.faith * centreK).clamp(-1.0, 1.0);
+      // Adjacent cells receive a slightly weaker push.
+      for (final offset in const [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        final neighbour = game.grid.getCell(gx + offset[0], gy + offset[1]);
+        if (neighbour != null) {
+          neighbour.spiritualState =
+              (neighbour.spiritualState + model.faith * adjacentK).clamp(-1.0, 1.0);
+        }
+      }
       // Small faith decay: without ongoing care their fervour slowly cools.
       // Floor at 50 so they remain Christian but their influence weakens.
       model.faith = (model.faith - 0.15).clamp(50.0, 100.0);
