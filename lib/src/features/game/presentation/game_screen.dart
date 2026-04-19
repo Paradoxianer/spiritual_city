@@ -166,6 +166,15 @@ class _GameScreenState extends State<GameScreen> {
               return _PastorhouseHud(game: _game);
             },
           ),
+          // Resource HUD – Flutter widget so bars update even while the Flame
+          // game loop is paused (building / dialog overlays open).
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _ResourceHud(game: _game);
+            },
+          ),
           // Street-name label – persistent top-center
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
@@ -1678,6 +1687,228 @@ class _PastorhouseHud extends StatelessWidget {
     if (deg <  67.5)  return '↘';
     if (deg < 112.5)  return '↓';
     return '↙';
+  }
+}
+
+
+
+// ── Resource HUD (Flutter overlay) ──────────────────────────────────────────
+
+/// Flutter-based resource-bar panel positioned at the top-left of the screen.
+///
+/// Using Flutter widgets (rather than a Flame component) ensures the bars
+/// update immediately after every action – even while the Flame game loop is
+/// paused (e.g. when a building or dialog overlay is open).
+class _ResourceHud extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _ResourceHud({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 6,
+      left: 6,
+      child: SafeArea(
+        child: Container(
+          // Keep padding tight so the panel stays ~96 px tall (matching the
+          // original Flame-rendered panel) and does not overlap the compass
+          // that is anchored at top: 114.
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _AnimatedResourceBar(
+                notifier: game.healthNotifier,
+                max: SpiritWorldGame.maxHealth,
+                icon: '❤️',
+                label: 'HP',
+                color: Colors.redAccent,
+              ),
+              const SizedBox(height: 2),
+              _AnimatedResourceBar(
+                notifier: game.hungerNotifier,
+                max: SpiritWorldGame.maxHunger,
+                icon: '🍞',
+                label: 'Hunger',
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 2),
+              _AnimatedResourceBar(
+                notifier: game.faithNotifier,
+                max: SpiritWorldGame.maxFaith,
+                icon: '🙏',
+                label: 'Faith',
+                color: Colors.purpleAccent,
+              ),
+              const SizedBox(height: 2),
+              _AnimatedResourceBar(
+                notifier: game.materialsNotifier,
+                max: SpiritWorldGame.maxMaterials,
+                icon: '📦',
+                label: 'Supplies',
+                color: Colors.blueGrey,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single resource bar with a brief "+N" / "−N" delta text that fades out
+/// after each change.
+///
+/// Listens directly to a [ValueNotifier] so it rebuilds immediately on any
+/// resource change, regardless of the Flame game pause state.
+class _AnimatedResourceBar extends StatefulWidget {
+  final ValueNotifier<double> notifier;
+  final double max;
+  final String icon;
+  final String label;
+  final Color color;
+
+  const _AnimatedResourceBar({
+    required this.notifier,
+    required this.max,
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  State<_AnimatedResourceBar> createState() => _AnimatedResourceBarState();
+}
+
+class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
+    with SingleTickerProviderStateMixin {
+  static const double _barWidth  = 130.0;
+  static const double _barHeight = 8.0;
+
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
+  double _prevValue = 0.0;
+  double _lastDelta = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _prevValue = widget.notifier.value;
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    // Opacity goes 1.0 → 0.0 so the delta text fades out completely.
+    _fadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn),
+    );
+    widget.notifier.addListener(_onValueChanged);
+  }
+
+  void _onValueChanged() {
+    if (!mounted) return;
+    final newValue = widget.notifier.value;
+    if (newValue == _prevValue) return;
+    setState(() {
+      _lastDelta = newValue - _prevValue;
+      _prevValue = newValue;
+    });
+    // (Re-)start the fade so the delta text disappears after 1.2 s.
+    _fadeCtrl.forward(from: 0.0);
+  }
+
+  @override
+  void dispose() {
+    widget.notifier.removeListener(_onValueChanged);
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = widget.notifier.value;
+    final progress = (value / widget.max).clamp(0.0, 1.0);
+    final deltaSign = _lastDelta >= 0 ? '+' : '';
+    final deltaText = '$deltaSign${_lastDelta.toInt()}';
+    final deltaColor = _lastDelta >= 0 ? Colors.amber : Colors.redAccent;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Emoji icon
+        Text(widget.icon, style: const TextStyle(fontSize: 11)),
+        const SizedBox(width: 4),
+        SizedBox(
+          width: _barWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Label + current value + fading delta
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${widget.label} ${value.toInt()}/${widget.max.toInt()}',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  // Delta chip – only shown while the fade is in progress.
+                  if (_fadeCtrl.isAnimating || _fadeCtrl.value < 1.0)
+                    AnimatedBuilder(
+                      animation: _fadeAnim,
+                      builder: (context, _) => Opacity(
+                        opacity: _fadeAnim.value.clamp(0.0, 1.0),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            deltaText,
+                            style: TextStyle(
+                              color: deltaColor,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              // Progress bar (plain, no glow)
+              Container(
+                width: _barWidth,
+                height: _barHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: progress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: widget.color,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
