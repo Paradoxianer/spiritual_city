@@ -1710,7 +1710,10 @@ class _ResourceHud extends StatelessWidget {
       left: 6,
       child: SafeArea(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          // Keep padding tight so the panel stays ~96 px tall (matching the
+          // original Flame-rendered panel) and does not overlap the compass
+          // that is anchored at top: 114.
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(10),
@@ -1726,7 +1729,7 @@ class _ResourceHud extends StatelessWidget {
                 label: 'HP',
                 color: Colors.redAccent,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 2),
               _AnimatedResourceBar(
                 notifier: game.hungerNotifier,
                 max: SpiritWorldGame.maxHunger,
@@ -1734,7 +1737,7 @@ class _ResourceHud extends StatelessWidget {
                 label: 'Hunger',
                 color: Colors.orange,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 2),
               _AnimatedResourceBar(
                 notifier: game.faithNotifier,
                 max: SpiritWorldGame.maxFaith,
@@ -1742,7 +1745,7 @@ class _ResourceHud extends StatelessWidget {
                 label: 'Faith',
                 color: Colors.purpleAccent,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 2),
               _AnimatedResourceBar(
                 notifier: game.materialsNotifier,
                 max: SpiritWorldGame.maxMaterials,
@@ -1758,7 +1761,8 @@ class _ResourceHud extends StatelessWidget {
   }
 }
 
-/// A single animated resource bar that flashes when its value changes.
+/// A single resource bar with a brief "+N" / "−N" delta text that fades out
+/// after each change.
 ///
 /// Listens directly to a [ValueNotifier] so it rebuilds immediately on any
 /// resource change, regardless of the Flame game pause state.
@@ -1783,24 +1787,26 @@ class _AnimatedResourceBar extends StatefulWidget {
 
 class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
     with SingleTickerProviderStateMixin {
-  static const double _barWidth = 130.0;
-  static const double _barHeight = 10.0;
-  /// How strongly the bar fades towards white at peak flash (0 = no change, 1 = full white).
-  static const double _kFlashIntensity = 0.55;
+  static const double _barWidth  = 130.0;
+  static const double _barHeight = 8.0;
 
-  late AnimationController _flashCtrl;
-  late Animation<double> _flashAnim;
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
   double _prevValue = 0.0;
+  double _lastDelta = 0.0;
 
   @override
   void initState() {
     super.initState();
     _prevValue = widget.notifier.value;
-    _flashCtrl = AnimationController(
+    _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 1200),
     );
-    _flashAnim = CurvedAnimation(parent: _flashCtrl, curve: Curves.easeOut);
+    // Opacity goes 1.0 → 0.0 so the delta text fades out completely.
+    _fadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn),
+    );
     widget.notifier.addListener(_onValueChanged);
   }
 
@@ -1808,16 +1814,18 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
     if (!mounted) return;
     final newValue = widget.notifier.value;
     if (newValue == _prevValue) return;
-    _prevValue = newValue;
-    // Restart the flash animation so the bar briefly glows on every change.
-    _flashCtrl.forward(from: 0.0);
-    setState(() {});
+    setState(() {
+      _lastDelta = newValue - _prevValue;
+      _prevValue = newValue;
+    });
+    // (Re-)start the fade so the delta text disappears after 1.2 s.
+    _fadeCtrl.forward(from: 0.0);
   }
 
   @override
   void dispose() {
     widget.notifier.removeListener(_onValueChanged);
-    _flashCtrl.dispose();
+    _fadeCtrl.dispose();
     super.dispose();
   }
 
@@ -1825,27 +1833,27 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
   Widget build(BuildContext context) {
     final value = widget.notifier.value;
     final progress = (value / widget.max).clamp(0.0, 1.0);
+    final deltaSign = _lastDelta >= 0 ? '+' : '';
+    final deltaText = '$deltaSign${_lastDelta.toInt()}';
+    final deltaColor = _lastDelta >= 0 ? Colors.amber : Colors.redAccent;
 
-    return AnimatedBuilder(
-      animation: _flashAnim,
-      builder: (context, _) {
-        final flash = _flashAnim.value;
-        final barColor =
-            Color.lerp(widget.color, Colors.white, flash * _kFlashIntensity) ?? widget.color;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Icon
-            Text(widget.icon, style: const TextStyle(fontSize: 11)),
-            const SizedBox(width: 4),
-            SizedBox(
-              width: _barWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Emoji icon
+        Text(widget.icon, style: const TextStyle(fontSize: 11)),
+        const SizedBox(width: 4),
+        SizedBox(
+          width: _barWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Label + current value + fading delta
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Label + value
                   Text(
                     '${widget.label} ${value.toInt()}/${widget.max.toInt()}',
                     style: TextStyle(
@@ -1854,47 +1862,52 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  // Bar
-                  Stack(
-                    children: [
-                      // Background track
-                      Container(
-                        width: _barWidth,
-                        height: _barHeight,
-                        decoration: BoxDecoration(
-                          color: Colors.white12,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                      // Filled portion with optional glow
-                      if (progress > 0)
-                        Container(
-                          width: _barWidth * progress,
-                          height: _barHeight,
-                          decoration: BoxDecoration(
-                            color: barColor,
-                            borderRadius: BorderRadius.circular(3),
-                            boxShadow: flash > 0.05
-                                ? [
-                                    BoxShadow(
-                                      color: widget.color
-                                          .withValues(alpha: flash * 0.85),
-                                      blurRadius: 8,
-                                      spreadRadius: 2,
-                                    ),
-                                  ]
-                                : null,
+                  // Delta chip – only shown while the fade is in progress.
+                  if (_fadeCtrl.isAnimating || _fadeCtrl.value < 1.0)
+                    AnimatedBuilder(
+                      animation: _fadeAnim,
+                      builder: (context, _) => Opacity(
+                        opacity: _fadeAnim.value.clamp(0.0, 1.0),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            deltaText,
+                            style: TextStyle(
+                              color: deltaColor,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
                 ],
               ),
-            ),
-          ],
-        );
-      },
+              // Progress bar (plain, no glow)
+              Container(
+                width: _barWidth,
+                height: _barHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: progress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: widget.color,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
