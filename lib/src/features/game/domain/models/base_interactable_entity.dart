@@ -23,7 +23,8 @@ abstract class BaseInteractableEntity {
   /// Tracks interactions in the current active dialogue/visit session.
   ///
   /// Reset to 0 at the start of each new session via [resetSession].
-  int currentSessionInteractions;
+  /// Always initialised to 0 – sessions begin fresh for every entity.
+  int currentSessionInteractions = 0;
 
   /// Active mission attached to this entity (null = no mission).
   String? activeMissionDescription;
@@ -31,8 +32,6 @@ abstract class BaseInteractableEntity {
   BaseInteractableEntity({
     this.faith = 0.0,
     this.interactionCount = 0,
-    this.currentSessionInteractions = 0,
-    this.activeMissionDescription,
   });
 
   /// Max allowed interactions per session.

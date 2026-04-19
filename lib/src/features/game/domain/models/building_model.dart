@@ -101,11 +101,6 @@ class BuildingModel extends BaseInteractableEntity {
     return base;
   }
 
-  @override
-  void resetSession() {
-    super.resetSession();
-  }
-
   // ── NPC group influence ───────────────────────────────────────────────────
 
   /// Apply [amount] faith to every resident NPC (for prayers / Bible reading
