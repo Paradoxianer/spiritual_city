@@ -1,3 +1,4 @@
+import 'base_interactable_entity.dart';
 import 'cell_object.dart';
 import 'npc_model.dart';
 
@@ -10,9 +11,12 @@ enum BuildingCategory { residential, other }
 /// Each [BuildingModel] is keyed by the unique [buildingId] that is also
 /// stored on every [BuildingData] cell.  The model tracks the residents
 /// assigned to the building and any per-building interaction counters.
-class BuildingModel {
+class BuildingModel extends BaseInteractableEntity {
   /// Stable unique identifier matching [BuildingData.buildingId].
   final String buildingId;
+
+  @override
+  String get id => buildingId;
 
   /// The building-type enum value used for category classification.
   final BuildingType type;
@@ -24,20 +28,34 @@ class BuildingModel {
   /// Only one building in the city should have this set to `true`.
   final bool isHomebase;
 
-  /// How many times the player has successfully interacted with this building.
-  /// After 3 or more interactions the access-chance bonus of +30 % applies
-  /// (Lastenheft §7.4 / Issue §A).
-  int totalConversations = 0;
-
-  /// Active mission attached to this building (null = no mission).
-  String? activeMissionDescription;
-
   BuildingModel({
     required this.buildingId,
     required this.type,
     List<NPCModel>? residents,
     this.isHomebase = false,
-  }) : residents = residents ?? [];
+    double faith = 0.0,
+    int interactionCount = 0,
+  })  : residents = residents ?? [],
+        super(faith: faith, interactionCount: interactionCount);
+
+  // ── Combined faith ────────────────────────────────────────────────────────
+
+  /// Combined faith of the building itself plus all its residents.
+  ///
+  /// Represents the overall spiritual atmosphere of the household: the
+  /// building's own holiness value plus each resident NPC's faith level.
+  double get combinedFaith =>
+      faith + residents.fold(0.0, (sum, npc) => sum + npc.faith);
+
+  // ── Influence radius ──────────────────────────────────────────────────────
+
+  /// The radius (in cells) within which this building's faith influences the
+  /// spiritual world.
+  ///
+  /// Buildings affect a larger area than individual NPCs (Issue #96, #116):
+  /// "Häuser haben nicht den isChrist-Effekt, ihre Heiligkeit beeinflusst
+  /// immer (minimal) die unsichtbare Welt, dafür aber in einem größeren Radius"
+  double get influenceRadius => 3.0;
 
   // ── Category helpers ──────────────────────────────────────────────────────
 
@@ -77,7 +95,7 @@ class BuildingModel {
       base = 0.15;
     }
 
-    if (totalConversations >= 3) {
+    if (interactionCount >= 3) {
       base = (base + 0.30).clamp(0.0, 1.0);
     }
     return base;

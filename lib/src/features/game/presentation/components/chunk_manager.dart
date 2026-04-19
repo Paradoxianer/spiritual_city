@@ -275,6 +275,7 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         residents: residents,
         isHomebase: bInfo.type == BuildingType.pastorHouse,
       );
+      game.applySavedBuildingState(model);
       _buildingModels[bInfo.buildingId] = model;
 
       final comp = BuildingComponent(buildingModel: model, position: pos);
