@@ -346,9 +346,9 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       // the centre-cell delta is easy=0.7 / normal=0.5 / hard=0.3 and
       // the adjacent-cell delta is easy=0.3 / normal=0.25 / hard=0.2.
       final (centreK, adjacentK) = switch (game.difficulty) {
-        Difficulty.easy   => (0.0070, 0.0030),
-        Difficulty.normal => (0.0050, 0.0025),
-        Difficulty.hard   => (0.0030, 0.0020),
+        Difficulty.easy   => (0.0150, 0.0075),
+        Difficulty.normal => (0.0100, 0.0050),
+        Difficulty.hard   => (0.0050, 0.0025),
       };
       cell.spiritualState = (cell.spiritualState + model.faith * centreK).clamp(-1.0, 1.0);
       // Adjacent cells receive a slightly weaker push.
