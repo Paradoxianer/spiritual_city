@@ -340,15 +340,17 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
 
     if (model.isChristian) {
       // Converted Christians radiate positive influence on the cell they
-      // occupy and on the four directly adjacent cells (slightly increased
-      // radius and strength per issue #feat).
-      cell.spiritualState = (cell.spiritualState + model.faith * 0.005).clamp(-1.0, 1.0);
+      // occupy and on the four directly adjacent cells. Strength is scaled by
+      // the difficulty factor (easy=1.5×, normal=1.0×, hard=0.5×) so that
+      // reclaiming territory is easier on easy and harder on hard difficulty.
+      final df = FaithCalculatorService.difficultyFactorFor(game.difficulty);
+      cell.spiritualState = (cell.spiritualState + model.faith * 0.005 * df).clamp(-1.0, 1.0);
       // Adjacent cells receive half the centre strength.
       for (final offset in const [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
         final neighbour = game.grid.getCell(gx + offset[0], gy + offset[1]);
         if (neighbour != null) {
           neighbour.spiritualState =
-              (neighbour.spiritualState + model.faith * 0.0025).clamp(-1.0, 1.0);
+              (neighbour.spiritualState + model.faith * 0.0025 * df).clamp(-1.0, 1.0);
         }
       }
       // Small faith decay: without ongoing care their fervour slowly cools.
