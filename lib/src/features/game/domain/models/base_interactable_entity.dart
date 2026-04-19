@@ -1,0 +1,64 @@
+/// Shared base class for all entities in the world that can be interacted
+/// with (NPCs and Buildings).
+///
+/// Centralises the faith system, unified interaction counter, session tracking,
+/// mission attachment, and influence mechanics so that future features can
+/// operate on any [BaseInteractableEntity] without knowing whether it is an
+/// NPC or a building.
+abstract class BaseInteractableEntity {
+  /// Stable unique identifier for this entity.
+  String get id;
+
+  /// Faith Level: -100.0 to +100.0.
+  ///
+  /// Negative = hostile / dark;  Positive = open / holy.
+  double faith;
+
+  /// Unified interaction counter across all interaction types.
+  ///
+  /// Incremented by every successful interaction.  Used for probability
+  /// calculations and to unlock higher session limits (see [maxSessionInteractions]).
+  int interactionCount;
+
+  /// Tracks interactions in the current active dialogue/visit session.
+  ///
+  /// Reset to 0 at the start of each new session via [resetSession].
+  int currentSessionInteractions;
+
+  /// Active mission attached to this entity (null = no mission).
+  String? activeMissionDescription;
+
+  BaseInteractableEntity({
+    this.faith = 0.0,
+    this.interactionCount = 0,
+    this.currentSessionInteractions = 0,
+    this.activeMissionDescription,
+  });
+
+  /// Max allowed interactions per session.
+  ///
+  /// Starts at 2.  For every 6 total interactions the player has had with
+  /// this entity, the limit grows by 1 – reflecting that you naturally talk
+  /// longer with people (or visit places) you know well (Issue #105).
+  ///
+  ///   0  interactions → 2
+  ///   6  interactions → 3
+  ///   12 interactions → 4  …
+  int get maxSessionInteractions => 2 + (interactionCount ~/ 6);
+
+  /// Whether the session interaction limit has been reached for this entity.
+  bool get isReadyToLeave => currentSessionInteractions >= maxSessionInteractions;
+
+  /// Apply a faith [amount] to this entity, clamped to the valid range
+  /// -100..100.
+  void applyInfluence(double amount) {
+    faith = (faith + amount).clamp(-100.0, 100.0);
+  }
+
+  /// Reset session state.
+  ///
+  /// Subclasses should call `super.resetSession()` and add their own logic.
+  void resetSession() {
+    currentSessionInteractions = 0;
+  }
+}

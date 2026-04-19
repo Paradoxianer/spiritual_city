@@ -165,7 +165,7 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
-    building.totalConversations++;
+    building.interactionCount++;
 
     switch (actionType) {
       case 'talk':

@@ -92,14 +92,14 @@ void main() {
       });
 
       test('+30 % bonus after 3+ conversations, capped at 1.0', () {
-        house.totalConversations = 3;
+        house.interactionCount = 3;
         expect(house.accessChance(100), 1.0);   // 0.85 + 0.30 capped
         expect(house.accessChance(0), 0.80);    // 0.50 + 0.30
         expect(house.accessChance(-100), 0.45); // 0.15 + 0.30
       });
 
       test('bonus does NOT apply before 3 conversations', () {
-        house.totalConversations = 2;
+        house.interactionCount = 2;
         expect(house.accessChance(0), 0.50);
       });
     });
@@ -212,12 +212,12 @@ void main() {
         expect(resident.faith, 2.0);
       });
 
-      test('totalConversations incremented on every action', () {
+      test('interactionCount incremented on every action', () {
         final b = house();
         final svc = BuildingInteractionService();
         svc.performAction('talk', b, 0.0);
         svc.performAction('pray', b, 0.0);
-        expect(b.totalConversations, 2);
+        expect(b.interactionCount, 2);
       });
 
       test('unknown action returns failure', () {
