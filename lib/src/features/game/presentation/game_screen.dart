@@ -2131,10 +2131,12 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   void _executeAction(String actionType) {
     final result = widget.game.handleBuildingAction(actionType);
     setState(() => _lastReaction = result.reactionEmoji);
-    // Auto-leave on success – but NOT for the pastor's own home (homebase),
-    // where the player should stay as long as they like.
+    // Auto-leave when the session limit is reached (tracked by
+    // building.currentSessionInteractions vs building.maxSessionInteractions).
+    // The homebase is exempt: it has baseSessionInteractions=999 and never
+    // forces the player to leave.
     final data = widget.game.activeBuildingData;
-    if (result.success && (data == null || !data.building.isHomebase)) {
+    if (result.success && data != null && data.building.isReadyToLeave) {
       Future.delayed(const Duration(milliseconds: 1200), () {
         if (mounted) widget.game.closeBuildingInterior();
       });
@@ -2194,6 +2196,9 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 
   Widget _buildHeader(BuildingModel building) {
     final isHome = building.isHomebase;
+    final done = building.currentSessionInteractions;
+    final max  = building.maxSessionInteractions;
+    final unlimited = isHome; // homebase has no forced leave
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -2253,6 +2258,11 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
                       fontSize: 11,
                     ),
                   ),
+                // Session interaction counter (hidden for homebase)
+                if (!unlimited) ...[
+                  const SizedBox(height: 4),
+                  _SessionDotsRow(done: done, max: max),
+                ],
               ],
             ),
           ),
@@ -3019,6 +3029,50 @@ class _InteriorArtWidget extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+/// A row of small dots showing how many session interactions have been used
+/// out of the current [max].  Filled dots = used, hollow dots = remaining.
+///
+/// Used in the building interior header to give the player a quick visual cue
+/// of how many more actions they can take before being asked to leave.
+class _SessionDotsRow extends StatelessWidget {
+  final int done;
+  final int max;
+
+  const _SessionDotsRow({required this.done, required this.max});
+
+  @override
+  Widget build(BuildContext context) {
+    // Cap the display at 12 dots to avoid overflow on very high counts.
+    final displayMax  = max.clamp(1, 12);
+    final displayDone = done.clamp(0, displayMax);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < displayMax; i++)
+          Container(
+            width: 7,
+            height: 7,
+            margin: const EdgeInsets.only(right: 3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: i < displayDone
+                  ? Colors.white.withValues(alpha: 0.85)
+                  : Colors.white.withValues(alpha: 0.22),
+            ),
+          ),
+        const SizedBox(width: 4),
+        Text(
+          '$displayDone/$displayMax',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.55),
+            fontSize: 10,
+          ),
+        ),
+      ],
     );
   }
 }
