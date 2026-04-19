@@ -166,6 +166,15 @@ class _GameScreenState extends State<GameScreen> {
               return _PastorhouseHud(game: _game);
             },
           ),
+          // Resource HUD – Flutter widget so bars update even while the Flame
+          // game loop is paused (building / dialog overlays open).
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _ResourceHud(game: _game);
+            },
+          ),
           // Street-name label – persistent top-center
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
@@ -1678,6 +1687,215 @@ class _PastorhouseHud extends StatelessWidget {
     if (deg <  67.5)  return '↘';
     if (deg < 112.5)  return '↓';
     return '↙';
+  }
+}
+
+
+
+// ── Resource HUD (Flutter overlay) ──────────────────────────────────────────
+
+/// Flutter-based resource-bar panel positioned at the top-left of the screen.
+///
+/// Using Flutter widgets (rather than a Flame component) ensures the bars
+/// update immediately after every action – even while the Flame game loop is
+/// paused (e.g. when a building or dialog overlay is open).
+class _ResourceHud extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _ResourceHud({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 6,
+      left: 6,
+      child: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _AnimatedResourceBar(
+                notifier: game.healthNotifier,
+                max: SpiritWorldGame.maxHealth,
+                icon: '❤️',
+                label: 'HP',
+                color: Colors.redAccent,
+              ),
+              const SizedBox(height: 6),
+              _AnimatedResourceBar(
+                notifier: game.hungerNotifier,
+                max: SpiritWorldGame.maxHunger,
+                icon: '🍞',
+                label: 'Hunger',
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 6),
+              _AnimatedResourceBar(
+                notifier: game.faithNotifier,
+                max: SpiritWorldGame.maxFaith,
+                icon: '🙏',
+                label: 'Faith',
+                color: Colors.purpleAccent,
+              ),
+              const SizedBox(height: 6),
+              _AnimatedResourceBar(
+                notifier: game.materialsNotifier,
+                max: SpiritWorldGame.maxMaterials,
+                icon: '📦',
+                label: 'Supplies',
+                color: Colors.blueGrey,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single animated resource bar that flashes when its value changes.
+///
+/// Listens directly to a [ValueNotifier] so it rebuilds immediately on any
+/// resource change, regardless of the Flame game pause state.
+class _AnimatedResourceBar extends StatefulWidget {
+  final ValueNotifier<double> notifier;
+  final double max;
+  final String icon;
+  final String label;
+  final Color color;
+
+  const _AnimatedResourceBar({
+    required this.notifier,
+    required this.max,
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  State<_AnimatedResourceBar> createState() => _AnimatedResourceBarState();
+}
+
+class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
+    with SingleTickerProviderStateMixin {
+  static const double _barWidth = 130.0;
+  static const double _barHeight = 10.0;
+  /// How strongly the bar fades towards white at peak flash (0 = no change, 1 = full white).
+  static const double _kFlashIntensity = 0.55;
+
+  late AnimationController _flashCtrl;
+  late Animation<double> _flashAnim;
+  double _prevValue = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _prevValue = widget.notifier.value;
+    _flashCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _flashAnim = CurvedAnimation(parent: _flashCtrl, curve: Curves.easeOut);
+    widget.notifier.addListener(_onValueChanged);
+  }
+
+  void _onValueChanged() {
+    if (!mounted) return;
+    final newValue = widget.notifier.value;
+    if (newValue == _prevValue) return;
+    _prevValue = newValue;
+    // Restart the flash animation so the bar briefly glows on every change.
+    _flashCtrl.forward(from: 0.0);
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.notifier.removeListener(_onValueChanged);
+    _flashCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = widget.notifier.value;
+    final progress = (value / widget.max).clamp(0.0, 1.0);
+
+    return AnimatedBuilder(
+      animation: _flashAnim,
+      builder: (context, _) {
+        final flash = _flashAnim.value;
+        final barColor =
+            Color.lerp(widget.color, Colors.white, flash * _kFlashIntensity) ?? widget.color;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Icon
+            Text(widget.icon, style: const TextStyle(fontSize: 11)),
+            const SizedBox(width: 4),
+            SizedBox(
+              width: _barWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Label + value
+                  Text(
+                    '${widget.label} ${value.toInt()}/${widget.max.toInt()}',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  // Bar
+                  Stack(
+                    children: [
+                      // Background track
+                      Container(
+                        width: _barWidth,
+                        height: _barHeight,
+                        decoration: BoxDecoration(
+                          color: Colors.white12,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      // Filled portion with optional glow
+                      if (progress > 0)
+                        Container(
+                          width: _barWidth * progress,
+                          height: _barHeight,
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: BorderRadius.circular(3),
+                            boxShadow: flash > 0.05
+                                ? [
+                                    BoxShadow(
+                                      color: widget.color
+                                          .withValues(alpha: flash * 0.85),
+                                      blurRadius: 8,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 

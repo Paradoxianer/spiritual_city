@@ -103,11 +103,25 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final PlayerProgress progress;
   late final ModifierManager modifiers;
 
-  // Ressourcen
-  double faith = 100.0;
-  double health = 100.0;
-  double hunger = 80.0;
-  double materials = 40.0;
+  // Ressourcen – backed by ValueNotifier so that Flutter overlay widgets (e.g.
+  // the resource HUD) can react to changes even while the Flame game loop is
+  // paused (e.g. while a building or dialog overlay is open).
+  final ValueNotifier<double> faithNotifier     = ValueNotifier(100.0);
+  final ValueNotifier<double> healthNotifier    = ValueNotifier(100.0);
+  final ValueNotifier<double> hungerNotifier    = ValueNotifier(80.0);
+  final ValueNotifier<double> materialsNotifier = ValueNotifier(40.0);
+
+  double get faith     => faithNotifier.value;
+  set faith(double v)  => faithNotifier.value = v;
+
+  double get health    => healthNotifier.value;
+  set health(double v) => healthNotifier.value = v;
+
+  double get hunger    => hungerNotifier.value;
+  set hunger(double v) => hungerNotifier.value = v;
+
+  double get materials    => materialsNotifier.value;
+  set materials(double v) => materialsNotifier.value = v;
 
   static const double maxFaith = 100.0;
   static const double maxHealth = 100.0;
@@ -1088,6 +1102,15 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void gainHealth(double amount) => health = (health + amount).clamp(0.0, maxHealth);
   void gainHunger(double amount) => hunger = (hunger + amount).clamp(0.0, maxHunger);
   void gainMaterials(double amount) => materials = (materials + amount).clamp(0.0, maxMaterials);
+
+  @override
+  void onRemove() {
+    faithNotifier.dispose();
+    healthNotifier.dispose();
+    hungerNotifier.dispose();
+    materialsNotifier.dispose();
+    super.onRemove();
+  }
 
   /// Record a completed prayer combat and check modifier unlocks
   void recordPrayerCombat() {

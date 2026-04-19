@@ -7,14 +7,11 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
 
   @override
   void render(Canvas canvas) {
-    // 1. RESOURCE BARS (Oben Links)
-    _drawResourceBars(canvas);
-
     if (!game.isSpiritualWorld) return;
 
     final player = game.player;
     
-    // 2. COMBAT HUD (Unten Mitte)
+    // COMBAT HUD (Unten Mitte)
     const hudWidth = 240.0;
     const hudHeight = 80.0;
     final x = (game.size.x - hudWidth) / 2;
@@ -36,70 +33,6 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
       canvas, x + 20, y + 45, hudWidth - 40, 12,
       'ZONE RADIUS', player.zoneSize, Colors.blueAccent,
     );
-  }
-
-  void _drawResourceBars(Canvas canvas) {
-    const double x = 14;
-    const double y = 14;
-    const double barW = 130;
-    const double barH = 10;
-    const double spacing = 20.0;
-    const double bgPad = 8;
-    const double totalH = spacing * 4 + bgPad * 2;
-
-    // Background panel
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(x - bgPad, y - bgPad, barW + 70, totalH),
-        const Radius.circular(10),
-      ),
-      Paint()..color = Colors.black.withValues(alpha: 0.55),
-    );
-
-    _drawResourceBar(canvas, x, y,              barW, barH, '❤️', 'HP',       game.health,    SpiritWorldGame.maxHealth,    Colors.redAccent);
-    _drawResourceBar(canvas, x, y + spacing,     barW, barH, '🍞', 'Hunger',   game.hunger,    SpiritWorldGame.maxHunger,    Colors.orange);
-    _drawResourceBar(canvas, x, y + spacing * 2, barW, barH, '🙏', 'Faith',    game.faith,     SpiritWorldGame.maxFaith,     Colors.purpleAccent);
-    _drawResourceBar(canvas, x, y + spacing * 3, barW, barH, '📦', 'Supplies', game.materials, SpiritWorldGame.maxMaterials, Colors.blueGrey);
-  }
-
-  void _drawResourceBar(Canvas canvas, double x, double y, double w, double h,
-      String icon, String label, double value, double max, Color color) {
-    final progress = (value / max).clamp(0.0, 1.0);
-    final val = value.toInt();
-    final maxVal = max.toInt();
-
-    // Icon
-    TextPainter(
-      text: TextSpan(text: icon, style: const TextStyle(fontSize: 11)),
-      textDirection: TextDirection.ltr,
-    )..layout()..paint(canvas, Offset(x, y - 1));
-
-    // Label + value text
-    TextPainter(
-      text: TextSpan(
-        text: '$label $val/$maxVal',
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.85),
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout()..paint(canvas, Offset(x + 18, y - 1));
-
-    // Bar background
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(x + 18, y + 10, w, h), const Radius.circular(3)),
-      Paint()..color = Colors.white12,
-    );
-
-    // Bar fill
-    if (progress > 0.0) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x + 18, y + 10, w * progress, h), const Radius.circular(3)),
-        Paint()..color = color,
-      );
-    }
   }
 
   void _drawBar(Canvas canvas, double x, double y, double w, double h, String label, double progress, Color color, {bool hasMarker = false}) {
