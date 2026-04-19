@@ -50,21 +50,6 @@ class PlayerComponent extends PositionComponent
 
   // ===========================================================================
 
-  // ── Passive presence influence ─────────────────────────────────────────────
-
-  /// How often (seconds) the player's passive presence brightens nearby cells
-  /// in the spiritual world.
-  static const double _passiveInfluenceInterval = 5.0;
-
-  /// Maximum positive delta applied to the centre cell per passive tick.
-  /// Falls off quadratically with distance to zero at [_passiveInfluenceRadius].
-  static const double _passiveInfluenceStrength = 0.006;
-
-  /// Radius (in grid cells) of the passive presence aura.
-  static const int _passiveInfluenceRadius = 3;
-
-  double _passiveInfluenceTimer = 0.0;
-
   // ── Directional prayer-zone geometry constants ─────────────────────────────
 
   /// The directional zone extends this multiple of [modifierMaxRadius] beyond
@@ -395,39 +380,5 @@ class PlayerComponent extends PositionComponent
 
     prayerZone.isActive = true; 
     prayerZone.position = position;
-
-    // ── Passive presence influence ─────────────────────────────────────────
-    // While in the spiritual world the Christian player passively brightens
-    // nearby cells, analogous to how daemons leave a dark slime trail.
-    _passiveInfluenceTimer += dt;
-    if (_passiveInfluenceTimer >= _passiveInfluenceInterval) {
-      _passiveInfluenceTimer = 0.0;
-      _applyPassivePresence();
-    }
-  }
-
-  /// Brightens all cells within [_passiveInfluenceRadius] grid cells of the
-  /// player.  The effect fades quadratically with distance so the centre cell
-  /// receives the full [_passiveInfluenceStrength] and cells at the edge of the
-  /// radius receive nearly zero.  Called every [_passiveInfluenceInterval]
-  /// seconds while in the spiritual world.
-  void _applyPassivePresence() {
-    final gx = (position.x / CellComponent.cellSize).floor();
-    final gy = (position.y / CellComponent.cellSize).floor();
-    const int r = _passiveInfluenceRadius;
-    final double maxDistSq = (r * r).toDouble();
-
-    for (int dy = -r; dy <= r; dy++) {
-      for (int dx = -r; dx <= r; dx++) {
-        final distSq = (dx * dx + dy * dy).toDouble();
-        if (distSq > maxDistSq) continue;
-        final cell = game.grid.getCell(gx + dx, gy + dy);
-        if (cell == null) continue;
-        final falloff = 1.0 - distSq / maxDistSq;
-        cell.spiritualState =
-            (cell.spiritualState + _passiveInfluenceStrength * falloff)
-                .clamp(-1.0, 1.0);
-      }
-    }
   }
 }
