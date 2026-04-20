@@ -11,6 +11,7 @@ import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
+import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
@@ -578,84 +579,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
     );
   }
 
-  /// Progressive faith bar shown to the right of the chat.
-  Widget _buildFaithBar(NPCModel model) {
-    if (!model.isFaithVague) {
-      // Not enough conversations yet – show a question mark placeholder.
-      return SizedBox(
-        width: 28,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('✝️', style: TextStyle(fontSize: 14)),
-            const SizedBox(height: 4),
-            Container(
-              width: 8,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white12,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Center(
-                child: Text('?', style: TextStyle(color: Colors.white38, fontSize: 9)),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final faithNorm = ((model.faith + 100) / 200.0).clamp(0.0, 1.0);
-    final barColor = Color.lerp(Colors.red[700]!, Colors.green[600]!, faithNorm)!;
-
-    // Vague: round to nearest 25%; revealed: exact value.
-    final displayNorm = model.isFaithRevealed
-        ? faithNorm
-        : ((faithNorm * 4).round() / 4.0).clamp(0.0, 1.0);
-
-    const barHeight = 80.0;
-
-    return SizedBox(
-      width: 28,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('✝️', style: TextStyle(fontSize: 14)),
-          const SizedBox(height: 4),
-          Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              Container(
-                width: 8,
-                height: barHeight,
-                decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              Container(
-                width: 8,
-                height: barHeight * displayNorm,
-                decoration: BoxDecoration(
-                  color: barColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          if (model.isFaithRevealed)
-            Text(
-              model.faith.toStringAsFixed(0),
-              style: const TextStyle(color: Colors.white60, fontSize: 9),
-            )
-          else
-            const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final dialog = widget.game.activeDialog;
@@ -685,18 +608,25 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 children: [
                   CircleAvatar(backgroundColor: Colors.white24, child: Text(dialog.npcEmoji)),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        dialog.npcName,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      if (_showDelta) _buildDeltaRow(),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          dialog.npcName,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        if (_showDelta) _buildDeltaRow(),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
+                  // Session interaction counter on the RIGHT
+                  _SessionDotsRow(
+                    done: model.currentSessionInteractions,
+                    max: model.maxSessionInteractions,
+                  ),
+                  const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: _isReadingBible ? null : () => widget.game.closeDialog(),
@@ -724,7 +654,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   // Progressive faith reveal bar
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    child: _buildFaithBar(model),
+                    child: _FaithBarWidget(entity: model),
                   ),
                 ],
               ),
@@ -2258,14 +2188,14 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
                       fontSize: 11,
                     ),
                   ),
-                // Session interaction counter (hidden for homebase)
-                if (!unlimited) ...[
-                  const SizedBox(height: 4),
-                  _SessionDotsRow(done: done, max: max),
-                ],
               ],
             ),
           ),
+          // Session interaction counter on the RIGHT (hidden for homebase)
+          if (!unlimited) ...[
+            _SessionDotsRow(done: done, max: max),
+            const SizedBox(width: 4),
+          ],
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white70),
             onPressed: () => widget.game.closeBuildingInterior(),
@@ -2406,21 +2336,33 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
                 margin: const EdgeInsets.symmetric(vertical: 10),
                 color: Colors.white12,
               ),
-              // ── Right: art + residents ────────────────────────────────────
+              // ── Right: art + residents + faith bar ────────────────────────
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 12, 12, 16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                  padding: const EdgeInsets.fromLTRB(10, 12, 4, 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
-                        child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
+                              child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                            ),
+                            if (building.residents.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildResidentChips(building, compact: true),
+                            ],
+                          ],
+                        ),
                       ),
-                      if (building.residents.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        _buildResidentChips(building, compact: true),
-                      ],
+                      // Progressive building-faith bar (mirrors NPC dialog)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: _FaithBarWidget(entity: building),
+                      ),
                     ],
                   ),
                 ),
@@ -3073,6 +3015,99 @@ class _SessionDotsRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Vertical faith-level bar shown on the right edge of an NPC dialog or
+/// building interior overlay.
+///
+/// Works for any [BaseInteractableEntity] since [isFaithVague] and
+/// [isFaithRevealed] are defined on the shared base class.
+///
+/// * Not vague (< 3 interactions) → question mark placeholder.
+/// * Vague (3–5 interactions) → bar rounded to nearest 25 %.
+/// * Revealed (6+ interactions) → exact bar + numeric label.
+class _FaithBarWidget extends StatelessWidget {
+  final BaseInteractableEntity entity;
+
+  const _FaithBarWidget({required this.entity});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!entity.isFaithVague) {
+      // Not enough interactions yet – show a question mark placeholder.
+      return SizedBox(
+        width: 28,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('✝️', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 4),
+            Container(
+              width: 8,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white12,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Center(
+                child: Text('?', style: TextStyle(color: Colors.white38, fontSize: 9)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final faithNorm = ((entity.faith + 100) / 200.0).clamp(0.0, 1.0);
+    final barColor = Color.lerp(Colors.red[700]!, Colors.green[600]!, faithNorm)!;
+
+    // Vague: round to nearest 25 %; revealed: exact value.
+    final displayNorm = entity.isFaithRevealed
+        ? faithNorm
+        : ((faithNorm * 4).round() / 4.0).clamp(0.0, 1.0);
+
+    const barHeight = 80.0;
+
+    return SizedBox(
+      width: 28,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('✝️', style: TextStyle(fontSize: 14)),
+          const SizedBox(height: 4),
+          Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              Container(
+                width: 8,
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Container(
+                width: 8,
+                height: barHeight * displayNorm,
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (entity.isFaithRevealed)
+            Text(
+              entity.faith.toStringAsFixed(0),
+              style: const TextStyle(color: Colors.white60, fontSize: 9),
+            )
+          else
+            const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
+        ],
+      ),
     );
   }
 }

@@ -48,6 +48,16 @@ abstract class BaseInteractableEntity {
   /// Whether the session interaction limit has been reached for this entity.
   bool get isReadyToLeave => currentSessionInteractions >= maxSessionInteractions;
 
+  // ── Progressive faith reveal ──────────────────────────────────────────────
+
+  /// After 3 total interactions the player has a vague sense of the entity's
+  /// faith level (shown as a bar rounded to the nearest 25 %).
+  bool get isFaithVague => interactionCount >= 3;
+
+  /// After 6 total interactions the player knows the entity's exact faith
+  /// level.
+  bool get isFaithRevealed => interactionCount >= 6;
+
   /// Apply a faith [amount] to this entity, clamped to the valid range
   /// -100..100.
   void applyInfluence(double amount) {

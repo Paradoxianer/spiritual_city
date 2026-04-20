@@ -159,5 +159,39 @@ void main() {
         expect(entity.activeMissionDescription, 'Help the community');
       });
     });
+
+    group('isFaithVague / isFaithRevealed (progressive reveal)', () {
+      test('not vague at 0 interactions', () {
+        expect(make(interactionCount: 0).isFaithVague, isFalse);
+      });
+
+      test('not vague at 2 interactions', () {
+        expect(make(interactionCount: 2).isFaithVague, isFalse);
+      });
+
+      test('vague at exactly 3 interactions', () {
+        expect(make(interactionCount: 3).isFaithVague, isTrue);
+      });
+
+      test('vague but not revealed at 5 interactions', () {
+        final e = make(interactionCount: 5);
+        expect(e.isFaithVague, isTrue);
+        expect(e.isFaithRevealed, isFalse);
+      });
+
+      test('revealed at exactly 6 interactions', () {
+        expect(make(interactionCount: 6).isFaithRevealed, isTrue);
+      });
+
+      test('revealed at 100 interactions', () {
+        expect(make(interactionCount: 100).isFaithRevealed, isTrue);
+      });
+
+      test('isFaithRevealed implies isFaithVague', () {
+        final e = make(interactionCount: 10);
+        expect(e.isFaithRevealed, isTrue);
+        expect(e.isFaithVague, isTrue);
+      });
+    });
   });
 }
