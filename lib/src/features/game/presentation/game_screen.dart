@@ -598,41 +598,24 @@ class _DialogOverlayState extends State<DialogOverlay> {
         child: Column(
           children: [
             // ── Header ────────────────────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: const BoxDecoration(
-                color: Color(0xFF128C7E),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            _InteractionHeader(
+              bgColor: const Color(0xFF128C7E),
+              verticalPadding: 10,
+              leading: CircleAvatar(
+                backgroundColor: Colors.white24,
+                child: Text(dialog.npcEmoji),
               ),
-              child: Row(
-                children: [
-                  CircleAvatar(backgroundColor: Colors.white24, child: Text(dialog.npcEmoji)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          dialog.npcName,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        if (_showDelta) _buildDeltaRow(),
-                      ],
-                    ),
-                  ),
-                  // Session interaction counter on the RIGHT
-                  _SessionDotsRow(
-                    done: model.currentSessionInteractions,
-                    max: model.maxSessionInteractions,
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: _isReadingBible ? null : () => widget.game.closeDialog(),
-                  ),
-                ],
+              title: dialog.npcName,
+              titleStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
+              subtitle: _showDelta ? _buildDeltaRow() : null,
+              sessionDone: model.currentSessionInteractions,
+              sessionMax: model.maxSessionInteractions,
+              onClose: _isReadingBible ? null : () => widget.game.closeDialog(),
+              closeIconColor: Colors.white,
             ),
 
             // ── Chat body + faith bar ─────────────────────────────────────────
@@ -2126,82 +2109,51 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 
   Widget _buildHeader(BuildingModel building) {
     final isHome = building.isHomebase;
-    final done = building.currentSessionInteractions;
-    final max  = building.maxSessionInteractions;
-    final unlimited = isHome; // homebase has no forced leave
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isHome ? const Color(0xFF4E342E) : const Color(0xFF283593),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    return _InteractionHeader(
+      bgColor: isHome ? const Color(0xFF4E342E) : const Color(0xFF283593),
+      verticalPadding: 12,
+      leading: Text(
+        _buildingTypeEmoji(building.type),
+        style: TextStyle(fontSize: isHome ? 32 : 28),
       ),
-      child: Row(
-        children: [
-          Text(
-            _buildingTypeEmoji(building.type),
-            style: TextStyle(fontSize: isHome ? 32 : 28),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      _buildingTypeName(building.type),
-                      style: TextStyle(
-                        color: isHome ? const Color(0xFFFFD54F) : Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: isHome ? 19 : 17,
-                      ),
-                    ),
-                    if (isHome) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: const Color(0xFFFFD54F).withValues(alpha: 0.6)),
-                        ),
-                        child: const Text(
-                          'Mein Zuhause',
-                          style: TextStyle(
-                            color: Color(0xFFFFD54F),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+      title: _buildingTypeName(building.type),
+      titleStyle: TextStyle(
+        color: isHome ? const Color(0xFFFFD54F) : Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: isHome ? 19 : 17,
+      ),
+      titleBadge: isHome
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: const Color(0xFFFFD54F).withValues(alpha: 0.6)),
+              ),
+              child: const Text(
+                'Mein Zuhause',
+                style: TextStyle(
+                  color: Color(0xFFFFD54F),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
                 ),
-                if (building.residents.isNotEmpty)
-                  Text(
-                    _residentSummaryLine(building),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 11,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // Session interaction counter on the RIGHT (hidden for homebase)
-          if (!unlimited) ...[
-            _SessionDotsRow(done: done, max: max),
-            const SizedBox(width: 4),
-          ],
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white70),
-            onPressed: () => widget.game.closeBuildingInterior(),
-          ),
-        ],
-      ),
+              ),
+            )
+          : null,
+      subtitle: building.residents.isNotEmpty
+          ? Text(
+              _residentSummaryLine(building),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 11,
+              ),
+            )
+          : null,
+      showDots: !isHome,
+      sessionDone: building.currentSessionInteractions,
+      sessionMax: building.maxSessionInteractions,
+      onClose: () => widget.game.closeBuildingInterior(),
     );
   }
 
@@ -2971,6 +2923,103 @@ class _InteriorArtWidget extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+/// Shared header bar used by both the NPC dialog and the building interior
+/// overlays.
+///
+/// Layout:
+/// ```
+/// [leading]  [SizedBox(12)]  [Expanded(title + optional subtitle)]
+///            [if showDots: SessionDotsRow + SizedBox(4)]  [CloseButton]
+/// ```
+///
+/// Parameters:
+/// * [bgColor] – background colour of the bar.
+/// * [verticalPadding] – vertical inner padding (default: 10).
+/// * [leading] – left-edge icon: a `CircleAvatar` for NPCs, an emoji `Text`
+///   for buildings.
+/// * [title] / [titleStyle] – main title text and its style.
+/// * [titleBadge] – optional widget shown to the right of the title in the
+///   same row (e.g. the "Mein Zuhause" label for the homebase).
+/// * [subtitle] – optional widget shown below the title row (e.g. delta row
+///   or resident summary).
+/// * [showDots] – whether to show the `_SessionDotsRow` counter (default: true).
+/// * [sessionDone] / [sessionMax] – values forwarded to `_SessionDotsRow`.
+/// * [onClose] – close-button callback; `null` renders the button as disabled.
+/// * [closeIconColor] – colour of the close icon (default: `Colors.white70`).
+class _InteractionHeader extends StatelessWidget {
+  final Color bgColor;
+  final double verticalPadding;
+  final Widget leading;
+  final String title;
+  final TextStyle titleStyle;
+  final Widget? titleBadge;
+  final Widget? subtitle;
+  final bool showDots;
+  final int sessionDone;
+  final int sessionMax;
+  final VoidCallback? onClose;
+  final Color closeIconColor;
+
+  const _InteractionHeader({
+    required this.bgColor,
+    this.verticalPadding = 10,
+    required this.leading,
+    required this.title,
+    required this.titleStyle,
+    this.titleBadge,
+    this.subtitle,
+    this.showDots = true,
+    this.sessionDone = 0,
+    this.sessionMax = 2,
+    this.onClose,
+    this.closeIconColor = Colors.white70,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Row(
+        children: [
+          leading,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title, style: titleStyle),
+                    if (titleBadge != null) ...[
+                      const SizedBox(width: 8),
+                      titleBadge!,
+                    ],
+                  ],
+                ),
+                if (subtitle != null) subtitle!,
+              ],
+            ),
+          ),
+          if (showDots) ...[
+            _SessionDotsRow(done: sessionDone, max: sessionMax),
+            const SizedBox(width: 4),
+          ],
+          IconButton(
+            icon: Icon(Icons.close, color: closeIconColor),
+            onPressed: onClose,
+          ),
+        ],
+      ),
     );
   }
 }
