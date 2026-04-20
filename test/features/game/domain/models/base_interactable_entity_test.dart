@@ -61,28 +61,36 @@ void main() {
         expect(make(interactionCount: 0).maxSessionInteractions, 2);
       });
 
-      test('5 total interactions → limit 2 (not yet 6)', () {
-        expect(make(interactionCount: 5).maxSessionInteractions, 2);
+      test('2 total interactions → still 2 (not yet threshold 3)', () {
+        expect(make(interactionCount: 2).maxSessionInteractions, 2);
       });
 
-      test('6 total interactions → limit 3', () {
-        expect(make(interactionCount: 6).maxSessionInteractions, 3);
+      test('3 total interactions → limit 3 (first threshold)', () {
+        expect(make(interactionCount: 3).maxSessionInteractions, 3);
       });
 
-      test('7 total interactions → still 3', () {
-        expect(make(interactionCount: 7).maxSessionInteractions, 3);
+      test('8 total interactions → still 3 (not yet threshold 9)', () {
+        expect(make(interactionCount: 8).maxSessionInteractions, 3);
       });
 
-      test('11 total interactions → still 3 (not yet 12)', () {
-        expect(make(interactionCount: 11).maxSessionInteractions, 3);
+      test('9 total interactions → limit 4 (second threshold)', () {
+        expect(make(interactionCount: 9).maxSessionInteractions, 4);
       });
 
-      test('12 total interactions → limit 4', () {
-        expect(make(interactionCount: 12).maxSessionInteractions, 4);
+      test('20 total interactions → still 4 (not yet threshold 21)', () {
+        expect(make(interactionCount: 20).maxSessionInteractions, 4);
       });
 
-      test('18 total interactions → limit 5', () {
-        expect(make(interactionCount: 18).maxSessionInteractions, 5);
+      test('21 total interactions → limit 5 (third threshold)', () {
+        expect(make(interactionCount: 21).maxSessionInteractions, 5);
+      });
+
+      test('64 total interactions → still 5 (not yet threshold 65)', () {
+        expect(make(interactionCount: 64).maxSessionInteractions, 5);
+      });
+
+      test('65 total interactions → limit 6 (fourth threshold)', () {
+        expect(make(interactionCount: 65).maxSessionInteractions, 6);
       });
     });
 
