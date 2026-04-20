@@ -855,6 +855,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Opens the building-interior overlay for [building].
   void openBuildingInterior(BuildingModel building) {
+    building.resetSession();
     activeBuildingData = GameBuildingData(building: building);
     overlays.add('BuildingInteriorOverlay');
     paused = true;
@@ -931,6 +932,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         radius: 12,
         amount: 0.12,
       );
+    }
+    // Increment session interaction counter for buildings (mirrors NPC dialog
+    // behaviour).  The homebase has an unlimited limit so this counter never
+    // triggers an auto-leave there.
+    if (result.success) {
+      data.building.currentSessionInteractions++;
     }
     return result;
   }

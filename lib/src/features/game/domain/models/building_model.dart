@@ -38,6 +38,59 @@ class BuildingModel extends BaseInteractableEntity {
   })  : residents = residents ?? [],
         super(faith: faith, interactionCount: interactionCount);
 
+  // ── Session limits ────────────────────────────────────────────────────────
+
+  /// Type-specific minimum number of interactions allowed per visit session.
+  ///
+  /// Public / commercial buildings are visited for longer than private homes.
+  ///
+  /// | Category                        | Base |
+  /// |---------------------------------|------|
+  /// | Pastor house (homebase)         | ∞ (int.maxFinite – no forced leave) |
+  /// | Residential (house, apartment)  | 2    |
+  /// | Commercial (shop, market, …)    | 4    |
+  /// | Church / cathedral              | 3    |
+  /// | Civic / public (hospital, …)    | 3    |
+  /// | Industrial / other              | 2    |
+  int get baseSessionInteractions {
+    if (isHomebase) return 999; // effectively unlimited
+    switch (type) {
+      case BuildingType.shop:
+      case BuildingType.supermarket:
+      case BuildingType.mall:
+      case BuildingType.office:
+      case BuildingType.skyscraper:
+        return 4;
+      case BuildingType.church:
+      case BuildingType.cathedral:
+        return 3;
+      case BuildingType.hospital:
+      case BuildingType.school:
+      case BuildingType.university:
+      case BuildingType.trainStation:
+      case BuildingType.policeStation:
+      case BuildingType.fireStation:
+      case BuildingType.postOffice:
+      case BuildingType.library:
+      case BuildingType.museum:
+      case BuildingType.stadium:
+      case BuildingType.cityHall:
+        return 3;
+      case BuildingType.house:
+      case BuildingType.apartment:
+      default:
+        return 2;
+    }
+  }
+
+  /// Max interactions per session, floored by [baseSessionInteractions].
+  ///
+  /// Grows over time as the player visits more often (Issue #105), but never
+  /// drops below the type-specific base.
+  @override
+  int get maxSessionInteractions =>
+      baseSessionInteractions + (interactionCount ~/ 6);
+
   // ── Combined faith ────────────────────────────────────────────────────────
 
   /// Combined faith of the building itself plus all its residents.
