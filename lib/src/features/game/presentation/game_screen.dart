@@ -2249,65 +2249,74 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   // ── Interior screen ───────────────────────────────────────────────────────
 
   Widget _buildInteriorScreen(BuildingModel building) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // ── Body: art left + faith bar right (mirrors NPC chat body) ──────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 4, 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
-                      child: _InteriorArtWidget(art: _interiorArt(building.type)),
-                    ),
-                    if (building.residents.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      _buildResidentChips(building, compact: true),
-                    ],
-                    if (_lastReaction != null) ...[
-                      const SizedBox(height: 6),
-                      Text(_lastReaction!, style: const TextStyle(fontSize: 28)),
-                    ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Left: art + residents + reaction ──────────────────────────────
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 8, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
+                    child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                  ),
+                  if (building.residents.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _buildResidentChips(building, compact: true),
                   ],
+                  if (_lastReaction != null) ...[
+                    const SizedBox(height: 6),
+                    Text(_lastReaction!, style: const TextStyle(fontSize: 28)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          // Divider
+          Container(
+            width: 1,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            color: Colors.white12,
+          ),
+          // ── Right: chips (or countdown) + faith bar ────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 12, 4, 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Material(
+                  type: MaterialType.transparency,
+                  child: _isActionBusy
+                      ? _buildActionCountdown()
+                      : _buildBuildingChipsColumn(building),
                 ),
-              ),
-              // Progressive faith bar (same as NPC dialog)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                child: _FaithBarWidget(entity: building),
-              ),
-            ],
+                // Progressive faith bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                  child: _FaithBarWidget(entity: building),
+                ),
+              ],
+            ),
           ),
-        ),
-        // ── Bottom: action chips or countdown (mirrors NPC dialog) ────────
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          decoration: const BoxDecoration(
-            color: Colors.black26,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-          ),
-          child: _isActionBusy
-              ? _buildActionCountdown()
-              : _buildBuildingChips(building),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  /// Compact countdown shown in the bottom bar while an action is in progress.
+  /// Vertical countdown shown in the right action panel while an action is in progress.
   Widget _buildActionCountdown() {
     final emoji = _actionEmojiFor(_pendingActionType ?? '');
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 24)),
-        const SizedBox(width: 10),
+        Text(emoji, style: const TextStyle(fontSize: 28)),
+        const SizedBox(height: 6),
         Text(
           '${_actionSecondsLeft}s',
           style: const TextStyle(
@@ -2316,12 +2325,13 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(height: 4),
         Text(
           _actionLabelFor(_pendingActionType ?? ''),
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 13,
+            fontSize: 10,
           ),
         ),
       ],
@@ -2348,13 +2358,15 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     }
   }
 
-  // ── Building action chips (bottom bar) ────────────────────────────────────
+  // ── Building action chips (right side-panel) ──────────────────────────────
 
-  /// Returns a row of [_EmojiChip] widgets for [building], matching the order
-  /// in [_actionsFor] so that keyboard badges 1-N stay in sync.
+  /// Returns a vertical column of [_EmojiChip] widgets for [building], matching
+  /// the order in [_actionsFor] so that keyboard badges 1-N stay in sync.
   ///
   /// Chips are disabled when the player lacks the required resources.
-  Widget _buildBuildingChips(BuildingModel building) {
+  /// This column lives in the RIGHT side-panel so the layout is visually
+  /// distinct from the NPC dialog (which uses a horizontal bottom row).
+  Widget _buildBuildingChipsColumn(BuildingModel building) {
     final g = widget.game;
     int idx = 0;
     int nk() => ++idx;
@@ -2436,9 +2448,12 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         ];
     }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: chips,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: chips
+          .map((c) => Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: c))
+          .toList(),
     );
   }
 
