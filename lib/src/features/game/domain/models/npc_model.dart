@@ -44,14 +44,6 @@ class NPCModel extends BaseInteractableEntity {
   /// Player health change from the most recent interaction (negative = HP spent).
   double lastPlayerHealthDelta = 0.0;
 
-  // ── Progressive faith reveal ───────────────────────────────────────────────
-
-  /// After 3 interactions the player has a vague sense of the NPC's faith.
-  bool get isFaithVague => interactionCount >= 3;
-
-  /// After 6 interactions the player knows the NPC's exact faith level.
-  bool get isFaithRevealed => interactionCount >= 6;
-
   /// ID of the building this NPC lives/works in.
   final String? homeBuildingId;
 
