@@ -34,16 +34,37 @@ abstract class BaseInteractableEntity {
     this.interactionCount = 0,
   });
 
+  /// Bonus session slots unlocked by the total [interactionCount].
+  ///
+  /// Thresholds and the corresponding dots shown in the header:
+  ///
+  /// | interactionCount | extra bonus | default total (base = 2) |
+  /// |------------------|-------------|--------------------------|
+  /// |  < 3             | 0           | 2                        |
+  /// |  3 – 8           | +1          | 3                        |
+  /// |  9 – 20          | +2          | 4                        |
+  /// |  21 – 64         | +3          | 5                        |
+  /// |  65 – 194        | +4          | 6                        |
+  /// |  195 – 584       | +5          | 7                        |
+  /// |  585+            | +6          | 8  (etc.)                |
+  ///
+  /// [BuildingModel] adds the bonus on top of its type-specific base
+  /// instead of the default base of 2.
+  int get sessionBonus {
+    const thresholds = [3, 9, 21, 65, 195, 585, 1755];
+    int n = 0;
+    for (final t in thresholds) {
+      if (interactionCount >= t) n++;
+      else break;
+    }
+    return n;
+  }
+
   /// Max allowed interactions per session.
   ///
-  /// Starts at 2.  For every 6 total interactions the player has had with
-  /// this entity, the limit grows by 1 – reflecting that you naturally talk
-  /// longer with people (or visit places) you know well (Issue #105).
-  ///
-  ///   0  interactions → 2
-  ///   6  interactions → 3
-  ///   12 interactions → 4  …
-  int get maxSessionInteractions => 2 + (interactionCount ~/ 6);
+  /// Starts at 2 and grows via [sessionBonus] – reflecting that you naturally
+  /// talk longer with people (or visit places) you know well.
+  int get maxSessionInteractions => 2 + sessionBonus;
 
   /// Whether the session interaction limit has been reached for this entity.
   bool get isReadyToLeave => currentSessionInteractions >= maxSessionInteractions;

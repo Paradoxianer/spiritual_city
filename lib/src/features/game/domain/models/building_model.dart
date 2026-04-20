@@ -88,8 +88,7 @@ class BuildingModel extends BaseInteractableEntity {
   /// Grows over time as the player visits more often (Issue #105), but never
   /// drops below the type-specific base.
   @override
-  int get maxSessionInteractions =>
-      baseSessionInteractions + (interactionCount ~/ 6);
+  int get maxSessionInteractions => baseSessionInteractions + sessionBonus;
 
   // ── Combined faith ────────────────────────────────────────────────────────
 
