@@ -2255,12 +2255,15 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Left: action chips (or countdown) ─────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 12, 4, 16),
-          child: _isActionBusy
-              ? _buildActionCountdown()
-              : _buildBuildingChipsColumn(building),
+        // ── Left: action menu (or countdown) ─────────────────────────────
+        SizedBox(
+          width: 200,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 10, 4, 14),
+            child: _isActionBusy
+                ? _buildActionCountdown()
+                : _buildBuildingChipsColumn(building),
+          ),
         ),
         // Divider
         Container(
@@ -2358,72 +2361,73 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     }
   }
 
-  // ── Building action chips (right side-panel) ──────────────────────────────
+  // ── Building action menu (left side-panel) ───────────────────────────────
 
-  /// Returns a vertical column of [_EmojiChip] widgets for [building], matching
-  /// the order in [_actionsFor] so that keyboard badges 1-N stay in sync.
+  /// Returns a vertical column of [_ActionMenuRow] widgets for [building],
+  /// matching the order in [_actionsFor] so that keyboard badges 1-N stay in sync.
   ///
-  /// Chips are disabled when the player lacks the required resources.
-  /// This column lives in the RIGHT side-panel so the layout is visually
-  /// distinct from the NPC dialog (which uses a horizontal bottom row).
+  /// Rows are disabled when the player lacks the required resources.
+  /// This column lives in the LEFT side-panel and uses the classic menu-row
+  /// layout (emoji + cost arrow + effect) to distinguish it visually from the
+  /// NPC dialog which uses a horizontal chip row at the bottom.
   Widget _buildBuildingChipsColumn(BuildingModel building) {
     final g = widget.game;
     int idx = 0;
     int nk() => ++idx;
 
-    final List<Widget> chips;
+    final List<Widget> rows;
     switch (building.type) {
       // ── Pastor's house ─────────────────────────────────────────────────
       case BuildingType.pastorHouse:
-        chips = [
-          _EmojiChip(emoji: '📖', hint: '↔🙏+20', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('readBible')),
-          _EmojiChip(emoji: '🍽️', hint: '→🍞+50', keyIndex: nk(), onTap: () => _performAction('eat')),
-          _EmojiChip(emoji: '😴', hint: '→❤️+50', keyIndex: nk(), onTap: () => _performAction('sleep')),
-          _EmojiChip(emoji: '🙏', hint: '↔✨+15🌍', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
-          _EmojiChip(emoji: '📋', hint: '→📜', keyIndex: nk(), onTap: () => _performAction('missions')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen', keyIndex: nk(), onTap: () => _performAction('eat')),
+          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen', keyIndex: nk(), onTap: () => _performAction('sleep')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🕊️+15', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionen', keyIndex: nk(), onTap: () => _performAction('missions')),
         ];
 
       // ── Residential ───────────────────────────────────────────────────
       case BuildingType.house:
       case BuildingType.apartment:
-        chips = [
-          _EmojiChip(emoji: '💬', hint: '→✝️', keyIndex: nk(), onTap: () => _performAction('talk')),
-          _EmojiChip(emoji: '🙏', hint: '−❤️→✝️', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
-          _EmojiChip(emoji: '📦', hint: '−10💰→✝️', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('help')),
-          _EmojiChip(emoji: '📖', hint: '−💰❤️→✝️', keyIndex: nk(), isDisabled: g.materials < 3 || g.health <= 3, onTap: () => _performAction('bible')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Gespräch', keyIndex: nk(), onTap: () => _performAction('talk')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−❤️→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−10💰→', trailingEmoji: '✝️', tooltip: 'Helfen', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('help')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−💰❤️→', trailingEmoji: '✝️', tooltip: 'Bibelstunde', keyIndex: nk(), isDisabled: g.materials < 3 || g.health <= 3, onTap: () => _performAction('bible')),
         ];
 
       // ── Church ────────────────────────────────────────────────────────
       case BuildingType.church:
       case BuildingType.cathedral:
-        chips = [
-          _EmojiChip(emoji: '📖', hint: '−3💰→✝️', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('readBible')),
-          _EmojiChip(emoji: '🙏', hint: '−3💰→✝️', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
-          _EmojiChip(emoji: '🎵', hint: '−8💰→✝️', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('worship')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🎵', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Lobpreis', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('worship')),
         ];
 
       // ── Hospital ──────────────────────────────────────────────────────
       case BuildingType.hospital:
-        chips = [
-          _EmojiChip(emoji: '🤝', hint: '−5💰→✝️', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('visitSick')),
-          _EmojiChip(emoji: '🙏', hint: '−3💰→✝️', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
-          _EmojiChip(emoji: '💊', hint: '−10💰→✝️', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('heal')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Kranke besuchen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('visitSick')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💊', arrowText: '−10💰→', trailingEmoji: '✝️', tooltip: 'Heilen', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('heal')),
         ];
 
       // ── School / University ───────────────────────────────────────────
       case BuildingType.school:
       case BuildingType.university:
-        chips = [
-          _EmojiChip(emoji: '📚', hint: '−5💰→✝️', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('teach')),
-          _EmojiChip(emoji: '🙏', hint: '−3💰→✝️', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
-          _EmojiChip(emoji: '📦', hint: '−8💰→✝️', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('distribute')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '📚', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Unterrichten', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('teach')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('distribute')),
         ];
 
       // ── Cemetery ──────────────────────────────────────────────────────
       case BuildingType.cemetery:
-        chips = [
-          _EmojiChip(emoji: '🙏', hint: '−5💰→✝️', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('pray')),
-          _EmojiChip(emoji: '🤝', hint: '−3💰→✝️', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('comfort')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Trösten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('comfort')),
         ];
 
       // ── Commercial ────────────────────────────────────────────────────
@@ -2432,27 +2436,27 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.mall:
       case BuildingType.office:
       case BuildingType.skyscraper:
-        chips = [
-          _EmojiChip(emoji: '💸', hint: '→💰', keyIndex: nk(), onTap: () => _performAction('donate')),
-          _EmojiChip(emoji: '💬', hint: '→✝️', keyIndex: nk(), onTap: () => _performAction('worker')),
-          _EmojiChip(emoji: '🙏', hint: '−3💰→✝️', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('prayBusiness')),
-          _EmojiChip(emoji: '📦', hint: '−5💰→✝️', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('distribute')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '💸', arrowText: '→', trailingEmoji: '💰', tooltip: 'Spenden', keyIndex: nk(), onTap: () => _performAction('donate')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Zeugnis', keyIndex: nk(), onTap: () => _performAction('worker')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Für Betrieb beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('prayBusiness')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('distribute')),
         ];
 
       // ── Everything else ───────────────────────────────────────────────
       default:
-        chips = [
-          _EmojiChip(emoji: '🙏', hint: '→✝️', keyIndex: nk(), onTap: () => _performAction('pray')),
-          _EmojiChip(emoji: '💬', hint: '−3💰→✝️', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('witness')),
-          _EmojiChip(emoji: '📦', hint: '−8💰→✝️', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('distribute')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Zeugnis geben', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('witness')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('distribute')),
         ];
     }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: chips
-          .map((c) => Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: c))
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows
+          .map((r) => Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: r))
           .toList(),
     );
   }
@@ -2784,6 +2788,8 @@ class _ActionMenuRow extends StatelessWidget {
   final VoidCallback onTap;
   /// 1-based keyboard shortcut shown as an amber badge (null = no badge).
   final int? keyIndex;
+  /// When true the row is rendered at reduced opacity and taps are ignored.
+  final bool isDisabled;
 
   const _ActionMenuRow({
     required this.leadingEmoji,
@@ -2792,60 +2798,64 @@ class _ActionMenuRow extends StatelessWidget {
     required this.tooltip,
     required this.onTap,
     this.keyIndex,
+    this.isDisabled = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final showBadge = keyIndex != null && _shouldShowKeyHints();
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
-          child: Row(
-            children: [
-              if (showBadge)
-                Container(
-                  width: 16,
-                  height: 16,
-                  margin: const EdgeInsets.only(right: 4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFA000), // amber 700
-                    shape: BoxShape.circle,
+    return Opacity(
+      opacity: isDisabled ? 0.35 : 1.0,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: isDisabled ? null : onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+            child: Row(
+              children: [
+                if (showBadge)
+                  Container(
+                    width: 16,
+                    height: 16,
+                    margin: const EdgeInsets.only(right: 4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFA000), // amber 700
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$keyIndex',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        height: 1,
+                      ),
+                    ),
                   ),
-                  alignment: Alignment.center,
+                Text(leadingEmoji, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 8),
+                Text(
+                  arrowText,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.45),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
                   child: Text(
-                    '$keyIndex',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      height: 1,
+                    trailingEmoji,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ),
-              Text(leadingEmoji, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 6),
-              Text(
-                arrowText,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.45),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  trailingEmoji,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
