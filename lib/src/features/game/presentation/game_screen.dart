@@ -2252,62 +2252,57 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   // ── Interior screen ───────────────────────────────────────────────────────
 
   Widget _buildInteriorScreen(BuildingModel building) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Left: action menu (or countdown) ─────────────────────────────
-        SizedBox(
-          width: 200,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 10, 4, 14),
-            child: _isActionBusy
-                ? _buildActionCountdown()
-                : _buildBuildingChipsColumn(building),
-          ),
-        ),
-        // Divider
-        Container(
-          width: 1,
-          height: 120,
-          margin: const EdgeInsets.symmetric(vertical: 10),
-          color: Colors.white12,
-        ),
-        // ── Middle: art + residents + reaction ────────────────────────────
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
-                  child: _InteriorArtWidget(art: _interiorArt(building.type)),
-                ),
-                if (building.residents.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildResidentChips(building, compact: true),
-                ],
-                if (_lastReaction != null) ...[
-                  const SizedBox(height: 6),
-                  Text(_lastReaction!, style: const TextStyle(fontSize: 28)),
-                ],
-              ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Left: action menu (or countdown) ──────────────────────────
+          SizedBox(
+            width: 200,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 10, 4, 14),
+              child: _isActionBusy
+                  ? _buildActionCountdown()
+                  : _buildBuildingChipsColumn(building),
             ),
           ),
-        ),
-        // Divider
-        Container(
-          width: 1,
-          height: 120,
-          margin: const EdgeInsets.symmetric(vertical: 10),
-          color: Colors.white12,
-        ),
-        // ── Right: faith bar ───────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-          child: _FaithBarWidget(entity: building),
-        ),
-      ],
+          // Full-height divider
+          const VerticalDivider(width: 1, thickness: 1, color: Colors.white12),
+          // ── Middle: art + residents + reaction ─────────────────────────
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
+                    child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                  ),
+                  if (building.residents.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _buildResidentChips(building, compact: true),
+                  ],
+                  if (_lastReaction != null) ...[
+                    const SizedBox(height: 6),
+                    Text(_lastReaction!, style: const TextStyle(fontSize: 28)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          // Full-height divider
+          const VerticalDivider(width: 1, thickness: 1, color: Colors.white12),
+          // ── Right: faith bar (centered, colored background like NPC dialog) ──
+          Container(
+            color: Colors.black26,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+            child: Center(
+              child: _FaithBarWidget(entity: building),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
