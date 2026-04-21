@@ -2318,7 +2318,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           const Text('🚪', style: TextStyle(fontSize: 56)),
           const SizedBox(height: 12),
           Text(
-            'Anklopfen?',
+            'Klingeln?',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.9),
               fontSize: 20,
@@ -2351,8 +2351,8 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     shape: const StadiumBorder(),
                   ),
-                  icon: const Text('👊', style: TextStyle(fontSize: 22)),
-                  label: const Text('Anklopfen', style: TextStyle(fontSize: 16)),
+                  icon: const Text('🔔', style: TextStyle(fontSize: 22)),
+                  label: const Text('Klingeln', style: TextStyle(fontSize: 16)),
                   onPressed: _attemptKnock,
                 ),
                 if (_shouldShowKeyHints())
