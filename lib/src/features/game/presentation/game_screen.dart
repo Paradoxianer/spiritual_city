@@ -2091,6 +2091,9 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          // CrossAxisAlignment.stretch ensures the interior Row receives TIGHT
+          // width constraints, so that its Expanded child can allocate space.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildHeader(data.building),
             if (_accessGranted == null)
@@ -2446,7 +2449,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: chips
           .map((c) => Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: c))
           .toList(),
@@ -3079,6 +3082,7 @@ class _FaithBarWidget extends StatelessWidget {
       return SizedBox(
         width: 28,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text('✝️', style: TextStyle(fontSize: 14)),
@@ -3112,6 +3116,7 @@ class _FaithBarWidget extends StatelessWidget {
     return SizedBox(
       width: 28,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text('✝️', style: TextStyle(fontSize: 14)),
