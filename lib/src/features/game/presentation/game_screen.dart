@@ -2249,62 +2249,58 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   // ── Interior screen ───────────────────────────────────────────────────────
 
   Widget _buildInteriorScreen(BuildingModel building) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Left: art + residents + reaction ──────────────────────────────
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 8, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
-                    child: _InteriorArtWidget(art: _interiorArt(building.type)),
-                  ),
-                  if (building.residents.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    _buildResidentChips(building, compact: true),
-                  ],
-                  if (_lastReaction != null) ...[
-                    const SizedBox(height: 6),
-                    Text(_lastReaction!, style: const TextStyle(fontSize: 28)),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          // Divider
-          Container(
-            width: 1,
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            color: Colors.white12,
-          ),
-          // ── Right: chips (or countdown) + faith bar ────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 12, 4, 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Left: art + residents + reaction ──────────────────────────────
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 8, 16),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Material(
-                  type: MaterialType.transparency,
-                  child: _isActionBusy
-                      ? _buildActionCountdown()
-                      : _buildBuildingChipsColumn(building),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
+                  child: _InteriorArtWidget(art: _interiorArt(building.type)),
                 ),
-                // Progressive faith bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                  child: _FaithBarWidget(entity: building),
-                ),
+                if (building.residents.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildResidentChips(building, compact: true),
+                ],
+                if (_lastReaction != null) ...[
+                  const SizedBox(height: 6),
+                  Text(_lastReaction!, style: const TextStyle(fontSize: 28)),
+                ],
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        // Divider
+        Container(
+          width: 1,
+          height: 120,
+          margin: const EdgeInsets.symmetric(vertical: 10),
+          color: Colors.white12,
+        ),
+        // ── Right: chips (or countdown) + faith bar ────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 4, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _isActionBusy
+                  ? _buildActionCountdown()
+                  : _buildBuildingChipsColumn(building),
+              // Progressive faith bar
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                child: _FaithBarWidget(entity: building),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
