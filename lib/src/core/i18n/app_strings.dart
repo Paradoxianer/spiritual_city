@@ -35,6 +35,11 @@ class AppStrings {
       'loadGame.delete': 'Löschen',
       'loadGame.load': 'Laden',
       'loadGame.lastPlayed': 'Zuletzt gespielt',
+      'loadGame.rename': 'Umbenennen',
+      'loadGame.rename.title': 'Spiel umbenennen',
+      'loadGame.rename.hint': 'Neuer Name',
+      'loadGame.rename.confirm': 'Umbenennen',
+      'loadGame.rename.cancel': 'Abbrechen',
 
       // In-game
       'game.saveQuit': 'Speichern & Beenden',
@@ -89,6 +94,11 @@ class AppStrings {
       'loadGame.delete': 'Delete',
       'loadGame.load': 'Load',
       'loadGame.lastPlayed': 'Last played',
+      'loadGame.rename': 'Rename',
+      'loadGame.rename.title': 'Rename Save',
+      'loadGame.rename.hint': 'New name',
+      'loadGame.rename.confirm': 'Rename',
+      'loadGame.rename.cancel': 'Cancel',
 
       // In-game
       'game.saveQuit': 'Save & Quit',
