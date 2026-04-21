@@ -410,29 +410,55 @@ class _DialogOverlayState extends State<DialogOverlay> {
   }
 
   /// Called when the player presses digit 1–6 while the dialog is open.
+  ///
+  /// Uses fixed slot positions so the key numbers never shift when optional
+  /// chips (help / convert) are hidden. Disabled chips are silently skipped.
   void _onDialogKey() {
     final idx = widget.game.dialogActionIndex.value;
     if (idx < 0) return;
     final model = widget.game.activeDialog?.npcModel;
     if (model == null) return;
-    final chips = _buildChipActions(model);
-    if (idx < chips.length) {
-      final (type, emoji) = chips[idx];
-      _handleInteraction(type, emoji);
+    final entry = _slotAction(idx, model);
+    if (entry == null) return; // slot unavailable for this NPC state
+    final (type, emoji) = entry;
+    if (_isChipActionDisabled(type)) return; // grayed-out: ignore shortkey
+    _handleInteraction(type, emoji);
+  }
+
+  /// Maps a fixed slot index (0–5 from keys 1–6) to an action (type, emoji),
+  /// or null if the slot is unavailable for [model]'s current state.
+  ///
+  /// Slots are always:  0=talk  1=counsel  2=pray  3=bible  4=help  5=convert
+  /// This keeps key numbers stable even when conditional chips are hidden.
+  static (String, String)? _slotAction(int slotIndex, NPCModel model) {
+    switch (slotIndex) {
+      case 0: return ('talk',    '💬');
+      case 1: return ('counsel', '👂');
+      case 2: return ('pray',    '🙏');
+      case 3: return ('bible',   '📖');
+      case 4: return model.wantsGift    ? ('help',    '📦')  : null;
+      case 5: return model.isChristian  ? null        : ('convert', '✝️?');
+      default: return null;
     }
   }
 
-  /// Returns the ordered list of (interactionType, emoji) for the current NPC,
-  /// matching exactly what is rendered as chips in the action bar.
-  List<(String, String)> _buildChipActions(NPCModel model) {
-    return [
-      ('talk',    '💬'),  // always visible
-      ('counsel', '👂'),  // always visible (may be disabled)
-      ('pray',    '🙏'),  // always visible (may be disabled)
-      ('bible',   '📖'),  // always visible
-      if (model.wantsGift)    ('help',    '📦'),
-      if (!model.isChristian) ('convert', '✝️?'),
-    ];
+  /// Returns true when [type] is currently disabled due to insufficient
+  /// resources, mirroring the [isDisabled] logic of the rendered chips.
+  bool _isChipActionDisabled(String type) {
+    final factor = FaithCalculatorService.difficultyFactorFor(
+        widget.game.difficulty);
+    switch (type) {
+      case 'counsel':
+        final hpCost = (2.0 / factor).round().clamp(1, 99);
+        return widget.game.health <= hpCost;
+      case 'pray':
+        final faithCost = (2.0 / factor).round().clamp(1, 99);
+        return widget.game.faith < faithCost;
+      case 'help':
+        return widget.game.materials < 8.0;
+      default:
+        return false;
+    }
   }
 
   void _scrollToBottom() {
@@ -768,24 +794,22 @@ class _DialogOverlayState extends State<DialogOverlay> {
                             (2.0 / factor).round().clamp(1, 99);
                         const helpMaterialCost = 8.0;
 
-                        // Build chips in the same order as _buildChipActions so
-                        // the key badges (1-N) always match keyboard dispatch.
-                        var idx = 0;
-                        int nextKey() => ++idx;
-
+                        // Fixed key indices: talk=1, counsel=2, pray=3,
+                        // bible=4, help=5, convert=6. The numbers are stable
+                        // even when optional chips (help/convert) are hidden.
                         return Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             _EmojiChip(
                               emoji: '💬',
                               hint: '→✝️',
-                              keyIndex: nextKey(),
+                              keyIndex: 1,
                               onTap: () => _handleInteraction('talk', '💬'),
                             ),
                             _EmojiChip(
                               emoji: '👂',
                               hint: '−❤️→✝️',
-                              keyIndex: nextKey(),
+                              keyIndex: 2,
                               isDisabled:
                                   widget.game.health <= counselHpCost,
                               onTap: () =>
@@ -794,7 +818,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                             _EmojiChip(
                               emoji: '🙏',
                               hint: '−🙏→✝️🌍',
-                              keyIndex: nextKey(),
+                              keyIndex: 3,
                               isDisabled:
                                   widget.game.faith < prayFaithCost,
                               onTap: () => _handleInteraction('pray', '🙏'),
@@ -802,7 +826,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                             _EmojiChip(
                               emoji: '📖',
                               hint: '→🙏🙏+✝️',
-                              keyIndex: nextKey(),
+                              keyIndex: 4,
                               onTap: () =>
                                   _handleInteraction('bible', '📖'),
                             ),
@@ -810,7 +834,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                               _EmojiChip(
                                 emoji: '📦',
                                 hint: '−8📦→✝️',
-                                keyIndex: nextKey(),
+                                keyIndex: 5,
                                 isDisabled: widget.game.materials <
                                     helpMaterialCost,
                                 onTap: () =>
@@ -820,7 +844,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                               _EmojiChip(
                                 emoji: '✝️🕊️',
                                 hint: '→?',
-                                keyIndex: nextKey(),
+                                keyIndex: 6,
                                 isSpecial: true,
                                 onTap: () =>
                                     _handleInteraction('convert', '✝️?'),
@@ -2046,7 +2070,15 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   /// Called when the player presses digit 1–6 while the building is open.
   void _onBuildingKey() {
     final idx = widget.game.buildingActionIndex.value;
-    if (idx < 0 || _accessGranted != true || _isActionBusy) return;
+    if (idx < 0) return;
+
+    // Knock screen: key 1 triggers the knock attempt.
+    if (_accessGranted == null) {
+      if (idx == 0) _attemptKnock();
+      return;
+    }
+
+    if (_accessGranted != true || _isActionBusy) return;
     if (idx < _actionTypes.length) {
       _performAction(_actionTypes[idx]);
     }
@@ -2305,16 +2337,44 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           ],
           const SizedBox(height: 20),
           Center(
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: const StadiumBorder(),
-              ),
-              icon: const Text('👊', style: TextStyle(fontSize: 22)),
-              label: const Text('Anklopfen', style: TextStyle(fontSize: 16)),
-              onPressed: _attemptKnock,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber[700],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: const StadiumBorder(),
+                  ),
+                  icon: const Text('👊', style: TextStyle(fontSize: 22)),
+                  label: const Text('Anklopfen', style: TextStyle(fontSize: 16)),
+                  onPressed: _attemptKnock,
+                ),
+                if (_shouldShowKeyHints())
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFA000),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '1',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
