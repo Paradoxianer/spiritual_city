@@ -27,3 +27,10 @@
 * **Semantisches Naming:** Variablen und Methoden müssen ihre Funktion präzise beschreiben.
 * **Intents dokumentieren:** Kommentiere das "Warum" hinter komplexen Entscheidungen, nicht das offensichtliche "Was".
 * **Dateistruktur:** "One Class Per File"-Prinzip zur Wahrung der Übersichtlichkeit.
+
+## 6. Mehrsprachigkeit & i18n
+* **Kein Hard-Coding:** Jeder sichtbare UI-Text muss über `AppStrings.get('key')` abgerufen werden – niemals direkt als String-Literal in Widgets schreiben.
+* **Vollständigkeit:** Beim Hinzufügen oder Ändern eines Strings diesen in **allen** Locales (`de`, `en`, …) in `lib/src/core/i18n/app_strings.dart` pflegen.
+* **Namenskonvention:** Schlüssel folgen dem Punkt-getrennten Schema `<screen>.<element>[.<variante>]` (z. B. `dialog.talk`, `difficulty.easy.desc`).
+* **Neue Sprachen:** Vollständige Locale-Map mit allen vorhandenen Schlüsseln anlegen; fehlende Schlüssel fallen auf den Rohschlüssel zurück.
+* **Dokumentation:** Vollständige i18n-Anleitung unter `docs/i18n.md`.
