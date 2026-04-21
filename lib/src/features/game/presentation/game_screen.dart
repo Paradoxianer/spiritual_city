@@ -368,6 +368,10 @@ class DialogOverlay extends StatefulWidget {
 }
 
 class _DialogOverlayState extends State<DialogOverlay> {
+  /// Material cost for the "help" (gift) action.  Single source of truth used
+  /// by both the chip [isDisabled] check and [_isChipActionDisabled].
+  static const double _helpMaterialCost = 8.0;
+
   final List<_ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   bool _isWaiting = false;
@@ -455,7 +459,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
         final faithCost = (2.0 / factor).round().clamp(1, 99);
         return widget.game.faith < faithCost;
       case 'help':
-        return widget.game.materials < 8.0;
+        return widget.game.materials < _helpMaterialCost;
       default:
         return false;
     }
@@ -792,7 +796,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                             (2.0 / factor).round().clamp(1, 99);
                         final prayFaithCost =
                             (2.0 / factor).round().clamp(1, 99);
-                        const helpMaterialCost = 8.0;
+                        const helpMaterialCost = _helpMaterialCost;
 
                         // Fixed key indices: talk=1, counsel=2, pray=3,
                         // bible=4, help=5, convert=6. The numbers are stable
