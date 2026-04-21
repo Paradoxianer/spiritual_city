@@ -153,7 +153,7 @@ class BuildingInteractionService {
         return const BuildingInteractionResult(
           playerFaithDelta: 15.0,
           playerHealthDelta: -5.0,
-          reactionEmoji: '🙏✨',
+          reactionEmoji: '🙏🕊️',
           actionDurationSeconds: pastorHousePraySeconds,
         );
       default:
