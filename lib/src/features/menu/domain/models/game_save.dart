@@ -38,6 +38,17 @@ class GameSave {
         gameState: newState,
       );
 
+  /// Returns a copy of this save with [name] replaced.
+  GameSave copyWithName(String newName) => GameSave(
+        id: id,
+        name: newName,
+        createdAt: createdAt,
+        difficulty: difficulty,
+        seed: seed,
+        lastPlayed: lastPlayed,
+        gameState: gameState,
+      );
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'name': name,
