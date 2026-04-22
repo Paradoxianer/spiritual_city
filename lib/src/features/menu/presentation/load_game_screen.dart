@@ -33,6 +33,61 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
     _reload();
   }
 
+  Future<void> _rename(GameSave save) async {
+    final controller = TextEditingController(text: save.name);
+    final String? newName;
+    try {
+      newName = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1A2E3F),
+          title: Text(
+            AppStrings.get('loadGame.rename.title'),
+            style: const TextStyle(color: Colors.white70),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: AppStrings.get('loadGame.rename.hint'),
+              hintStyle: TextStyle(color: Colors.blueGrey.shade400),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.blueGrey.shade600),
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.lightBlueAccent),
+              ),
+            ),
+            onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                AppStrings.get('loadGame.rename.cancel'),
+                style: const TextStyle(color: Colors.blueGrey),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+              child: Text(
+                AppStrings.get('loadGame.rename.confirm'),
+                style: const TextStyle(color: Colors.lightBlueAccent),
+              ),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
+    if (newName != null && newName.isNotEmpty) {
+      await widget.menuService.renameSave(save.id, newName);
+      _reload();
+    }
+  }
+
   void _load(GameSave save) {
     context.go('/game', extra: save);
   }
@@ -81,6 +136,7 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
                       save: saves[i],
                       onLoad: () => _load(saves[i]),
                       onDelete: () => _delete(saves[i].id),
+                      onRename: () => _rename(saves[i]),
                     ),
                   );
                 },
@@ -108,11 +164,13 @@ class _SaveTile extends StatelessWidget {
   final GameSave save;
   final VoidCallback onLoad;
   final VoidCallback onDelete;
+  final VoidCallback onRename;
 
   const _SaveTile({
     required this.save,
     required this.onLoad,
     required this.onDelete,
+    required this.onRename,
   });
 
   @override
@@ -148,10 +206,20 @@ class _SaveTile extends StatelessWidget {
           '$diffLabel · ${AppStrings.get('loadGame.lastPlayed')}: $dateStr',
           style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 12),
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-          tooltip: AppStrings.get('loadGame.delete'),
-          onPressed: onDelete,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.lightBlueAccent),
+              tooltip: AppStrings.get('loadGame.rename'),
+              onPressed: onRename,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              tooltip: AppStrings.get('loadGame.delete'),
+              onPressed: onDelete,
+            ),
+          ],
         ),
       ),
     );

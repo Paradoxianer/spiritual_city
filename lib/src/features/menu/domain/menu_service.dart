@@ -73,6 +73,20 @@ class MenuService {
 
   Future<void> deleteSave(String id) => _repository.deleteSave(id);
 
+  /// Renames the save identified by [id] to [newName].
+  ///
+  /// If the save no longer exists this is a no-op.
+  Future<void> renameSave(String id, String newName) async {
+    final saves = await _repository.loadAllSaves();
+    final existing = saves.where((s) => s.id == id).firstOrNull;
+    if (existing == null) {
+      _log.warning('renameSave: save $id not found – skipping');
+      return;
+    }
+    await _repository.writeSave(existing.copyWithName(newName));
+    _log.info('Renamed save ${existing.id} to "$newName"');
+  }
+
   /// Updates the [gameState] of an existing save identified by [id].
   ///
   /// If the save no longer exists (deleted in another session), this is a
