@@ -2258,7 +2258,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         children: [
           // ── Left: action menu (or countdown) ──────────────────────────
           SizedBox(
-            width: 200,
+            width: 170,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 10, 4, 14),
               child: _isActionBusy
@@ -2277,7 +2277,11 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
                 children: [
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
-                    child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topCenter,
+                      child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                    ),
                   ),
                   if (building.residents.isNotEmpty) ...[
                     const SizedBox(height: 8),
