@@ -2252,13 +2252,32 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   // ── Interior screen ───────────────────────────────────────────────────────
 
   Widget _buildInteriorScreen(BuildingModel building) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 360) {
+          return _buildInteriorScreenCompact(building);
+        }
+        return _buildInteriorScreenWide(building, constraints.maxWidth);
+      },
+    );
+  }
+
+  /// Wide layout (≥ 360 px): three-column row with action panel on the left,
+  /// art + residents in the middle, and faith bar on the right.
+  Widget _buildInteriorScreenWide(BuildingModel building, double availableWidth) {
+    // Ensure the middle column always has at least 100 px for the art.
+    const faithBarMinWidth = 42.0;
+    const minMiddleWidth = 100.0;
+    final leftWidth =
+        (availableWidth - faithBarMinWidth - minMiddleWidth - 2).clamp(0.0, 200.0);
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Left: action menu (or countdown) ──────────────────────────
           SizedBox(
-            width: 200,
+            width: leftWidth,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 10, 4, 14),
               child: _isActionBusy
@@ -2277,7 +2296,11 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
                 children: [
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
-                    child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topCenter,
+                      child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                    ),
                   ),
                   if (building.residents.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -2303,6 +2326,65 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Compact layout (< 360 px, e.g. narrow phones): art + faith bar on top,
+  /// action chips at the bottom — avoids horizontal overflow.
+  Widget _buildInteriorScreenCompact(BuildingModel building) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ── Top row: art (Expanded) + faith bar ───────────────────────────
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 12, 4, 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.topCenter,
+                          child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                        ),
+                      ),
+                      if (building.residents.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildResidentChips(building, compact: true),
+                      ],
+                      if (_lastReaction != null) ...[
+                        const SizedBox(height: 4),
+                        Text(_lastReaction!, style: const TextStyle(fontSize: 24)),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const VerticalDivider(width: 1, thickness: 1, color: Colors.white12),
+              Container(
+                color: Colors.black26,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                child: Center(child: _FaithBarWidget(entity: building)),
+              ),
+            ],
+          ),
+        ),
+        // ── Horizontal divider ─────────────────────────────────────────────
+        const Divider(height: 1, thickness: 1, color: Colors.white12),
+        // ── Bottom: action menu (or countdown) ────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+          child: _isActionBusy
+              ? _buildActionCountdown()
+              : _buildBuildingChipsColumn(building),
+        ),
+      ],
     );
   }
 
