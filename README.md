@@ -71,6 +71,17 @@ lib/
                 └── game_screen.dart  # Flutter UI overlay (HUD, dialogs)
 ```
 
+### 📖 Player Documentation
+
+New to the game? Start here:
+
+| Guide | Description |
+|-------|-------------|
+| [🎮 Getting Started](docs/gameplay/getting-started.md) | Game loop, resources, tips for new players |
+| [🕹️ Controls](docs/gameplay/controls.md) | Keyboard, touch & prayer-combat timing |
+| [🏠 Buildings Guide](docs/gameplay/buildings.md) | All building types and their actions |
+| [🌌 Spiritual World](docs/gameplay/spiritual-world.md) | Prayer combat, territory & daemon entities |
+
 ### 🌍 Multilingual Support
 
 The app ships with a lightweight custom i18n system (`lib/src/core/i18n/app_strings.dart`).
@@ -147,6 +158,17 @@ flutter run                    # Standardgerät
 flutter run -d chrome          # Web
 flutter run -d linux           # Desktop
 ```
+
+### 📖 Spieler-Dokumentation
+
+Neu im Spiel? Hier starten:
+
+| Leitfaden | Beschreibung |
+|-----------|--------------|
+| [🎮 Einstieg](docs/gameplay/getting-started.md) | Spielablauf, Ressourcen, Tipps für Einsteiger |
+| [🕹️ Steuerung](docs/gameplay/controls.md) | Tastatur, Touch & Gebetskampf-Timing |
+| [🏠 Gebäude-Leitfaden](docs/gameplay/buildings.md) | Alle Gebäudetypen und ihre Aktionen |
+| [🌌 Geistliche Welt](docs/gameplay/spiritual-world.md) | Gebetskampf, Territorium & Dämonen |
 
 ### 🌍 Mehrsprachigkeit (i18n)
 
