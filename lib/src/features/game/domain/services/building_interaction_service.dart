@@ -122,8 +122,12 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
+    // Pastor house is the player's base; interactions improve the building's
+    // own sanctity so the faith bar reveals over repeated visits.
+    building.interactionCount++;
     switch (actionType) {
       case 'readBible':
+        building.applyInfluence(8.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 20.0,
           playerHealthDelta: -5.0,
@@ -145,10 +149,11 @@ class BuildingInteractionService {
         );
       case 'pray':
         // Faith gain + massive area spiritual influence (handled in game layer).
+        building.applyInfluence(10.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 15.0,
           playerHealthDelta: -5.0,
-          reactionEmoji: '🙏✨',
+          reactionEmoji: '🙏🕊️',
           actionDurationSeconds: pastorHousePraySeconds,
         );
       default:
@@ -165,10 +170,11 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
-    building.totalConversations++;
+    building.interactionCount++;
 
     switch (actionType) {
       case 'talk':
+        building.applyInfluence(3.0);
         for (final npc in building.residents) {
           npc.interactionCount++;
         }
@@ -177,6 +183,7 @@ class BuildingInteractionService {
           reactionEmoji: '💬😊',
         );
       case 'pray':
+        building.applyInfluence(5.0);
         building.influenceResidents(3.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 15.0,
@@ -185,6 +192,7 @@ class BuildingInteractionService {
           reactionEmoji: '🙏❤️',
         );
       case 'help':
+        building.applyInfluence(5.0);
         for (final npc in building.residents) {
           npc.applyInfluence(5.0);
         }
@@ -194,6 +202,7 @@ class BuildingInteractionService {
           reactionEmoji: '📦🙏',
         );
       case 'bible':
+        building.applyInfluence(5.0);
         building.influenceResidents(2.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
@@ -215,6 +224,7 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
+    building.interactionCount++;
     switch (actionType) {
       case 'donate':
         final manager =
@@ -222,6 +232,7 @@ class BuildingInteractionService {
         final managerFaith = manager?.faith ?? 0.0;
         final successChance = (0.50 + managerFaith / 400.0).clamp(0.0, 1.0);
         if (_rng.nextDouble() < successChance) {
+          building.applyInfluence(5.0);
           return BuildingInteractionResult(
             playerMaterialsDelta: 20.0 + _rng.nextDouble() * 20.0,
             reactionEmoji: '💰🙏',
@@ -232,17 +243,20 @@ class BuildingInteractionService {
           success: false,
         );
       case 'worker':
+        building.applyInfluence(3.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 5.0,
           reactionEmoji: '💬👷',
         );
       case 'prayBusiness':
+        building.applyInfluence(5.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
           playerMaterialsDelta: -3.0,
           reactionEmoji: '🙏🏢',
         );
       case 'distribute':
+        building.applyInfluence(8.0);
         building.influenceResidents(3.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 15.0,
@@ -263,14 +277,17 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
+    building.interactionCount++;
     switch (actionType) {
       case 'readBible':
+        building.applyInfluence(8.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
           playerMaterialsDelta: -3.0,
           reactionEmoji: '📖✝️',
         );
       case 'pray':
+        building.applyInfluence(8.0);
         building.influenceResidents(5.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 15.0,
@@ -278,6 +295,7 @@ class BuildingInteractionService {
           reactionEmoji: '🙏⛪',
         );
       case 'worship':
+        building.applyInfluence(12.0);
         building.influenceResidents(10.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 20.0,
@@ -298,8 +316,10 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
+    building.interactionCount++;
     switch (actionType) {
       case 'visitSick':
+        building.applyInfluence(6.0);
         building.influenceResidents(4.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 12.0,
@@ -307,6 +327,7 @@ class BuildingInteractionService {
           reactionEmoji: '🤝🏥',
         );
       case 'pray':
+        building.applyInfluence(5.0);
         building.influenceResidents(3.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
@@ -314,12 +335,14 @@ class BuildingInteractionService {
           reactionEmoji: '🙏🏥',
         );
       case 'heal':
+        building.applyInfluence(10.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 20.0,
           playerMaterialsDelta: -10.0,
           reactionEmoji: '💊✝️',
         );
       case 'distribute':
+        building.applyInfluence(5.0);
         building.influenceResidents(2.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 8.0,
@@ -340,8 +363,10 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
+    building.interactionCount++;
     switch (actionType) {
       case 'teach':
+        building.applyInfluence(5.0);
         building.influenceResidents(5.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 8.0,
@@ -349,6 +374,7 @@ class BuildingInteractionService {
           reactionEmoji: '📚✝️',
         );
       case 'pray':
+        building.applyInfluence(5.0);
         building.influenceResidents(2.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
@@ -356,6 +382,7 @@ class BuildingInteractionService {
           reactionEmoji: '🙏🏫',
         );
       case 'distribute':
+        building.applyInfluence(5.0);
         building.influenceResidents(3.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
@@ -376,14 +403,17 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
+    building.interactionCount++;
     switch (actionType) {
       case 'pray':
+        building.applyInfluence(9.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 18.0,
           playerMaterialsDelta: -5.0,
           reactionEmoji: '🙏🪦',
         );
       case 'comfort':
+        building.applyInfluence(5.0);
         building.influenceResidents(6.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 10.0,
@@ -404,14 +434,17 @@ class BuildingInteractionService {
     String actionType,
     BuildingModel building,
   ) {
+    building.interactionCount++;
     switch (actionType) {
       case 'pray':
+        building.applyInfluence(5.0);
         building.influenceResidents(2.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 8.0,
           reactionEmoji: '🙏🏗️',
         );
       case 'witness':
+        building.applyInfluence(5.0);
         for (final npc in building.residents) {
           npc.applyInfluence(4.0);
         }
@@ -421,6 +454,7 @@ class BuildingInteractionService {
           reactionEmoji: '💬✝️',
         );
       case 'distribute':
+        building.applyInfluence(6.0);
         building.influenceResidents(3.0);
         return const BuildingInteractionResult(
           playerFaithDelta: 12.0,

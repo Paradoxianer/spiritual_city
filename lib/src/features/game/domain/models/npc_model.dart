@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flame/components.dart';
+import 'base_interactable_entity.dart';
 
 enum NPCType {
   citizen,
@@ -9,27 +10,13 @@ enum NPCType {
 }
 
 /// NPC Data Model based on Lastenheft Section 6.2
-class NPCModel {
+class NPCModel extends BaseInteractableEntity {
+  @override
   final String id;
+
   final String name;
   final NPCType type;
   final Vector2 homePosition;
-  
-  /// Faith Level: -100.0 to +100.0
-  /// < -50: Opposed/Negative
-  /// > 50: Christian/Believer
-  double faith; 
-  
-  /// Unified interaction counter: incremented by every interaction type
-  /// (talk, counsel, pray, bible, help).  Used in all probability calculations
-  /// (e.g. prayer acceptance chance, faith reveal thresholds).
-  int interactionCount;
-  
-  /// Tracks interactions in the current active dialogue session
-  int currentSessionInteractions = 0;
-
-  /// True once the NPC has received 3 interactions this session.
-  bool get isReadyToLeave => currentSessionInteractions >= 3;
 
   /// Whether the player gave a gift (help action) during this session.
   bool hadGiftThisSession = false;
@@ -57,23 +44,11 @@ class NPCModel {
   /// Player health change from the most recent interaction (negative = HP spent).
   double lastPlayerHealthDelta = 0.0;
 
-  // ── Progressive faith reveal ───────────────────────────────────────────────
-
-  /// After 3 interactions the player has a vague sense of the NPC's faith.
-  bool get isFaithVague => interactionCount >= 3;
-
-  /// After 6 interactions the player knows the NPC's exact faith level.
-  bool get isFaithRevealed => interactionCount >= 6;
-
   /// ID of the building this NPC lives/works in.
   final String? homeBuildingId;
 
   /// Whether this NPC has gone through the conversion prayer (Übergabegebet).
   bool isConverted;
-
-  /// Active mission attached to this NPC (null = no mission).
-  /// When non-null the radial menu offers a "📋" action to complete it.
-  String? activeMissionDescription;
 
   /// Last saved world-pixel position.  Set by [SpiritWorldGame.applySavedNPCState]
   /// when loading a game; consumed once by [NPCComponent] to restore the NPC's
@@ -86,23 +61,19 @@ class NPCModel {
     required this.type,
     required this.homePosition,
     this.homeBuildingId,
-    this.faith = 0.0,
-    this.interactionCount = 0,
+    double faith = 0.0,
+    int interactionCount = 0,
     this.currentMessage,
     this.isConverted = false,
-  });
+  }) : super(faith: faith, interactionCount: interactionCount);
 
   /// An NPC is considered a Christian once they have prayed the conversion
   /// prayer (Übergabegebet) with the player.  High faith alone is not enough.
   bool get isChristian => isConverted;
 
-  /// Logic to update faith based on interaction and environment
-  void applyInfluence(double amount) {
-    faith = (faith + amount).clamp(-100.0, 100.0);
-  }
-
+  @override
   void resetSession() {
-    currentSessionInteractions = 0;
+    super.resetSession();
     hadGiftThisSession = false;
     lastReactionEmoji = '';
     lastNpcFaithDelta = 0.0;

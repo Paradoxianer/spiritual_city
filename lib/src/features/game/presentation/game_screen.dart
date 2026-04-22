@@ -11,6 +11,7 @@ import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
+import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
@@ -578,84 +579,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
     );
   }
 
-  /// Progressive faith bar shown to the right of the chat.
-  Widget _buildFaithBar(NPCModel model) {
-    if (!model.isFaithVague) {
-      // Not enough conversations yet – show a question mark placeholder.
-      return SizedBox(
-        width: 28,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('✝️', style: TextStyle(fontSize: 14)),
-            const SizedBox(height: 4),
-            Container(
-              width: 8,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white12,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Center(
-                child: Text('?', style: TextStyle(color: Colors.white38, fontSize: 9)),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final faithNorm = ((model.faith + 100) / 200.0).clamp(0.0, 1.0);
-    final barColor = Color.lerp(Colors.red[700]!, Colors.green[600]!, faithNorm)!;
-
-    // Vague: round to nearest 25%; revealed: exact value.
-    final displayNorm = model.isFaithRevealed
-        ? faithNorm
-        : ((faithNorm * 4).round() / 4.0).clamp(0.0, 1.0);
-
-    const barHeight = 80.0;
-
-    return SizedBox(
-      width: 28,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('✝️', style: TextStyle(fontSize: 14)),
-          const SizedBox(height: 4),
-          Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              Container(
-                width: 8,
-                height: barHeight,
-                decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              Container(
-                width: 8,
-                height: barHeight * displayNorm,
-                decoration: BoxDecoration(
-                  color: barColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          if (model.isFaithRevealed)
-            Text(
-              model.faith.toStringAsFixed(0),
-              style: const TextStyle(color: Colors.white60, fontSize: 9),
-            )
-          else
-            const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final dialog = widget.game.activeDialog;
@@ -675,34 +598,24 @@ class _DialogOverlayState extends State<DialogOverlay> {
         child: Column(
           children: [
             // ── Header ────────────────────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: const BoxDecoration(
-                color: Color(0xFF128C7E),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            _InteractionHeader(
+              bgColor: const Color(0xFF128C7E),
+              verticalPadding: 10,
+              leading: CircleAvatar(
+                backgroundColor: Colors.white24,
+                child: Text(dialog.npcEmoji),
               ),
-              child: Row(
-                children: [
-                  CircleAvatar(backgroundColor: Colors.white24, child: Text(dialog.npcEmoji)),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        dialog.npcName,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      if (_showDelta) _buildDeltaRow(),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: _isReadingBible ? null : () => widget.game.closeDialog(),
-                  ),
-                ],
+              title: dialog.npcName,
+              titleStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
+              subtitle: _showDelta ? _buildDeltaRow() : null,
+              sessionDone: model.currentSessionInteractions,
+              sessionMax: model.maxSessionInteractions,
+              onClose: _isReadingBible ? null : () => widget.game.closeDialog(),
+              closeIconColor: Colors.white,
             ),
 
             // ── Chat body + faith bar ─────────────────────────────────────────
@@ -724,7 +637,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   // Progressive faith reveal bar
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    child: _buildFaithBar(model),
+                    child: _FaithBarWidget(entity: model),
                   ),
                 ],
               ),
@@ -2053,7 +1966,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   }
 
   /// Returns the ordered list of action-type strings for a building type,
-  /// matching the order returned by [_buildActionMenuRows].
+  /// matching the chip order in [_buildBuildingChips].
   static List<String> _actionsFor(BuildingType type) {
     switch (type) {
       case BuildingType.pastorHouse:
@@ -2131,10 +2044,12 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   void _executeAction(String actionType) {
     final result = widget.game.handleBuildingAction(actionType);
     setState(() => _lastReaction = result.reactionEmoji);
-    // Auto-leave on success – but NOT for the pastor's own home (homebase),
-    // where the player should stay as long as they like.
+    // Auto-leave when the session limit is reached (tracked by
+    // building.currentSessionInteractions vs building.maxSessionInteractions).
+    // The homebase is exempt: it has baseSessionInteractions=999 and never
+    // forces the player to leave.
     final data = widget.game.activeBuildingData;
-    if (result.success && (data == null || !data.building.isHomebase)) {
+    if (result.success && data != null && data.building.isReadyToLeave) {
       Future.delayed(const Duration(milliseconds: 1200), () {
         if (mounted) widget.game.closeBuildingInterior();
       });
@@ -2176,6 +2091,9 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          // CrossAxisAlignment.stretch ensures the interior Row receives TIGHT
+          // width constraints, so that its Expanded child can allocate space.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildHeader(data.building),
             if (_accessGranted == null)
@@ -2194,74 +2112,51 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 
   Widget _buildHeader(BuildingModel building) {
     final isHome = building.isHomebase;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isHome ? const Color(0xFF4E342E) : const Color(0xFF283593),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    return _InteractionHeader(
+      bgColor: isHome ? const Color(0xFF4E342E) : const Color(0xFF283593),
+      verticalPadding: 12,
+      leading: Text(
+        _buildingTypeEmoji(building.type),
+        style: TextStyle(fontSize: isHome ? 32 : 28),
       ),
-      child: Row(
-        children: [
-          Text(
-            _buildingTypeEmoji(building.type),
-            style: TextStyle(fontSize: isHome ? 32 : 28),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      _buildingTypeName(building.type),
-                      style: TextStyle(
-                        color: isHome ? const Color(0xFFFFD54F) : Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: isHome ? 19 : 17,
-                      ),
-                    ),
-                    if (isHome) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: const Color(0xFFFFD54F).withValues(alpha: 0.6)),
-                        ),
-                        child: const Text(
-                          'Mein Zuhause',
-                          style: TextStyle(
-                            color: Color(0xFFFFD54F),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+      title: _buildingTypeName(building.type),
+      titleStyle: TextStyle(
+        color: isHome ? const Color(0xFFFFD54F) : Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: isHome ? 19 : 17,
+      ),
+      titleBadge: isHome
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: const Color(0xFFFFD54F).withValues(alpha: 0.6)),
+              ),
+              child: const Text(
+                'Mein Zuhause',
+                style: TextStyle(
+                  color: Color(0xFFFFD54F),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
                 ),
-                if (building.residents.isNotEmpty)
-                  Text(
-                    _residentSummaryLine(building),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 11,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white70),
-            onPressed: () => widget.game.closeBuildingInterior(),
-          ),
-        ],
-      ),
+              ),
+            )
+          : null,
+      subtitle: building.residents.isNotEmpty
+          ? Text(
+              _residentSummaryLine(building),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 11,
+              ),
+            )
+          : null,
+      showDots: !isHome,
+      sessionDone: building.currentSessionInteractions,
+      sessionMax: building.maxSessionInteractions,
+      onClose: () => widget.game.closeBuildingInterior(),
     );
   }
 
@@ -2325,7 +2220,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   String _accessHint(BuildingModel building, double faith) {
     final accessPercentage =
         (building.accessChance(faith) * 100).round();
-    final bonus = building.totalConversations >= 3 ? ' (+30 % Bonus)' : '';
+    final bonus = building.interactionCount >= 3 ? ' (+30 % Bonus)' : '';
     return 'Erfolgschance: $accessPercentage %$bonus';
   }
 
@@ -2357,99 +2252,91 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   // ── Interior screen ───────────────────────────────────────────────────────
 
   Widget _buildInteriorScreen(BuildingModel building) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Reaction feedback
-        if (_lastReaction != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              _lastReaction!,
-              style: const TextStyle(fontSize: 32),
-            ),
-          ),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Left: action menu or countdown ────────────────────────────
-              SizedBox(
-                width: 162,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 8, 16),
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: _isActionBusy
-                        ? _buildActionCountdown()
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: _buildActionMenuRows(building),
-                          ),
-                  ),
-                ),
-              ),
-              // Divider
-              Container(
-                width: 1,
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                color: Colors.white12,
-              ),
-              // ── Right: art + residents ────────────────────────────────────
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 12, 12, 16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
-                        child: _InteriorArtWidget(art: _interiorArt(building.type)),
-                      ),
-                      if (building.residents.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        _buildResidentChips(building, compact: true),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Countdown widget shown in the action panel while an action is in progress.
-  Widget _buildActionCountdown() {
-    final emoji = _actionEmojiFor(_pendingActionType ?? '');
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 32)),
-          const SizedBox(height: 8),
-          Text(
-            '${_actionSecondsLeft}s',
-            style: const TextStyle(
-              color: Colors.amber,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+          // ── Left: action menu (or countdown) ──────────────────────────
+          SizedBox(
+            width: 170,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 10, 4, 14),
+              child: _isActionBusy
+                  ? _buildActionCountdown()
+                  : _buildBuildingChipsColumn(building),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            _actionLabelFor(_pendingActionType ?? ''),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.6),
-              fontSize: 11,
+          // Full-height divider
+          const VerticalDivider(width: 1, thickness: 1, color: Colors.white12),
+          // ── Middle: art + residents + reaction ─────────────────────────
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topCenter,
+                      child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                    ),
+                  ),
+                  if (building.residents.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _buildResidentChips(building, compact: true),
+                  ],
+                  if (_lastReaction != null) ...[
+                    const SizedBox(height: 6),
+                    Text(_lastReaction!, style: const TextStyle(fontSize: 28)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          // Full-height divider
+          const VerticalDivider(width: 1, thickness: 1, color: Colors.white12),
+          // ── Right: faith bar (centered, colored background like NPC dialog) ──
+          Container(
+            color: Colors.black26,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+            child: Center(
+              child: _FaithBarWidget(entity: building),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Vertical countdown shown in the right action panel while an action is in progress.
+  Widget _buildActionCountdown() {
+    final emoji = _actionEmojiFor(_pendingActionType ?? '');
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 28)),
+        const SizedBox(height: 6),
+        Text(
+          '${_actionSecondsLeft}s',
+          style: const TextStyle(
+            color: Colors.amber,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _actionLabelFor(_pendingActionType ?? ''),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 10,
+          ),
+        ),
+      ],
     );
   }
 
@@ -2473,92 +2360,106 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     }
   }
 
-  // ── Action menu rows (left panel) ─────────────────────────────────────────
+  // ── Building action menu (left side-panel) ───────────────────────────────
 
-  /// Returns a vertical list of [_ActionMenuRow] widgets for [building].
+  /// Returns a vertical column of [_ActionMenuRow] widgets for [building],
+  /// matching the order in [_actionsFor] so that keyboard badges 1-N stay in sync.
   ///
-  /// Each row shows: action emoji  →/←  effect emoji(s)
-  /// A Tooltip (long-press mobile / hover desktop) reveals a German description.
-  /// Rows are numbered 1-N so keyboard badges match [_actionsFor] order.
-  List<Widget> _buildActionMenuRows(BuildingModel building) {
+  /// Rows are disabled when the player lacks the required resources.
+  /// This column lives in the LEFT side-panel and uses the classic menu-row
+  /// layout (emoji + cost arrow + effect) to distinguish it visually from the
+  /// NPC dialog which uses a horizontal chip row at the bottom.
+  Widget _buildBuildingChipsColumn(BuildingModel building) {
+    final g = widget.game;
+    int idx = 0;
+    int nk() => ++idx;
+
+    final List<Widget> rows;
     switch (building.type) {
-      // ── Pastor's house ────────────────────────────────────────────────────
+      // ── Pastor's house ─────────────────────────────────────────────────
       case BuildingType.pastorHouse:
-        return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20 ❤️-5', tooltip: 'Bibel lesen (+20 Glauben, −5 HP; ~5s)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen (+50 Hunger, kostenlos; ~3s)', onTap: () => _performAction('eat')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen (+50 HP; ~8s)', onTap: () => _performAction('sleep')),
-          _ActionMenuRow(keyIndex: 4, leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '✨+15 ❤️-5 🌍', tooltip: 'Beten (+15 Glauben, −5 HP, Einfluss auf die unsichtbare Welt; ~5s)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(keyIndex: 5, leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionsübersicht öffnen', onTap: () => _performAction('missions')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen', keyIndex: nk(), onTap: () => _performAction('eat')),
+          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen', keyIndex: nk(), onTap: () => _performAction('sleep')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🕊️+15', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionen', keyIndex: nk(), onTap: () => _performAction('missions')),
         ];
 
-      // ── Residential ───────────────────────────────────────────────────────
+      // ── Residential ───────────────────────────────────────────────────
       case BuildingType.house:
       case BuildingType.apartment:
-        return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👥✝️', tooltip: 'Gespräch führen (+5 Glauben)', onTap: () => _performAction('talk')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '❤️×5', tooltip: 'Für Familie beten (−5 HP, +15 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Hilfe anbieten (−10 Material, +10 Glauben)', onTap: () => _performAction('help')),
-          _ActionMenuRow(keyIndex: 4, leadingEmoji: '📖', arrowText: '←', trailingEmoji: '❤️×3💰×3', tooltip: 'Gemeinsam Bibel lesen (−3 HP, −3 Material, +10 Glauben)', onTap: () => _performAction('bible')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Gespräch', keyIndex: nk(), onTap: () => _performAction('talk')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−❤️→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−10💰→', trailingEmoji: '✝️', tooltip: 'Helfen', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('help')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−💰❤️→', trailingEmoji: '✝️', tooltip: 'Bibelstunde', keyIndex: nk(), isDisabled: g.materials < 3 || g.health <= 3, onTap: () => _performAction('bible')),
         ];
 
-      // ── Church ────────────────────────────────────────────────────────────
+      // ── Church ────────────────────────────────────────────────────────
       case BuildingType.church:
       case BuildingType.cathedral:
-        return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📖', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Bibel lesen (−3 Material, +10 Glauben)', onTap: () => _performAction('readBible')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Gemeinsam beten (−3 Material, +15 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '🎵', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Gottesdienst halten (−8 Material, +20 Glauben)', onTap: () => _performAction('worship')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🎵', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Lobpreis', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('worship')),
         ];
 
-      // ── Hospital ──────────────────────────────────────────────────────────
+      // ── Hospital ──────────────────────────────────────────────────────
       case BuildingType.hospital:
-        return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Kranke besuchen (−5 Material, +12 Glauben)', onTap: () => _performAction('visitSick')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Heilung beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '💊', arrowText: '←', trailingEmoji: '💰×10', tooltip: 'Heilen lassen (−10 Material, +20 Glauben)', onTap: () => _performAction('heal')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Kranke besuchen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('visitSick')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💊', arrowText: '−10💰→', trailingEmoji: '✝️', tooltip: 'Heilen', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('heal')),
         ];
 
-      // ── School / University ───────────────────────────────────────────────
+      // ── School / University ───────────────────────────────────────────
       case BuildingType.school:
       case BuildingType.university:
-        return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '📚', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Glauben lehren (−5 Material, +8 Glauben)', onTap: () => _performAction('teach')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für Schüler beten (−3 Material, +10 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material spenden (−8 Material, +10 Glauben)', onTap: () => _performAction('distribute')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '📚', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Unterrichten', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('teach')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('distribute')),
         ];
 
-      // ── Cemetery ──────────────────────────────────────────────────────────
+      // ── Cemetery ──────────────────────────────────────────────────────
       case BuildingType.cemetery:
-        return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Stille Andacht (−5 Material, +18 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '🤝', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Trauernde trösten (−3 Material, +10 Glauben)', onTap: () => _performAction('comfort')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Trösten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('comfort')),
         ];
 
-      // ── Commercial ────────────────────────────────────────────────────────
+      // ── Commercial ────────────────────────────────────────────────────
       case BuildingType.shop:
       case BuildingType.supermarket:
       case BuildingType.mall:
       case BuildingType.office:
       case BuildingType.skyscraper:
-        return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '💸', arrowText: '←', trailingEmoji: '💰↑↑', tooltip: 'Um Spende bitten (+20–40 Material)', onTap: () => _performAction('donate')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '💬', arrowText: '→', trailingEmoji: '👷✝️', tooltip: 'Mit Arbeiter sprechen (+5 Glauben)', onTap: () => _performAction('worker')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '🙏', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Für den Betrieb beten (−3 Material, +10 Glauben)', onTap: () => _performAction('prayBusiness')),
-          _ActionMenuRow(keyIndex: 4, leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×5', tooltip: 'Material verteilen (−5 Material, +15 Glauben)', onTap: () => _performAction('distribute')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '💸', arrowText: '→', trailingEmoji: '💰', tooltip: 'Spenden', keyIndex: nk(), onTap: () => _performAction('donate')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Zeugnis', keyIndex: nk(), onTap: () => _performAction('worker')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Für Betrieb beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('prayBusiness')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('distribute')),
         ];
 
-      // ── Everything else ───────────────────────────────────────────────────
+      // ── Everything else ───────────────────────────────────────────────
       default:
-        return [
-          _ActionMenuRow(keyIndex: 1, leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '🌿✝️', tooltip: 'Beten (+8 Glauben)', onTap: () => _performAction('pray')),
-          _ActionMenuRow(keyIndex: 2, leadingEmoji: '💬', arrowText: '←', trailingEmoji: '💰×3', tooltip: 'Zeugnis geben (−3 Material, +10 Glauben)', onTap: () => _performAction('witness')),
-          _ActionMenuRow(keyIndex: 3, leadingEmoji: '📦', arrowText: '←', trailingEmoji: '💰×8', tooltip: 'Material verteilen (−8 Material, +12 Glauben)', onTap: () => _performAction('distribute')),
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Zeugnis geben', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('witness')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('distribute')),
         ];
     }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows
+          .map((r) => Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: r))
+          .toList(),
+    );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   /// Delegates to the static helpers in [BuildingComponent] to stay DRY.
   String _buildingTypeEmoji(BuildingType type) =>
@@ -2886,6 +2787,8 @@ class _ActionMenuRow extends StatelessWidget {
   final VoidCallback onTap;
   /// 1-based keyboard shortcut shown as an amber badge (null = no badge).
   final int? keyIndex;
+  /// When true the row is rendered at reduced opacity and taps are ignored.
+  final bool isDisabled;
 
   const _ActionMenuRow({
     required this.leadingEmoji,
@@ -2894,60 +2797,64 @@ class _ActionMenuRow extends StatelessWidget {
     required this.tooltip,
     required this.onTap,
     this.keyIndex,
+    this.isDisabled = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final showBadge = keyIndex != null && _shouldShowKeyHints();
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
-          child: Row(
-            children: [
-              if (showBadge)
-                Container(
-                  width: 16,
-                  height: 16,
-                  margin: const EdgeInsets.only(right: 4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFA000), // amber 700
-                    shape: BoxShape.circle,
+    return Opacity(
+      opacity: isDisabled ? 0.35 : 1.0,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: isDisabled ? null : onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+            child: Row(
+              children: [
+                if (showBadge)
+                  Container(
+                    width: 16,
+                    height: 16,
+                    margin: const EdgeInsets.only(right: 4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFA000), // amber 700
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$keyIndex',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        height: 1,
+                      ),
+                    ),
                   ),
-                  alignment: Alignment.center,
+                Text(leadingEmoji, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 8),
+                Text(
+                  arrowText,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.45),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
                   child: Text(
-                    '$keyIndex',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      height: 1,
+                    trailingEmoji,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ),
-              Text(leadingEmoji, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 6),
-              Text(
-                arrowText,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.45),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  trailingEmoji,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -3019,6 +2926,242 @@ class _InteriorArtWidget extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+/// Shared header bar used by both the NPC dialog and the building interior
+/// overlays.
+///
+/// Layout:
+/// ```
+/// [leading]  [SizedBox(12)]  [Expanded(title + optional subtitle)]
+///            [if showDots: SessionDotsRow + SizedBox(4)]  [CloseButton]
+/// ```
+///
+/// Parameters:
+/// * [bgColor] – background colour of the bar.
+/// * [verticalPadding] – vertical inner padding (default: 10).
+/// * [leading] – left-edge icon: a `CircleAvatar` for NPCs, an emoji `Text`
+///   for buildings.
+/// * [title] / [titleStyle] – main title text and its style.
+/// * [titleBadge] – optional widget shown to the right of the title in the
+///   same row (e.g. the "Mein Zuhause" label for the homebase).
+/// * [subtitle] – optional widget shown below the title row (e.g. delta row
+///   or resident summary).
+/// * [showDots] – whether to show the `_SessionDotsRow` counter (default: true).
+/// * [sessionDone] / [sessionMax] – values forwarded to `_SessionDotsRow`.
+/// * [onClose] – close-button callback; `null` renders the button as disabled.
+/// * [closeIconColor] – colour of the close icon (default: `Colors.white70`).
+class _InteractionHeader extends StatelessWidget {
+  final Color bgColor;
+  final double verticalPadding;
+  final Widget leading;
+  final String title;
+  final TextStyle titleStyle;
+  final Widget? titleBadge;
+  final Widget? subtitle;
+  final bool showDots;
+  final int sessionDone;
+  final int sessionMax;
+  final VoidCallback? onClose;
+  final Color closeIconColor;
+
+  const _InteractionHeader({
+    required this.bgColor,
+    this.verticalPadding = 10,
+    required this.leading,
+    required this.title,
+    required this.titleStyle,
+    this.titleBadge,
+    this.subtitle,
+    this.showDots = true,
+    this.sessionDone = 0,
+    this.sessionMax = 2,
+    this.onClose,
+    this.closeIconColor = Colors.white70,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Row(
+        children: [
+          leading,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title, style: titleStyle),
+                    if (titleBadge != null) ...[
+                      const SizedBox(width: 8),
+                      titleBadge!,
+                    ],
+                  ],
+                ),
+                if (subtitle != null) subtitle!,
+              ],
+            ),
+          ),
+          if (showDots) ...[
+            _SessionDotsRow(done: sessionDone, max: sessionMax),
+            const SizedBox(width: 4),
+          ],
+          IconButton(
+            icon: Icon(Icons.close, color: closeIconColor),
+            onPressed: onClose,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A row of small dots showing how many session interactions have been used
+/// out of the current [max].  Filled dots = used, hollow dots = remaining.
+///
+/// Used in the building interior header to give the player a quick visual cue
+/// of how many more actions they can take before being asked to leave.
+class _SessionDotsRow extends StatelessWidget {
+  final int done;
+  final int max;
+
+  const _SessionDotsRow({required this.done, required this.max});
+
+  @override
+  Widget build(BuildContext context) {
+    // Cap the display at 12 dots to avoid overflow on very high counts.
+    final displayMax  = max.clamp(1, 12);
+    final displayDone = done.clamp(0, displayMax);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < displayMax; i++)
+          Container(
+            width: 7,
+            height: 7,
+            margin: const EdgeInsets.only(right: 3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: i < displayDone
+                  ? Colors.white.withValues(alpha: 0.85)
+                  : Colors.white.withValues(alpha: 0.22),
+            ),
+          ),
+        const SizedBox(width: 4),
+        Text(
+          '$displayDone/$displayMax',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.55),
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Vertical faith-level bar shown on the right edge of an NPC dialog or
+/// building interior overlay.
+///
+/// Works for any [BaseInteractableEntity] since [isFaithVague] and
+/// [isFaithRevealed] are defined on the shared base class.
+///
+/// * Not vague (< 3 interactions) → question mark placeholder.
+/// * Vague (3–5 interactions) → bar rounded to nearest 25 %.
+/// * Revealed (6+ interactions) → exact bar + numeric label.
+class _FaithBarWidget extends StatelessWidget {
+  final BaseInteractableEntity entity;
+
+  const _FaithBarWidget({required this.entity});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!entity.isFaithVague) {
+      // Not enough interactions yet – show a question mark placeholder.
+      return SizedBox(
+        width: 28,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('✝️', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 4),
+            Container(
+              width: 8,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white12,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Center(
+                child: Text('?', style: TextStyle(color: Colors.white38, fontSize: 9)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final faithNorm = ((entity.faith + 100) / 200.0).clamp(0.0, 1.0);
+    final barColor = Color.lerp(Colors.red[700]!, Colors.green[600]!, faithNorm)!;
+
+    // Vague: round to nearest 25 %; revealed: exact value.
+    final displayNorm = entity.isFaithRevealed
+        ? faithNorm
+        : ((faithNorm * 4).round() / 4.0).clamp(0.0, 1.0);
+
+    const barHeight = 80.0;
+
+    return SizedBox(
+      width: 28,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('✝️', style: TextStyle(fontSize: 14)),
+          const SizedBox(height: 4),
+          Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              Container(
+                width: 8,
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Container(
+                width: 8,
+                height: barHeight * displayNorm,
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (entity.isFaithRevealed)
+            Text(
+              entity.faith.toStringAsFixed(0),
+              style: const TextStyle(color: Colors.white60, fontSize: 9),
+            )
+          else
+            const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
+        ],
+      ),
     );
   }
 }

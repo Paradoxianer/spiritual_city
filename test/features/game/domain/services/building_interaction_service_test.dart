@@ -92,14 +92,14 @@ void main() {
       });
 
       test('+30 % bonus after 3+ conversations, capped at 1.0', () {
-        house.totalConversations = 3;
+        house.interactionCount = 3;
         expect(house.accessChance(100), 1.0);   // 0.85 + 0.30 capped
         expect(house.accessChance(0), 0.80);    // 0.50 + 0.30
         expect(house.accessChance(-100), 0.45); // 0.15 + 0.30
       });
 
       test('bonus does NOT apply before 3 conversations', () {
-        house.totalConversations = 2;
+        house.interactionCount = 2;
         expect(house.accessChance(0), 0.50);
       });
     });
@@ -126,6 +126,108 @@ void main() {
         );
         building.influenceResidents(10.0);
         expect(npc.faith, 100.0);
+      });
+    });
+
+    group('baseSessionInteractions per building type', () {
+      test('residential buildings start at 2', () {
+        expect(BuildingModel(buildingId: 'h', type: BuildingType.house).baseSessionInteractions, 2);
+        expect(BuildingModel(buildingId: 'a', type: BuildingType.apartment).baseSessionInteractions, 2);
+      });
+
+      test('commercial buildings start at 4', () {
+        for (final t in [
+          BuildingType.shop,
+          BuildingType.supermarket,
+          BuildingType.mall,
+          BuildingType.office,
+          BuildingType.skyscraper,
+        ]) {
+          expect(
+            BuildingModel(buildingId: 'b', type: t).baseSessionInteractions,
+            4,
+            reason: '$t should have base 4',
+          );
+        }
+      });
+
+      test('church/cathedral start at 3', () {
+        expect(BuildingModel(buildingId: 'c', type: BuildingType.church).baseSessionInteractions, 3);
+        expect(BuildingModel(buildingId: 'cd', type: BuildingType.cathedral).baseSessionInteractions, 3);
+      });
+
+      test('civic/public buildings start at 3', () {
+        for (final t in [
+          BuildingType.hospital,
+          BuildingType.school,
+          BuildingType.university,
+          BuildingType.trainStation,
+        ]) {
+          expect(
+            BuildingModel(buildingId: 'b', type: t).baseSessionInteractions,
+            3,
+            reason: '$t should have base 3',
+          );
+        }
+      });
+
+      test('pastor house (homebase) has effectively unlimited limit', () {
+        final ph = BuildingModel(buildingId: 'ph', type: BuildingType.pastorHouse, isHomebase: true);
+        expect(ph.baseSessionInteractions, greaterThan(100));
+        expect(ph.isReadyToLeave, isFalse);
+      });
+    });
+
+    group('maxSessionInteractions grows with interactionCount', () {
+      test('residential: 0 interactions → 2', () {
+        final b = BuildingModel(buildingId: 'h', type: BuildingType.house);
+        expect(b.maxSessionInteractions, 2);
+      });
+
+      test('residential: 6 interactions → 3', () {
+        final b = BuildingModel(buildingId: 'h', type: BuildingType.house, interactionCount: 6);
+        expect(b.maxSessionInteractions, 3);
+      });
+
+      test('shop: 0 interactions → 4', () {
+        final b = BuildingModel(buildingId: 's', type: BuildingType.shop);
+        expect(b.maxSessionInteractions, 4);
+      });
+
+      test('shop: 6 interactions → 5', () {
+        final b = BuildingModel(buildingId: 's', type: BuildingType.shop, interactionCount: 6);
+        expect(b.maxSessionInteractions, 5);
+      });
+
+      test('shop: 12 interactions → 6', () {
+        final b = BuildingModel(buildingId: 's', type: BuildingType.shop, interactionCount: 12);
+        expect(b.maxSessionInteractions, 6);
+      });
+    });
+
+    group('isReadyToLeave for buildings', () {
+      test('not ready before limit', () {
+        final b = BuildingModel(buildingId: 'h', type: BuildingType.house);
+        b.currentSessionInteractions = 1;
+        expect(b.isReadyToLeave, isFalse);
+      });
+
+      test('ready at limit', () {
+        final b = BuildingModel(buildingId: 'h', type: BuildingType.house);
+        b.currentSessionInteractions = 2;
+        expect(b.isReadyToLeave, isTrue);
+      });
+
+      test('shop not ready at 3 (base=4)', () {
+        final b = BuildingModel(buildingId: 's', type: BuildingType.shop);
+        b.currentSessionInteractions = 3;
+        expect(b.isReadyToLeave, isFalse);
+      });
+
+      test('shop ready at 4 (base=4)', () {
+        final b = BuildingModel(buildingId: 's', type: BuildingType.shop);
+        b.currentSessionInteractions = 4;
+        expect(b.isReadyToLeave, isTrue);
       });
     });
   });
@@ -212,12 +314,12 @@ void main() {
         expect(resident.faith, 2.0);
       });
 
-      test('totalConversations incremented on every action', () {
+      test('interactionCount incremented on every action', () {
         final b = house();
         final svc = BuildingInteractionService();
         svc.performAction('talk', b, 0.0);
         svc.performAction('pray', b, 0.0);
-        expect(b.totalConversations, 2);
+        expect(b.interactionCount, 2);
       });
 
       test('unknown action returns failure', () {

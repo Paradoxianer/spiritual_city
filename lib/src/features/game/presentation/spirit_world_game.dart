@@ -177,6 +177,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Key: npc.id  Value: {faith, conv, pray, counsel, converted}
   Map<String, Map<String, dynamic>>? _savedNPCStates;
 
+  /// Saved building-property overrides loaded from Hive.
+  /// Key: building.buildingId  Value: {faith, conv}
+  Map<String, Map<String, dynamic>>? _savedBuildingStates;
+
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
 
@@ -200,8 +204,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final hasSavedState = savedState != null && savedState.isNotEmpty;
     if (hasSavedState) {
       _applyPlayerState(savedState!);
-      _savedCellStates = _parseSavedCellStates(savedState);
-      _savedNPCStates  = _parseSavedNPCStates(savedState);
+      _savedCellStates     = _parseSavedCellStates(savedState);
+      _savedNPCStates      = _parseSavedNPCStates(savedState);
+      _savedBuildingStates = _parseSavedBuildingStates(savedState);
     }
 
     player = PlayerComponent(joystick: _createJoystick());
@@ -349,6 +354,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     };
   }
 
+  /// Parses the `buildings` sub-map from a serialised save into a flat lookup.
+  Map<String, Map<String, dynamic>> _parseSavedBuildingStates(
+      Map<String, dynamic> state) {
+    final raw = state['buildings'] as Map?;
+    if (raw == null) return {};
+    return {
+      for (final e in raw.entries)
+        e.key as String: (e.value as Map).cast<String, dynamic>(),
+    };
+  }
+
   // ── ChunkManager callbacks (called when a chunk / NPC is first generated) ─
 
   /// Called by [ChunkManager] immediately after a chunk's cells are generated.
@@ -391,6 +407,19 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
   }
 
+  /// Called by [ChunkManager] for every [BuildingModel] after generation.
+  ///
+  /// Restores faith and interaction count so that the player's relationship
+  /// with each building (access-chance bonus, spiritual state) is preserved
+  /// across sessions.  Falls back to defaults when the save predates building
+  /// persistence (backward-compatible with old save files).
+  void applySavedBuildingState(BuildingModel building) {
+    final saved = _savedBuildingStates?[building.buildingId];
+    if (saved == null) return;
+    building.faith            = (saved['faith'] as num?)?.toDouble() ?? building.faith;
+    building.interactionCount = saved['conv']   as int?              ?? building.interactionCount;
+  }
+
   // ── State capture (called when the player saves and quits) ────────────────
 
   /// Serialises the full game state into a [Map] suitable for storing in
@@ -431,6 +460,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       }
     }
 
+    // ── Building states ──────────────────────────────────────────────────────
+    final Map<String, Map<String, dynamic>> buildingStates = {};
+    for (final comp in chunkManager.allActiveBuildings) {
+      final building = comp.buildingModel;
+      if (building.faith != 0.0 || building.interactionCount != 0) {
+        buildingStates[building.buildingId] = {
+          if (building.faith != 0.0)            'faith': building.faith,
+          if (building.interactionCount != 0)   'conv':  building.interactionCount,
+        };
+      }
+    }
+
     return {
       'schemaVersion':    kSaveDataVersion,
       'faith':            faith,
@@ -442,6 +483,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       'isSpiritualWorld': isSpiritualWorld,
       'cells':            cellStates,
       'npcs':             npcStates,
+      'buildings':        buildingStates,
     };
   }
 
@@ -813,6 +855,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Opens the building-interior overlay for [building].
   void openBuildingInterior(BuildingModel building) {
+    building.resetSession();
     activeBuildingData = GameBuildingData(building: building);
     overlays.add('BuildingInteriorOverlay');
     paused = true;
@@ -889,6 +932,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         radius: 12,
         amount: 0.12,
       );
+    }
+    // Increment session interaction counter for buildings (mirrors NPC dialog
+    // behaviour).  The homebase has an unlimited limit so this counter never
+    // triggers an auto-leave there.
+    if (result.success) {
+      data.building.currentSessionInteractions++;
     }
     return result;
   }

@@ -164,10 +164,9 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       model.lastPlayerHealthDelta = -hpCost.toDouble();
       final gain = (_faithCalc.calculateCounselingGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
-      // Counseling directly unlocks the full 6-interaction threshold so that
-      // isFaithRevealed becomes true immediately.  The health cost is much
-      // higher than a regular action to balance this shortcut.
-      model.interactionCount = model.interactionCount < 6 ? 6 : model.interactionCount;
+      // Counseling counts as 6 interactions so the session-dot bonus grows
+      // appropriately: 4× counsel → interactionCount 24 ≥ threshold 21 → 5 dots.
+      model.interactionCount += 6;
       model.currentSessionInteractions++; // total = 2 for this action
       model.lastNpcFaithDelta = gain.toDouble();
       return ['👂💬', '👂🙏', '👂😊', '👂💛'][_random.nextInt(4)];
