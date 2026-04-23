@@ -99,7 +99,7 @@ spielst, der einer prozedural generierten Stadt Hoffnung und Glauben bringt.
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  1. REALE WELT  → mit Menschen reden, dienen,        │
+│  1. REALE WELT  → mit Menschen reden, für sie beten, │
 │                   Glauben & Materialien sammeln      │
 │          ↓                                           │
 │  2. KIRCHE/ZUHAUSE → ausruhen, Bibel lesen,          │
@@ -143,31 +143,31 @@ Vier Ressourcen werden im HUD (oben links) angezeigt:
 
 ### Wie Glaube funktioniert
 
-- **Glaube gewinnen:** Bibel lesen, beten, positiv mit NPCs sprechen, Menschen helfen, Gottesdienste halten.
+- **Glaube gewinnen:** Bibel lesen, beten, positiv mit NPCs sprechen, Menschen helfen.
 - **Glaube ausgeben:** Betreten der geistlichen Welt (kostet 7 Glaube) und Gebetskampf dort.
-- **Passive Regeneration:** Im Pastorat oder in einer Kirche warten → Glaube füllt sich langsam wieder auf.
+- **Passive Regeneration:** Im Pastorhaus oder in einer Kirche warten → Glaube füllt sich langsam wieder auf.
 
 ### Wie Materialien funktionieren
 
-- **Materialien gewinnen:** Kirchensammlungen, Spenden in Handelsgebäuden, Dienstmissionen.
-- **Materialien ausgeben:** Bedürftigen NPCs dienen, Kirche pflegen, Gemeindeprojekte finanzieren.
-- **Spiritueller Effekt:** Das Verteilen von Materialien hellt das Territorium in der unsichtbaren Welt leicht auf.
+- **Materialien gewinnen:** Loot auf der Straße, Spenden in Handelsgebäuden.
+- **Materialien ausgeben:** Bedürftigen NPCs Material geben,
 
 ### Speichern & Laden
 
-- **Speichern & Beenden**-Button (im Spielmenü) jederzeit nutzen.
+- **Speichern & Beenden** X -Button im Spiel schließt und speicher.
 - Mehrere Speicherslots verfügbar — im Hauptmenü unter **Spiel laden** auswählen.
 
 ### Tipps für Einsteiger
 
-- 💡 Starte mit dem Besuch deines **Pastorats** — unbegrenzte Aktionen, Gesundheit/Hunger/Glaube auffüllen.
+- 💡 Starte mit dem Besuch deines **Pastoren** — unbegrenzte Aktionen, Gesundheit/Hunger/Glaube auffüllen.
 - 💡 Die **geistliche Welt** (Taste `Q`) erst betreten, wenn ≥ 20 Glaube gesammelt wurde.
-- 💡 NPCs mehrfach ansprechen, bevor du versuchst, sie zu bekehren — sie erinnern sich an dich.
+- 💡 NPCs mehrfach ansprechen Seelsorge anbieten (Ohr) und viel Bibellesen  bevor du versuchst, sie zu bekehren — sie erinnern sich an dich.
+- 💡 NPCS die sich in eime in der unsichtbaren Welt "befreitem" Gebiet bewegen lassen öferts für sich beten und bekehren sich schneller
 - 💡 Gebäude in der Nähe von **Kirchen** lassen sich geistlich leichter beeinflussen.
 - 💡 **F1** (oder **?**) im Spiel drücken für alle Tastenkürzel.
 
 ### Nächste Schritte
 
 - 🕹️ [Steuerung](controls.md) — vollständige Tastatur- & Touch-Referenz
-- 🏠 [Gebäude-Leitfaden](buildings.md) — was du in jedem Gebäudetyp tun kannst
-- 🌌 [Geistliche Welt](spiritual-world.md) — Gebetskampf & Territorium erklärt
+- 🏠 [Gebäude-Leitfaden](buildings.md) — was du in jedem Gebäudetyp tun kannst - **wird noch überarbeitet**
+- 🌌 [Geistliche Welt](spiritual-world.md) — Gebetskampf & Territorium erklärt - **wird noch überarbeitet**
