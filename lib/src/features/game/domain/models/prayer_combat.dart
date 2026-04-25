@@ -11,7 +11,7 @@ enum PrayerMode {
   rebuke(
     id: 'rebuke',
     color: Colors.redAccent,
-    icon: '🔥',
+    icon: '🫸',
   ),
   slow(
     id: 'slow',
@@ -21,7 +21,7 @@ enum PrayerMode {
   drain(
     id: 'drain',
     color: Colors.purpleAccent,
-    icon: '⚖️',
+    icon: '🪫',
   );
 
   final String id;
