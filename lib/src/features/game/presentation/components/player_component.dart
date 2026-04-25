@@ -3,11 +3,9 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
-import '../../../menu/domain/models/difficulty.dart';
 import '../../domain/models/game_keymap.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
-import 'daemon_component.dart';
 import 'prayer_zone_component.dart';
 import 'shockwave_component.dart';
 import '../../domain/models/prayer_combat.dart';
@@ -22,10 +20,6 @@ class PlayerComponent extends PositionComponent
   // Prayer Combat State
   late final PrayerZoneComponent prayerZone;
   bool _isChargingIntensity = false;
-  bool _isChargingSize = false;
-
-  // Pulse Times for Oscillators
-  double _sizePulseTime = 0.0;
 
   // Gebetskampf 2.0 (Issue #9)
   PrayerMode _currentMode = PrayerMode.liberation;
@@ -174,10 +168,8 @@ class PlayerComponent extends PositionComponent
       }
     }
 
-    _isChargingSize = _pressedShift || !joystick.delta.isZero();
-    
     if (game.isSpiritualWorld && !_keyboardDirection.isZero()) {
-      _isChargingSize = true;
+      // Directional hint could be handled here if needed
     }
 
     return true;
@@ -266,11 +258,6 @@ class PlayerComponent extends PositionComponent
   }
 
   void _updatePrayerMechanics(double dt) {
-    // Size is handled by shockwaves now, but we keep prayerZone as a "visual hint"
-    _isChargingSize = !joystick.delta.isZero() ||
-        _keyboardDirection.x != 0 || _keyboardDirection.y != 0 ||
-        _pressedShift || _isChargingIntensity;
-
     if (_isChargingIntensity && game.faith > 1.0) {
       _holdingTime += dt;
       _timeSinceLastShockwave += dt;

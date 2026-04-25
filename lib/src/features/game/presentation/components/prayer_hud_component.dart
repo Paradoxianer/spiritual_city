@@ -1,7 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
-import 'package:spiritual_city/src/features/game/presentation/spirit_world_game.dart';
-import 'package:spiritual_city/src/features/game/presentation/components/player_component.dart';
+import '../spirit_world_game.dart';
+import 'player_component.dart';
 
 class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
   PrayerHudComponent() : super(priority: 200);

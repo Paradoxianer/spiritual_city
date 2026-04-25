@@ -16,6 +16,7 @@ import '../domain/models/interactions.dart';
 import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
+import '../domain/models/prayer_combat.dart';
 import '../domain/services/building_interaction_service.dart';
 import '../domain/services/mission_service.dart';
 import '../domain/models/cell_object.dart';
@@ -240,7 +241,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     await _addHudButtons();
 
     modeButtons = [];
-    final modes = PrayerMode.values;
+    const modes = PrayerMode.values;
     for (int i = 0; i < modes.length; i++) {
       final mode = modes[i];
       final btn = HudButton(
