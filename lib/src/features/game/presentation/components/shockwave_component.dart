@@ -99,20 +99,26 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
     
     // Main shockwave body (wide gradient feel)
     final paint = Paint()
-      ..color = color.withValues(alpha: alpha)
+      ..color = color.withValues(alpha: alpha * 0.7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 10.0 + (progress * 25.0); // Much wider
+      ..strokeWidth = 20.0 + (progress * 40.0); // Even wider for better alpha gradient
     
     // Stronger blur for "alpha gradient" look
-    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 15.0 * (1.0 - progress));
+    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 25.0 * (1.0 - progress));
     
+    canvas.drawCircle(Offset.zero, _currentRadius, paint);
+    
+    // Second softer layer
+    paint.strokeWidth = 10.0 + (progress * 20.0);
+    paint.color = color.withValues(alpha: alpha * 0.4);
+    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 40.0 * (1.0 - progress));
     canvas.drawCircle(Offset.zero, _currentRadius, paint);
     
     // Sharper leading edge
     final edgePaint = Paint()
-      ..color = color.withValues(alpha: alpha * 1.5)
+      ..color = color.withValues(alpha: alpha * 1.2)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 3.0;
     canvas.drawCircle(Offset.zero, _currentRadius, edgePaint);
     
     // Inner secondary pulse

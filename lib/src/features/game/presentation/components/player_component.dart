@@ -25,7 +25,7 @@ class PlayerComponent extends PositionComponent
   PrayerMode _currentMode = PrayerMode.liberation;
   double _holdingTime = 0.0;
   double _timeSinceLastShockwave = 0.0;
-  static const double _shockwaveInterval = 0.6; // New wave every 0.6s
+  static const double _shockwaveInterval = 1.2; // Slower interval (every 1.2s) for more impact
 
   PrayerMode get currentMode => _currentMode;
   double get holdingTime => _holdingTime;
@@ -193,8 +193,8 @@ class PlayerComponent extends PositionComponent
       game.faith,
     );
 
-    // Faith cost per wave
-    final cost = 2.0 * game.modifiers.faithCostMultiplier;
+    // Faith cost per wave (higher cost for stronger waves)
+    final cost = 5.0 * game.modifiers.faithCostMultiplier;
     if (game.faith < cost) {
       _isChargingIntensity = false;
       return;

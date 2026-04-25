@@ -582,10 +582,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       btn.opacity = isSpiritualWorld ? 1.0 : 0.0;
       // Arrange mode buttons in a radial arc on the right
       if (isSpiritualWorld) {
-        final angle = (i - 1.5) * 0.4; // Arc around the center-right
+        // Higher arc on the right side
+        final angle = (i - 1.5) * 0.5; 
         btn.position = Vector2(
-          size.x - 120 - math.cos(angle) * 80,
-          size.y - 120 + math.sin(angle) * 80,
+          size.x - 100 - math.cos(angle) * 100,
+          size.y - 250 + math.sin(angle) * 100,
         );
         btn.keyLabel = '${i + 1}';
       }

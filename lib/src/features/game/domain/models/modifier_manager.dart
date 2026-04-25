@@ -126,18 +126,18 @@ class ModifierManager {
     final base = progress.combatProfile.getFor(mode);
     final faithFactor = (currentFaith / 100.0).clamp(0.1, 2.0);
     
-    // Holding time bonus: 10% increase per second held
-    final holdingBonus = 1.0 + (holdingTime * 0.1);
+    // Holding time bonus: 20% strength increase per second held
+    final strengthHoldingBonus = 1.0 + (holdingTime * 0.2);
 
     // Apply global passives
     final radiusMultiplier = zoneSizeSpeedMultiplier; // Ausdauer
     final strengthMultiplier = impactPowerMultiplier; // Kraft
 
     return EffectiveCombatStats(
-      radius: base.radius * radiusMultiplier * holdingBonus * 50.0, // Base pixels
-      strength: base.strength * strengthMultiplier * faithFactor * holdingBonus * 10.0,
+      radius: base.radius * radiusMultiplier * 200.0, // Fixed max radius
+      strength: base.strength * strengthMultiplier * faithFactor * strengthHoldingBonus * 25.0, // Increased base strength
       duration: base.duration * (1.0 + (holdingTime * 0.05)),
-      speed: base.speed * 200.0, // Pixels per second
+      speed: base.speed * 120.0, // Slower expansion for more "weight"
       color: mode.color,
     );
   }
