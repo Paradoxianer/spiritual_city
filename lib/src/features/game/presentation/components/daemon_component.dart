@@ -5,6 +5,7 @@ import '../../domain/models/daemon_model.dart';
 import '../../domain/models/city_cell.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../../domain/services/faith_calculator_service.dart';
+import '../../domain/models/prayer_combat.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
@@ -25,6 +26,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   static const double _daemonSize = 18.0;
 
   double _cellDrainMultiplier = 1.0;
+
+  // Active effect tracking (Issue #9)
+  final Map<PrayerMode, double> _activeEffects = {};
 
   // ── Pure orbital movement ─────────────────────────────────────────────────
 
@@ -120,13 +124,28 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
     if (_hitFlickerTimer > 0) _hitFlickerTimer -= dt;
 
+    // ── Update active effects (Issue #9) ──────────────────────────────────────
+    _activeEffects.removeWhere((mode, remaining) => remaining <= 0);
+    _activeEffects.updateAll((mode, remaining) => remaining - dt);
+
     // ── Advance orbit angle every frame ───────────────────────────────────────
-    _orbitAngle += _angularSpeed * dt;
+    double effectiveAngularSpeed = _angularSpeed;
+    if (_activeEffects.containsKey(PrayerMode.slow)) {
+      effectiveAngularSpeed *= 0.4; // Slow down movement
+    }
+    _orbitAngle += effectiveAngularSpeed * dt;
 
     // ── Shrink orbit radius (faster during prayer) ────────────────────────────
-    final spiralSpeed = game.spiritualDynamics.isPrayerAttractionActive
+    double spiralSpeed = game.spiritualDynamics.isPrayerAttractionActive
         ? _spiralSpeedPrayer
         : _spiralSpeedNormal;
+    
+    if (_activeEffects.containsKey(PrayerMode.rebuke)) {
+      spiralSpeed = -30.0; // Push back
+    } else if (_activeEffects.containsKey(PrayerMode.slow)) {
+      spiralSpeed *= 0.5; // Shrink slower
+    }
+
     final newRadius = _orbitRadius - spiralSpeed * dt;
 
     // ── Contact strike: daemon reached the player ─────────────────────────────
@@ -195,10 +214,21 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   // ── Combat ─────────────────────────────────────────────────────────────────
 
   /// Called by the prayer combat system when this daemon is within range.
-  void takeDamage(double amount) {
+  void takeDamage(double amount, {PrayerMode? mode, double duration = 0}) {
     if (model.dissolved) return;
     _hitFlickerTimer = _hitFlickerDuration;
-    model.energy += amount;
+    
+    // Apply effect if provided
+    if (mode != null && duration > 0) {
+      _activeEffects[mode] = duration;
+    }
+
+    double finalDamage = amount;
+    if (_activeEffects.containsKey(PrayerMode.drain)) {
+      finalDamage *= 1.5; // Drain increases damage taken
+    }
+
+    model.energy += finalDamage;
     if (model.energy >= 0) _explode();
   }
 
@@ -299,6 +329,23 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // Core – reuse pre-allocated paint.
     _corePaint.color = isFlickering ? _coreFlicker : _coreNormal;
     canvas.drawCircle(center, _daemonSize * 0.35, _corePaint);
+
+    // Active Effect Auras (Issue #9)
+    if (_activeEffects.isNotEmpty) {
+      final effectModes = _activeEffects.keys.toList();
+      for (int i = 0; i < effectModes.length; i++) {
+        final mode = effectModes[i];
+        final auraRadius = _daemonSize * (0.8 + (i * 0.25));
+        final effectPaint = Paint()
+          ..color = mode.color.withValues(alpha: 0.4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+        
+        // Pulsing ring
+        final pulse = 1.0 + math.sin(_orbitAngle * 5 + i) * 0.1;
+        canvas.drawCircle(center, auraRadius * pulse, effectPaint);
+      }
+    }
 
     // Energy arc (shows remaining life, always starts full)
     final energyFraction =

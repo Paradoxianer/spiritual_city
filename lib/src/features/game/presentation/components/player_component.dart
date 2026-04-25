@@ -208,6 +208,7 @@ class PlayerComponent extends PositionComponent
       duration: stats.duration,
       speed: stats.speed,
       color: stats.color,
+      mode: _currentMode,
     ));
   }
 

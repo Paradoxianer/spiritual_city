@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
 import 'daemon_component.dart';
 import 'cell_component.dart';
+import '../../domain/models/prayer_combat.dart';
 
 /// A circular shockwave emitted during prayer combat.
 /// Issue #9
@@ -12,6 +13,8 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
   final double duration; // How long the effect lasts on daemons
   final double speed;
   final Color color;
+  
+  final PrayerMode mode; // Add mode reference
   
   double _currentRadius = 0;
   
@@ -25,6 +28,7 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
     required this.duration,
     required this.speed,
     required this.color,
+    required this.mode,
   }) : super(position: position, anchor: Anchor.center, priority: 115);
 
   @override
@@ -84,9 +88,7 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
       final dist = center.distanceTo(daemon.position);
       if (dist <= _currentRadius && dist > _currentRadius - 25) {
         final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
-        daemon.takeDamage(strength * 5.0 * falloff);
-        
-        // TODO: Apply mode-specific effects (slow, pushback) here in the future
+        daemon.takeDamage(strength * 5.0 * falloff, mode: mode, duration: duration);
         _hitIds.add(daemon.model.id);
       }
     }

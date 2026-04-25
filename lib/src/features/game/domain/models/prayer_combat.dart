@@ -6,7 +6,7 @@ enum PrayerMode {
   liberation(
     id: 'liberation',
     color: Colors.white,
-    icon: '🙏',
+    icon: '🕊️',
   ),
   rebuke(
     id: 'rebuke',
@@ -16,12 +16,12 @@ enum PrayerMode {
   slow(
     id: 'slow',
     color: Colors.lightBlueAccent,
-    icon: '❄️',
+    icon: '⏳',
   ),
   drain(
     id: 'drain',
     color: Colors.purpleAccent,
-    icon: '✨',
+    icon: '⚖️',
   );
 
   final String id;
