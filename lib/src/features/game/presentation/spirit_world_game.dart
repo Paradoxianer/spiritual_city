@@ -203,7 +203,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         : null;
     final hasSavedState = savedState != null && savedState.isNotEmpty;
     if (hasSavedState) {
-      _applyPlayerState(savedState!);
+      _applyPlayerState(savedState);
       _savedCellStates     = _parseSavedCellStates(savedState);
       _savedNPCStates      = _parseSavedNPCStates(savedState);
       _savedBuildingStates = _parseSavedBuildingStates(savedState);
@@ -219,7 +219,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // introduced, making the player spawn inside a solid building.)
     player.position = hasSavedState
         ? Vector2(
-            (savedState!['playerX'] as num).toDouble(),
+            (savedState['playerX'] as num).toDouble(),
             (savedState['playerY'] as num).toDouble(),
           )
         : Vector2(7040, 7168);
@@ -248,7 +248,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     camera.viewfinder.position = player.position.clone();
 
     await Future.delayed(const Duration(milliseconds: 1000));
-    if (hasSavedState && savedState!['isSpiritualWorld'] == true) {
+    if (hasSavedState && savedState['isSpiritualWorld'] == true) {
       isSpiritualWorld = true;
       _updateButtonStyles();
     }

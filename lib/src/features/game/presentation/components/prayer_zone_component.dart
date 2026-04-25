@@ -8,6 +8,7 @@ class PrayerZoneComponent extends PositionComponent with HasGameReference<Spirit
   double pulseValue = 0.0;     // Pulsierend gesteuert durch Aktions-Button
   Vector2 direction = Vector2.zero();
   bool isActive = false;
+  Color? colorOverride;
 
   /// Maximum radius of the prayer zone in pixels.
   /// Must be kept in sync with [PlayerComponent.modifierMaxRadius].
@@ -30,13 +31,13 @@ class PrayerZoneComponent extends PositionComponent with HasGameReference<Spirit
     // Wenn die Fläche groß ist, verteilt sich die Energie -> die Sättigung sinkt.
     final energyDensity = (1.0 / (sizeFactor * 2 + 0.5)).clamp(0.2, 1.0);
     
-    final auraColor = Color.lerp(
+    final auraColor = colorOverride?.withValues(alpha: 0.2 * energyDensity) ?? Color.lerp(
       Colors.blueAccent.withValues(alpha: 0.1 * energyDensity),
       Colors.cyanAccent.withValues(alpha: 0.3 * energyDensity),
       pulseValue,
     )!;
     
-    final coreColor = Color.lerp(
+    final coreColor = colorOverride?.withValues(alpha: 0.6 * energyDensity) ?? Color.lerp(
       Colors.white.withValues(alpha: 0.4 * energyDensity),
       Colors.amberAccent.withValues(alpha: 0.9 * energyDensity),
       pulseValue,

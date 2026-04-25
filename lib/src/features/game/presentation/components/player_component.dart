@@ -9,6 +9,8 @@ import '../spirit_world_game.dart';
 import 'cell_component.dart';
 import 'daemon_component.dart';
 import 'prayer_zone_component.dart';
+import 'shockwave_component.dart';
+import '../../domain/models/prayer_combat.dart';
 
 class PlayerComponent extends PositionComponent 
     with HasGameReference<SpiritWorldGame>, KeyboardHandler {
@@ -24,49 +26,43 @@ class PlayerComponent extends PositionComponent
 
   // Pulse Times for Oscillators
   double _sizePulseTime = 0.0;
-  double _intensityPulseTime = 0.0;
+
+  // Gebetskampf 2.0 (Issue #9)
+  PrayerMode _currentMode = PrayerMode.liberation;
+  double _holdingTime = 0.0;
+  double _timeSinceLastShockwave = 0.0;
+  static const double _shockwaveInterval = 0.6; // New wave every 0.6s
+
+  PrayerMode get currentMode => _currentMode;
+  double get holdingTime => _holdingTime;
+
+  // Getters für das HUD
+  double get faithPulse => prayerZone.pulseValue;
+  double get zoneSize => prayerZone.sizeFactor;
+
+  void nextMode() {
+    final nextIdx = (_currentMode.index + 1) % PrayerMode.values.length;
+    _currentMode = PrayerMode.values[nextIdx];
+    _holdingTime = 0; // Reset as per Issue #9
+    _timeSinceLastShockwave = 0;
+  }
+
+  void setMode(PrayerMode mode) {
+    if (_currentMode != mode) {
+      _currentMode = mode;
+      _holdingTime = 0;
+      _timeSinceLastShockwave = 0;
+    }
+  }
 
   // ===========================================================================
   // MODIFIER VORBEREITUNG (Für Issue #29 / #32)
   // ===========================================================================
   
-  /// Geschwindigkeit des Flächen-Pulses (Joystick/Shift)
-  double modifierSizeSpeed = 2.2;      
-  
-  /// Geschwindigkeit des Kraft-Pulses (Aktionsbutton)
-  double modifierIntensitySpeed = 3.5; 
-  
-  /// Basis-Stärke des Gebets (Faktor für die Umwandlung von Faith in Impact)
-  /// HINWEIS: Dies ist der Wert, der später durch Missionen/Upgrades erhöht wird!
-  double modifierBasePower = 15.0;     
-  
-  /// Maximaler Radius der Gebetszone (in Pixeln).
-  /// Muss mit [PrayerZoneComponent.maxRadius] übereinstimmen, damit die visuelle
-  /// Zone exakt die betroffenen Zellen anzeigt.
-  double modifierMaxRadius = PrayerZoneComponent.maxRadius; 
-
   /// Globaler Widerstand-Multiplikator (Kann durch Missionen gesenkt werden)
   double modifierResistanceFactor = 1.0; 
 
   // ===========================================================================
-
-  // ── Directional prayer-zone geometry constants ─────────────────────────────
-
-  /// The directional zone extends this multiple of [modifierMaxRadius] beyond
-  /// the base radius.  Set to [PrayerZoneComponent.beamLengthMultiplier] so
-  /// the impact area matches the rendered beam exactly.
-  static const double _dirZoneRadiusMultiplier = PrayerZoneComponent.beamLengthMultiplier;
-
-  /// Half-angle (radians) of the directional prayer cone (~40 °).
-  static const double _dirZoneHalfAngle = math.pi / 4.5;
-
-  /// Converts normalized impact power to daemon energy damage.
-  /// Tuned so a full optimal prayer kills a normal-difficulty daemon in ~3 hits.
-  static const double _daemonDamageScale = 50.0;
-
-  // Getters für das HUD
-  double get faithPulse => prayerZone.pulseValue;
-  double get zoneSize => prayerZone.sizeFactor;
 
   PlayerComponent({required this.joystick})
       : super(
@@ -138,6 +134,11 @@ class PlayerComponent extends PositionComponent
       game.toggleWorld();
     }
 
+    // ── Switch Mode (R) ───────────────────────────────────────────────────────
+    if (event is KeyUpEvent && event.logicalKey == GameKeymap.switchMode) {
+      nextMode();
+    }
+
     // ── Close (Escape) ────────────────────────────────────────────────────────
     if (event is KeyUpEvent && event.logicalKey == GameKeymap.close) {
       game.handleEscape();
@@ -190,111 +191,36 @@ class PlayerComponent extends PositionComponent
 
   void releasePrayer() {
     if (!_isChargingIntensity) return;
-    _executePrayerImpact();
     _isChargingIntensity = false;
-    _intensityPulseTime = 0;
+    _holdingTime = 0;
+    _timeSinceLastShockwave = 0;
     game.recordPrayerCombat();
-    // Praying attracts daemons for 30 seconds (Issue #31)
     game.spiritualDynamics.activatePrayerAttraction();
   }
 
-  void _executePrayerImpact() {
-    // rawIntensity determines what % of faith is spent (0.0 to 1.0).
-    final rawIntensity = math.sin(_intensityPulseTime * modifierIntensitySpeed).abs();
-    // Use the currently displayed zone size so the impact area matches
-    // exactly what the player sees on screen.
-    final radiusFactor = prayerZone.sizeFactor.clamp(0.001, 1.0);
+  void _emitShockwave() {
+    final stats = game.modifiers.getEffectiveCombatStats(
+      _currentMode,
+      _holdingTime,
+      game.faith,
+    );
 
-    // TIMING MULTIPLIER (Lastenheft 2.3)
-    // Inbrunst modifier widens the optimal window
-    final optimalThreshold = 0.7 - game.modifiers.optimalWindowExtension;
-    final double timingMultiplier;
-    if (rawIntensity >= optimalThreshold) {
-      timingMultiplier = 1.0; // OPTIMAL
-    } else if (rawIntensity >= 0.5) {
-      timingMultiplier = 0.8; // GOOD
-    } else if (rawIntensity >= 0.3) {
-      timingMultiplier = 0.6; // EARLY
-    } else {
-      timingMultiplier = 0.4; // TOO LATE
+    // Faith cost per wave
+    final cost = 2.0 * game.modifiers.faithCostMultiplier;
+    if (game.faith < cost) {
+      _isChargingIntensity = false;
+      return;
     }
+    game.faith -= cost;
 
-    // FAITH EINSATZ: Weisheit modifier reduces faith cost
-    final double faithToSpend = game.faith * rawIntensity * game.modifiers.faithCostMultiplier;
-    game.faith -= faithToSpend;
-
-    final radius = radiusFactor * modifierMaxRadius;
-
-    // IMPACT BERECHNUNG: includes Kraft modifier
-    final areaUnits = math.pi * math.pow(radius / CellComponent.cellSize, 2.0);
-    final impactPower = (faithToSpend * modifierBasePower * timingMultiplier *
-            game.modifiers.impactPowerMultiplier) /
-        areaUnits.clamp(0.1, 1000.0);
-
-    final center = position;
-    final gridX = (center.x / CellComponent.cellSize).floor();
-    final gridY = (center.y / CellComponent.cellSize).floor();
-    final cellRange = (radius / CellComponent.cellSize).ceil() + 2;
-
-    for (int dy = -cellRange; dy <= cellRange; dy++) {
-      for (int dx = -cellRange; dx <= cellRange; dx++) {
-        final cell = game.grid.getCell(gridX + dx, gridY + dy);
-        if (cell != null) {
-          final cellPos = Vector2(
-            (gridX + dx) * CellComponent.cellSize + CellComponent.cellSize / 2,
-            (gridY + dy) * CellComponent.cellSize + CellComponent.cellSize / 2,
-          );
-
-          bool inZone = false;
-          if (prayerZone.direction.isZero()) {
-            inZone = center.distanceTo(cellPos) <= radius;
-          } else {
-            final toCell = cellPos - center;
-            final dist = toCell.length;
-            if (dist <= radius * _dirZoneRadiusMultiplier) {
-              final angle = toCell.angleTo(prayerZone.direction);
-              if (angle.abs() < _dirZoneHalfAngle) inZone = true;
-            }
-          }
-
-          if (inZone) {
-            final dist = center.distanceTo(cellPos);
-            final falloff = 1.0 - (dist / (radius * _dirZoneRadiusMultiplier)).clamp(0.0, 1.0);
-            final finalImpact = (impactPower / 100.0) * falloff / modifierResistanceFactor;
-            cell.spiritualState = (cell.spiritualState + finalImpact).clamp(-1.0, 1.0);
-          }
-        }
-      }
-    }
-
-    // ── Daemon combat (Issue #31) ────────────────────────────────────────────
-    // Daemons inside the impact zone take direct damage.
-    // On easy the player deals more damage; on hard daemons are more resistant.
-    final daemonDamageMultiplier = switch (game.difficulty) {
-      Difficulty.easy   => 1.5,
-      Difficulty.normal => 1.0,
-      Difficulty.hard   => 0.7,
-    };
-
-    for (final daemon
-        in List.of(game.world.children.whereType<DaemonComponent>())) {
-      if (daemon.model.dissolved) continue;
-      final dist = center.distanceTo(daemon.position);
-      bool inZone;
-      if (prayerZone.direction.isZero()) {
-        inZone = dist <= radius;
-      } else {
-        final toTarget = daemon.position - center;
-        inZone = toTarget.length <= radius * _dirZoneRadiusMultiplier &&
-            toTarget.angleTo(prayerZone.direction).abs() < _dirZoneHalfAngle;
-      }
-      if (inZone) {
-        final falloff = 1.0 - (dist / (radius * _dirZoneRadiusMultiplier)).clamp(0.0, 1.0);
-        // Scale damage so that a full optimal prayer kills a daemon in ~3 hits.
-        daemon.takeDamage(
-            impactPower * _daemonDamageScale * falloff * daemonDamageMultiplier);
-      }
-    }
+    game.world.add(ShockwaveComponent(
+      position: position.clone(),
+      maxRadius: stats.radius,
+      strength: stats.strength,
+      duration: stats.duration,
+      speed: stats.speed,
+      color: stats.color,
+    ));
   }
 
   @override
@@ -340,45 +266,33 @@ class PlayerComponent extends PositionComponent
   }
 
   void _updatePrayerMechanics(double dt) {
-    // Size grows when joystick is moved, keyboard direction held, Shift pressed,
-    // OR when the faith/intensity button is held (so the HUD action button alone
-    // is enough to see the growing prayer zone – Issue #32).
+    // Size is handled by shockwaves now, but we keep prayerZone as a "visual hint"
     _isChargingSize = !joystick.delta.isZero() ||
         _keyboardDirection.x != 0 || _keyboardDirection.y != 0 ||
         _pressedShift || _isChargingIntensity;
 
-    // Apply Ausdauer modifier to zone growth speed
-    final effectiveSizeSpeed = modifierSizeSpeed * game.modifiers.zoneSizeSpeedMultiplier;
-    // Apply Konzentration modifier to intensity pulse speed (slower = more control)
-    final effectiveIntensitySpeed = modifierIntensitySpeed * game.modifiers.faithPulseSpeedMultiplier;
-    
-    if (_isChargingSize) {
-      _sizePulseTime += dt;
-      prayerZone.sizeFactor = math.sin(_sizePulseTime * effectiveSizeSpeed).abs();
+    if (_isChargingIntensity && game.faith > 1.0) {
+      _holdingTime += dt;
+      _timeSinceLastShockwave += dt;
       
-      if (!joystick.delta.isZero()) {
-        prayerZone.direction = joystick.relativeDelta;
-      } else if (!_keyboardDirection.isZero()) {
-        prayerZone.direction = _keyboardDirection;
-      } else {
-        // No directional input – show a centered circle (Issue #32).
-        prayerZone.direction = Vector2.zero();
+      if (_timeSinceLastShockwave >= _shockwaveInterval) {
+        _emitShockwave();
+        _timeSinceLastShockwave = 0;
       }
-    } else {
-      _sizePulseTime = 0;
-      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 2.5).clamp(0.001, 1.0);
-    }
 
-    if (_isChargingIntensity && game.faith > 0.05) {
-      _intensityPulseTime += dt;
-      prayerZone.pulseValue = math.sin(_intensityPulseTime * effectiveIntensitySpeed).abs();
+      // Visual pulse for the player
+      prayerZone.sizeFactor = 0.2 + (math.sin(_holdingTime * 10).abs() * 0.1);
+      prayerZone.pulseValue = 0.5 + (math.sin(_holdingTime * 5).abs() * 0.5);
+      prayerZone.isActive = true;
+      prayerZone.colorOverride = _currentMode.color;
     } else {
       _isChargingIntensity = false;
-      _intensityPulseTime = 0;
-      prayerZone.pulseValue = 0.05;
+      _holdingTime = 0;
+      _timeSinceLastShockwave = 0;
+      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 2.0).clamp(0, 1);
+      if (prayerZone.sizeFactor <= 0) prayerZone.isActive = false;
     }
 
-    prayerZone.isActive = true; 
     prayerZone.position = position;
   }
 }
