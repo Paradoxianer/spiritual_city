@@ -70,6 +70,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final SpiritualDynamicsSystem spiritualDynamics;
   late final HudButton actionButton;
   late final HudButton worldToggleButton;
+  late final List<HudButton> modeButtons;
   late final PrayerHudComponent prayerHud;
   late final LootSystem lootSystem;
 
@@ -237,6 +238,23 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     await camera.viewport.add(joystick);
     await _addHudButtons();
+
+    modeButtons = [];
+    final modes = PrayerMode.values;
+    for (int i = 0; i < modes.length; i++) {
+      final mode = modes[i];
+      final btn = HudButton(
+        icon: mode.icon,
+        color: mode.color.withValues(alpha: 0.5),
+        onDown: () => player.setMode(mode),
+        isActive: () => player.currentMode == mode,
+        size: Vector2.all(55),
+        position: Vector2(size.x - 170, size.y - 150 - (i * 65)),
+      );
+      btn.opacity = 0; // Hidden by default
+      modeButtons.add(btn);
+      await camera.viewport.add(btn);
+    }
     
     prayerHud = PrayerHudComponent();
     await camera.viewport.add(prayerHud);
@@ -250,6 +268,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     await Future.delayed(const Duration(milliseconds: 1000));
     if (hasSavedState && savedState['isSpiritualWorld'] == true) {
       isSpiritualWorld = true;
+      _updateHudVisibility();
       _updateButtonStyles();
     }
     isWorldReady.value = true;
@@ -498,6 +517,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
     
     isSpiritualWorld = !isSpiritualWorld;
+    _updateHudVisibility();
     _updateButtonStyles();
     _log.info('Switched World: $isSpiritualWorld');
 
@@ -538,6 +558,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       isSpiritualWorld ? '🏙️' : '🙏',
       isSpiritualWorld ? Colors.grey.withValues(alpha: 0.7) : Colors.purple.withValues(alpha: 0.6)
     );
+  }
+
+  void _updateHudVisibility() {
+    if (isSpiritualWorld) {
+      if (joystick.parent != null) joystick.removeFromParent();
+    } else {
+      if (joystick.parent == null) camera.viewport.add(joystick);
+    }
+
+    for (var btn in modeButtons) {
+      btn.opacity = isSpiritualWorld ? 1.0 : 0.0;
+    }
   }
 
   void _openRadialMenu() {
@@ -1295,8 +1327,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 class HudButton extends PositionComponent with TapCallbacks {
   final VoidCallback? onDown;
   final VoidCallback? onUp;
+  final bool Function()? isActive;
   String icon;
   Color color;
+  double opacity = 1.0;
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
   final String? keyLabel;
   
@@ -1305,9 +1339,11 @@ class HudButton extends PositionComponent with TapCallbacks {
     required this.color,
     this.onDown, 
     this.onUp,
+    this.isActive,
     this.keyLabel,
-    required super.position
-  }) : super(anchor: Anchor.center, size: Vector2.all(75)); // Einheitliche Größe
+    required super.position,
+    Vector2? size,
+  }) : super(anchor: Anchor.center, size: size ?? Vector2.all(75)); // Einheitliche Größe
 
   void updateContent(String newIcon, Color newColor) {
     icon = newIcon;
@@ -1316,42 +1352,52 @@ class HudButton extends PositionComponent with TapCallbacks {
 
   @override
   void render(Canvas canvas) {
+    if (opacity <= 0) return;
+
     final center = Offset(size.x / 2, size.y / 2);
     final radius = size.x / 2;
 
     // 1. Schwarzer Rand / Schatten
-    canvas.drawCircle(center, radius + 2, Paint()..color = Colors.black.withValues(alpha: 0.5));
+    canvas.drawCircle(center, radius + 2, Paint()..color = Colors.black.withValues(alpha: 0.5 * opacity));
     
     // 2. Haupt-Button
-    canvas.drawCircle(center, radius, Paint()..color = color);
+    final selected = isActive?.call() ?? false;
+    canvas.drawCircle(center, radius, Paint()..color = color.withValues(alpha: color.a * opacity));
+    
+    if (selected) {
+      canvas.drawCircle(center, radius, Paint()
+        ..color = Colors.white.withValues(alpha: 0.5 * opacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3);
+    }
 
     // 3. Glanz-Effekt oben
     final shinePaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Colors.white.withValues(alpha: 0.3), Colors.transparent],
+        colors: [Colors.white.withValues(alpha: 0.3 * opacity), Colors.transparent],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, shinePaint);
 
     // 4. Icon
     TextPainter(
-      text: TextSpan(text: icon, style: const TextStyle(fontSize: 30)),
+      text: TextSpan(text: icon, style: TextStyle(fontSize: size.x * 0.4, color: Colors.white.withValues(alpha: opacity))),
       textDirection: TextDirection.ltr
-    )..layout()..paint(canvas, Offset(size.x / 2 - 15, size.y / 2 - 19));
+    )..layout()..paint(canvas, Offset(size.x / 2 - (size.x * 0.2), size.y / 2 - (size.y * 0.25)));
 
     // 5. Keyboard shortcut badge (amber circle, top-right corner, desktop/web only)
     if (keyLabel != null && _shouldShowKeyHints()) {
       const badgeRadius = 11.0;
       final badgeCenter = Offset(size.x - badgeRadius + 2, badgeRadius - 2);
-      canvas.drawCircle(badgeCenter, badgeRadius, Paint()..color = const Color(0xFFFFA000));
+      canvas.drawCircle(badgeCenter, badgeRadius, Paint()..color = const Color(0xFFFFA000).withValues(alpha: opacity));
       TextPainter(
         text: TextSpan(
           text: keyLabel,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Colors.black.withValues(alpha: opacity),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -1363,11 +1409,17 @@ class HudButton extends PositionComponent with TapCallbacks {
   }
 
   @override
-  void onTapDown(TapDownEvent event) => onDown?.call();
+  void onTapDown(TapDownEvent event) {
+    if (opacity > 0) onDown?.call();
+  }
 
   @override
-  void onTapUp(TapUpEvent event) => onUp?.call();
+  void onTapUp(TapUpEvent event) {
+    if (opacity > 0) onUp?.call();
+  }
 
   @override
-  void onTapCancel(TapCancelEvent event) => onUp?.call();
+  void onTapCancel(TapCancelEvent event) {
+    if (opacity > 0) onUp?.call();
+  }
 }

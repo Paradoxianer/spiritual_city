@@ -280,16 +280,16 @@ class PlayerComponent extends PositionComponent
         _timeSinceLastShockwave = 0;
       }
 
-      // Visual pulse for the player
-      prayerZone.sizeFactor = 0.2 + (math.sin(_holdingTime * 10).abs() * 0.1);
-      prayerZone.pulseValue = 0.5 + (math.sin(_holdingTime * 5).abs() * 0.5);
+      // Subtle visual aura for the player
+      prayerZone.sizeFactor = 0.25; // Steady size hint
+      prayerZone.pulseValue = 0.3 + (math.sin(_holdingTime * 2).abs() * 0.2); // Very slow pulse
       prayerZone.isActive = true;
       prayerZone.colorOverride = _currentMode.color;
     } else {
       _isChargingIntensity = false;
       _holdingTime = 0;
       _timeSinceLastShockwave = 0;
-      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 2.0).clamp(0, 1);
+      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 1.5).clamp(0, 1);
       if (prayerZone.sizeFactor <= 0) prayerZone.isActive = false;
     }
 
