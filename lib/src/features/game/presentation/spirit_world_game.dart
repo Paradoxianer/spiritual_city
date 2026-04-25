@@ -555,6 +555,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       isSpiritualWorld ? '✝️' : '🖐️',
       isSpiritualWorld ? Colors.amber.withValues(alpha: 0.7) : Colors.blue.withValues(alpha: 0.6)
     );
+    actionButton.keyLabel = isSpiritualWorld ? 'Space' : 'E';
+
     worldToggleButton.updateContent(
       isSpiritualWorld ? '🏙️' : '🙏',
       isSpiritualWorld ? Colors.grey.withValues(alpha: 0.7) : Colors.purple.withValues(alpha: 0.6)
@@ -564,12 +566,28 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void _updateHudVisibility() {
     if (isSpiritualWorld) {
       if (joystick.parent != null) joystick.removeFromParent();
+      // Move combat button to left
+      actionButton.position = Vector2(80, size.y - 80);
+      actionButton.keyLabel = 'Space';
     } else {
       if (joystick.parent == null) camera.viewport.add(joystick);
+      // Move interaction button back to right
+      actionButton.position = Vector2(size.x - 80, size.y - 80);
+      actionButton.keyLabel = 'E';
     }
 
-    for (var btn in modeButtons) {
+    for (int i = 0; i < modeButtons.length; i++) {
+      final btn = modeButtons[i];
       btn.opacity = isSpiritualWorld ? 1.0 : 0.0;
+      // Arrange mode buttons in a radial arc on the right
+      if (isSpiritualWorld) {
+        final angle = (i - 1.5) * 0.4; // Arc around the center-right
+        btn.position = Vector2(
+          size.x - 120 - math.cos(angle) * 80,
+          size.y - 120 + math.sin(angle) * 80,
+        );
+        btn.keyLabel = '${i + 1}';
+      }
     }
   }
 
@@ -1319,7 +1337,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     if (isLoaded) {
-      actionButton.position = Vector2(size.x - 80, size.y - 80);
+      _updateHudVisibility();
       worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
     }
   }
@@ -1333,7 +1351,7 @@ class HudButton extends PositionComponent with TapCallbacks {
   Color color;
   double opacity = 1.0;
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
-  final String? keyLabel;
+  String? keyLabel;
   
   HudButton({
     required this.icon,

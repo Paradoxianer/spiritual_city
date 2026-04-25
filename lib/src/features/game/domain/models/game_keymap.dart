@@ -100,27 +100,12 @@ class GameKeymap {
     // Unsichtbare Welt
     KeymapEntry(
       keys: 'Leertaste (halten)',
-      action: 'Gebet aufladen',
+      action: 'Geistlichen Kampf aktivieren',
       category: 'Unsichtbare Welt',
     ),
     KeymapEntry(
-      keys: 'Shift (halten)',
-      action: 'Gebetszone vergrößern',
-      category: 'Unsichtbare Welt',
-    ),
-    KeymapEntry(
-      keys: 'W/A/S/D (halten)',
-      action: 'Gebetszone ausrichten',
-      category: 'Unsichtbare Welt',
-    ),
-    KeymapEntry(
-      keys: 'Leertaste loslassen',
-      action: 'Gebet auslösen',
-      category: 'Unsichtbare Welt',
-    ),
-    KeymapEntry(
-      keys: 'R',
-      action: 'Gebetsmodus umschalten',
+      keys: '1 – 4',
+      action: 'Gebetsmodus direkt auswählen',
       category: 'Unsichtbare Welt',
     ),
 

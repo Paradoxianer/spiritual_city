@@ -95,22 +95,34 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
   @override
   void render(Canvas canvas) {
     final progress = (_currentRadius / maxRadius).clamp(0.0, 1.0);
-    final alpha = (1.0 - progress) * 0.6;
+    final alpha = (1.0 - progress) * 0.5;
     
+    // Main shockwave body (wide gradient feel)
     final paint = Paint()
       ..color = color.withValues(alpha: alpha)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0 + (progress * 10.0); // Thickens as it expands
+      ..strokeWidth = 10.0 + (progress * 25.0); // Much wider
     
-    // Optional: Add a glow effect
-    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 5.0 * (1.0 - progress));
+    // Stronger blur for "alpha gradient" look
+    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 15.0 * (1.0 - progress));
     
     canvas.drawCircle(Offset.zero, _currentRadius, paint);
     
-    // Inner thin ring
-    if (_currentRadius > 10) {
-      paint.strokeWidth = 1.0;
-      canvas.drawCircle(Offset.zero, _currentRadius - 10, paint);
+    // Sharper leading edge
+    final edgePaint = Paint()
+      ..color = color.withValues(alpha: alpha * 1.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawCircle(Offset.zero, _currentRadius, edgePaint);
+    
+    // Inner secondary pulse
+    if (_currentRadius > 20) {
+      final innerAlpha = alpha * 0.3;
+      final innerPaint = Paint()
+        ..color = color.withValues(alpha: innerAlpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5.0;
+      canvas.drawCircle(Offset.zero, _currentRadius - 20, innerPaint);
     }
   }
 }

@@ -34,13 +34,6 @@ class PlayerComponent extends PositionComponent
   double get faithPulse => prayerZone.pulseValue;
   double get zoneSize => prayerZone.sizeFactor;
 
-  void nextMode() {
-    final nextIdx = (_currentMode.index + 1) % PrayerMode.values.length;
-    _currentMode = PrayerMode.values[nextIdx];
-    _holdingTime = 0; // Reset as per Issue #9
-    _timeSinceLastShockwave = 0;
-  }
-
   void setMode(PrayerMode mode) {
     if (_currentMode != mode) {
       _currentMode = mode;
@@ -128,9 +121,12 @@ class PlayerComponent extends PositionComponent
       game.toggleWorld();
     }
 
-    // ── Switch Mode (R) ───────────────────────────────────────────────────────
-    if (event is KeyUpEvent && event.logicalKey == GameKeymap.switchMode) {
-      nextMode();
+    // ── Switch Mode (1-4 in Spiritual World) ─────────────────────────────────
+    if (game.isSpiritualWorld && event is KeyUpEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.digit1) setMode(PrayerMode.liberation);
+      if (event.logicalKey == LogicalKeyboardKey.digit2) setMode(PrayerMode.rebuke);
+      if (event.logicalKey == LogicalKeyboardKey.digit3) setMode(PrayerMode.slow);
+      if (event.logicalKey == LogicalKeyboardKey.digit4) setMode(PrayerMode.drain);
     }
 
     // ── Close (Escape) ────────────────────────────────────────────────────────
@@ -267,17 +263,13 @@ class PlayerComponent extends PositionComponent
         _timeSinceLastShockwave = 0;
       }
 
-      // Subtle visual aura for the player
-      prayerZone.sizeFactor = 0.25; // Steady size hint
-      prayerZone.pulseValue = 0.3 + (math.sin(_holdingTime * 2).abs() * 0.2); // Very slow pulse
-      prayerZone.isActive = true;
-      prayerZone.colorOverride = _currentMode.color;
+      // Aura disabled as per user request (shockwave is enough)
+      prayerZone.isActive = false;
     } else {
       _isChargingIntensity = false;
       _holdingTime = 0;
       _timeSinceLastShockwave = 0;
-      prayerZone.sizeFactor = (prayerZone.sizeFactor - dt * 1.5).clamp(0, 1);
-      if (prayerZone.sizeFactor <= 0) prayerZone.isActive = false;
+      prayerZone.isActive = false;
     }
 
     prayerZone.position = position;
