@@ -27,4 +27,39 @@ class PlayerProgress {
     territoriesPartiallyTaken++;
     if (full) territoriesFullyTaken++;
   }
+
+  Map<String, dynamic> toJson() => {
+    'prayerCombats': prayerCombatsCompleted,
+    'bibleReadings': bibleReadingsCompleted,
+    'npcsConverted': npcsConverted,
+    'conversations': conversationsHeld,
+    'territoriesPartially': territoriesPartiallyTaken,
+    'territoriesFully': territoriesFullyTaken,
+    'maxChristians': maxChristiansInOneCell,
+    'combatProfile': combatProfile.toJson(),
+  };
+
+  void loadFromJson(Map<String, dynamic> json) {
+    prayerCombatsCompleted = (json['prayerCombats'] ?? 0) as int;
+    bibleReadingsCompleted = (json['bibleReadings'] ?? 0) as int;
+    npcsConverted = (json['npcsConverted'] ?? 0) as int;
+    conversationsHeld = (json['conversations'] ?? 0) as int;
+    territoriesPartiallyTaken = (json['territoriesPartially'] ?? 0) as int;
+    territoriesFullyTaken = (json['territoriesFully'] ?? 0) as int;
+    maxChristiansInOneCell = (json['maxChristians'] ?? 0) as int;
+    
+    if (json.containsKey('combatProfile')) {
+      final profileJson = json['combatProfile'] as Map<String, dynamic>;
+      final loadedProfile = CombatProfile.fromJson(profileJson);
+      // Copy loaded values into existing instance
+      for (var mode in PrayerMode.values) {
+        final loadedStats = loadedProfile.getFor(mode);
+        final currentStats = combatProfile.getFor(mode);
+        currentStats.radius = loadedStats.radius;
+        currentStats.strength = loadedStats.strength;
+        currentStats.duration = loadedStats.duration;
+        currentStats.speed = loadedStats.speed;
+      }
+    }
+  }
 }

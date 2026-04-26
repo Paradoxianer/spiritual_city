@@ -50,7 +50,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   ///   • version 0 (missing key) → version 1: initial schema.
   ///   • version 1 → version 2: NPC counters unified into interactionCount
   ///     ('conv' key); separate 'pray' and 'counsel' keys removed.
-  static const int kSaveDataVersion = 2;
+  ///   • version 2 → version 3: Added PlayerProgress and CombatProfile persistence.
+  static const int kSaveDataVersion = 3;
 
   /// Difficulty level selected in the main menu.
   final Difficulty difficulty;
@@ -351,6 +352,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     health    = (state['health']    as num?)?.toDouble() ?? health;
     hunger    = (state['hunger']    as num?)?.toDouble() ?? hunger;
     materials = (state['materials'] as num?)?.toDouble() ?? materials;
+
+    if (state.containsKey('progress')) {
+      progress.loadFromJson(state['progress'] as Map<String, dynamic>);
+      _checkAndApplyModifiers(); // Sync modifiers with loaded progress
+    }
   }
 
   /// Parses the `cells` sub-map from a serialised save into a flat lookup.
@@ -502,6 +508,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       'playerX':          player.position.x,
       'playerY':          player.position.y,
       'isSpiritualWorld': isSpiritualWorld,
+      'progress':         progress.toJson(),
       'cells':            cellStates,
       'npcs':             npcStates,
       'buildings':        buildingStates,
