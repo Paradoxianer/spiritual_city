@@ -331,9 +331,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0);
     final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0);
 
-    game.health = (game.health - hpDamage).clamp(0.0, SpiritWorldGame.maxHealth);
-    game.gainFaith(-faithDamage);
-    game.hunger = (game.hunger - hungerDamage).clamp(0.0, SpiritWorldGame.maxHunger);
+    game.spendHealth(hpDamage);
+    game.spendFaith(faithDamage);
+    game.spendHunger(hungerDamage);
 
     // Paint a 4-cell radius around the player dark red (negative influence).
     final gx = (game.player.position.x / CellComponent.cellSize).floor();

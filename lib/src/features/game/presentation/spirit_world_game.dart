@@ -16,6 +16,7 @@ import '../domain/models/interactions.dart';
 import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
+export '../domain/models/player_progress.dart';
 import '../domain/models/prayer_combat.dart';
 import '../domain/services/building_interaction_service.dart';
 import '../domain/services/mission_service.dart';
@@ -126,10 +127,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   double get materials    => materialsNotifier.value;
   set materials(double v) => materialsNotifier.value = v;
 
-  static const double maxFaith = 100.0;
-  static const double maxHealth = 100.0;
-  static const double maxHunger = 100.0;
-  static const double maxMaterials = 100.0;
   static const double worldToggleCost = 10.0;
 
   /// Number of daemons spawned around the player on spiritual-world entry.
@@ -522,7 +519,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
     
     if (!isSpiritualWorld) {
-      faith -= worldToggleCost;
+      spendFaith(worldToggleCost);
     }
     
     isSpiritualWorld = !isSpiritualWorld;
@@ -976,11 +973,15 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     } else if (result.playerMaterialsDelta < 0) {
       spendMaterials(-result.playerMaterialsDelta);
     }
-    if (result.playerHealthDelta != 0) {
-      health = (health + result.playerHealthDelta).clamp(0.0, maxHealth);
+    if (result.playerHealthDelta > 0) {
+      gainHealth(result.playerHealthDelta);
+    } else if (result.playerHealthDelta < 0) {
+      spendHealth(-result.playerHealthDelta);
     }
-    if (result.playerHungerDelta != 0) {
+    if (result.playerHungerDelta > 0) {
       gainHunger(result.playerHungerDelta);
+    } else if (result.playerHungerDelta < 0) {
+      spendHunger(-result.playerHungerDelta);
     }
     // 'prayBusiness' also nudges the cell underneath the player positively
     if (actionType == 'prayBusiness') {
@@ -1195,26 +1196,58 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     _hungerDrainTimer += dt;
     if (_hungerDrainTimer >= hungerDrainInterval) {
       _hungerDrainTimer = 0.0;
-      hunger = (hunger - hungerDrainAmount).clamp(0.0, maxHunger);
+      spendHunger(hungerDrainAmount);
       // If starving, health starts draining
       if (hunger < healthFromHungerThreshold) {
-        health = (health - 0.5).clamp(0.0, maxHealth);
+        spendHealth(0.5);
       }
     }
+  }
+
+  /// Spend resources (clamped to 0)
+  void spendFaith(double amount) {
+    progress.faithStage.add(amount);
+    faith = (faith - amount).clamp(0.0, progress.maxFaith);
+  }
+
+  void spendHealth(double amount) {
+    progress.healthStage.add(amount);
+    health = (health - amount).clamp(0.0, progress.maxHealth);
+  }
+
+  void spendHunger(double amount) {
+    progress.hungerStage.add(amount);
+    hunger = (hunger - amount).clamp(0.0, progress.maxHunger);
   }
 
   /// Spend materials (returns false if not enough)
   bool spendMaterials(double amount) {
     if (materials < amount) return false;
-    materials = (materials - amount).clamp(0.0, maxMaterials);
+    progress.materialsStage.add(amount);
+    materials = (materials - amount).clamp(0.0, progress.maxMaterials);
     return true;
   }
 
   /// Gain resources (clamped to max)
-  void gainFaith(double amount) => faith = (faith + amount).clamp(0.0, maxFaith);
-  void gainHealth(double amount) => health = (health + amount).clamp(0.0, maxHealth);
-  void gainHunger(double amount) => hunger = (hunger + amount).clamp(0.0, maxHunger);
-  void gainMaterials(double amount) => materials = (materials + amount).clamp(0.0, maxMaterials);
+  void gainFaith(double amount) {
+    progress.faithStage.add(amount);
+    faith = (faith + amount).clamp(0.0, progress.maxFaith);
+  }
+
+  void gainHealth(double amount) {
+    progress.healthStage.add(amount);
+    health = (health + amount).clamp(0.0, progress.maxHealth);
+  }
+
+  void gainHunger(double amount) {
+    progress.hungerStage.add(amount);
+    hunger = (hunger + amount).clamp(0.0, progress.maxHunger);
+  }
+
+  void gainMaterials(double amount) {
+    progress.materialsStage.add(amount);
+    materials = (materials + amount).clamp(0.0, progress.maxMaterials);
+  }
 
   @override
   void onRemove() {

@@ -170,7 +170,7 @@ class _GameScreenState extends State<GameScreen> {
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
               if (!isReady) return const SizedBox.shrink();
-              return _ResourceHud(game: _game);
+              return _ResourceHud(gameRef: _game);
             },
           ),
           // Street-name label – persistent top-center
@@ -1638,8 +1638,8 @@ class _PastorhouseHud extends StatelessWidget {
 /// update immediately after every action – even while the Flame game loop is
 /// paused (e.g. when a building or dialog overlay is open).
 class _ResourceHud extends StatelessWidget {
-  final SpiritWorldGame game;
-  const _ResourceHud({required this.game});
+  final SpiritWorldGame gameRef;
+  const _ResourceHud({required this.gameRef});
 
   @override
   Widget build(BuildContext context) {
@@ -1661,32 +1661,36 @@ class _ResourceHud extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _AnimatedResourceBar(
-                notifier: game.healthNotifier,
-                max: SpiritWorldGame.maxHealth,
+                notifier: gameRef.healthNotifier,
+                stage: gameRef.progress.healthStage,
+                max: gameRef.progress.maxHealth,
                 icon: '❤️',
                 label: 'HP',
                 color: Colors.redAccent,
               ),
               const SizedBox(height: 2),
               _AnimatedResourceBar(
-                notifier: game.hungerNotifier,
-                max: SpiritWorldGame.maxHunger,
+                notifier: gameRef.hungerNotifier,
+                stage: gameRef.progress.hungerStage,
+                max: gameRef.progress.maxHunger,
                 icon: '🍞',
                 label: 'Hunger',
                 color: Colors.orange,
               ),
               const SizedBox(height: 2),
               _AnimatedResourceBar(
-                notifier: game.faithNotifier,
-                max: SpiritWorldGame.maxFaith,
+                notifier: gameRef.faithNotifier,
+                stage: gameRef.progress.faithStage,
+                max: gameRef.progress.maxFaith,
                 icon: '🙏',
                 label: 'Faith',
                 color: Colors.purpleAccent,
               ),
               const SizedBox(height: 2),
               _AnimatedResourceBar(
-                notifier: game.materialsNotifier,
-                max: SpiritWorldGame.maxMaterials,
+                notifier: gameRef.materialsNotifier,
+                stage: gameRef.progress.materialsStage,
+                max: gameRef.progress.maxMaterials,
                 icon: '📦',
                 label: 'Supplies',
                 color: Colors.blueGrey,
@@ -1706,6 +1710,7 @@ class _ResourceHud extends StatelessWidget {
 /// resource change, regardless of the Flame game pause state.
 class _AnimatedResourceBar extends StatefulWidget {
   final ValueNotifier<double> notifier;
+  final ResourceStage stage;
   final double max;
   final String icon;
   final String label;
@@ -1713,6 +1718,7 @@ class _AnimatedResourceBar extends StatefulWidget {
 
   const _AnimatedResourceBar({
     required this.notifier,
+    required this.stage,
     required this.max,
     required this.icon,
     required this.label,
@@ -1727,6 +1733,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
     with SingleTickerProviderStateMixin {
   static const double _barWidth  = 130.0;
   static const double _barHeight = 8.0;
+  static const double _stageBarHeight = 2.0;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -1771,6 +1778,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
   Widget build(BuildContext context) {
     final value = widget.notifier.value;
     final progress = (value / widget.max).clamp(0.0, 1.0);
+    final stageProgress = widget.stage.progress;
     final deltaSign = _lastDelta >= 0 ? '+' : '';
     final deltaText = '$deltaSign${_lastDelta.toInt()}';
     final deltaColor = _lastDelta >= 0 ? Colors.amber : Colors.redAccent;
@@ -1788,7 +1796,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Label + current value + fading delta
+              // Label + current value + fading delta + Stage Level
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1800,34 +1808,68 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const Spacer(),
+                  Text(
+                    'Lv.${widget.stage.stage}',
+                    style: const TextStyle(
+                      color: Colors.amberAccent,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   // Delta chip – only shown while the fade is in progress.
                   if (_fadeCtrl.isAnimating || _fadeCtrl.value < 1.0)
                     AnimatedBuilder(
                       animation: _fadeAnim,
                       builder: (context, _) => Opacity(
                         opacity: _fadeAnim.value.clamp(0.0, 1.0),
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Text(
-                            deltaText,
-                            style: TextStyle(
-                              color: deltaColor,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        child: Text(
+                          deltaText,
+                          style: TextStyle(
+                            color: deltaColor,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
                 ],
               ),
-              // Progress bar (plain, no glow)
+              const SizedBox(height: 1),
+              // Stage Progress Bar (Pixel strip)
+              Container(
+                width: _barWidth,
+                height: _stageBarHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: stageProgress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.cyanAccent.withValues(alpha: 0.8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.cyanAccent.withValues(alpha: 0.4),
+                            blurRadius: 2,
+                            spreadRadius: 0.5,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Main Progress bar (plain, no glow)
               Container(
                 width: _barWidth,
                 height: _barHeight,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white12,
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(3)),
                 ),
                 child: Align(
                   alignment: Alignment.centerLeft,
@@ -1836,7 +1878,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
                     child: Container(
                       decoration: BoxDecoration(
                         color: widget.color,
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
                       ),
                     ),
                   ),
