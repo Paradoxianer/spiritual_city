@@ -37,7 +37,7 @@ class _MenuScreenState extends State<MenuScreen> {
           children: [
             // Background cross symbol (decorative)
             Center(
-              child: Opacity(
+              child: const Opacity(
                 opacity: 0.04,
                 child: Icon(
                   Icons.add,

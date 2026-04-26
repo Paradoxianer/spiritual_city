@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -250,6 +249,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         color: mode.color.withValues(alpha: 0.5),
         onDown: () => player.setMode(mode),
         isActive: () => player.currentMode == mode,
+        plain: true,
         size: Vector2.all(55),
         position: Vector2(size.x - 170, size.y - 150 - (i * 65)),
       );
@@ -577,17 +577,20 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       actionButton.keyLabel = 'E';
     }
 
+    final dockWidth = modeButtons.length * 60.0;
+    final startX = (size.x - dockWidth) / 2 + 30;
+
     for (int i = 0; i < modeButtons.length; i++) {
       final btn = modeButtons[i];
       btn.opacity = isSpiritualWorld ? 1.0 : 0.0;
-      // Arrange mode buttons in a radial arc on the right
+      
       if (isSpiritualWorld) {
-        // Higher arc on the right side
-        final angle = (i - 1.5) * 0.5; 
-        btn.position = Vector2(
-          size.x - 100 - math.cos(angle) * 100,
-          size.y - 250 + math.sin(angle) * 100,
-        );
+        final isSelected = player.currentMode == PrayerMode.values[i];
+        final targetSize = isSelected ? 70.0 : 50.0;
+        final targetY = isSelected ? size.y - 90.0 : size.y - 80.0;
+        
+        btn.size = Vector2.all(targetSize);
+        btn.position = Vector2(startX + (i * 60), targetY);
         btn.keyLabel = '${i + 1}';
       }
     }
@@ -1117,6 +1120,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       _updateNearestInteractable();
       _updatePassiveResources(dt);
       _updateStreetLabel();
+      if (isSpiritualWorld) _updateHudVisibility(); // Dynamic dock update
     }
     // Always push player position so the Flutter HUD compass stays live.
     playerWorldPosition.value = player.position.clone();
@@ -1352,6 +1356,7 @@ class HudButton extends PositionComponent with TapCallbacks {
   String icon;
   Color color;
   double opacity = 1.0;
+  bool plain = false;
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
   String? keyLabel;
   
@@ -1362,6 +1367,7 @@ class HudButton extends PositionComponent with TapCallbacks {
     this.onUp,
     this.isActive,
     this.keyLabel,
+    this.plain = false,
     required super.position,
     Vector2? size,
   }) : super(anchor: Anchor.center, size: size ?? Vector2.all(75)); // Einheitliche Größe
@@ -1377,38 +1383,66 @@ class HudButton extends PositionComponent with TapCallbacks {
 
     final center = Offset(size.x / 2, size.y / 2);
     final radius = size.x / 2;
-
-    // 1. Schwarzer Rand / Schatten
-    canvas.drawCircle(center, radius + 2, Paint()..color = Colors.black.withValues(alpha: 0.5 * opacity));
-    
-    // 2. Haupt-Button
     final selected = isActive?.call() ?? false;
-    canvas.drawCircle(center, radius, Paint()..color = color.withValues(alpha: color.a * opacity));
-    
-    if (selected) {
-      canvas.drawCircle(center, radius, Paint()
-        ..color = Colors.white.withValues(alpha: 0.5 * opacity)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3);
+
+    if (!plain) {
+      // 1. Schwarzer Rand / Schatten
+      canvas.drawCircle(center, radius + 2, Paint()..color = Colors.black.withValues(alpha: 0.5 * opacity));
+      
+      // 2. Haupt-Button
+      final paint = Paint()..color = color.withValues(alpha: color.a * opacity);
+      
+      // Shadow / Elevation effect
+      canvas.drawCircle(center + const Offset(0, 4), radius, Paint()..color = Colors.black.withValues(alpha: 0.3 * opacity));
+      
+      canvas.drawCircle(center, radius, paint);
+      
+      if (selected) {
+        canvas.drawCircle(center, radius, Paint()
+          ..color = Colors.white.withValues(alpha: 0.7 * opacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3);
+      }
+
+      // 3. Glanz-Effekt oben
+      final shinePaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.white.withValues(alpha: 0.3 * opacity), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      canvas.drawCircle(center, radius, shinePaint);
+    } else if (selected) {
+      // Plain selection marker: subtle glow behind the icon
+      canvas.drawCircle(
+        center, 
+        radius * 0.8, 
+        Paint()
+          ..color = color.withValues(alpha: 0.4 * opacity)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.4),
+      );
     }
 
-    // 3. Glanz-Effekt oben
-    final shinePaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Colors.white.withValues(alpha: 0.3 * opacity), Colors.transparent],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-    canvas.drawCircle(center, radius, shinePaint);
-
     // 4. Icon
+    final iconStyle = TextStyle(
+      fontSize: size.x * (plain ? 0.8 : 0.4), 
+      color: Colors.white.withValues(alpha: opacity),
+      shadows: plain ? [
+        Shadow(
+          blurRadius: 10.0,
+          color: Colors.black.withValues(alpha: 0.8 * opacity),
+          offset: const Offset(2.0, 2.0),
+        ),
+      ] : null,
+    );
+
     TextPainter(
-      text: TextSpan(text: icon, style: TextStyle(fontSize: size.x * 0.4, color: Colors.white.withValues(alpha: opacity))),
+      text: TextSpan(text: icon, style: iconStyle),
       textDirection: TextDirection.ltr
-    )..layout()..paint(canvas, Offset(size.x / 2 - (size.x * 0.2), size.y / 2 - (size.y * 0.25)));
+    )..layout()..paint(canvas, Offset(size.x / 2 - (size.x * (plain ? 0.4 : 0.2)), size.y / 2 - (size.y * (plain ? 0.45 : 0.25))));
 
     // 5. Keyboard shortcut badge (amber circle, top-right corner, desktop/web only)
-    if (keyLabel != null && _shouldShowKeyHints()) {
+    if (!plain && keyLabel != null && _shouldShowKeyHints()) {
       const badgeRadius = 11.0;
       final badgeCenter = Offset(size.x - badgeRadius + 2, badgeRadius - 2);
       canvas.drawCircle(badgeCenter, badgeRadius, Paint()..color = const Color(0xFFFFA000).withValues(alpha: opacity));

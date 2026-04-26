@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
@@ -88,7 +87,6 @@ class PlayerComponent extends PositionComponent
   }
 
   final Vector2 _keyboardDirection = Vector2.zero();
-  bool _pressedShift = false;
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
@@ -98,9 +96,6 @@ class PlayerComponent extends PositionComponent
     if (keysPressed.contains(GameKeymap.moveLeft)  || keysPressed.contains(GameKeymap.moveLeftAlt))  _keyboardDirection.x -= 1;
     if (keysPressed.contains(GameKeymap.moveRight) || keysPressed.contains(GameKeymap.moveRightAlt)) _keyboardDirection.x += 1;
     if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
-
-    _pressedShift = keysPressed.contains(GameKeymap.prayerSize) ||
-        keysPressed.contains(GameKeymap.prayerSizeAlt);
 
     // ── Action button (Space) ─────────────────────────────────────────────────
     if (keysPressed.contains(GameKeymap.action)) {

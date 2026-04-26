@@ -3,8 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'core/di/service_locator.dart';
 import 'features/game/presentation/game_screen.dart';
 import 'features/menu/domain/menu_service.dart';
-import 'features/menu/domain/models/difficulty.dart';
-import 'features/menu/domain/models/game_save.dart';
 import 'features/menu/presentation/difficulty_selector.dart';
 import 'features/menu/presentation/load_game_screen.dart';
 import 'features/menu/presentation/menu_screen.dart';

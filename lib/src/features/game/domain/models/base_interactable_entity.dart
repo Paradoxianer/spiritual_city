@@ -54,8 +54,10 @@ abstract class BaseInteractableEntity {
     const thresholds = [3, 9, 21, 65, 195, 585, 1755];
     int n = 0;
     for (final t in thresholds) {
-      if (interactionCount >= t) n++;
-      else break;
+      if (interactionCount < t) {
+        return n;
+      }
+      n++;
     }
     return n;
   }

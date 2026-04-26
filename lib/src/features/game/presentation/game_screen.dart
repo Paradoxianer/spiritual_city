@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' show atan2, pi;
-import 'package:flame/components.dart' show Vector2;
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -9,8 +8,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
-import '../../../features/menu/domain/models/difficulty.dart';
-import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';

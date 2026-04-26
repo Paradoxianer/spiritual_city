@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
@@ -45,40 +44,12 @@ class PrayerZoneComponent extends PositionComponent with HasGameReference<Spirit
 
     final paint = Paint()..style = PaintingStyle.fill;
 
-    if (direction.isZero()) {
-      // Zentrierter Kreis (Ring-Form)
-      paint.color = auraColor;
-      canvas.drawCircle(Offset.zero, radius * 1.1, paint);
-      
-      paint.color = coreColor;
-      paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * energyDensity);
-      canvas.drawCircle(Offset.zero, radius, paint);
-    } else {
-      // Gerichtete Form (Flamme/Strahl)
-      _drawBeam(canvas, radius, direction, coreColor, auraColor, energyDensity);
-    }
-  }
-
-  void _drawBeam(Canvas canvas, double radius, Vector2 dir, Color core, Color aura, double density) {
-    final angle = atan2(dir.y, dir.x);
-    canvas.save();
-    canvas.rotate(angle);
+    // Zentrierter Kreis (Ring-Form)
+    paint.color = auraColor;
+    canvas.drawCircle(Offset.zero, radius * 1.1, paint);
     
-    final paint = Paint()..style = PaintingStyle.fill;
-    
-    // Die Breite des Strahls ist schmaler, wenn er gerichtet ist
-    final beamWidth = radius * 0.7;
-    final beamLength = radius * beamLengthMultiplier;
-
-    // Aura
-    paint.color = aura;
-    canvas.drawOval(Rect.fromLTWH(0, -beamWidth, beamLength, beamWidth * 2), paint);
-
-    // Kern
-    paint.color = core;
-    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 15 * density);
-    canvas.drawOval(Rect.fromLTWH(radius * 0.1, -beamWidth * 0.6, beamLength * 0.8, beamWidth * 1.2), paint);
-    
-    canvas.restore();
+    paint.color = coreColor;
+    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * energyDensity);
+    canvas.drawCircle(Offset.zero, radius, paint);
   }
 }

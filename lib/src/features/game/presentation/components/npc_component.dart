@@ -457,7 +457,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (model.activeMissionDescription != null) {
       const r = 5.0;
       final cx = size.x / 2;
-      final cy = -r - 3;
+      const cy = -r - 3;
       canvas.drawCircle(Offset(cx, cy), r, _missionBadgePaint);
       canvas.drawCircle(Offset(cx, cy), r, _missionBadgeBorderPaint);
       // Draw the '!' character inside the badge using a simple line+dot.

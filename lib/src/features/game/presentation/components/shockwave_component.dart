@@ -72,7 +72,12 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
           // Hit if the ring has just passed over the cell center
           if (dist <= _currentRadius && dist > _currentRadius - 20) {
             final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
-            final impact = (strength / 100.0) * falloff;
+            
+            // Mode-specific cell impact (Issue #9)
+            // Liberation is the primary tool for cleansing the city.
+            final modeMultiplier = mode == PrayerMode.liberation ? 1.0 : 0.15;
+            
+            final impact = (strength / 100.0) * falloff * modeMultiplier;
             cell.spiritualState = (cell.spiritualState + impact).clamp(-1.0, 1.0);
             _hitIds.add(cellId);
           }

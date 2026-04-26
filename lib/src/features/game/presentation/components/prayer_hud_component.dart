@@ -1,7 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
-import 'player_component.dart';
 
 class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
   PrayerHudComponent() : super(priority: 200);
@@ -25,14 +24,8 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
 
     _drawBar(
       canvas, x + 20, y + 15, hudWidth - 40, 12,
-      'PRAYER INTENSITY', player.faithPulse,
-      player.faithPulse > 0.7 ? Colors.amberAccent : Colors.cyanAccent,
-      hasMarker: true,
-    );
-
-    _drawBar(
-      canvas, x + 20, y + 45, hudWidth - 40, 12,
-      'ZONE RADIUS', player.zoneSize, Colors.blueAccent,
+      'PRAYER ENERGY', game.faith / SpiritWorldGame.maxFaith,
+      Colors.amberAccent,
     );
   }
 

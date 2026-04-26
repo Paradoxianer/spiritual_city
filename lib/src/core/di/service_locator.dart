@@ -4,7 +4,6 @@ import '../utils/seed_manager.dart';
 import '../../features/game/domain/city_generator.dart';
 import '../../features/menu/data/menu_repository.dart';
 import '../../features/menu/domain/menu_service.dart';
-import '../../features/menu/domain/models/difficulty.dart';
 import '../i18n/app_language.dart';
 import '../i18n/app_strings.dart';
 

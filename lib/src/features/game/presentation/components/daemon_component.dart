@@ -190,6 +190,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Drains the cell the daemon currently occupies by `_slimeDrainRate × dt`.
   /// This is called every frame, producing a clearly visible dark trail.
   void _drainCurrentCell(double dt) {
+    // Liberation effect stops the daemon from draining the ground (Issue #9)
+    if (_activeEffects.containsKey(PrayerMode.liberation)) return;
+
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
@@ -242,15 +245,33 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     }
 
     double finalDamage = amount;
+    
+    // Drain effect makes the daemon take much more damage
     if (_activeEffects.containsKey(PrayerMode.drain)) {
-      finalDamage *= 1.5; // Drain increases damage taken
+      finalDamage *= 1.8; 
+    }
+    
+    // Liberation damage is standard, but specialized for cleansing
+    if (mode == PrayerMode.liberation) {
+      finalDamage *= 1.2;
+    }
+
+    // CC modes (Rebuke, Slow) deal extremely little damage as their focus is utility
+    if (mode == PrayerMode.rebuke || mode == PrayerMode.slow) {
+      finalDamage *= 0.05;
     }
 
     model.energy += finalDamage;
-    if (model.energy >= 0) _explode();
+    if (model.energy >= 0) {
+      if (mode == PrayerMode.drain) {
+        _absorb();
+      } else {
+        _explode();
+      }
+    }
   }
 
-  /// Daemon killed by prayer: cleanses a 3-cell radius around the death point.
+  /// Daemon killed by Liberation: cleanses a 3-cell radius around the death point.
   void _explode() {
     model.dissolved = true;
     const int radius = 3;
@@ -269,6 +290,15 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         }
       }
     }
+    removeFromParent();
+  }
+
+  /// Daemon killed by Drain: Pastor absorbs energy, no explosion.
+  void _absorb() {
+    model.dissolved = true;
+    // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
+    final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0);
+    game.gainFaith(faithGain);
     removeFromParent();
   }
 
