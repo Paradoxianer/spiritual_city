@@ -25,7 +25,7 @@ class PlayerComponent extends PositionComponent
   PrayerMode _currentMode = PrayerMode.liberation;
   double _holdingTime = 0.0;
   double _timeSinceLastShockwave = 0.0;
-  static const double _shockwaveInterval = 1.2; // Slower interval (every 1.2s) for more impact
+  static const double _shockwaveInterval = 1.8; // Even slower rhythm
 
   PrayerMode get currentMode => _currentMode;
   double get holdingTime => _holdingTime;
@@ -172,8 +172,9 @@ class PlayerComponent extends PositionComponent
   }
 
   void startChargingIntensity() {
-    if (game.faith > 0.1) {
+    if (!_isChargingIntensity && game.faith > 1.0) {
       _isChargingIntensity = true;
+      _timeSinceLastShockwave = _shockwaveInterval; // Start immediately
     }
   }
 

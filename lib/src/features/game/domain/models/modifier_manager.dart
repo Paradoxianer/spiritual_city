@@ -134,10 +134,10 @@ class ModifierManager {
     final strengthMultiplier = impactPowerMultiplier; // Kraft
 
     return EffectiveCombatStats(
-      radius: base.radius * radiusMultiplier * 200.0, // Fixed max radius
-      strength: base.strength * strengthMultiplier * faithFactor * strengthHoldingBonus * 25.0, // Increased base strength
+      radius: base.radius * radiusMultiplier * 140.0, // Reduced max radius
+      strength: base.strength * strengthMultiplier * faithFactor * strengthHoldingBonus * 25.0,
       duration: base.duration * (1.0 + (holdingTime * 0.05)),
-      speed: base.speed * 120.0, // Slower expansion for more "weight"
+      speed: base.speed * 90.0, // Slower expansion
       color: mode.color,
     );
   }

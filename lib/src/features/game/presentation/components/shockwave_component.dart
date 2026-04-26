@@ -96,41 +96,30 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
 
   @override
   void render(Canvas canvas) {
-    final progress = (_currentRadius / maxRadius).clamp(0.0, 1.0);
+    if (_currentRadius < 5.0) return; // Hide very small start to avoid blob
+
+    final progress = (_currentRadius / maxRadius).clamp(0.01, 1.0);
     final alpha = (1.0 - progress) * 0.5;
     
-    // Main shockwave body (wide gradient feel)
+    // Main shockwave body
     final paint = Paint()
       ..color = color.withValues(alpha: alpha * 0.7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 20.0 + (progress * 40.0); // Even wider for better alpha gradient
+      ..strokeWidth = 5.0 + (progress * 55.0);
     
-    // Stronger blur for "alpha gradient" look
-    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 25.0 * (1.0 - progress));
+    // Blur grows with expansion to avoid "static aura" at start
+    final blurAmount = (5.0 + progress * 25.0) * (1.0 - progress);
+    if (blurAmount > 0.1) {
+      paint.maskFilter = MaskFilter.blur(BlurStyle.normal, blurAmount);
+    }
     
-    canvas.drawCircle(Offset.zero, _currentRadius, paint);
-    
-    // Second softer layer
-    paint.strokeWidth = 10.0 + (progress * 20.0);
-    paint.color = color.withValues(alpha: alpha * 0.4);
-    paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 40.0 * (1.0 - progress));
     canvas.drawCircle(Offset.zero, _currentRadius, paint);
     
     // Sharper leading edge
     final edgePaint = Paint()
-      ..color = color.withValues(alpha: alpha * 1.2)
+      ..color = color.withValues(alpha: alpha * 1.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0;
+      ..strokeWidth = 1.0 + (progress * 2.0);
     canvas.drawCircle(Offset.zero, _currentRadius, edgePaint);
-    
-    // Inner secondary pulse
-    if (_currentRadius > 20) {
-      final innerAlpha = alpha * 0.3;
-      final innerPaint = Paint()
-        ..color = color.withValues(alpha: innerAlpha)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5.0;
-      canvas.drawCircle(Offset.zero, _currentRadius - 20, innerPaint);
-    }
   }
 }

@@ -29,6 +29,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   // Active effect tracking (Issue #9)
   final Map<PrayerMode, double> _activeEffects = {};
+  double _knockbackVelocity = 0.0;
 
   // ── Pure orbital movement ─────────────────────────────────────────────────
 
@@ -140,13 +141,23 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         ? _spiralSpeedPrayer
         : _spiralSpeedNormal;
     
-    if (_activeEffects.containsKey(PrayerMode.rebuke)) {
-      spiralSpeed = -30.0; // Push back
-    } else if (_activeEffects.containsKey(PrayerMode.slow)) {
+    if (_activeEffects.containsKey(PrayerMode.slow)) {
       spiralSpeed *= 0.5; // Shrink slower
     }
 
-    final newRadius = _orbitRadius - spiralSpeed * dt;
+    // Persistent Rebuke resistance (Option 2)
+    if (_activeEffects.containsKey(PrayerMode.rebuke)) {
+      // Base resistance + strength bonus. Higher faith/strength = stronger push
+      final resistance = 15.0 + (game.faith / 5.0);
+      spiralSpeed -= resistance; // Reduces or reverses the approach speed
+    }
+
+    // Apply and decay knockback impulse (The "Impact")
+    final knockbackStep = _knockbackVelocity * dt;
+    _knockbackVelocity *= math.pow(0.01, dt); // Very fast decay (0.2s)
+    if (_knockbackVelocity < 1.0) _knockbackVelocity = 0;
+
+    final newRadius = (_orbitRadius - spiralSpeed * dt) + knockbackStep;
 
     // ── Contact strike: daemon reached the player ─────────────────────────────
     if (newRadius <= _orbitRadiusMin) {
@@ -221,6 +232,13 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // Apply effect if provided
     if (mode != null && duration > 0) {
       _activeEffects[mode] = duration;
+      if (mode == PrayerMode.rebuke) {
+        // Initial physical "push" velocity (The "Impact")
+        // Scaled by weight (heavier daemons are harder to push)
+        final weight = (model.initialEnergy.abs() / 50.0).clamp(1.0, 5.0);
+        final impulse = (120.0 + (game.faith / 2.0)) / weight;
+        _knockbackVelocity = impulse;
+      }
     }
 
     double finalDamage = amount;
