@@ -1206,46 +1206,62 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Spend resources (clamped to 0)
   void spendFaith(double amount) {
-    progress.faithStage.add(amount);
+    if (progress.faithStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
     faith = (faith - amount).clamp(0.0, progress.maxFaith);
   }
 
   void spendHealth(double amount) {
-    progress.healthStage.add(amount);
+    if (progress.healthStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
     health = (health - amount).clamp(0.0, progress.maxHealth);
   }
 
   void spendHunger(double amount) {
-    progress.hungerStage.add(amount);
+    if (progress.hungerStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
     hunger = (hunger - amount).clamp(0.0, progress.maxHunger);
   }
 
   /// Spend materials (returns false if not enough)
   bool spendMaterials(double amount) {
     if (materials < amount) return false;
-    progress.materialsStage.add(amount);
+    if (progress.materialsStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
     materials = (materials - amount).clamp(0.0, progress.maxMaterials);
     return true;
   }
 
   /// Gain resources (clamped to max)
   void gainFaith(double amount) {
-    progress.faithStage.add(amount);
+    if (progress.faithStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
     faith = (faith + amount).clamp(0.0, progress.maxFaith);
   }
 
   void gainHealth(double amount) {
-    progress.healthStage.add(amount);
+    if (progress.healthStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
     health = (health + amount).clamp(0.0, progress.maxHealth);
   }
 
   void gainHunger(double amount) {
-    progress.hungerStage.add(amount);
+    if (progress.hungerStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
     hunger = (hunger + amount).clamp(0.0, progress.maxHunger);
   }
 
   void gainMaterials(double amount) {
-    progress.materialsStage.add(amount);
+    if (progress.materialsStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
     materials = (materials + amount).clamp(0.0, progress.maxMaterials);
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'prayer_combat.dart';
 
 /// Tracks the progression of a single resource (Faith, Materials, etc.).
@@ -53,7 +54,7 @@ class ResourceStage {
 ///
 /// Counters are updated from NPC interactions, prayer combats, and missions.
 /// Lastenheft §5.4
-class PlayerProgress {
+class PlayerProgress extends ChangeNotifier {
   // --- Combat tracking ---
   int prayerCombatsCompleted = 0;
   int bibleReadingsCompleted = 0;
@@ -86,7 +87,11 @@ class PlayerProgress {
   void recordTerritoryTaken({bool full = false}) {
     territoriesPartiallyTaken++;
     if (full) territoriesFullyTaken++;
+    notifyListeners();
   }
+
+  /// Explicitly notify listeners that the max values or stages have changed.
+  void notifyLevelUp() => notifyListeners();
 
   Map<String, dynamic> toJson() => {
     'prayerCombats': prayerCombatsCompleted,
