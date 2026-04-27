@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'player_progress.dart';
+import 'prayer_combat.dart';
 
 /// Passive modifier that is permanently active once unlocked.
 class Modifier {
@@ -108,4 +110,52 @@ class ModifierManager {
 
   /// Decay reduction (bewahrung)
   double get decayReduction => bewahrung.unlocked ? 0.15 : 0.0;
+
+  // ---- Advanced Combat Calculations (Issue #9) ----------------------------
+
+  /// Calculates the effective stats for a specific prayer shockwave.
+  ///
+  /// [mode] The active prayer mode.
+  /// [holdingTime] Total time the button has been held.
+  /// [currentFaith] The player's current faith (0.0 to 100.0+).
+  EffectiveCombatStats getEffectiveCombatStats(
+    PrayerMode mode,
+    double holdingTime,
+    double currentFaith,
+  ) {
+    final base = progress.combatProfile.getFor(mode);
+    final faithFactor = (currentFaith / 100.0).clamp(0.1, 2.0);
+    
+    // Holding time bonus: 20% strength increase per second held
+    final strengthHoldingBonus = 1.0 + (holdingTime * 0.2);
+
+    // Apply global passives
+    final radiusMultiplier = zoneSizeSpeedMultiplier; // Ausdauer
+    final strengthMultiplier = impactPowerMultiplier; // Kraft
+
+    return EffectiveCombatStats(
+      radius: base.radius * radiusMultiplier * 140.0, // Reduced max radius
+      strength: base.strength * strengthMultiplier * faithFactor * strengthHoldingBonus * 25.0,
+      duration: base.duration * (1.0 + (holdingTime * 0.05)),
+      speed: base.speed * 90.0, // Slower expansion
+      color: mode.color,
+    );
+  }
+}
+
+/// Result of combat calculations.
+class EffectiveCombatStats {
+  final double radius;
+  final double strength;
+  final double duration;
+  final double speed;
+  final Color color;
+
+  EffectiveCombatStats({
+    required this.radius,
+    required this.strength,
+    required this.duration,
+    required this.speed,
+    required this.color,
+  });
 }

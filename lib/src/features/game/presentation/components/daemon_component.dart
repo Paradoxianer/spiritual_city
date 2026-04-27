@@ -5,6 +5,7 @@ import '../../domain/models/daemon_model.dart';
 import '../../domain/models/city_cell.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../../domain/services/faith_calculator_service.dart';
+import '../../domain/models/prayer_combat.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
@@ -25,6 +26,10 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   static const double _daemonSize = 18.0;
 
   double _cellDrainMultiplier = 1.0;
+
+  // Active effect tracking (Issue #9)
+  final Map<PrayerMode, double> _activeEffects = {};
+  double _knockbackVelocity = 0.0;
 
   // ── Pure orbital movement ─────────────────────────────────────────────────
 
@@ -120,14 +125,39 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
     if (_hitFlickerTimer > 0) _hitFlickerTimer -= dt;
 
+    // ── Update active effects (Issue #9) ──────────────────────────────────────
+    _activeEffects.removeWhere((mode, remaining) => remaining <= 0);
+    _activeEffects.updateAll((mode, remaining) => remaining - dt);
+
     // ── Advance orbit angle every frame ───────────────────────────────────────
-    _orbitAngle += _angularSpeed * dt;
+    double effectiveAngularSpeed = _angularSpeed;
+    if (_activeEffects.containsKey(PrayerMode.slow)) {
+      effectiveAngularSpeed *= 0.4; // Slow down movement
+    }
+    _orbitAngle += effectiveAngularSpeed * dt;
 
     // ── Shrink orbit radius (faster during prayer) ────────────────────────────
-    final spiralSpeed = game.spiritualDynamics.isPrayerAttractionActive
+    double spiralSpeed = game.spiritualDynamics.isPrayerAttractionActive
         ? _spiralSpeedPrayer
         : _spiralSpeedNormal;
-    final newRadius = _orbitRadius - spiralSpeed * dt;
+    
+    if (_activeEffects.containsKey(PrayerMode.slow)) {
+      spiralSpeed *= 0.5; // Shrink slower
+    }
+
+    // Persistent Rebuke resistance (Option 2)
+    if (_activeEffects.containsKey(PrayerMode.rebuke)) {
+      // Base resistance + strength bonus. Higher faith/strength = stronger push
+      final resistance = 15.0 + (game.faith / 5.0);
+      spiralSpeed -= resistance; // Reduces or reverses the approach speed
+    }
+
+    // Apply and decay knockback impulse (The "Impact")
+    final knockbackStep = _knockbackVelocity * dt;
+    _knockbackVelocity *= math.pow(0.01, dt); // Very fast decay (0.2s)
+    if (_knockbackVelocity < 1.0) _knockbackVelocity = 0;
+
+    final newRadius = (_orbitRadius - spiralSpeed * dt) + knockbackStep;
 
     // ── Contact strike: daemon reached the player ─────────────────────────────
     if (newRadius <= _orbitRadiusMin) {
@@ -160,6 +190,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Drains the cell the daemon currently occupies by `_slimeDrainRate × dt`.
   /// This is called every frame, producing a clearly visible dark trail.
   void _drainCurrentCell(double dt) {
+    // Liberation effect stops the daemon from draining the ground (Issue #9)
+    if (_activeEffects.containsKey(PrayerMode.liberation)) return;
+
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
@@ -195,14 +228,50 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   // ── Combat ─────────────────────────────────────────────────────────────────
 
   /// Called by the prayer combat system when this daemon is within range.
-  void takeDamage(double amount) {
+  void takeDamage(double amount, {PrayerMode? mode, double duration = 0}) {
     if (model.dissolved) return;
     _hitFlickerTimer = _hitFlickerDuration;
-    model.energy += amount;
-    if (model.energy >= 0) _explode();
+    
+    // Apply effect if provided
+    if (mode != null && duration > 0) {
+      _activeEffects[mode] = duration;
+      if (mode == PrayerMode.rebuke) {
+        // Initial physical "push" velocity (The "Impact")
+        // Scaled by weight (heavier daemons are harder to push)
+        final weight = (model.initialEnergy.abs() / 50.0).clamp(1.0, 5.0);
+        final impulse = (120.0 + (game.faith / 2.0)) / weight;
+        _knockbackVelocity = impulse;
+      }
+    }
+
+    double finalDamage = amount;
+    
+    // Drain effect makes the daemon take much more damage
+    if (_activeEffects.containsKey(PrayerMode.drain)) {
+      finalDamage *= 1.8; 
+    }
+    
+    // Liberation damage is standard, but specialized for cleansing
+    if (mode == PrayerMode.liberation) {
+      finalDamage *= 1.2;
+    }
+
+    // CC modes (Rebuke, Slow) deal extremely little damage as their focus is utility
+    if (mode == PrayerMode.rebuke || mode == PrayerMode.slow) {
+      finalDamage *= 0.05;
+    }
+
+    model.energy += finalDamage;
+    if (model.energy >= 0) {
+      if (mode == PrayerMode.drain) {
+        _absorb();
+      } else {
+        _explode();
+      }
+    }
   }
 
-  /// Daemon killed by prayer: cleanses a 3-cell radius around the death point.
+  /// Daemon killed by Liberation: cleanses a 3-cell radius around the death point.
   void _explode() {
     model.dissolved = true;
     const int radius = 3;
@@ -221,6 +290,15 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         }
       }
     }
+    removeFromParent();
+  }
+
+  /// Daemon killed by Drain: Pastor absorbs energy, no explosion.
+  void _absorb() {
+    model.dissolved = true;
+    // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
+    final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0);
+    game.gainFaith(faithGain);
     removeFromParent();
   }
 
@@ -253,9 +331,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0);
     final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0);
 
-    game.health = (game.health - hpDamage).clamp(0.0, SpiritWorldGame.maxHealth);
-    game.gainFaith(-faithDamage);
-    game.hunger = (game.hunger - hungerDamage).clamp(0.0, SpiritWorldGame.maxHunger);
+    game.spendHealth(hpDamage);
+    game.spendFaith(faithDamage);
+    game.spendHunger(hungerDamage);
 
     // Paint a 4-cell radius around the player dark red (negative influence).
     final gx = (game.player.position.x / CellComponent.cellSize).floor();
@@ -299,6 +377,23 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // Core – reuse pre-allocated paint.
     _corePaint.color = isFlickering ? _coreFlicker : _coreNormal;
     canvas.drawCircle(center, _daemonSize * 0.35, _corePaint);
+
+    // Active Effect Auras (Issue #9)
+    if (_activeEffects.isNotEmpty) {
+      final effectModes = _activeEffects.keys.toList();
+      for (int i = 0; i < effectModes.length; i++) {
+        final mode = effectModes[i];
+        final auraRadius = _daemonSize * (0.8 + (i * 0.25));
+        final effectPaint = Paint()
+          ..color = mode.color.withValues(alpha: 0.4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+        
+        // Pulsing ring
+        final pulse = 1.0 + math.sin(_orbitAngle * 5 + i) * 0.1;
+        canvas.drawCircle(center, auraRadius * pulse, effectPaint);
+      }
+    }
 
     // Energy arc (shows remaining life, always starts full)
     final energyFraction =

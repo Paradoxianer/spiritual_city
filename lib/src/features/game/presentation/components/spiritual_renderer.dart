@@ -348,10 +348,18 @@ class _ShadowOrb {
     y += vy * dt;
 
     // Wrap-around at chunk boundaries so orbs never disappear.
-    if (x < -radius) x += w + radius * 2;
-    else if (x > w + radius) x -= w + radius * 2;
-    if (y < -radius) y += h + radius * 2;
-    else if (y > h + radius) y -= h + radius * 2;
+    if (x < -radius) {
+      x += w + radius * 2;
+    }
+    if (x > w + radius) {
+      x -= w + radius * 2;
+    }
+    if (y < -radius) {
+      y += h + radius * 2;
+    }
+    if (y > h + radius) {
+      y -= h + radius * 2;
+    }
 
     // Pick a new direction after the current interval expires.
     _steerTimer += dt;

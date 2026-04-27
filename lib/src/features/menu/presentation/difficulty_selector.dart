@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../domain/menu_service.dart';
-import '../domain/models/game_save.dart';
 import 'widgets/menu_button.dart';
 
 final _random = Random();

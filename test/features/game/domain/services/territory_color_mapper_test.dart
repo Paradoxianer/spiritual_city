@@ -12,12 +12,12 @@ void main() {
 
     test('positive state maps to green-dominant color', () {
       final color = mapper.stateToColor(0.5);
-      expect(color.green, greaterThan(color.red));
+      expect(color.g, greaterThan(color.r));
     });
 
     test('negative state maps to red-dominant color', () {
       final color = mapper.stateToColor(-0.5);
-      expect(color.red, greaterThan(color.green));
+      expect(color.r, greaterThan(color.g));
     });
 
     test('neutral state maps to grey', () {
@@ -33,15 +33,15 @@ void main() {
     test('strongly positive state approaches dark green', () {
       final color = mapper.stateToColor(1.0);
       // dark green (#006400): high green, near-zero red and blue
-      expect(color.green, greaterThan(color.red));
-      expect(color.green, greaterThan(50));
+      expect(color.g, greaterThan(color.r));
+      expect(color.g * 255, greaterThan(50));
     });
 
     test('strongly negative state approaches near-black red', () {
       final color = mapper.stateToColor(-1.0);
       // near-black red (#330000): low r, near-zero g and b
-      expect(color.red, lessThan(80));
-      expect(color.green, lessThan(20));
+      expect(color.r * 255, lessThan(80));
+      expect(color.g * 255, lessThan(20));
     });
 
     test('redPulseAlpha returns 1.0 for non-negative and mildly negative states', () {

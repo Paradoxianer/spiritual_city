@@ -327,7 +327,7 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   static int _distToChunkEdge(List<int> cell) {
     final x = cell[0];
     final y = cell[1];
-    final s = CityChunk.chunkSize - 1;
+    const s = CityChunk.chunkSize - 1;
     return [x, s - x, y, s - y].reduce((m, v) => v < m ? v : m);
   }
 

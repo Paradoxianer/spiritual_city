@@ -116,7 +116,7 @@ class RadialItem extends PositionComponent with TapCallbacks {
     if (keyIndex != null) {
       const badgeRadius = 8.0;
       final badgeCx = size.x - badgeRadius * 0.7;
-      final badgeCy = badgeRadius * 0.7;
+      const badgeCy = badgeRadius * 0.7;
       final badgePaint = Paint()..color = Colors.amber.shade700;
       canvas.drawCircle(Offset(badgeCx, badgeCy), badgeRadius, badgePaint);
       final numPainter = TextPainter(

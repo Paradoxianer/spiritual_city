@@ -16,6 +16,8 @@ import '../domain/models/interactions.dart';
 import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
+export '../domain/models/player_progress.dart';
+import '../domain/models/prayer_combat.dart';
 import '../domain/services/building_interaction_service.dart';
 import '../domain/services/mission_service.dart';
 import '../domain/models/cell_object.dart';
@@ -49,7 +51,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   ///   • version 0 (missing key) → version 1: initial schema.
   ///   • version 1 → version 2: NPC counters unified into interactionCount
   ///     ('conv' key); separate 'pray' and 'counsel' keys removed.
-  static const int kSaveDataVersion = 2;
+  ///   • version 2 → version 3: Added PlayerProgress and CombatProfile persistence.
+  static const int kSaveDataVersion = 3;
 
   /// Difficulty level selected in the main menu.
   final Difficulty difficulty;
@@ -70,6 +73,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final SpiritualDynamicsSystem spiritualDynamics;
   late final HudButton actionButton;
   late final HudButton worldToggleButton;
+  late final List<HudButton> modeButtons;
   late final PrayerHudComponent prayerHud;
   late final LootSystem lootSystem;
 
@@ -123,10 +127,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   double get materials    => materialsNotifier.value;
   set materials(double v) => materialsNotifier.value = v;
 
-  static const double maxFaith = 100.0;
-  static const double maxHealth = 100.0;
-  static const double maxHunger = 100.0;
-  static const double maxMaterials = 100.0;
   static const double worldToggleCost = 10.0;
 
   /// Number of daemons spawned around the player on spiritual-world entry.
@@ -186,82 +186,109 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   @override
   Future<void> onLoad() async {
-    _log.info('--- INITIALIZING GAME ---');
-    seedManager = SeedManager(42);
-    generator = CityGenerator(seedManager);
-    grid = CityGrid();
+    try {
+      _log.info('--- INITIALIZING GAME ---');
+      seedManager = SeedManager(42);
+      generator = CityGenerator(seedManager);
+      grid = CityGrid();
 
-    // Progress & modifiers
-    progress = PlayerProgress();
-    modifiers = ModifierManager(progress: progress);
+      // Progress & modifiers
+      progress = PlayerProgress();
+      modifiers = ModifierManager(progress: progress);
 
-    // ── Restore save state ──────────────────────────────────────────────────
-    final rawState = gameSave?.gameState;
-    // Run migration so the rest of onLoad always sees the current schema.
-    final savedState = rawState != null && rawState.isNotEmpty
-        ? _migrateGameState(Map<String, dynamic>.from(rawState))
-        : null;
-    final hasSavedState = savedState != null && savedState.isNotEmpty;
-    if (hasSavedState) {
-      _applyPlayerState(savedState!);
-      _savedCellStates     = _parseSavedCellStates(savedState);
-      _savedNPCStates      = _parseSavedNPCStates(savedState);
-      _savedBuildingStates = _parseSavedBuildingStates(savedState);
+      // Initialize dynamics system early so modifiers can be applied during state restoration.
+      spiritualDynamics = SpiritualDynamicsSystem();
+
+      // ── Restore save state ──────────────────────────────────────────────────
+      final rawState = gameSave?.gameState;
+      // Run migration so the rest of onLoad always sees the current schema.
+      final savedState = rawState != null && rawState.isNotEmpty
+          ? _migrateGameState(Map<String, dynamic>.from(rawState))
+          : null;
+      final hasSavedState = savedState != null && savedState.isNotEmpty;
+      if (hasSavedState) {
+        _applyPlayerState(savedState);
+        _savedCellStates     = _parseSavedCellStates(savedState);
+        _savedNPCStates      = _parseSavedNPCStates(savedState);
+        _savedBuildingStates = _parseSavedBuildingStates(savedState);
+      }
+
+      player = PlayerComponent(joystick: _createJoystick());
+      // Spawn on the boulevard at grid cell (220, 224) = pixel (7040, 7168).
+      // y=224 is always a boulevard road (224 % 32 == 0) so the cell is
+      // guaranteed walkable regardless of lot generation.  The pastor house is
+      // at (220, 222) — just 2 cells north — see SpecialBuildingRegistry.
+      // (Previously (7000, 7000) = cell (218, 218) which ended up inside the
+      // pastor-house lot block after the lot-wide special-building scan was
+      // introduced, making the player spawn inside a solid building.)
+      player.position = hasSavedState
+          ? Vector2(
+              (savedState['playerX'] as num).toDouble(),
+              (savedState['playerY'] as num).toDouble(),
+            )
+          : Vector2(7040, 7168);
+      await world.add(player);
+
+      chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
+      await world.add(chunkManager);
+
+      // System already initialized, now add to world
+      await world.add(spiritualDynamics);
+
+      // Wire modifier values to the dynamics system
+      spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
+      spiritualDynamics.modifierDecayReduction = modifiers.decayReduction;
+
+      await camera.viewport.add(joystick);
+      await _addHudButtons();
+
+      modeButtons = [];
+      const modes = PrayerMode.values;
+      for (int i = 0; i < modes.length; i++) {
+        final mode = modes[i];
+        final btn = HudButton(
+          icon: mode.icon,
+          color: mode.color.withValues(alpha: 0.5),
+          onDown: () => player.setMode(mode),
+          isActive: () => player.currentMode == mode,
+          plain: true,
+          size: Vector2.all(55),
+          position: Vector2(size.x - 170, size.y - 150 - (i * 65)),
+        );
+        btn.opacity = 0; // Hidden by default
+        modeButtons.add(btn);
+        await camera.viewport.add(btn);
+      }
+      
+      prayerHud = PrayerHudComponent();
+      await camera.viewport.add(prayerHud);
+
+      lootSystem = LootSystem(seed: seedManager.seed);
+      await world.add(lootSystem);
+
+      camera.viewfinder.anchor = Anchor.center;
+      camera.viewfinder.position = player.position.clone();
+
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (hasSavedState && savedState['isSpiritualWorld'] == true) {
+        isSpiritualWorld = true;
+        _updateHudVisibility();
+        _updateButtonStyles();
+      }
+      isWorldReady.value = true;
+      _log.info(
+        '--- GAME READY --- '
+        'pastorhousePos=${pastorhousePosition.value} '
+        'playerPos=${player.position}',
+      );
+
+      // Assign starting missions to NPCs / buildings in the spawn chunk.
+      // Run after a short delay so chunk NPCs/buildings are all registered.
+      Future.delayed(const Duration(milliseconds: 500), _tryAssignStartMissions);
+    } catch (e, stack) {
+      _log.severe('CRITICAL ERROR DURING GAME LOAD: $e', e, stack);
+      isWorldReady.value = true;
     }
-
-    player = PlayerComponent(joystick: _createJoystick());
-    // Spawn on the boulevard at grid cell (220, 224) = pixel (7040, 7168).
-    // y=224 is always a boulevard road (224 % 32 == 0) so the cell is
-    // guaranteed walkable regardless of lot generation.  The pastor house is
-    // at (220, 222) — just 2 cells north — see SpecialBuildingRegistry.
-    // (Previously (7000, 7000) = cell (218, 218) which ended up inside the
-    // pastor-house lot block after the lot-wide special-building scan was
-    // introduced, making the player spawn inside a solid building.)
-    player.position = hasSavedState
-        ? Vector2(
-            (savedState!['playerX'] as num).toDouble(),
-            (savedState['playerY'] as num).toDouble(),
-          )
-        : Vector2(7040, 7168);
-    await world.add(player);
-
-    chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
-    await world.add(chunkManager);
-
-    spiritualDynamics = SpiritualDynamicsSystem();
-    await world.add(spiritualDynamics);
-
-    // Wire modifier values to the dynamics system
-    spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
-    spiritualDynamics.modifierDecayReduction = modifiers.decayReduction;
-
-    await camera.viewport.add(joystick);
-    await _addHudButtons();
-    
-    prayerHud = PrayerHudComponent();
-    await camera.viewport.add(prayerHud);
-
-    lootSystem = LootSystem(seed: seedManager.seed);
-    await world.add(lootSystem);
-
-    camera.viewfinder.anchor = Anchor.center;
-    camera.viewfinder.position = player.position.clone();
-
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (hasSavedState && savedState!['isSpiritualWorld'] == true) {
-      isSpiritualWorld = true;
-      _updateButtonStyles();
-    }
-    isWorldReady.value = true;
-    _log.info(
-      '--- GAME READY --- '
-      'pastorhousePos=${pastorhousePosition.value} '
-      'playerPos=${player.position}',
-    );
-
-    // Assign starting missions to NPCs / buildings in the spawn chunk.
-    // Run after a short delay so chunk NPCs/buildings are all registered.
-    Future.delayed(const Duration(milliseconds: 500), _tryAssignStartMissions);
   }
 
 
@@ -299,9 +326,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       if (npcs != null) {
         for (final npcState in npcs.values) {
           if (npcState is Map) {
-            final conv    = (npcState['conv']    as int?) ?? 0;
-            final pray    = (npcState['pray']    as int?) ?? 0;
-            final counsel = (npcState['counsel'] as int?) ?? 0;
+            final conv    = (npcState['conv']    as num?)?.toInt() ?? 0;
+            final pray    = (npcState['pray']    as num?)?.toInt() ?? 0;
+            final counsel = (npcState['counsel'] as num?)?.toInt() ?? 0;
             final merged  = conv + pray + counsel;
             // Only write 'conv' when non-zero; absent key is equivalent to 0
             // (consistent with how the original save code omits zero-value keys).
@@ -330,6 +357,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     health    = (state['health']    as num?)?.toDouble() ?? health;
     hunger    = (state['hunger']    as num?)?.toDouble() ?? hunger;
     materials = (state['materials'] as num?)?.toDouble() ?? materials;
+
+    if (state.containsKey('progress')) {
+      final progressData = state['progress'];
+      if (progressData is Map) {
+        progress.loadFromJson(progressData.cast<String, dynamic>());
+      }
+      _checkAndApplyModifiers(); // Sync modifiers with loaded progress
+    }
   }
 
   /// Parses the `cells` sub-map from a serialised save into a flat lookup.
@@ -398,7 +433,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final saved = _savedNPCStates?[npc.id];
     if (saved == null) return;
     npc.faith             = (saved['faith']   as num?)?.toDouble() ?? npc.faith;
-    npc.interactionCount  = saved['conv']     as int?  ?? npc.interactionCount;
+    npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
     final posX = (saved['posX'] as num?)?.toDouble();
     final posY = (saved['posY'] as num?)?.toDouble();
@@ -417,7 +452,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final saved = _savedBuildingStates?[building.buildingId];
     if (saved == null) return;
     building.faith            = (saved['faith'] as num?)?.toDouble() ?? building.faith;
-    building.interactionCount = saved['conv']   as int?              ?? building.interactionCount;
+    building.interactionCount = (saved['conv']  as num?)?.toInt()    ?? building.interactionCount;
   }
 
   // ── State capture (called when the player saves and quits) ────────────────
@@ -481,6 +516,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       'playerX':          player.position.x,
       'playerY':          player.position.y,
       'isSpiritualWorld': isSpiritualWorld,
+      'progress':         progress.toJson(),
       'cells':            cellStates,
       'npcs':             npcStates,
       'buildings':        buildingStates,
@@ -494,10 +530,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
     
     if (!isSpiritualWorld) {
-      faith -= worldToggleCost;
+      spendFaith(worldToggleCost);
     }
     
     isSpiritualWorld = !isSpiritualWorld;
+    _updateHudVisibility();
     _updateButtonStyles();
     _log.info('Switched World: $isSpiritualWorld');
 
@@ -534,10 +571,44 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       isSpiritualWorld ? '✝️' : '🖐️',
       isSpiritualWorld ? Colors.amber.withValues(alpha: 0.7) : Colors.blue.withValues(alpha: 0.6)
     );
+    actionButton.keyLabel = isSpiritualWorld ? 'Space' : 'E';
+
     worldToggleButton.updateContent(
       isSpiritualWorld ? '🏙️' : '🙏',
       isSpiritualWorld ? Colors.grey.withValues(alpha: 0.7) : Colors.purple.withValues(alpha: 0.6)
     );
+  }
+
+  void _updateHudVisibility() {
+    if (isSpiritualWorld) {
+      if (joystick.parent != null) joystick.removeFromParent();
+      // Move combat button to left
+      actionButton.position = Vector2(80, size.y - 80);
+      actionButton.keyLabel = 'Space';
+    } else {
+      if (joystick.parent == null) camera.viewport.add(joystick);
+      // Move interaction button back to right
+      actionButton.position = Vector2(size.x - 80, size.y - 80);
+      actionButton.keyLabel = 'E';
+    }
+
+    final dockWidth = modeButtons.length * 60.0;
+    final startX = (size.x - dockWidth) / 2 + 30;
+
+    for (int i = 0; i < modeButtons.length; i++) {
+      final btn = modeButtons[i];
+      btn.opacity = isSpiritualWorld ? 1.0 : 0.0;
+      
+      if (isSpiritualWorld) {
+        final isSelected = player.currentMode == PrayerMode.values[i];
+        final targetSize = isSelected ? 70.0 : 50.0;
+        final targetY = isSelected ? size.y - 90.0 : size.y - 80.0;
+        
+        btn.size = Vector2.all(targetSize);
+        btn.position = Vector2(startX + (i * 60), targetY);
+        btn.keyLabel = '${i + 1}';
+      }
+    }
   }
 
   void _openRadialMenu() {
@@ -913,11 +984,15 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     } else if (result.playerMaterialsDelta < 0) {
       spendMaterials(-result.playerMaterialsDelta);
     }
-    if (result.playerHealthDelta != 0) {
-      health = (health + result.playerHealthDelta).clamp(0.0, maxHealth);
+    if (result.playerHealthDelta > 0) {
+      gainHealth(result.playerHealthDelta);
+    } else if (result.playerHealthDelta < 0) {
+      spendHealth(-result.playerHealthDelta);
     }
-    if (result.playerHungerDelta != 0) {
+    if (result.playerHungerDelta > 0) {
       gainHunger(result.playerHungerDelta);
+    } else if (result.playerHungerDelta < 0) {
+      spendHunger(-result.playerHungerDelta);
     }
     // 'prayBusiness' also nudges the cell underneath the player positively
     if (actionType == 'prayBusiness') {
@@ -1064,6 +1139,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       _updateNearestInteractable();
       _updatePassiveResources(dt);
       _updateStreetLabel();
+      if (isSpiritualWorld) _updateHudVisibility(); // Dynamic dock update
     }
     // Always push player position so the Flutter HUD compass stays live.
     playerWorldPosition.value = player.position.clone();
@@ -1131,26 +1207,74 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     _hungerDrainTimer += dt;
     if (_hungerDrainTimer >= hungerDrainInterval) {
       _hungerDrainTimer = 0.0;
-      hunger = (hunger - hungerDrainAmount).clamp(0.0, maxHunger);
+      spendHunger(hungerDrainAmount);
       // If starving, health starts draining
       if (hunger < healthFromHungerThreshold) {
-        health = (health - 0.5).clamp(0.0, maxHealth);
+        spendHealth(0.5);
       }
     }
+  }
+
+  /// Spend resources (clamped to 0)
+  void spendFaith(double amount) {
+    if (progress.faithStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
+    faith = (faith - amount).clamp(0.0, progress.maxFaith);
+  }
+
+  void spendHealth(double amount) {
+    if (progress.healthStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
+    health = (health - amount).clamp(0.0, progress.maxHealth);
+  }
+
+  void spendHunger(double amount) {
+    if (progress.hungerStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
+    hunger = (hunger - amount).clamp(0.0, progress.maxHunger);
   }
 
   /// Spend materials (returns false if not enough)
   bool spendMaterials(double amount) {
     if (materials < amount) return false;
-    materials = (materials - amount).clamp(0.0, maxMaterials);
+    if (progress.materialsStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
+    materials = (materials - amount).clamp(0.0, progress.maxMaterials);
     return true;
   }
 
   /// Gain resources (clamped to max)
-  void gainFaith(double amount) => faith = (faith + amount).clamp(0.0, maxFaith);
-  void gainHealth(double amount) => health = (health + amount).clamp(0.0, maxHealth);
-  void gainHunger(double amount) => hunger = (hunger + amount).clamp(0.0, maxHunger);
-  void gainMaterials(double amount) => materials = (materials + amount).clamp(0.0, maxMaterials);
+  void gainFaith(double amount) {
+    if (progress.faithStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
+    faith = (faith + amount).clamp(0.0, progress.maxFaith);
+  }
+
+  void gainHealth(double amount) {
+    if (progress.healthStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
+    health = (health + amount).clamp(0.0, progress.maxHealth);
+  }
+
+  void gainHunger(double amount) {
+    if (progress.hungerStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
+    hunger = (hunger + amount).clamp(0.0, progress.maxHunger);
+  }
+
+  void gainMaterials(double amount) {
+    if (progress.materialsStage.add(amount)) {
+      progress.notifyLevelUp();
+    }
+    materials = (materials + amount).clamp(0.0, progress.maxMaterials);
+  }
 
   @override
   void onRemove() {
@@ -1286,7 +1410,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     if (isLoaded) {
-      actionButton.position = Vector2(size.x - 80, size.y - 80);
+      _updateHudVisibility();
       worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
     }
   }
@@ -1295,19 +1419,25 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 class HudButton extends PositionComponent with TapCallbacks {
   final VoidCallback? onDown;
   final VoidCallback? onUp;
+  final bool Function()? isActive;
   String icon;
   Color color;
+  double opacity = 1.0;
+  bool plain = false;
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
-  final String? keyLabel;
+  String? keyLabel;
   
   HudButton({
     required this.icon,
     required this.color,
     this.onDown, 
     this.onUp,
+    this.isActive,
     this.keyLabel,
-    required super.position
-  }) : super(anchor: Anchor.center, size: Vector2.all(75)); // Einheitliche Größe
+    this.plain = false,
+    required super.position,
+    Vector2? size,
+  }) : super(anchor: Anchor.center, size: size ?? Vector2.all(75)); // Einheitliche Größe
 
   void updateContent(String newIcon, Color newColor) {
     icon = newIcon;
@@ -1316,42 +1446,80 @@ class HudButton extends PositionComponent with TapCallbacks {
 
   @override
   void render(Canvas canvas) {
+    if (opacity <= 0) return;
+
     final center = Offset(size.x / 2, size.y / 2);
     final radius = size.x / 2;
+    final selected = isActive?.call() ?? false;
 
-    // 1. Schwarzer Rand / Schatten
-    canvas.drawCircle(center, radius + 2, Paint()..color = Colors.black.withValues(alpha: 0.5));
-    
-    // 2. Haupt-Button
-    canvas.drawCircle(center, radius, Paint()..color = color);
+    if (!plain) {
+      // 1. Schwarzer Rand / Schatten
+      canvas.drawCircle(center, radius + 2, Paint()..color = Colors.black.withValues(alpha: 0.5 * opacity));
+      
+      // 2. Haupt-Button
+      final paint = Paint()..color = color.withValues(alpha: color.a * opacity);
+      
+      // Shadow / Elevation effect
+      canvas.drawCircle(center + const Offset(0, 4), radius, Paint()..color = Colors.black.withValues(alpha: 0.3 * opacity));
+      
+      canvas.drawCircle(center, radius, paint);
+      
+      if (selected) {
+        canvas.drawCircle(center, radius, Paint()
+          ..color = Colors.white.withValues(alpha: 0.7 * opacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3);
+      }
 
-    // 3. Glanz-Effekt oben
-    final shinePaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Colors.white.withValues(alpha: 0.3), Colors.transparent],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-    canvas.drawCircle(center, radius, shinePaint);
+      // 3. Glanz-Effekt oben
+      final shinePaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.white.withValues(alpha: 0.3 * opacity), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      canvas.drawCircle(center, radius, shinePaint);
+    } else if (selected) {
+      // Plain selection marker: subtle glow behind the icon
+      canvas.drawCircle(
+        center, 
+        radius * 0.8, 
+        Paint()
+          ..color = color.withValues(alpha: 0.4 * opacity)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.4),
+      );
+    }
 
     // 4. Icon
+    final iconStyle = TextStyle(
+      fontSize: size.x * (plain ? 0.8 : 0.4), 
+      color: Colors.white.withValues(alpha: opacity),
+      shadows: plain ? [
+        Shadow(
+          blurRadius: 10.0,
+          color: Colors.black.withValues(alpha: 0.8 * opacity),
+          offset: const Offset(2.0, 2.0),
+        ),
+      ] : null,
+    );
+
     TextPainter(
-      text: TextSpan(text: icon, style: const TextStyle(fontSize: 30)),
+      text: TextSpan(text: icon, style: iconStyle),
       textDirection: TextDirection.ltr
-    )..layout()..paint(canvas, Offset(size.x / 2 - 15, size.y / 2 - 19));
+    )..layout()..paint(canvas, Offset(size.x / 2 - (size.x * (plain ? 0.4 : 0.2)), size.y / 2 - (size.y * (plain ? 0.45 : 0.25))));
 
     // 5. Keyboard shortcut badge (amber circle, top-right corner, desktop/web only)
-    if (keyLabel != null && _shouldShowKeyHints()) {
+    if (!plain && keyLabel != null && _shouldShowKeyHints()) {
       const badgeRadius = 11.0;
       final badgeCenter = Offset(size.x - badgeRadius + 2, badgeRadius - 2);
-      canvas.drawCircle(badgeCenter, badgeRadius, Paint()..color = const Color(0xFFFFA000));
+      canvas.drawCircle(badgeCenter, badgeRadius, Paint()..color = const Color(0xFFFFA000).withValues(alpha: opacity));
       TextPainter(
         text: TextSpan(
           text: keyLabel,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Colors.black.withValues(alpha: opacity),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -1363,11 +1531,17 @@ class HudButton extends PositionComponent with TapCallbacks {
   }
 
   @override
-  void onTapDown(TapDownEvent event) => onDown?.call();
+  void onTapDown(TapDownEvent event) {
+    if (opacity > 0) onDown?.call();
+  }
 
   @override
-  void onTapUp(TapUpEvent event) => onUp?.call();
+  void onTapUp(TapUpEvent event) {
+    if (opacity > 0) onUp?.call();
+  }
 
   @override
-  void onTapCancel(TapCancelEvent event) => onUp?.call();
+  void onTapCancel(TapCancelEvent event) {
+    if (opacity > 0) onUp?.call();
+  }
 }

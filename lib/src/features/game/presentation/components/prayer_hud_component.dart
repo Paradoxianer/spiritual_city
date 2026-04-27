@@ -9,8 +9,6 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) return;
 
-    final player = game.player;
-    
     // COMBAT HUD (Unten Mitte)
     const hudWidth = 240.0;
     const hudHeight = 80.0;
@@ -24,14 +22,8 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
 
     _drawBar(
       canvas, x + 20, y + 15, hudWidth - 40, 12,
-      'PRAYER INTENSITY', player.faithPulse,
-      player.faithPulse > 0.7 ? Colors.amberAccent : Colors.cyanAccent,
-      hasMarker: true,
-    );
-
-    _drawBar(
-      canvas, x + 20, y + 45, hudWidth - 40, 12,
-      'ZONE RADIUS', player.zoneSize, Colors.blueAccent,
+      'PRAYER ENERGY', game.faith / game.progress.maxFaith,
+      Colors.amberAccent,
     );
   }
 

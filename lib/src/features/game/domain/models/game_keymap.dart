@@ -59,6 +59,9 @@ class GameKeymap {
   static const LogicalKeyboardKey prayerSize    = LogicalKeyboardKey.shiftLeft;
   static const LogicalKeyboardKey prayerSizeAlt = LogicalKeyboardKey.shiftRight;
 
+  /// Switch prayer mode.
+  static const LogicalKeyboardKey switchMode = LogicalKeyboardKey.keyR;
+
   // ── World toggle ───────────────────────────────────────────────────────────
   static const LogicalKeyboardKey worldToggle = LogicalKeyboardKey.keyQ;
 
@@ -97,22 +100,12 @@ class GameKeymap {
     // Unsichtbare Welt
     KeymapEntry(
       keys: 'Leertaste (halten)',
-      action: 'Gebet aufladen',
+      action: 'Geistlichen Kampf aktivieren',
       category: 'Unsichtbare Welt',
     ),
     KeymapEntry(
-      keys: 'Shift (halten)',
-      action: 'Gebetszone vergrößern',
-      category: 'Unsichtbare Welt',
-    ),
-    KeymapEntry(
-      keys: 'W/A/S/D (halten)',
-      action: 'Gebetszone ausrichten',
-      category: 'Unsichtbare Welt',
-    ),
-    KeymapEntry(
-      keys: 'Leertaste loslassen',
-      action: 'Gebet auslösen',
+      keys: '1 – 4',
+      action: 'Gebetsmodus direkt auswählen',
       category: 'Unsichtbare Welt',
     ),
 
