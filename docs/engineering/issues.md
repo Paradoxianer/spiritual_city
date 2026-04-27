@@ -1,5 +1,5 @@
 ﻿# 📋 GitHub Issues Roadmap
-_Last updated: 25.04.2026 19:31_
+_Last updated: 26.04.2026 20:45_
 _Sorted by Release and Priority (High > Medium > Low)_
 
 ## 🔥 ✨ #92: feat: Interaktives Tutorial-System für neue Spieler [enhancement, prio: 1] 🏁 [Release 1]
@@ -10,19 +10,19 @@ Neue Spieler (insbesondere Kinder) benötigen eine klare Einführung in die Kern
 
 ---
 
-## ⚡ ✨ #114: feat: Game Over / Ohnmacht Mechanik (0 Leben) [enhancement, prio: 2, feature] 🏁 [Release 1]
----
-**Status / Description:**
-
-Wenn das Leben des Spielers auf 0 sinkt, soll der Bildschirm dunkel abblenden (Ohnmacht). Der Spieler wacht danach im Pastorenhaus (oder einem Krankenhaus) wieder auf. Konsequenz: Er hat wieder 100% Leben und 100% Hunger, aber **alle gesammelten Ressourcen (Faith, Material etc.) werden auf 0 gesetzt**. Spielfortschritt wie Bekehrungen oder befreite Bereiche in der unsichtbaren Welt bleiben erhalten.
-
----
-
 ## ⚡ ✨ #85: feat: Signifikante Auswirkungen der geistlichen Welt auf die reale Welt [prio: 2, feature] 🏁 [Release 1]
 ---
 **Status / Description:**
 
 Es muss sich lohnen, in der geistlichen Welt zu kämpfen. Positive Bereiche in der geistlichen Welt müssen signifikante Auswirkungen auf die reale Welt haben.
+
+---
+
+## ⚡ ✨ #114: feat: Game Over / Ohnmacht Mechanik (0 Leben) [enhancement, prio: 2, feature] 🏁 [Release 1]
+---
+**Status / Description:**
+
+Wenn das Leben des Spielers auf 0 sinkt, soll der Bildschirm dunkel abblenden (Ohnmacht). Der Spieler wacht danach im Pastorenhaus (oder einem Krankenhaus) wieder auf. Konsequenz: Er hat wieder 100% Leben und 100% Hunger, aber **alle gesammelten Ressourcen (Faith, Material etc.) werden auf 0 gesetzt**. Spielfortschritt wie Bekehrungen oder befreite Bereiche in der unsichtbaren Welt bleiben erhalten.
 
 ---
 
@@ -52,13 +52,15 @@ Wenn man eine Mission (📋) im Radial Menu drückt:
 Gewünscht:
 Missions sollten echte Aufgaben sein:
 Designfrage : sollten nicht die Missionen teil des NPCs oder Hausdialog / Loook dialog sein... es wird ja an interactible objekt dran gehangen?????
-sollte es dann inicht erst zugänglich sien, wenn man die Person anspricht oder in das haus rein kommt.. und dort entsprechende "Aufgaben erledigt"
+sollte es dann nicht erst zugänglich sein, wenn man die Person anspricht oder in das haus rein kommt.. und dort entsprechende "Aufgaben erledigt"
 evtl...
 1. Dialog öffnet sich mit Mission-Details 
 2. Mann benötig bestimmte Ressourcen (hoffentlich hat man genug Faith)
-3. Bestimmte Action durchführen (z.B. "Bete 3x", "Liefere 10 Materials ab", "Lerne Prophezeiung --> 5 hunger")
+3. Bestimmte Action durchführen (z.B. "Bete 3x", "Liefere 10 Materials ab", "Lerne Prophezeiung ---> man bekommt mehr Geistliche Erfahrungspunkte... ")
 4. Belohnung erst nach Completion der Action
-Beispiel-Missionen mit Actions
+
+
+Beispiel-Missionen mit Actions zum diskutieren??? - Könnte man Missionen auch "sinnvoll" Prozedural erzeugen?
 
 Mission | Aktion | Bedingung | Reward
 🙏 Bete für die Gegend | pray im Spiritual World | 5x gebetet |  --> Grüne Riesen Explosin in dem bereich in der unsichtbaren Welt??? (+ x geistliche Erkenntniss)
@@ -234,30 +236,7 @@ Komplikation: aus Chunks Ungeladen
   2. **Angriff (Kampf-Modifier):** Stufenweise Steigerung von Radius, Stärke, Dauer und Geschwindigkeit für jeden der 4 Gebetsmodi.
 - **Progression:** Exponentielles Kostenwachstum für Langzeitmotivation, günstige Einstiegs-Level.
 - **Datenmodell:** Implementierung einer \CombatProfile\ Klasse im \PlayerProgress\, die alle Modifikatoren speichert.
-
----
-
-## ⚡ ✨ #9: feat: Gebetskampf 2.0 - Schockwellen-System & 4-Faktor-Modifier [enhancement, prio: 2] 🏁 [Release 1]
----
-**Status / Description:**
-
-Kampf in der unsichtbaren Welt:
-## Core Rework
-- **Simplifizierung:** Aura-basiertes System (keine Richtung).
-- **Haltedauer** (andauerndes "Gebet") bewirkt eine verstärkung des aktuellen Effekts
-- **Steuerung:** Halten zum Laden, Umschalten zwischen 4 Modi (Befreiung, Rebuke, Slow, Drain) beim umschalten wird die Haltedauer... wieder auf 0 gesetzt...
-- **Visuelles Feedback:** Kreisförmige Schockwellen mit Farbverlauf (Alpha-Gradient). Expansion von 0 bis Max-Radius. mit Passender Farblicher Kennzeichnung (farblicher Ring sollte entsprechend nach effekt unterschiedlich sein)
-- **Die 4 individuellen Modifier (pro Modus):**
-  1. **Radius:** Wie weit sich der Effekt ausdehnt.
-  2. **Stärke:** Basis-Intensität des Effekts.
-  3. **Dauer:** Wie lange der Effekt auf Dämonen nachwirkt.
-  4. **Geschwindigkeit:** Wie schnell die Schockwelle expandiert.
-- **Berechnungs-Formel:** 
-  \Effekt = (1.0 - (Distanz / Radius)) * Haltedauer * Stärkenmodifikator\
-  (Effekt ist im Zentrum am stärksten)*derzeitiger Glauben.
-- **Mechanik:** Kontinuierliche Wellen-Emmision(schockwellen) , die den Effekt bei jedem Kontakt neu applizieren.
-- Joystik button verschwindet und statt dessen wird der "unsichtbare" Kampf button eingeblendert. Dieser löst die Schockwellen des aktuellen Effeks aus...
-rechts anstatt des derzitigen Feur Buttons kann man zwischen den vier verschiedenen Modi wählen
+Modifikatoren sollten prinzipell nur mit der neuen Geistliche Erkentniss ressource arbieten (also keine extra "funktionalität" wie "Inbrunst" usw.. keep it simpel und nachvollziehbar!!
 
 ---
 
@@ -426,6 +405,9 @@ Ein einfach verständliches, ressourcenbasiertes Stage-System für fortlaufenden
 - Stage-Fortschritt ist klar getrennt pro Ressource und kann gezielt trainiert / gefördert werden.
 - Stage-Counter und Schwellen sind jederzeit im UI ersichtlich.
 
+###Important
+- Stufenaufstieg  (vor allem Faith) muss so gestaltet werden, dass er imt dem Kampsystem in der unsichtbaren Welt gut zusammen arbeitet (nicht zu stark und nicht zu wenig steigt... beachte balancing!!!!) - was wären sinnvolle Schritte (sollte es logarithmisch aufsteigen???)
+
 ### Acceptance Criteria
 - Stages und ihre Wirkung sind jederzeit für den Spieler einsehbar.
 - Jede Ressource bietet motivierende Fortschrittserhöhung durch Nutzung.
@@ -449,14 +431,6 @@ Die App muss in der Google Play Console und in App Store Connect angelegt werden
 
 ---
 
-## #93: legal: Datenschutzerklärung (DSGVO) & Impressum [documentation] 🏁 [Release 1]
----
-**Status / Description:**
-
-Für den Release im Google Play Store und Apple App Store sind zwingend erforderlich: 1. Eine rechtssichere Datenschutzerklärung (besonders wichtig, falls Analytics, Crash-Reports oder Cloud-Saves genutzt werden). 2. Ein Impressum (Pflicht im DACH-Raum). Beides muss auf einer Webseite gehostet, im Store verlinkt und in der App aufrufbar sein.
-
----
-
 ## ✨ #59: refactor: Unified Shockwave & Aura Framework [feature] 🏁 [Release 1]
 ---
 **Status / Description:**
@@ -466,6 +440,44 @@ Für den Release im Google Play Store und Apple App Store sind zwingend erforder
 - **Schockwellen-Renderer:** Implementierung eines performanten Ripple-Effekts (klein -> groß expandierend).
 - **Power-Scaling:** Logik zur Berechnung der Haltedauer-Multiplikatoren.
 - **Color-Strategy:** Einfaches Umschalten der Aura-Farbe und Effekt-Logik basierend auf dem gewählten Modus.
+
+---
+
+## #126: ui: Needs cleanup 🏁 [Release 1]
+---
+**Status / Description:**
+
+At  the moment we have so many "buttons" ui elements in de hud.. we need to clean it up.. (also you can exiendtly tap on "exit" or help
+we should have a "Menü button" on the right top wich opens a Menu .. 
+Save
+Load
+Help
+[do we need more Options]
+Quit
+
+---
+
+## #93: legal: Datenschutzerklärung (DSGVO) & Impressum [documentation] 🏁 [Release 1]
+---
+**Status / Description:**
+
+Für den Release im Google Play Store und Apple App Store sind zwingend erforderlich: 1. Eine rechtssichere Datenschutzerklärung (besonders wichtig, falls Analytics, Crash-Reports oder Cloud-Saves genutzt werden). 2. Ein Impressum (Pflicht im DACH-Raum). Beides muss auf einer Webseite gehostet, im Store verlinkt und in der App aufrufbar sein.
+
+---
+
+## ✨ #96: feat: Gottesdienst/Gebet in Kirchen mit Flächenwirkung (AoE) [enhancement, feature] 🏁 [Release 1]
+---
+**Status / Description:**
+
+In Kirchen sollte man Gottesdienst halten oder beten können. Das sollte in der unsichtbaren Welt einen deutlich größeren Einflussradius haben als normale Aktionen. Zudem sollen NPCs in diesem Radius einen Boost auf ihren 'Faith'-Wert bekommen.
+
+---
+
+## #121: bug: loot loading 🏁 [Release 1]
+---
+**Status / Description:**
+
+Nach dem Laden erscheint immer ein loot direkt neben der geladen position
 
 ---
 
@@ -492,11 +504,19 @@ Jedem Special House / Gebäudetyp klare AoE-Multiplikatoren und Action-Anknüpfu
 
 ---
 
-## #115: feat: Hunger Mechanik 🏁 [Release 1]
+## #124: feat: Ressourcen-Erweiterung - Geistliche Erkenntnis (Insight) 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Wenn man Hunger hat... wäre ein sinnvolles Feature.. dass man sich viel langsamer bewegt und Aktionen allgmein mehr kosten (anstrengerder) :-)
+## Anforderungen
+- **Währungstyp:** Integer (\int\) für klare Erfolgserlebnisse.
+- **Quellen:**
+  - **Bekehrungen:** 10 bekehrte Personen = 1 Punkt Erkenntnis.
+  - **Missionen:** Belohnung je nach Schwierigkeit (z.B. 1-3 Punkte).
+  - **Loot:** Seltene Funde in der Welt (1 Punkt).
+- **Integration:** 
+  - Schnittstelle zum \ConversionService\ (triggert bei Erreichen von Vielfachen von 10).
+  - UI-Anzeige im HUD und in der Upgrade-Zentrale.
 
 ---
 
@@ -510,7 +530,7 @@ Wenn man Hunger hat... wäre ein sinnvolles Feature.. dass man sich viel langsam
 Die verschiedenen Teilaspekte von Gebetskampf, Unsichtbare-Welt-Effekten, Ressourcensystem und Spezialgebäude sollen in einem modularen, eleganten und wartbaren Ansatz zusammengeführt werden. **Dieses Issue ist ein reines Koordinations- und Architektur-Issue; Implementierung erfolgt ausschließlich über die referenzierten Teil-Issues.**
 
 ## Systemübersicht
-- **Kern-Loop:** Stationärer Gebetskampf in der unsichtbaren Welt, 10–20 Sekunden, Eintrittskosten, Faith-Drain, klare Gebetsformen (Kreis/AoE, Flamme/Angriff), Gegnertiming.
+- **Kern-Loop:** Stationärer Gebetskampf in der unsichtbaren Welt, 10–20 Sekunden, Eintrittskosten, Faith-Drain, klare Gebetsformen (Kreis/AoE /Angriff), Gegnertiming.
 - **AoE-/Stärke-/Wirkungsmodifikatoren:** Fortschritt und Tiefe durch sammelbare Modifier aus Missionen/Loot.
 - **Realwelt-Effekte:** Framework koppelt reale Aktionen mit persistenten, parametrisierten Effekten in der unsichtbaren Welt.
 - **Spezialgebäude:** Unterschiedliche AoEs, Modifier-Anbindung.
@@ -533,19 +553,20 @@ Die verschiedenen Teilaspekte von Gebetskampf, Unsichtbare-Welt-Effekten, Ressou
 
 ---
 
-## #121: bug: loot loading 🏁 [Release 1]
+## #115: feat: Hunger Mechanik 🏁 [Release 1]
 ---
 **Status / Description:**
 
-Nach dem Laden erscheint immer ein loot direkt neben der geladen position
+Wenn man Hunger hat... wäre ein sinnvolles Feature.. dass man sich viel langsamer bewegt und Aktionen allgmein mehr kosten (anstrengerder) :-)
 
 ---
 
-## 🔴 #111: bug: Problems with Menuselection of pwa [bug] 🏁 [Release 1]
+## #108: doc: ergänze Kommentare im Code wo nötig [documentation] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-on ios devices with the default browser... the difficulty menu dosent work... the main menu works.. but diffuctly jsut dont reakt.
+Schau wo der Code noch auskommentiert werden muss um besser zu verstehen was passiert und die Wartbarkeit zu erhöhen..
+folge Kommentierungsregeln so dass wir wenn notwendig daraus mit einem Tool eine entsprechende dokumentation erstelle können
 
 ---
 
@@ -557,11 +578,11 @@ Das HUD soll immer sichtbar anzeigen, wie viele Menschen in der Stadt bereits Ch
 
 ---
 
-## ✨ #96: feat: Gottesdienst/Gebet in Kirchen mit Flächenwirkung (AoE) [enhancement, feature] 🏁 [Release 1]
+## 🔴 #111: bug: Problems with Menuselection of pwa [bug] 🏁 [Release 1]
 ---
 **Status / Description:**
 
-In Kirchen sollte man Gottesdienst halten oder beten können. Das sollte in der unsichtbaren Welt einen deutlich größeren Einflussradius haben als normale Aktionen. Zudem sollen NPCs in diesem Radius einen Boost auf ihren 'Faith'-Wert bekommen.
+on ios devices with the default browser... the difficulty menu dosent work... the main menu works.. but diffuctly jsut dont reakt.
 
 ---
 
@@ -573,15 +594,6 @@ Diese sollte umfassende einfühurung in das Spiel.. sowie Tipps und Tricks, best
 und die Spielmechanik auch mit bibelversen hinterlegt / bedgründet werden
 
 Sollten wir diese dokumente auf verschieden Sprachen erhältlich machen?? und wenn ja wie?
-
----
-
-## #108: doc: ergänze Kommentare im Code wo nötig [documentation] 🏁 [Release 1]
----
-**Status / Description:**
-
-Schau wo der Code noch auskommentiert werden muss um besser zu verstehen was passiert und die Wartbarkeit zu erhöhen..
-folge Kommentierungsregeln so dass wir wenn notwendig daraus mit einem Tool eine entsprechende dokumentation erstelle können
 
 ---
 
@@ -716,22 +728,6 @@ Implementierung eines Übergangs von Stadt zu unendlicher Natur am Rand der Welt
 - Erfordern massives 'anhaltendes Gebet' zum Einnehmen.
 - Festungen fungieren als Spawn-Zentren für starke Dämonen.
 - Belohnung: Massive Insight-Gutschrift und langanhaltende Reinigung des Sektors.
-
----
-
-## #124: feat: Ressourcen-Erweiterung - Geistliche Erkenntnis (Insight)
----
-**Status / Description:**
-
-## Anforderungen
-- **Währungstyp:** Integer (\int\) für klare Erfolgserlebnisse.
-- **Quellen:**
-  - **Bekehrungen:** 10 bekehrte Personen = 1 Punkt Erkenntnis.
-  - **Missionen:** Belohnung je nach Schwierigkeit (z.B. 1-3 Punkte).
-  - **Loot:** Seltene Funde in der Welt (1 Punkt).
-- **Integration:** 
-  - Schnittstelle zum \ConversionService\ (triggert bei Erreichen von Vielfachen von 10).
-  - UI-Anzeige im HUD und in der Upgrade-Zentrale.
 
 ---
 

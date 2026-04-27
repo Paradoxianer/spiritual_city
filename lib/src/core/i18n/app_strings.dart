@@ -56,11 +56,17 @@ class AppStrings {
       // NPC Dialog
       'dialog.talk': 'Sprich',
       'dialog.pray': 'Bete',
-      'dialog.help': 'Diene',
-      'dialog.convert': 'Bekehre',
+      'dialog.help': 'Helfen',
+      'dialog.convert': 'Bekehrung',
       'dialog.farewell': '👋 Tschüss',
       'dialog.goodbye': '👋 Tschüss!',
       'dialog.conversation': 'Gespräch',
+
+      // Resources
+      'resource.health': 'Gesundheit',
+      'resource.provision': 'Versorgung',
+      'resource.faith': 'Glaube',
+      'resource.supplies': 'Vorräte',
     },
     'en': {
       // Main Menu
@@ -116,10 +122,16 @@ class AppStrings {
       'dialog.talk': 'Talk',
       'dialog.pray': 'Pray',
       'dialog.help': 'Help',
-      'dialog.convert': 'Convert',
+      'dialog.convert': 'Conversion',
       'dialog.farewell': '👋 Goodbye',
       'dialog.goodbye': '👋 Goodbye!',
       'dialog.conversation': 'Chat',
+
+      // Resources
+      'resource.health': 'Health',
+      'resource.provision': 'Provision',
+      'resource.faith': 'Faith',
+      'resource.supplies': 'Supplies',
     },
   };
 
