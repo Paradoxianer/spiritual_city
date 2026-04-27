@@ -186,101 +186,109 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   @override
   Future<void> onLoad() async {
-    _log.info('--- INITIALIZING GAME ---');
-    seedManager = SeedManager(42);
-    generator = CityGenerator(seedManager);
-    grid = CityGrid();
+    try {
+      _log.info('--- INITIALIZING GAME ---');
+      seedManager = SeedManager(42);
+      generator = CityGenerator(seedManager);
+      grid = CityGrid();
 
-    // Progress & modifiers
-    progress = PlayerProgress();
-    modifiers = ModifierManager(progress: progress);
+      // Progress & modifiers
+      progress = PlayerProgress();
+      modifiers = ModifierManager(progress: progress);
 
-    // ── Restore save state ──────────────────────────────────────────────────
-    final rawState = gameSave?.gameState;
-    // Run migration so the rest of onLoad always sees the current schema.
-    final savedState = rawState != null && rawState.isNotEmpty
-        ? _migrateGameState(Map<String, dynamic>.from(rawState))
-        : null;
-    final hasSavedState = savedState != null && savedState.isNotEmpty;
-    if (hasSavedState) {
-      _applyPlayerState(savedState);
-      _savedCellStates     = _parseSavedCellStates(savedState);
-      _savedNPCStates      = _parseSavedNPCStates(savedState);
-      _savedBuildingStates = _parseSavedBuildingStates(savedState);
-    }
+      // Initialize dynamics system early so modifiers can be applied during state restoration.
+      spiritualDynamics = SpiritualDynamicsSystem();
 
-    player = PlayerComponent(joystick: _createJoystick());
-    // Spawn on the boulevard at grid cell (220, 224) = pixel (7040, 7168).
-    // y=224 is always a boulevard road (224 % 32 == 0) so the cell is
-    // guaranteed walkable regardless of lot generation.  The pastor house is
-    // at (220, 222) — just 2 cells north — see SpecialBuildingRegistry.
-    // (Previously (7000, 7000) = cell (218, 218) which ended up inside the
-    // pastor-house lot block after the lot-wide special-building scan was
-    // introduced, making the player spawn inside a solid building.)
-    player.position = hasSavedState
-        ? Vector2(
-            (savedState['playerX'] as num).toDouble(),
-            (savedState['playerY'] as num).toDouble(),
-          )
-        : Vector2(7040, 7168);
-    await world.add(player);
+      // ── Restore save state ──────────────────────────────────────────────────
+      final rawState = gameSave?.gameState;
+      // Run migration so the rest of onLoad always sees the current schema.
+      final savedState = rawState != null && rawState.isNotEmpty
+          ? _migrateGameState(Map<String, dynamic>.from(rawState))
+          : null;
+      final hasSavedState = savedState != null && savedState.isNotEmpty;
+      if (hasSavedState) {
+        _applyPlayerState(savedState);
+        _savedCellStates     = _parseSavedCellStates(savedState);
+        _savedNPCStates      = _parseSavedNPCStates(savedState);
+        _savedBuildingStates = _parseSavedBuildingStates(savedState);
+      }
 
-    chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
-    await world.add(chunkManager);
+      player = PlayerComponent(joystick: _createJoystick());
+      // Spawn on the boulevard at grid cell (220, 224) = pixel (7040, 7168).
+      // y=224 is always a boulevard road (224 % 32 == 0) so the cell is
+      // guaranteed walkable regardless of lot generation.  The pastor house is
+      // at (220, 222) — just 2 cells north — see SpecialBuildingRegistry.
+      // (Previously (7000, 7000) = cell (218, 218) which ended up inside the
+      // pastor-house lot block after the lot-wide special-building scan was
+      // introduced, making the player spawn inside a solid building.)
+      player.position = hasSavedState
+          ? Vector2(
+              (savedState['playerX'] as num).toDouble(),
+              (savedState['playerY'] as num).toDouble(),
+            )
+          : Vector2(7040, 7168);
+      await world.add(player);
 
-    spiritualDynamics = SpiritualDynamicsSystem();
-    await world.add(spiritualDynamics);
+      chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
+      await world.add(chunkManager);
 
-    // Wire modifier values to the dynamics system
-    spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
-    spiritualDynamics.modifierDecayReduction = modifiers.decayReduction;
+      // System already initialized, now add to world
+      await world.add(spiritualDynamics);
 
-    await camera.viewport.add(joystick);
-    await _addHudButtons();
+      // Wire modifier values to the dynamics system
+      spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
+      spiritualDynamics.modifierDecayReduction = modifiers.decayReduction;
 
-    modeButtons = [];
-    const modes = PrayerMode.values;
-    for (int i = 0; i < modes.length; i++) {
-      final mode = modes[i];
-      final btn = HudButton(
-        icon: mode.icon,
-        color: mode.color.withValues(alpha: 0.5),
-        onDown: () => player.setMode(mode),
-        isActive: () => player.currentMode == mode,
-        plain: true,
-        size: Vector2.all(55),
-        position: Vector2(size.x - 170, size.y - 150 - (i * 65)),
+      await camera.viewport.add(joystick);
+      await _addHudButtons();
+
+      modeButtons = [];
+      const modes = PrayerMode.values;
+      for (int i = 0; i < modes.length; i++) {
+        final mode = modes[i];
+        final btn = HudButton(
+          icon: mode.icon,
+          color: mode.color.withValues(alpha: 0.5),
+          onDown: () => player.setMode(mode),
+          isActive: () => player.currentMode == mode,
+          plain: true,
+          size: Vector2.all(55),
+          position: Vector2(size.x - 170, size.y - 150 - (i * 65)),
+        );
+        btn.opacity = 0; // Hidden by default
+        modeButtons.add(btn);
+        await camera.viewport.add(btn);
+      }
+      
+      prayerHud = PrayerHudComponent();
+      await camera.viewport.add(prayerHud);
+
+      lootSystem = LootSystem(seed: seedManager.seed);
+      await world.add(lootSystem);
+
+      camera.viewfinder.anchor = Anchor.center;
+      camera.viewfinder.position = player.position.clone();
+
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (hasSavedState && savedState['isSpiritualWorld'] == true) {
+        isSpiritualWorld = true;
+        _updateHudVisibility();
+        _updateButtonStyles();
+      }
+      isWorldReady.value = true;
+      _log.info(
+        '--- GAME READY --- '
+        'pastorhousePos=${pastorhousePosition.value} '
+        'playerPos=${player.position}',
       );
-      btn.opacity = 0; // Hidden by default
-      modeButtons.add(btn);
-      await camera.viewport.add(btn);
+
+      // Assign starting missions to NPCs / buildings in the spawn chunk.
+      // Run after a short delay so chunk NPCs/buildings are all registered.
+      Future.delayed(const Duration(milliseconds: 500), _tryAssignStartMissions);
+    } catch (e, stack) {
+      _log.severe('CRITICAL ERROR DURING GAME LOAD: $e', e, stack);
+      isWorldReady.value = true;
     }
-    
-    prayerHud = PrayerHudComponent();
-    await camera.viewport.add(prayerHud);
-
-    lootSystem = LootSystem(seed: seedManager.seed);
-    await world.add(lootSystem);
-
-    camera.viewfinder.anchor = Anchor.center;
-    camera.viewfinder.position = player.position.clone();
-
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (hasSavedState && savedState['isSpiritualWorld'] == true) {
-      isSpiritualWorld = true;
-      _updateHudVisibility();
-      _updateButtonStyles();
-    }
-    isWorldReady.value = true;
-    _log.info(
-      '--- GAME READY --- '
-      'pastorhousePos=${pastorhousePosition.value} '
-      'playerPos=${player.position}',
-    );
-
-    // Assign starting missions to NPCs / buildings in the spawn chunk.
-    // Run after a short delay so chunk NPCs/buildings are all registered.
-    Future.delayed(const Duration(milliseconds: 500), _tryAssignStartMissions);
   }
 
 
@@ -318,9 +326,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       if (npcs != null) {
         for (final npcState in npcs.values) {
           if (npcState is Map) {
-            final conv    = (npcState['conv']    as int?) ?? 0;
-            final pray    = (npcState['pray']    as int?) ?? 0;
-            final counsel = (npcState['counsel'] as int?) ?? 0;
+            final conv    = (npcState['conv']    as num?)?.toInt() ?? 0;
+            final pray    = (npcState['pray']    as num?)?.toInt() ?? 0;
+            final counsel = (npcState['counsel'] as num?)?.toInt() ?? 0;
             final merged  = conv + pray + counsel;
             // Only write 'conv' when non-zero; absent key is equivalent to 0
             // (consistent with how the original save code omits zero-value keys).
@@ -351,7 +359,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     materials = (state['materials'] as num?)?.toDouble() ?? materials;
 
     if (state.containsKey('progress')) {
-      progress.loadFromJson(state['progress'] as Map<String, dynamic>);
+      final progressData = state['progress'];
+      if (progressData is Map) {
+        progress.loadFromJson(progressData.cast<String, dynamic>());
+      }
       _checkAndApplyModifiers(); // Sync modifiers with loaded progress
     }
   }
@@ -422,7 +433,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final saved = _savedNPCStates?[npc.id];
     if (saved == null) return;
     npc.faith             = (saved['faith']   as num?)?.toDouble() ?? npc.faith;
-    npc.interactionCount  = saved['conv']     as int?  ?? npc.interactionCount;
+    npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
     final posX = (saved['posX'] as num?)?.toDouble();
     final posY = (saved['posY'] as num?)?.toDouble();
@@ -441,7 +452,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final saved = _savedBuildingStates?[building.buildingId];
     if (saved == null) return;
     building.faith            = (saved['faith'] as num?)?.toDouble() ?? building.faith;
-    building.interactionCount = saved['conv']   as int?              ?? building.interactionCount;
+    building.interactionCount = (saved['conv']  as num?)?.toInt()    ?? building.interactionCount;
   }
 
   // ── State capture (called when the player saves and quits) ────────────────

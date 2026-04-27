@@ -111,33 +111,39 @@ class PlayerProgress extends ChangeNotifier {
   };
 
   void loadFromJson(Map<String, dynamic> json) {
-    prayerCombatsCompleted = (json['prayerCombats'] ?? 0) as int;
-    bibleReadingsCompleted = (json['bibleReadings'] ?? 0) as int;
-    npcsConverted = (json['npcsConverted'] ?? 0) as int;
-    conversationsHeld = (json['conversations'] ?? 0) as int;
-    territoriesPartiallyTaken = (json['territoriesPartially'] ?? 0) as int;
-    territoriesFullyTaken = (json['territoriesFully'] ?? 0) as int;
-    maxChristiansInOneCell = (json['maxChristians'] ?? 0) as int;
+    prayerCombatsCompleted = (json['prayerCombats'] as num?)?.toInt() ?? 0;
+    bibleReadingsCompleted = (json['bibleReadings'] as num?)?.toInt() ?? 0;
+    npcsConverted = (json['npcsConverted'] as num?)?.toInt() ?? 0;
+    conversationsHeld = (json['conversations'] as num?)?.toInt() ?? 0;
+    territoriesPartiallyTaken = (json['territoriesPartially'] as num?)?.toInt() ?? 0;
+    territoriesFullyTaken = (json['territoriesFully'] as num?)?.toInt() ?? 0;
+    maxChristiansInOneCell = (json['maxChristians'] as num?)?.toInt() ?? 0;
     
     if (json.containsKey('stages')) {
-      final s = json['stages'] as Map<String, dynamic>;
-      if (s.containsKey('faith')) faithStage.fromJson(s['faith']);
-      if (s.containsKey('materials')) materialsStage.fromJson(s['materials']);
-      if (s.containsKey('health')) healthStage.fromJson(s['health']);
-      if (s.containsKey('hunger')) hungerStage.fromJson(s['hunger']);
+      final stagesRaw = json['stages'];
+      if (stagesRaw is Map) {
+        final s = stagesRaw.cast<String, dynamic>();
+        if (s.containsKey('faith')) faithStage.fromJson(s['faith']);
+        if (s.containsKey('materials')) materialsStage.fromJson(s['materials']);
+        if (s.containsKey('health')) healthStage.fromJson(s['health']);
+        if (s.containsKey('hunger')) hungerStage.fromJson(s['hunger']);
+      }
     }
 
     if (json.containsKey('combatProfile')) {
-      final profileJson = json['combatProfile'] as Map<String, dynamic>;
-      final loadedProfile = CombatProfile.fromJson(profileJson);
-      // Copy loaded values into existing instance
-      for (var mode in PrayerMode.values) {
-        final loadedStats = loadedProfile.getFor(mode);
-        final currentStats = combatProfile.getFor(mode);
-        currentStats.radius = loadedStats.radius;
-        currentStats.strength = loadedStats.strength;
-        currentStats.duration = loadedStats.duration;
-        currentStats.speed = loadedStats.speed;
+      final profileRaw = json['combatProfile'];
+      if (profileRaw is Map) {
+        final profileJson = profileRaw.cast<String, dynamic>();
+        final loadedProfile = CombatProfile.fromJson(profileJson);
+        // Copy loaded values into existing instance
+        for (var mode in PrayerMode.values) {
+          final loadedStats = loadedProfile.getFor(mode);
+          final currentStats = combatProfile.getFor(mode);
+          currentStats.radius = loadedStats.radius;
+          currentStats.strength = loadedStats.strength;
+          currentStats.duration = loadedStats.duration;
+          currentStats.speed = loadedStats.speed;
+        }
       }
     }
   }
