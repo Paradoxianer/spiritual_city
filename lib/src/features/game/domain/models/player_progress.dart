@@ -159,16 +159,28 @@ class PlayerProgress extends ChangeNotifier {
       if (profileRaw is Map) {
         final profileJson = profileRaw.cast<String, dynamic>();
         final loadedProfile = CombatProfile.fromJson(profileJson);
-        // Copy loaded values into existing instance
+        // Copy loaded level values into the existing instance.
+        combatProfile.shieldLevel = loadedProfile.shieldLevel;
+        combatProfile.helmLevel   = loadedProfile.helmLevel;
         for (var mode in PrayerMode.values) {
-          final loadedStats = loadedProfile.getFor(mode);
+          final loadedStats  = loadedProfile.getFor(mode);
           final currentStats = combatProfile.getFor(mode);
-          currentStats.radius = loadedStats.radius;
-          currentStats.strength = loadedStats.strength;
-          currentStats.duration = loadedStats.duration;
-          currentStats.speed = loadedStats.speed;
+          currentStats.radiusLevel   = loadedStats.radiusLevel;
+          currentStats.strengthLevel = loadedStats.strengthLevel;
+          currentStats.durationLevel = loadedStats.durationLevel;
+          currentStats.speedLevel    = loadedStats.speedLevel;
         }
       }
     }
+  }
+
+  /// Spend [amount] whole-point Insight as upgrade currency.
+  /// Returns `true` and deducts the cost if sufficient Insight is available,
+  /// otherwise returns `false` without modifying anything.
+  bool spendInsight(int amount) {
+    if (insight < amount) return false;
+    insight -= amount;
+    notifyListeners();
+    return true;
   }
 }

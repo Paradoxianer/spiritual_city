@@ -328,8 +328,10 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final amp = _cellDrainMultiplier; // easy=0.67, normal=1.0, hard=2.0
 
     final hpDamage     = (8.0 * strength * amp).clamp(1.0, 30.0);
-    final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0);
-    final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0);
+    final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0) *
+        (1.0 - game.progress.combatProfile.shieldDamageReduction);
+    final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0) *
+        (1.0 - game.progress.combatProfile.helmHungerReduction);
 
     game.spendHealth(hpDamage);
     game.spendFaith(faithDamage);
