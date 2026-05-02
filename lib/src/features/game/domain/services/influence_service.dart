@@ -131,13 +131,14 @@ class InfluenceService {
       if (effect.isExpired) {
         if (effect.durationType == InfluenceDurationType.temporary) {
           // Instantly reverse the full effect when time is up.
+          // No glow: the reversal is a silent backend correction, not a
+          // player action – triggering a red flash here would be misleading.
           _applyToCells(
             grid,
             effect.originX,
             effect.originY,
             -effect.totalDelta,
             effect.radius,
-            triggerGlow: true,
           );
         }
         return true; // remove expired effects
