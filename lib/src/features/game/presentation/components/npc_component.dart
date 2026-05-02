@@ -3,10 +3,12 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
+import '../../domain/models/building_model.dart';
 import '../../domain/models/npc_model.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
 import '../../domain/services/faith_calculator_service.dart';
+import '../../domain/services/influence_service.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
@@ -328,6 +330,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   }
 
   /// Daily: NPC faith state influences the cell they are standing on (Lastenheft §6.3)
+  ///
+  /// Converted NPCs additionally call [InfluenceService.applyAoE] so their
+  /// passive influence is tracked by the same system as building actions
+  /// (Issue #59 – NPC-Influence-Integration).
   void _updateSpiritualInfluence(double dt) {
     _spiritualInfluenceTimer += dt;
     if (_spiritualInfluenceTimer < _spiritualInfluenceInterval) return;
@@ -361,6 +367,19 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       // Small faith decay: without ongoing care their fervour slowly cools.
       // Floor at 50 so they remain Christian but their influence weakens.
       model.faith = (model.faith - 0.15).clamp(50.0, 100.0);
+
+      // Passive AoE via InfluenceService (Issue #59 – NPC-Influence-Integration).
+      // Converted NPCs emit a permanent per-tick influence pulse so their
+      // spiritual footprint is visible and decays like other building actions.
+      game.influenceService.applyAoE(
+        grid: game.grid,
+        originX: gx,
+        originY: gy,
+        delta: BuildingInfluenceConstants.deltaNpcPassive,
+        radius: BuildingInfluenceConstants.radiusNpcPassive,
+        durationType: InfluenceDurationType.permanent,
+        buildingMultiplier: BuildingInfluenceConstants.multiplierSmall,
+      );
     } else if (model.faith > 50) {
       // Sympathetic NPCs provide a weak positive nudge
       cell.spiritualState = (cell.spiritualState + 0.05).clamp(-1.0, 1.0);

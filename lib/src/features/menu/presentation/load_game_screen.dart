@@ -34,54 +34,10 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
   }
 
   Future<void> _rename(GameSave save) async {
-    final controller = TextEditingController(text: save.name);
-    final String? newName;
-    try {
-      newName = await showDialog<String>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1A2E3F),
-          title: Text(
-            AppStrings.get('loadGame.rename.title'),
-            style: const TextStyle(color: Colors.white70),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: AppStrings.get('loadGame.rename.hint'),
-              hintStyle: TextStyle(color: Colors.blueGrey.shade400),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.blueGrey.shade600),
-              ),
-              focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.lightBlueAccent),
-              ),
-            ),
-            onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(
-                AppStrings.get('loadGame.rename.cancel'),
-                style: const TextStyle(color: Colors.blueGrey),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-              child: Text(
-                AppStrings.get('loadGame.rename.confirm'),
-                style: const TextStyle(color: Colors.lightBlueAccent),
-              ),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      controller.dispose();
-    }
+    final String? newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _RenameDialog(initialName: save.name),
+    );
     if (newName != null && newName.isNotEmpty) {
       await widget.menuService.renameSave(save.id, newName);
       _reload();
@@ -156,6 +112,80 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Dialog that lets the player rename a save slot.
+///
+/// The [TextEditingController] is created and disposed as part of the
+/// [State] lifecycle, which avoids the "used after disposed" crash that
+/// occurred when the controller was disposed in a `finally` block while
+/// Flutter's dialog exit-animation was still running (Issue #135).
+class _RenameDialog extends StatefulWidget {
+  final String initialName;
+
+  const _RenameDialog({required this.initialName});
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1A2E3F),
+      title: Text(
+        AppStrings.get('loadGame.rename.title'),
+        style: const TextStyle(color: Colors.white70),
+      ),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: AppStrings.get('loadGame.rename.hint'),
+          hintStyle: TextStyle(color: Colors.blueGrey.shade400),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.blueGrey.shade600),
+          ),
+          focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.lightBlueAccent),
+          ),
+        ),
+        onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            AppStrings.get('loadGame.rename.cancel'),
+            style: const TextStyle(color: Colors.blueGrey),
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(
+            AppStrings.get('loadGame.rename.confirm'),
+            style: const TextStyle(color: Colors.lightBlueAccent),
+          ),
+        ),
+      ],
     );
   }
 }
