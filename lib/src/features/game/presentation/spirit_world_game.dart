@@ -755,13 +755,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Called by [MissionService] when a mission is completed via
   /// [advanceEntityMission].  Awards faith, materials and Insight and shows
   /// a brief toast message.
+
   void _onMissionCompleted(MissionModel mission) {
     if (mission.rewardFaith > 0) gainFaith(mission.rewardFaith);
     if (mission.rewardMaterials > 0) gainMaterials(mission.rewardMaterials);
     if (mission.insightReward > 0) progress.addInsight(mission.insightReward);
 
     final insightStr = mission.insightReward > 0
-        ? ' +${mission.insightReward.toStringAsFixed(1)} ✨'
+        ? ' +${mission.insightReward.toStringAsFixed(1)} 📖'
         : '';
     missionCompleteMessage.value =
         '📋 Mission!$insightStr';
@@ -772,7 +773,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     _log.info(
       'Mission completed: "${mission.description}" '
       '→ +${mission.rewardFaith}🙏 +${mission.rewardMaterials}📦 '
-      '+${mission.insightReward}✨',
+      '+${mission.insightReward}📖',
     );
   }
 
@@ -891,87 +892,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     overlays.remove('LookOverlay');
   }
 
-  // ── Mission board ─────────────────────────────────────────────────────────
-
-  /// Active data for the mission-board overlay (null when closed).
-  MissionBoardData? activeMissionBoardData;
-
-  /// Opens the mission board inline inside the current building overlay.
-  void openMissionBoard() {
-    final entries = <MissionEntry>[];
-    for (final npcComp in chunkManager.allActiveNPCs) {
-      final npc = npcComp.model;
-      if (npc.activeMission == null) continue;
-      final m = npc.activeMission!;
-      entries.add(MissionEntry(
-        targetEmoji: npcComp.interactionEmoji,
-        targetName: npc.name,
-        description: m.description,
-        faithReward: m.rewardFaith.round(),
-        materialsReward: m.rewardMaterials.round(),
-        insightReward: m.insightReward,
-        progress: m.progress,
-        targetCount: m.targetCount,
-        address: _addressForPixelPos(npcComp.position),
-      ));
-    }
-    for (final bldComp in chunkManager.allActiveBuildings) {
-      final bld = bldComp.buildingModel;
-      if (bld.activeMission == null) continue;
-      final m = bld.activeMission!;
-      entries.add(MissionEntry(
-        targetEmoji: BuildingComponent.buildingEmoji(bld.type),
-        targetName: BuildingComponent.buildingName(bld.type),
-        description: m.description,
-        faithReward: m.rewardFaith.round(),
-        materialsReward: m.rewardMaterials.round(),
-        insightReward: m.insightReward,
-        progress: m.progress,
-        targetCount: m.targetCount,
-        address: _addressForPixelPos(bldComp.position),
-      ));
-    }
-    activeMissionBoardData = MissionBoardData(entries: entries);
-    overlays.add('MissionBoardOverlay');
-  }
-
-  /// Returns a formatted address string (e.g. "Lindenallee 14") for the cell
-  /// at the given pixel position.  Returns null if no relevant data is found.
-  String? _addressForPixelPos(Vector2 pixelPos) {
-    const cellSize = 32.0;
-    final gx = (pixelPos.x / cellSize).floor();
-    final gy = (pixelPos.y / cellSize).floor();
-
-    int? houseNumber;
-    String? streetName;
-
-    // Check the cell itself and its 4 cardinal neighbours for building/road data.
-    for (final offset in const [
-      [0, 0], [-1, 0], [1, 0], [0, -1], [0, 1],
-    ]) {
-      final c = grid.getCell(gx + offset[0], gy + offset[1]);
-      if (c == null) continue;
-      if (c.data is BuildingData && houseNumber == null) {
-        houseNumber = (c.data as BuildingData).houseNumber;
-      }
-      if (c.data is RoadData && streetName == null) {
-        final rn = (c.data as RoadData).streetName;
-        if (rn != null) streetName = rn;
-      }
-      if (houseNumber != null && streetName != null) break;
-    }
-
-    if (streetName != null && houseNumber != null) return '$streetName $houseNumber';
-    if (streetName != null) return streetName;
-    if (houseNumber != null) return 'Nr. $houseNumber';
-    return null;
-  }
-
-  void closeMissionBoard() {
-    activeMissionBoardData = null;
-    overlays.remove('MissionBoardOverlay');
-  }
-
   String handleInteraction(String type) {
     if (_nearestInteractable == null) return '❓';
     final result = _nearestInteractable!.handleInteraction(type);
@@ -1024,17 +944,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       return const BuildingInteractionResult(reactionEmoji: '❓', success: false);
     }
 
-    // 'missions' is handled at the game layer – open the mission board inline.
-    if (actionType == 'missions') {
-      openMissionBoard();
-      return const BuildingInteractionResult(reactionEmoji: '📋', success: true);
-    }
-
     final result = buildingInteractionService.performAction(
       actionType,
       data.building,
       faith,
     );
+
     // Guard: refuse if the player cannot afford the material cost.
     // materialCost is negative when playerMaterialsDelta > 0 (a gain), so the
     // check `materialCost > 0` safely skips this guard for income actions.
@@ -1333,7 +1248,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (activeDialog != null) { closeDialog();            return; }
     if (activeBuildingData != null) { closeBuildingInterior(); return; }
     if (activeLookData != null)     { closeLookOverlay();      return; }
-    if (activeMissionBoardData != null) { closeMissionBoard(); return; }
     if (_currentMenu != null) { closeMenu();              return; }
   }
 

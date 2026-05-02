@@ -93,8 +93,6 @@ class _GameScreenState extends State<GameScreen> {
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
               'LookOverlay': (context, game) => LookOverlay(game: _game),
-              'MissionBoardOverlay': (context, game) =>
-                  MissionBoardOverlay(game: _game),
               'KeymapOverlay': (context, game) =>
                   KeymapOverlay(game: _game),
             },
@@ -646,7 +644,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
             ),
           const SizedBox(width: 6),
           Text(
-            '+${mission.insightReward.toStringAsFixed(1)} ✨',
+            '+${mission.insightReward.toStringAsFixed(1)} 📖',
             style: const TextStyle(
               color: Color(0xFFFFD54F),
               fontSize: 11,
@@ -1368,218 +1366,9 @@ class _LookCellRow extends StatelessWidget {
 }
 
 
-// ── Mission board data classes ─────────────────────────────────────────────────
-
-/// A single mission entry shown in [MissionBoardOverlay].
-class MissionEntry {
-  final String targetEmoji;
-  final String targetName;
-  final String description;
-  final int faithReward;
-  final int materialsReward;
-  final double insightReward;
-  final int progress;
-  final int targetCount;
-  /// Formatted address, e.g. "Lindenallee 14" or "Nr. 22". May be null.
-  final String? address;
-
-  const MissionEntry({
-    required this.targetEmoji,
-    required this.targetName,
-    required this.description,
-    required this.faithReward,
-    required this.materialsReward,
-    this.insightReward = 0,
-    this.progress = 0,
-    this.targetCount = 1,
-    this.address,
-  });
-}
-
-/// Data passed to [MissionBoardOverlay].
-class MissionBoardData {
-  final List<MissionEntry> entries;
-  const MissionBoardData({required this.entries});
-}
-
-// ── Mission Board Overlay ─────────────────────────────────────────────────────
-
-/// Shows all active missions as an emoji-styled list.
-/// Opened from inside the pastor house via the '📋 Missionen' action.
-class MissionBoardOverlay extends StatelessWidget {
-  final SpiritWorldGame game;
-  const MissionBoardOverlay({super.key, required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    final data = game.activeMissionBoardData;
-    if (data == null) return const SizedBox.shrink();
-
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.82,
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.65,
-        ),
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1B2A1B).withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFFFD54F), width: 1.5),
-          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12)],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFF2E4A2E),
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Row(
-                children: [
-                  const Text('📋', style: TextStyle(fontSize: 22)),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Aktive Missionen',
-                      style: TextStyle(
-                        color: Color(0xFFFFD54F),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70),
-                    onPressed: () => game.closeMissionBoard(),
-                  ),
-                ],
-              ),
-            ),
-            // Mission list
-            Flexible(
-              child: data.entries.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'Derzeit keine aktiven Missionen.\nKomme wieder, um neue Aufgaben zu erhalten.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: Colors.white54,
-                            fontSize: 13,
-                            fontStyle: FontStyle.italic),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      shrinkWrap: true,
-                      itemCount: data.entries.length,
-                      separatorBuilder: (_, __) =>
-                          const Divider(color: Colors.white12),
-                      itemBuilder: (context, i) {
-                        final m = data.entries[i];
-                        final hasProgress = m.targetCount > 1;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(m.targetEmoji,
-                                  style: const TextStyle(fontSize: 24)),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      m.description,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                    if (hasProgress) ...[
-                                      const SizedBox(height: 4),
-                                      _MissionProgressBar(
-                                        progress: m.progress,
-                                        targetCount: m.targetCount,
-                                      ),
-                                    ],
-                                    if (m.address != null) ...[
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        '📍 ${m.address}',
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(
-                                              alpha: 0.60),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (m.insightReward > 0)
-                                    Text(
-                                      '+${m.insightReward.toStringAsFixed(1)} ✨',
-                                      style: const TextStyle(
-                                        color: Color(0xFFFFD54F),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  if (m.faithReward > 0)
-                                    Text(
-                                      '+${m.faithReward}🙏',
-                                      style: const TextStyle(
-                                        color: Colors.amber,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  if (m.materialsReward > 0)
-                                    Text(
-                                      '+${m.materialsReward}📦',
-                                      style: const TextStyle(
-                                        color: Colors.lightBlue,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Mission progress bar ───────────────────────────────────────────────────────
 
-/// Compact progress bar for multi-step missions shown in the mission board and
-/// building/NPC dialog headers.
+/// Compact progress bar for multi-step missions shown in building/NPC dialog headers.
 class _MissionProgressBar extends StatelessWidget {
   final int progress;
   final int targetCount;
@@ -2339,7 +2128,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
   static List<String> _actionsFor(BuildingType type) {
     switch (type) {
       case BuildingType.pastorHouse:
-        return ['readBible', 'eat', 'sleep', 'pray', 'missions'];
+        return ['readBible', 'eat', 'sleep', 'pray'];
       case BuildingType.house:
         return ['practicalHelp', 'pray', 'houseVisit', 'discipleshipGroup'];
       case BuildingType.apartment:
@@ -2524,7 +2313,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
             ),
           const SizedBox(width: 6),
           Text(
-            '+${mission.insightReward.toStringAsFixed(1)} ✨',
+            '+${mission.insightReward.toStringAsFixed(1)} 📖',
             style: const TextStyle(
               color: Color(0xFFFFD54F),
               fontSize: 11,
@@ -2893,7 +2682,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen', keyIndex: nk(), onTap: () => _performAction('eat')),
           _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen', keyIndex: nk(), onTap: () => _performAction('sleep')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🕊️+15', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionen', keyIndex: nk(), onTap: () => _performAction('missions')),
         ];
 
       // ── Residential (House) ───────────────────────────────────────────
