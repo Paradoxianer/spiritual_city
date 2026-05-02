@@ -1721,10 +1721,7 @@ class _InsightDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = progress.insight + progress.pendingInsight;
-    final label = total == total.truncateToDouble()
-        ? total.toInt().toString()
-        : total.toStringAsFixed(1);
+    final label = _insightLabel(progress);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -3448,6 +3445,21 @@ class _FaithBarWidget extends StatelessWidget {
 
 // ── Upgrade-Zentrale (Issue #4) ───────────────────────────────────────────────
 
+/// Formats an insight total (whole + pending) as a compact string.
+/// Returns the integer string if the value is whole (e.g. "3"),
+/// otherwise one decimal place (e.g. "3.5").
+String _insightLabel(PlayerProgress progress) {
+  final total = progress.insight + progress.pendingInsight;
+  return total == total.truncateToDouble()
+      ? total.toInt().toString()
+      : total.toStringAsFixed(1);
+}
+
+/// Formats a modifier multiplier as a +N% percent string.
+/// E.g. multiplier 1.3 → '+30%'.
+String _pct(double multiplier) =>
+    '+${(multiplier * 100 - 100).toStringAsFixed(0)}%';
+
 /// Full upgrade panel shown inside the pastor-house "Upgrades" tab.
 /// Displays current Insight balance, two defense upgrades, and four prayer
 /// mode sections with four upgrades each.
@@ -3464,10 +3476,8 @@ class _UpgradePanelState extends State<_UpgradePanel> {
   CombatProfile  get _profile  => _progress.combatProfile;
 
   void _buyUpgrade(VoidCallback apply, int cost) {
-    if (_progress.insight < cost) return;
     setState(() {
-      _progress.spendInsight(cost);
-      apply();
+      if (_progress.spendInsight(cost)) apply();
     });
   }
 
@@ -3517,10 +3527,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
   }
 
   Widget _buildInsightHeader() {
-    final total = _progress.insight + _progress.pendingInsight;
-    final label = total == total.truncateToDouble()
-        ? total.toInt().toString()
-        : total.toStringAsFixed(1);
+    final label = _insightLabel(_progress);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -3602,10 +3609,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
             ],
           ),
           const SizedBox(height: 4),
-          _buildAttackRow('Radius',      stats.radiusLevel,   '+${(stats.radius * 100 - 100).toStringAsFixed(0)}% Reichweite', () => stats.radiusLevel++),
-          _buildAttackRow('Stärke',      stats.strengthLevel, '+${(stats.strength * 100 - 100).toStringAsFixed(0)}% Stärke',     () => stats.strengthLevel++),
-          _buildAttackRow('Dauer',       stats.durationLevel, '+${(stats.duration * 100 - 100).toStringAsFixed(0)}% Dauer',      () => stats.durationLevel++),
-          _buildAttackRow('Geschw.',     stats.speedLevel,    '+${(stats.speed * 100 - 100).toStringAsFixed(0)}% Geschw.',       () => stats.speedLevel++),
+          _buildAttackRow('Radius',      stats.radiusLevel,   '${_pct(stats.radius)} Reichweite', () => stats.radiusLevel++),
+          _buildAttackRow('Stärke',      stats.strengthLevel, '${_pct(stats.strength)} Stärke',    () => stats.strengthLevel++),
+          _buildAttackRow('Dauer',       stats.durationLevel, '${_pct(stats.duration)} Dauer',     () => stats.durationLevel++),
+          _buildAttackRow('Geschw.',     stats.speedLevel,    '${_pct(stats.speed)} Geschw.',      () => stats.speedLevel++),
         ],
       ),
     );
