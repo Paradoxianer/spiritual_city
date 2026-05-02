@@ -977,6 +977,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         success: false,
       );
     }
+    // Guard: refuse if the player does not have enough hunger for the action.
+    final hungerCost = -result.playerHungerDelta;
+    if (hungerCost > 0 && hunger < hungerCost) {
+      return const BuildingInteractionResult(
+        reactionEmoji: '🚫🍞',
+        success: false,
+      );
+    }
     // Apply resource deltas immediately
     if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);
     if (result.playerMaterialsDelta > 0) {
@@ -994,8 +1002,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     } else if (result.playerHungerDelta < 0) {
       spendHunger(-result.playerHungerDelta);
     }
-    // 'prayBusiness' also nudges the cell underneath the player positively
-    if (actionType == 'prayBusiness') {
+    // Geistliche Erkenntnis (Insight) from building actions.
+    if (result.playerInsightDelta > 0) {
+      progress.addInsight(result.playerInsightDelta);
+    }
+    // 'bless' and spiritual actions nudge the cell underneath the player.
+    if (actionType == 'bless' || actionType == 'blessPolice' ||
+        actionType == 'blessHousehold') {
       _nudgeCellUnderPlayer(0.02);
       missionService.onVisitPrayed();
     }

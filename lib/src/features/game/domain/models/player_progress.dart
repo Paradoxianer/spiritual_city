@@ -63,6 +63,26 @@ class PlayerProgress extends ChangeNotifier {
   int territoriesPartiallyTaken = 0;
   int territoriesFullyTaken = 0;
 
+  // --- Geistliche Erkenntnis (Spiritual Insight) – Issue #124 ─────────────
+  /// Accumulated fractional insight from building actions.
+  /// Grows in 0.5-point steps; only whole points are "displayed" / usable.
+  double pendingInsight = 0.0;
+
+  /// Total whole-point insight unlocked so far.
+  int insight = 0;
+
+  /// Add [amount] of insight (typically 0.5).  Whole points are cashed out
+  /// immediately and accumulated into [insight].
+  void addInsight(double amount) {
+    pendingInsight += amount;
+    if (pendingInsight >= 1.0) {
+      final wholePoints = pendingInsight.floor();
+      insight += wholePoints;
+      pendingInsight -= wholePoints.toDouble();
+      notifyListeners();
+    }
+  }
+
   // --- Resource Stages (Issue #61) ---
   final ResourceStage faithStage = ResourceStage();
   final ResourceStage materialsStage = ResourceStage();
@@ -101,6 +121,8 @@ class PlayerProgress extends ChangeNotifier {
     'territoriesPartially': territoriesPartiallyTaken,
     'territoriesFully': territoriesFullyTaken,
     'maxChristians': maxChristiansInOneCell,
+    'insight': insight,
+    'pendingInsight': pendingInsight,
     'combatProfile': combatProfile.toJson(),
     'stages': {
       'faith': faithStage.toJson(),
@@ -118,6 +140,8 @@ class PlayerProgress extends ChangeNotifier {
     territoriesPartiallyTaken = (json['territoriesPartially'] as num?)?.toInt() ?? 0;
     territoriesFullyTaken = (json['territoriesFully'] as num?)?.toInt() ?? 0;
     maxChristiansInOneCell = (json['maxChristians'] as num?)?.toInt() ?? 0;
+    insight = (json['insight'] as num?)?.toInt() ?? 0;
+    pendingInsight = (json['pendingInsight'] as num?)?.toDouble() ?? 0.0;
     
     if (json.containsKey('stages')) {
       final stagesRaw = json['stages'];

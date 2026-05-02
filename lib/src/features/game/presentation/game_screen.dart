@@ -2002,6 +2002,26 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         return _scaledDuration(BuildingInteractionService.pastorHouseSleepSeconds);
       case 'pray':
         return _scaledDuration(BuildingInteractionService.pastorHousePraySeconds);
+      case 'houseVisit':
+        return _scaledDuration(BuildingInteractionService.houseVisitSeconds);
+      case 'talkBoss':
+        return _scaledDuration(BuildingInteractionService.talkBossSeconds);
+      case 'counseling':
+        return _scaledDuration(BuildingInteractionService.counselingSeconds);
+      case 'talkDirector':
+        return _scaledDuration(BuildingInteractionService.talkDirectorSeconds);
+      case 'valueLecture':
+        return _scaledDuration(BuildingInteractionService.valueLectureSeconds);
+      case 'funeral':
+        return _scaledDuration(BuildingInteractionService.funeralSeconds);
+      case 'mayorAudience':
+        return _scaledDuration(BuildingInteractionService.mayorAudienceSeconds);
+      case 'prayForPoliticians':
+        return _scaledDuration(BuildingInteractionService.prayForPoliticiansSeconds);
+      case 'worship':
+        return _scaledDuration(BuildingInteractionService.worshipSeconds);
+      case 'sundayService':
+        return _scaledDuration(BuildingInteractionService.sundayServiceSeconds);
       default:
         return 0;
     }
@@ -2052,24 +2072,33 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.pastorHouse:
         return ['readBible', 'eat', 'sleep', 'pray', 'missions'];
       case BuildingType.house:
+        return ['practicalHelp', 'pray', 'houseVisit', 'discipleshipGroup'];
       case BuildingType.apartment:
-        return ['talk', 'pray', 'help', 'bible'];
+        return ['practicalHelp', 'pray', 'houseVisit', 'discipleshipGroup', 'blessHousehold'];
       case BuildingType.church:
       case BuildingType.cathedral:
-        return ['readBible', 'pray', 'worship'];
+        return ['sundayService', 'worship'];
       case BuildingType.hospital:
-        return ['visitSick', 'pray', 'heal'];
+        return ['medicalHelp', 'counseling', 'chapelService'];
       case BuildingType.school:
       case BuildingType.university:
-        return ['teach', 'pray', 'distribute'];
+        return ['letterToManagement', 'talkDirector', 'valueLecture', 'prayerCircle'];
       case BuildingType.cemetery:
-        return ['pray', 'comfort'];
+        return ['funeral', 'comfort'];
+      case BuildingType.policeStation:
+        return ['blessPolice', 'pray', 'witness'];
+      case BuildingType.cityHall:
+        return ['mayorAudience', 'prayForPoliticians'];
+      case BuildingType.trainStation:
+        return ['travel'];
+      case BuildingType.stadium:
+        return ['majorEvent'];
       case BuildingType.shop:
       case BuildingType.supermarket:
       case BuildingType.mall:
       case BuildingType.office:
       case BuildingType.skyscraper:
-        return ['donate', 'worker', 'prayBusiness', 'distribute'];
+        return ['talkBoss', 'shopping', 'bless', 'requestDonation'];
       default:
         return ['pray', 'witness', 'distribute'];
     }
@@ -2454,17 +2483,37 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case 'eat':       return '🍽️';
       case 'sleep':     return '😴';
       case 'pray':      return '🙏';
+      case 'houseVisit':  return '☕';
+      case 'talkBoss':    return '💼';
+      case 'counseling':  return '👂';
+      case 'talkDirector': return '🏫';
+      case 'valueLecture': return '🎤';
+      case 'funeral':      return '⚰️';
+      case 'mayorAudience': return '🏛️';
+      case 'prayForPoliticians': return '🙏';
+      case 'worship':     return '🧘‍♂️';
+      case 'sundayService': return '⛪';
       default:          return '⏳';
     }
   }
 
   static String _actionLabelFor(String actionType) {
     switch (actionType) {
-      case 'readBible': return 'Bibel lesen …';
-      case 'eat':       return 'Essen …';
-      case 'sleep':     return 'Schlafen …';
-      case 'pray':      return 'Beten …';
-      default:          return 'Warten …';
+      case 'readBible':   return 'Bibel lesen …';
+      case 'eat':         return 'Essen …';
+      case 'sleep':       return 'Schlafen …';
+      case 'pray':        return 'Beten …';
+      case 'houseVisit':  return 'Hausbesuch …';
+      case 'talkBoss':    return 'Gespräch mit Chef …';
+      case 'counseling':  return 'Seelsorge …';
+      case 'talkDirector': return 'Gespräch mit Direktor …';
+      case 'valueLecture': return 'Vortrag halten …';
+      case 'funeral':      return 'Beerdigung …';
+      case 'mayorAudience': return 'Audienz beim Bürgermeister …';
+      case 'prayForPoliticians': return 'Für Politiker beten …';
+      case 'worship':     return 'Anbetung …';
+      case 'sundayService': return 'Gottesdienst …';
+      default:            return 'Warten …';
     }
   }
 
@@ -2494,47 +2543,83 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionen', keyIndex: nk(), onTap: () => _performAction('missions')),
         ];
 
-      // ── Residential ───────────────────────────────────────────────────
+      // ── Residential (House) ───────────────────────────────────────────
       case BuildingType.house:
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+        ];
+
+      // ── Residential (Apartment) ───────────────────────────────────────
       case BuildingType.apartment:
         rows = [
-          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Gespräch', keyIndex: nk(), onTap: () => _performAction('talk')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−❤️→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−10💰→', trailingEmoji: '✝️', tooltip: 'Helfen', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('help')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−💰❤️→', trailingEmoji: '✝️', tooltip: 'Bibelstunde', keyIndex: nk(), isDisabled: g.materials < 3 || g.health <= 3, onTap: () => _performAction('bible')),
+          _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '🏢', arrowText: '−10🙏→', trailingEmoji: '+1✝️/Bew.', tooltip: 'Hausgemeinschaft segnen', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('blessHousehold')),
         ];
 
       // ── Church ────────────────────────────────────────────────────────
       case BuildingType.church:
       case BuildingType.cathedral:
         rows = [
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('readBible')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '🎵', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Lobpreis', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('worship')),
+          _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−50💰−60❤️→', trailingEmoji: '🔥AOE', tooltip: 'Gottesdienst', keyIndex: nk(), isDisabled: g.materials < 50 || g.health < 60, onTap: () => _performAction('sundayService')),
+          _ActionMenuRow(leadingEmoji: '🧘‍♂️', arrowText: '⏱→', trailingEmoji: '+🙏/Sek', tooltip: 'Anbetung', keyIndex: nk(), onTap: () => _performAction('worship')),
         ];
 
       // ── Hospital ──────────────────────────────────────────────────────
       case BuildingType.hospital:
         rows = [
-          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Kranke besuchen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('visitSick')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '💊', arrowText: '−10💰→', trailingEmoji: '✝️', tooltip: 'Heilen', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('heal')),
+          _ActionMenuRow(leadingEmoji: '🏥', arrowText: '−15💰→', trailingEmoji: '❤️🍞100%', tooltip: 'Medizinische Hilfe', keyIndex: nk(), isDisabled: g.materials < 15, onTap: () => _performAction('medicalHelp')),
+          _ActionMenuRow(leadingEmoji: '👂', arrowText: '⏱→', trailingEmoji: '+Interakt.', tooltip: 'Seelsorge', keyIndex: nk(), isDisabled: building.interactionCount <= 3, onTap: () => _performAction('counseling')),
+          _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−30🙏→', trailingEmoji: '+15🙏NPCs', tooltip: 'Gottesdienst Kapelle', keyIndex: nk(), isDisabled: building.interactionCount <= 10 || g.faith < 30, onTap: () => _performAction('chapelService')),
         ];
 
       // ── School / University ───────────────────────────────────────────
       case BuildingType.school:
       case BuildingType.university:
         rows = [
-          _ActionMenuRow(leadingEmoji: '📚', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Unterrichten', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('teach')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('distribute')),
+          _ActionMenuRow(leadingEmoji: '✉️', arrowText: '−5💰→', trailingEmoji: '+2✝️', tooltip: 'Brief an Schulleitung', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('letterToManagement')),
+          _ActionMenuRow(leadingEmoji: '🏫', arrowText: '⏱→', trailingEmoji: '+5✝️🎤', tooltip: 'Gespräch mit Direktor', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('talkDirector')),
+          _ActionMenuRow(leadingEmoji: '🎤', arrowText: '⏱→', trailingEmoji: '+NPCs', tooltip: 'Werte-Vortrag', keyIndex: nk(), isDisabled: building.interactionCount <= 15 || !building.isLecturePrepared, onTap: () => _performAction('valueLecture')),
+          _ActionMenuRow(leadingEmoji: '⭕', arrowText: '−60🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Gebetskreis gründen', keyIndex: nk(), isDisabled: building.interactionCount <= 30 || g.faith < 60, onTap: () => _performAction('prayerCircle')),
         ];
 
       // ── Cemetery ──────────────────────────────────────────────────────
       case BuildingType.cemetery:
         rows = [
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('pray')),
-          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Trösten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('comfort')),
+          _ActionMenuRow(leadingEmoji: '⚰️', arrowText: '⏱→', trailingEmoji: '+Interakt.', tooltip: 'Beerdigung', keyIndex: nk(), onTap: () => _performAction('funeral')),
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '−75%❤️🍞→', trailingEmoji: '✝️!', tooltip: 'Trost', keyIndex: nk(), isDisabled: !building.hasFuneralCompleted || g.health < 75 || g.hunger < 75, onTap: () => _performAction('comfort')),
+        ];
+
+      // ── Police Station ────────────────────────────────────────────────
+      case BuildingType.policeStation:
+        rows = [
+          _ActionMenuRow(leadingEmoji: '👮‍♂️', arrowText: '−15🙏→', trailingEmoji: '🛡️1Tag', tooltip: 'Polizei segnen', keyIndex: nk(), isDisabled: g.faith < 15, onTap: () => _performAction('blessPolice')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Zeugnis geben', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('witness')),
+        ];
+
+      // ── City Hall ─────────────────────────────────────────────────────
+      case BuildingType.cityHall:
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🏛️', arrowText: '⏱→', trailingEmoji: '+3✝️', tooltip: 'Audienz Bürgermeister', keyIndex: nk(), onTap: () => _performAction('mayorAudience')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−🙏−50❤️🍞→', trailingEmoji: '🌍+0.05', tooltip: 'Für Politiker beten', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || g.faith < 100 || g.health < 50 || g.hunger < 50, onTap: () => _performAction('prayForPoliticians')),
+        ];
+
+      // ── Train Station ─────────────────────────────────────────────────
+      case BuildingType.trainStation:
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🚂', arrowText: '−10💰→', trailingEmoji: '🗺️Teleport', tooltip: 'Reise', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('travel')),
+        ];
+
+      // ── Stadium ───────────────────────────────────────────────────────
+      case BuildingType.stadium:
+        rows = [
+          _ActionMenuRow(leadingEmoji: '🏟️', arrowText: '−100🙏💰→', trailingEmoji: '🌟+0.5✨', tooltip: 'Großveranstaltung', keyIndex: nk(), isDisabled: building.interactionCount <= 50 || g.faith < 100 || g.materials < 100, onTap: () => _performAction('majorEvent')),
         ];
 
       // ── Commercial ────────────────────────────────────────────────────
@@ -2544,10 +2629,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.office:
       case BuildingType.skyscraper:
         rows = [
-          _ActionMenuRow(leadingEmoji: '💸', arrowText: '→', trailingEmoji: '💰', tooltip: 'Spenden', keyIndex: nk(), onTap: () => _performAction('donate')),
-          _ActionMenuRow(leadingEmoji: '💬', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Zeugnis', keyIndex: nk(), onTap: () => _performAction('worker')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Für Betrieb beten', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('prayBusiness')),
-          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−5💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('distribute')),
+          _ActionMenuRow(leadingEmoji: '💼', arrowText: '⏱→', trailingEmoji: '+3✝️', tooltip: 'Gespräch mit Chef', keyIndex: nk(), onTap: () => _performAction('talkBoss')),
+          _ActionMenuRow(leadingEmoji: '🛒', arrowText: '−5💰→', trailingEmoji: '+20🍞❤️', tooltip: 'Einkaufen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('shopping')),
+          _ActionMenuRow(leadingEmoji: '🕊️', arrowText: '−15🙏→', trailingEmoji: '+2✝️', tooltip: 'Segnen', keyIndex: nk(), isDisabled: g.faith < 15, onTap: () => _performAction('bless')),
+          _ActionMenuRow(leadingEmoji: '🤲', arrowText: '−10❤️🍞→', trailingEmoji: '💰?', tooltip: 'Um Spenden bitten', keyIndex: nk(), isDisabled: building.interactionCount <= 2 || g.health < 10 || g.hunger < 10, onTap: () => _performAction('requestDonation')),
         ];
 
       // ── Everything else ───────────────────────────────────────────────
