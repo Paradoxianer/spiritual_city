@@ -1714,7 +1714,7 @@ class _ResourceHud extends StatelessWidget {
 }
 
 /// Compact Insight display shown below the resource bars in the HUD.
-/// Shows accumulated whole-point insight + fractional pending in ✨ format.
+/// Shows accumulated whole-point insight + fractional pending as 📖 N format.
 class _InsightDisplay extends StatelessWidget {
   final PlayerProgress progress;
   const _InsightDisplay({required this.progress});
@@ -1725,7 +1725,7 @@ class _InsightDisplay extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('✨', style: TextStyle(fontSize: 12)),
+        const Text('📖', style: TextStyle(fontSize: 12)),
         const SizedBox(width: 3),
         Text(
           label,
@@ -1737,7 +1737,7 @@ class _InsightDisplay extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(
-          'Insight',
+          'Erkenntnis',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.55),
             fontSize: 10,
@@ -2633,7 +2633,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '📖+0.5', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
         ];
 
       // ── Residential (Apartment) ───────────────────────────────────────
@@ -2642,7 +2642,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '📖+0.5', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
           _ActionMenuRow(leadingEmoji: '🏢', arrowText: '−10🙏→', trailingEmoji: '+1✝️/Bew.', tooltip: 'Hausgemeinschaft segnen', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('blessHousehold')),
         ];
 
@@ -2669,7 +2669,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '✉️', arrowText: '−5💰→', trailingEmoji: '+2✝️', tooltip: 'Brief an Schulleitung', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('letterToManagement')),
           _ActionMenuRow(leadingEmoji: '🏫', arrowText: '⏱→', trailingEmoji: '+5✝️🎤', tooltip: 'Gespräch mit Direktor', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('talkDirector')),
           _ActionMenuRow(leadingEmoji: '🎤', arrowText: '⏱→', trailingEmoji: '+NPCs', tooltip: 'Werte-Vortrag', keyIndex: nk(), isDisabled: building.interactionCount <= 15 || !building.isLecturePrepared, onTap: () => _performAction('valueLecture')),
-          _ActionMenuRow(leadingEmoji: '⭕', arrowText: '−60🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Gebetskreis gründen', keyIndex: nk(), isDisabled: building.interactionCount <= 30 || g.faith < 60, onTap: () => _performAction('prayerCircle')),
+          _ActionMenuRow(leadingEmoji: '⭕', arrowText: '−60🙏→', trailingEmoji: '📖+0.5', tooltip: 'Gebetskreis gründen', keyIndex: nk(), isDisabled: building.interactionCount <= 30 || g.faith < 60, onTap: () => _performAction('prayerCircle')),
         ];
 
       // ── Cemetery ──────────────────────────────────────────────────────
@@ -2703,7 +2703,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       // ── Stadium ───────────────────────────────────────────────────────
       case BuildingType.stadium:
         rows = [
-          _ActionMenuRow(leadingEmoji: '🏟️', arrowText: '−100🙏💰→', trailingEmoji: '🌟+0.5✨', tooltip: 'Großveranstaltung', keyIndex: nk(), isDisabled: building.interactionCount <= 50 || g.faith < 100 || g.materials < 100, onTap: () => _performAction('majorEvent')),
+          _ActionMenuRow(leadingEmoji: '🏟️', arrowText: '−100🙏💰→', trailingEmoji: '📖+0.5', tooltip: 'Großveranstaltung', keyIndex: nk(), isDisabled: building.interactionCount <= 50 || g.faith < 100 || g.materials < 100, onTap: () => _performAction('majorEvent')),
         ];
 
       // ── Commercial ────────────────────────────────────────────────────
@@ -3538,10 +3538,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('✨', style: TextStyle(fontSize: 18)),
+          const Text('📖', style: TextStyle(fontSize: 18)),
           const SizedBox(width: 6),
           Text(
-            '$label Insight verfügbar',
+            '$label Erkenntnis verfügbar',
             style: const TextStyle(
               color: Colors.amber,
               fontWeight: FontWeight.bold,
@@ -3594,6 +3594,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Mode header
           Row(
             children: [
               Text(mode.icon, style: const TextStyle(fontSize: 14)),
@@ -3608,31 +3609,52 @@ class _UpgradePanelState extends State<_UpgradePanel> {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          _buildAttackRow('Radius',      stats.radiusLevel,   '${_pct(stats.radius)} Reichweite', () => stats.radiusLevel++),
-          _buildAttackRow('Stärke',      stats.strengthLevel, '${_pct(stats.strength)} Stärke',    () => stats.strengthLevel++),
-          _buildAttackRow('Dauer',       stats.durationLevel, '${_pct(stats.duration)} Dauer',     () => stats.durationLevel++),
-          _buildAttackRow('Geschw.',     stats.speedLevel,    '${_pct(stats.speed)} Geschw.',      () => stats.speedLevel++),
+          const SizedBox(height: 6),
+          // 4 tiles side by side
+          Row(
+            children: [
+              Expanded(child: _AttackTile(
+                icon: '🎯',
+                label: 'Radius',
+                level: stats.radiusLevel,
+                effectText: _pct(stats.radius),
+                cost: upgradeInsightCost(stats.radiusLevel),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.radiusLevel),
+                onBuy: () => _buyUpgrade(() => stats.radiusLevel++, upgradeInsightCost(stats.radiusLevel)),
+              )),
+              const SizedBox(width: 4),
+              Expanded(child: _AttackTile(
+                icon: '⚡',
+                label: 'Stärke',
+                level: stats.strengthLevel,
+                effectText: _pct(stats.strength),
+                cost: upgradeInsightCost(stats.strengthLevel),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.strengthLevel),
+                onBuy: () => _buyUpgrade(() => stats.strengthLevel++, upgradeInsightCost(stats.strengthLevel)),
+              )),
+              const SizedBox(width: 4),
+              Expanded(child: _AttackTile(
+                icon: '⏱️',
+                label: 'Dauer',
+                level: stats.durationLevel,
+                effectText: _pct(stats.duration),
+                cost: upgradeInsightCost(stats.durationLevel),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.durationLevel),
+                onBuy: () => _buyUpgrade(() => stats.durationLevel++, upgradeInsightCost(stats.durationLevel)),
+              )),
+              const SizedBox(width: 4),
+              Expanded(child: _AttackTile(
+                icon: '💨',
+                label: 'Geschw.',
+                level: stats.speedLevel,
+                effectText: _pct(stats.speed),
+                cost: upgradeInsightCost(stats.speedLevel),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.speedLevel),
+                onBuy: () => _buyUpgrade(() => stats.speedLevel++, upgradeInsightCost(stats.speedLevel)),
+              )),
+            ],
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAttackRow(String label, int level, String effectText, VoidCallback onBuy) {
-    final cost = upgradeInsightCost(level);
-    final canAfford = _progress.insight >= cost;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: _UpgradeRow(
-        icon: '',
-        label: label,
-        level: level,
-        description: '',
-        effectText: effectText,
-        cost: cost,
-        canAfford: canAfford,
-        onBuy: () => _buyUpgrade(onBuy, cost),
-        compact: true,
       ),
     );
   }
@@ -3657,7 +3679,6 @@ class _UpgradeRow extends StatelessWidget {
   final int cost;
   final bool canAfford;
   final VoidCallback onBuy;
-  final bool compact;
 
   const _UpgradeRow({
     required this.icon,
@@ -3668,21 +3689,20 @@ class _UpgradeRow extends StatelessWidget {
     required this.cost,
     required this.canAfford,
     required this.onBuy,
-    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: compact ? 4 : 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         children: [
-          if (!compact && icon.isNotEmpty) ...[
+          if (icon.isNotEmpty) ...[
             Text(icon, style: const TextStyle(fontSize: 16)),
             const SizedBox(width: 6),
           ],
@@ -3695,10 +3715,10 @@ class _UpgradeRow extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
-                        fontSize: compact ? 11 : 12,
+                        fontSize: 12,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -3765,7 +3785,7 @@ class _BuyButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('✨', style: TextStyle(fontSize: 11)),
+              const Text('📖', style: TextStyle(fontSize: 11)),
               const SizedBox(width: 2),
               Text(
                 '$cost',
@@ -3778,6 +3798,80 @@ class _BuyButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Compact vertical tile for a single attack-stat upgrade.
+/// Used inside the horizontal 4-column grid in [_UpgradePanelState._buildModeSection].
+class _AttackTile extends StatelessWidget {
+  final String icon;
+  final String label;
+  final int level;
+  final String effectText;
+  final int cost;
+  final bool canAfford;
+  final VoidCallback onBuy;
+
+  const _AttackTile({
+    required this.icon,
+    required this.label,
+    required this.level,
+    required this.effectText,
+    required this.cost,
+    required this.canAfford,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Icon
+          Text(icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(height: 2),
+          // Stat name
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+          ),
+          const SizedBox(height: 2),
+          // Level badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Lv $level',
+              style: const TextStyle(color: Colors.amber, fontSize: 8),
+            ),
+          ),
+          const SizedBox(height: 2),
+          // Effect
+          Text(
+            effectText,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.greenAccent, fontSize: 9),
+          ),
+          const SizedBox(height: 4),
+          // Buy button
+          _BuyButton(cost: cost, canAfford: canAfford, onBuy: onBuy),
+        ],
       ),
     );
   }
