@@ -22,7 +22,7 @@ import '../models/city_grid.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// How long (seconds) the visual glow persists on a cell.
-const double kCellGlowDuration = 0.8;
+const double kCellGlowDuration = 2.0;
 
 /// Duration category for an influence effect.
 enum InfluenceDurationType {

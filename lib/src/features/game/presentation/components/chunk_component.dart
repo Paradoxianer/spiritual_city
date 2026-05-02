@@ -92,11 +92,15 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
         final cell = chunk.cells['$x,$y'];
         if (cell == null || cell.glowTimer <= 0) continue;
 
-        // Fade: 1.0 at full glow, 0.0 at expiry.
-        // Maximum raw alpha capped at 0.55 for a subtle but perceptible flash.
+        // Fade: 1.0 at peak, 0.0 at expiry (linear fade-out).
+        // Alpha uses a normalised minimum so that even small deltas (e.g.
+        // practicalHelp with delta=0.05) produce a clearly perceptible flash.
+        // Range: 0.35 (minimum, any non-zero influence) … 0.55 (maximum).
         final fade = (cell.glowTimer / kCellGlowDuration).clamp(0.0, 1.0);
-        final intensity = fade * cell.glowStrength.abs().clamp(0.0, 1.0);
-        final alpha = (intensity * 0.55).clamp(0.0, 0.55);
+        // Normalise intensity to [0..1] so we only scale the *amplitude* of
+        // the base alpha range, not the visibility floor.
+        final normIntensity = cell.glowStrength.abs().clamp(0.0, 1.0);
+        final alpha = fade * (0.35 + normIntensity * 0.20);
 
         final color = cell.glowStrength > 0
             ? Color.fromARGB((alpha * 255).round(), 0, 230, 80)   // green
