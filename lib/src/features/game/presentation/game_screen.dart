@@ -2607,7 +2607,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       case BuildingType.cityHall:
         rows = [
           _ActionMenuRow(leadingEmoji: '🏛️', arrowText: '⏱→', trailingEmoji: '+3✝️', tooltip: 'Audienz Bürgermeister', keyIndex: nk(), onTap: () => _performAction('mayorAudience')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−🙏−50❤️🍞→', trailingEmoji: '🌍+0.05', tooltip: 'Für Politiker beten', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || g.faith < 50 || g.health < 50 || g.hunger < 50, onTap: () => _performAction('prayForPoliticians')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−🙏−50❤️🍞→', trailingEmoji: '🌍+0.05', tooltip: 'Für Politiker beten', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || g.faith < 100 || g.health < 50 || g.hunger < 50, onTap: () => _performAction('prayForPoliticians')),
         ];
 
       // ── Train Station ─────────────────────────────────────────────────

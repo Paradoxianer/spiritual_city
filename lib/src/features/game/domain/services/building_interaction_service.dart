@@ -256,8 +256,8 @@ class BuildingInteractionService {
 
       // ── Jüngerschaftsgruppe: >20 Interaktionen + 1 Bekehrter, -50 Faith
       case 'discipleshipGroup':
-        final hasConverted = building.residents.any((n) => n.isChristian);
-        if (building.interactionCount <= 20 || !hasConverted) {
+        final hasChristianResident = building.residents.any((n) => n.isChristian);
+        if (building.interactionCount <= 20 || !hasChristianResident) {
           return const BuildingInteractionResult(
             reactionEmoji: '🚫📖',
             success: false,

@@ -1010,6 +1010,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (actionType == 'bless' || actionType == 'blessPolice' ||
         actionType == 'blessHousehold') {
       _nudgeCellUnderPlayer(0.02);
+      missionService.onVisitPrayed();
     }
     // Pastor house prayer: massively brightens spiritual world in the area.
     if (actionType == 'pray' &&
