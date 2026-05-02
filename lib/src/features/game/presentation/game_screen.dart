@@ -190,6 +190,14 @@ class _GameScreenState extends State<GameScreen> {
               return _LootToast(game: _game);
             },
           ),
+          // Mission complete toast – briefly shown when a mission is completed.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _MissionCompleteToast(game: _game);
+            },
+          ),
           // Saving overlay – centered indicator shown while persisting to Hive.
           if (_isSaving)
             Container(
@@ -607,6 +615,49 @@ class _DialogOverlayState extends State<DialogOverlay> {
     );
   }
 
+  /// Thin mission-progress banner shown between the NPC header and the chat.
+  Widget _buildNpcMissionBanner(NPCModel model) {
+    final mission = model.activeMission;
+    if (mission == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
+      child: Row(
+        children: [
+          const Text('📋', style: TextStyle(fontSize: 13)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              mission.description,
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 6),
+          if (mission.targetCount > 1)
+            _MissionProgressBar(
+              progress: mission.progress,
+              targetCount: mission.targetCount,
+            )
+          else
+            Text(
+              '${mission.progress}/${mission.targetCount}',
+              style: const TextStyle(color: Colors.amber, fontSize: 11),
+            ),
+          const SizedBox(width: 6),
+          Text(
+            '+${mission.insightReward.toStringAsFixed(1)} ✨',
+            style: const TextStyle(
+              color: Color(0xFFFFD54F),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dialog = widget.game.activeDialog;
@@ -645,6 +696,9 @@ class _DialogOverlayState extends State<DialogOverlay> {
               onClose: _isReadingBible ? null : () => widget.game.closeDialog(),
               closeIconColor: Colors.white,
             ),
+
+            // ── Active mission banner ─────────────────────────────────────────
+            if (model.activeMission != null) _buildNpcMissionBanner(model),
 
             // ── Chat body + faith bar ─────────────────────────────────────────
             Expanded(
@@ -1062,6 +1116,100 @@ class _LootToastState extends State<_LootToast>
   }
 }
 
+/// Brief centre toast shown when the player completes a mission.  Uses the
+/// same fade-in/out animation pattern as [_LootToast].
+class _MissionCompleteToast extends StatefulWidget {
+  final SpiritWorldGame game;
+  const _MissionCompleteToast({required this.game});
+
+  @override
+  State<_MissionCompleteToast> createState() => _MissionCompleteToastState();
+}
+
+class _MissionCompleteToastState extends State<_MissionCompleteToast>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  Timer? _dismissTimer;
+  String? _message;
+
+  static const Duration _fadeDuration = Duration(milliseconds: 300);
+  static const Duration _visibleDuration = Duration(seconds: 3);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: _fadeDuration);
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    widget.game.missionCompleteMessage.addListener(_onMessage);
+  }
+
+  void _onMessage() {
+    final msg = widget.game.missionCompleteMessage.value;
+    if (msg == null || !mounted) return;
+    _dismissTimer?.cancel();
+    setState(() => _message = msg);
+    _ctrl.forward(from: 0.0);
+    _dismissTimer = Timer(_visibleDuration, _dismiss);
+  }
+
+  void _dismiss() {
+    _dismissTimer?.cancel();
+    _ctrl.reverse().then((_) {
+      if (mounted) {
+        widget.game.missionCompleteMessage.value = null;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    widget.game.missionCompleteMessage.removeListener(_onMessage);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_message == null) return const SizedBox.shrink();
+    return Positioned(
+      top: MediaQuery.of(context).size.height * 0.35,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: FadeTransition(
+          opacity: _opacity,
+          child: GestureDetector(
+            onTap: _dismiss,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xCC0D2C0D),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                    color: const Color(0xFFFFD54F), width: 1.5),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black54, blurRadius: 10),
+                ],
+              ),
+              child: Text(
+                _message!,
+                style: const TextStyle(
+                  color: Color(0xFFFFD54F),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Look Overlay ──────────────────────────────────────────────────────────────
 
 /// Rich look overlay – shows spiritual state, building/NPC info, and street
@@ -1229,6 +1377,9 @@ class MissionEntry {
   final String description;
   final int faithReward;
   final int materialsReward;
+  final double insightReward;
+  final int progress;
+  final int targetCount;
   /// Formatted address, e.g. "Lindenallee 14" or "Nr. 22". May be null.
   final String? address;
 
@@ -1238,6 +1389,9 @@ class MissionEntry {
     required this.description,
     required this.faithReward,
     required this.materialsReward,
+    this.insightReward = 0,
+    this.progress = 0,
+    this.targetCount = 1,
     this.address,
   });
 }
@@ -1331,6 +1485,7 @@ class MissionBoardOverlay extends StatelessWidget {
                           const Divider(color: Colors.white12),
                       itemBuilder: (context, i) {
                         final m = data.entries[i];
+                        final hasProgress = m.targetCount > 1;
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Row(
@@ -1354,6 +1509,13 @@ class MissionBoardOverlay extends StatelessWidget {
                                         letterSpacing: 1.2,
                                       ),
                                     ),
+                                    if (hasProgress) ...[
+                                      const SizedBox(height: 4),
+                                      _MissionProgressBar(
+                                        progress: m.progress,
+                                        targetCount: m.targetCount,
+                                      ),
+                                    ],
                                     if (m.address != null) ...[
                                       const SizedBox(height: 3),
                                       Text(
@@ -1373,21 +1535,32 @@ class MissionBoardOverlay extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    '+${m.faithReward}🙏',
-                                    style: const TextStyle(
-                                      color: Colors.amber,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                  if (m.insightReward > 0)
+                                    Text(
+                                      '+${m.insightReward.toStringAsFixed(1)} ✨',
+                                      style: const TextStyle(
+                                        color: Color(0xFFFFD54F),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    '+${m.materialsReward}📦',
-                                    style: const TextStyle(
-                                      color: Colors.lightBlue,
-                                      fontSize: 12,
+                                  if (m.faithReward > 0)
+                                    Text(
+                                      '+${m.faithReward}🙏',
+                                      style: const TextStyle(
+                                        color: Colors.amber,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
+                                  if (m.materialsReward > 0)
+                                    Text(
+                                      '+${m.materialsReward}📦',
+                                      style: const TextStyle(
+                                        color: Colors.lightBlue,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ],
@@ -1399,6 +1572,54 @@ class MissionBoardOverlay extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Mission progress bar ───────────────────────────────────────────────────────
+
+/// Compact progress bar for multi-step missions shown in the mission board and
+/// building/NPC dialog headers.
+class _MissionProgressBar extends StatelessWidget {
+  final int progress;
+  final int targetCount;
+
+  const _MissionProgressBar({
+    required this.progress,
+    required this.targetCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = targetCount > 0
+        ? (progress / targetCount).clamp(0.0, 1.0)
+        : 0.0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 72,
+          height: 6,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: pct,
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFFFFD54F),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$progress/$targetCount',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 10,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2253,6 +2474,8 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildHeader(data.building),
+            if (data.building.activeMission != null && _accessGranted == true)
+              _buildMissionBanner(data.building),
             if (_accessGranted == null)
               _buildKnockScreen(data.building)
             else if (_accessGranted == false)
@@ -2263,6 +2486,52 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
               _buildInteriorScreen(data.building),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Mission banner ────────────────────────────────────────────────────────
+
+  /// Thin banner shown below the header when the building has an active
+  /// mission.  Displays the mission description and current progress.
+  Widget _buildMissionBanner(BuildingModel building) {
+    final mission = building.activeMission;
+    if (mission == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
+      child: Row(
+        children: [
+          const Text('📋', style: TextStyle(fontSize: 14)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              mission.description,
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (mission.targetCount > 1)
+            _MissionProgressBar(
+              progress: mission.progress,
+              targetCount: mission.targetCount,
+            )
+          else
+            Text(
+              '${mission.progress}/${mission.targetCount}',
+              style: const TextStyle(color: Colors.amber, fontSize: 11),
+            ),
+          const SizedBox(width: 6),
+          Text(
+            '+${mission.insightReward.toStringAsFixed(1)} ✨',
+            style: const TextStyle(
+              color: Color(0xFFFFD54F),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -13,6 +13,7 @@ import '../domain/models/building_model.dart';
 import '../domain/models/city_chunk.dart';
 import '../domain/models/city_grid.dart';
 import '../domain/models/interactions.dart';
+import '../domain/models/mission_model.dart';
 import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
@@ -79,7 +80,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final LootSystem lootSystem;
 
   /// Mission system – wired to all interaction hooks.
-  final MissionService missionService = MissionService();
+  late final MissionService missionService;
+
+  /// Brief mission-completion toast message (reuses the loot-toast widget).
+  /// Set to null after the toast has been dismissed.
+  final ValueNotifier<String?> missionCompleteMessage = ValueNotifier(null);
 
   /// Influence system – manages AoE spiritual-state effects with duration/decay.
   final InfluenceService influenceService = InfluenceService();
@@ -199,6 +204,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       // Progress & modifiers
       progress = PlayerProgress();
       modifiers = ModifierManager(progress: progress);
+
+      // Mission system – initialised here so the onMissionCompleted callback
+      // can reference `progress`, `gainFaith` etc. which aren't available yet
+      // at field initialisation time.
+      missionService = MissionService(
+        onMissionCompleted: _onMissionCompleted,
+      );
 
       // Initialize dynamics system early so modifiers can be applied during state restoration.
       spiritualDynamics = SpiritualDynamicsSystem();
@@ -444,6 +456,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (posX != null && posY != null) {
       npc.savedPosition = Vector2(posX, posY);
     }
+    // Restore active mission if one was saved.
+    if (saved['mission'] is Map) {
+      npc.activeMission = MissionModel.fromJson(
+        (saved['mission'] as Map).cast<String, dynamic>(),
+      );
+    }
   }
 
   /// Called by [ChunkManager] for every [BuildingModel] after generation.
@@ -457,6 +475,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (saved == null) return;
     building.faith            = (saved['faith'] as num?)?.toDouble() ?? building.faith;
     building.interactionCount = (saved['conv']  as num?)?.toInt()    ?? building.interactionCount;
+    // Restore active mission if one was saved.
+    if (saved['mission'] is Map) {
+      building.activeMission = MissionModel.fromJson(
+        (saved['mission'] as Map).cast<String, dynamic>(),
+      );
+    }
   }
 
   // ── State capture (called when the player saves and quits) ────────────────
@@ -495,6 +519,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           if (npc.isConverted)           'converted': true,
           'posX': npcComp.position.x,
           'posY': npcComp.position.y,
+          if (npc.activeMission != null) 'mission': npc.activeMission!.toJson(),
         };
       }
     }
@@ -503,10 +528,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final Map<String, Map<String, dynamic>> buildingStates = {};
     for (final comp in chunkManager.allActiveBuildings) {
       final building = comp.buildingModel;
-      if (building.faith != 0.0 || building.interactionCount != 0) {
+      if (building.faith != 0.0 || building.interactionCount != 0 ||
+          building.activeMission != null) {
         buildingStates[building.buildingId] = {
           if (building.faith != 0.0)            'faith': building.faith,
           if (building.interactionCount != 0)   'conv':  building.interactionCount,
+          if (building.activeMission != null)   'mission': building.activeMission!.toJson(),
         };
       }
     }
@@ -725,6 +752,30 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   // ── Mission helpers ───────────────────────────────────────────────────────
 
+  /// Called by [MissionService] when a mission is completed via
+  /// [advanceEntityMission].  Awards faith, materials and Insight and shows
+  /// a brief toast message.
+  void _onMissionCompleted(MissionModel mission) {
+    if (mission.rewardFaith > 0) gainFaith(mission.rewardFaith);
+    if (mission.rewardMaterials > 0) gainMaterials(mission.rewardMaterials);
+    if (mission.insightReward > 0) progress.addInsight(mission.insightReward);
+
+    final insightStr = mission.insightReward > 0
+        ? ' +${mission.insightReward.toStringAsFixed(1)} ✨'
+        : '';
+    missionCompleteMessage.value =
+        '📋 Mission!$insightStr';
+    Future.delayed(const Duration(seconds: 3), () {
+      missionCompleteMessage.value = null;
+    });
+
+    _log.info(
+      'Mission completed: "${mission.description}" '
+      '→ +${mission.rewardFaith}🙏 +${mission.rewardMaterials}📦 '
+      '+${mission.insightReward}✨',
+    );
+  }
+
   void _completeMissionForNpc(NPCModel npc) {
     final (faith, mats) = missionService.completeNpcMission(
       npc,
@@ -850,25 +901,33 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final entries = <MissionEntry>[];
     for (final npcComp in chunkManager.allActiveNPCs) {
       final npc = npcComp.model;
-      if (npc.activeMissionDescription == null) continue;
+      if (npc.activeMission == null) continue;
+      final m = npc.activeMission!;
       entries.add(MissionEntry(
         targetEmoji: npcComp.interactionEmoji,
         targetName: npc.name,
-        description: npc.activeMissionDescription!,
-        faithReward: MissionService.faithReward,
-        materialsReward: MissionService.materialsReward,
+        description: m.description,
+        faithReward: m.rewardFaith.round(),
+        materialsReward: m.rewardMaterials.round(),
+        insightReward: m.insightReward,
+        progress: m.progress,
+        targetCount: m.targetCount,
         address: _addressForPixelPos(npcComp.position),
       ));
     }
     for (final bldComp in chunkManager.allActiveBuildings) {
       final bld = bldComp.buildingModel;
-      if (bld.activeMissionDescription == null) continue;
+      if (bld.activeMission == null) continue;
+      final m = bld.activeMission!;
       entries.add(MissionEntry(
         targetEmoji: BuildingComponent.buildingEmoji(bld.type),
         targetName: BuildingComponent.buildingName(bld.type),
-        description: bld.activeMissionDescription!,
-        faithReward: MissionService.faithReward,
-        materialsReward: MissionService.materialsReward,
+        description: m.description,
+        faithReward: m.rewardFaith.round(),
+        materialsReward: m.rewardMaterials.round(),
+        insightReward: m.insightReward,
+        progress: m.progress,
+        targetCount: m.targetCount,
         address: _addressForPixelPos(bldComp.position),
       ));
     }
@@ -914,10 +973,23 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   String handleInteraction(String type) {
-    if (_nearestInteractable != null) {
-      return _nearestInteractable!.handleInteraction(type);
+    if (_nearestInteractable == null) return '❓';
+    final result = _nearestInteractable!.handleInteraction(type);
+
+    // ── ActionType mission advancement for NPC interactions (Issue #131) ──
+    final at = MissionService.npcActionToType(type);
+    if (at != null && _nearestInteractable is NPCComponent) {
+      final npc = (_nearestInteractable as NPCComponent).model;
+      missionService.advanceEntityMission(
+        at,
+        npc,
+        allNpcs: chunkManager.allActiveNPCs.map((c) => c.model).toList(),
+        allBuildings:
+            chunkManager.allActiveBuildings.map((c) => c.buildingModel).toList(),
+      );
     }
-    return '❓';
+
+    return result;
   }
 
   void closeDialog() {
@@ -1030,6 +1102,26 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // the building.  Each action carries a named delta/radius/duration combo.
     if (result.success) {
       _applyBuildingAoEInfluence(actionType, data.building);
+    }
+    // ── ActionType mission advancement (Issue #131) ───────────────────────
+    // After a successful action, advance any matching active mission on this
+    // building.  The MissionService callback handles rewards + new assignment.
+    if (result.success) {
+      final at = MissionService.buildingActionToType(
+        actionType,
+        data.building.type,
+      );
+      if (at != null) {
+        missionService.advanceEntityMission(
+          at,
+          data.building,
+          allNpcs:
+              chunkManager.allActiveNPCs.map((c) => c.model).toList(),
+          allBuildings: chunkManager.allActiveBuildings
+              .map((c) => c.buildingModel)
+              .toList(),
+        );
+      }
     }
     // Increment session interaction counter for buildings (mirrors NPC dialog
     // behaviour).  The homebase has an unlimited limit so this counter never
@@ -1426,6 +1518,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     healthNotifier.dispose();
     hungerNotifier.dispose();
     materialsNotifier.dispose();
+    missionCompleteMessage.dispose();
     super.onRemove();
   }
 
