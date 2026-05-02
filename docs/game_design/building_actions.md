@@ -21,6 +21,8 @@ Dieses Dokument definiert die Aktionen, Kosten und Auswirkungen für die verschi
 | **Large (Hospital, Mall, Stadium)** | 5 | 2.5x | Regionaler Knotenpunkt. |
 | **Spiritual (Church, Cathedral)** | 8-15 | 5.0x | Geistliche Festung. |
 
+> **Hinweis:** AoE-Radius und Power beziehen sich auf Gebäude- und NPC-Einfluss in der unsichtbaren Welt, **nicht** auf den Pastor-Kampf-Radius (der wird über das Upgrade-System in #4 gesteuert).
+
 ---
 
 ## 1. Wohngebäude (Residential) 🏘️
@@ -30,8 +32,8 @@ Dieses Dokument definiert die Aktionen, Kosten und Auswirkungen für die verschi
 | :--- | :--- | :--- | :--- |
 | **Praktische Hilfe** 🛠️🤝📦 | Keine | 10 Materials | **+5 Interaktionen**. Kleiner grüner Impuls in unsichtbarer Welt. |
 | **Gebet** 🙏🕊️🙌 | Keine | 10 Faith | Geringe Erfolgswahrscheinlichkeit. Bei Erfolg: +2 Interaktionen, Haus-Zelle wird grüner. |
-| **Hausbesuch** ☕🍰🏠 | Interaktionen > 5 | Zeit (Dauer) | **Hunger/Health Refill**. Chance auf Materials-Spenden ($x \cdot \text{Interaktionen}$). |
-| **Jüngerschaftsgruppe** 📖👥🔥🧑‍🤝‍🧑 | Interaktionen > 20 + 1 Bekehrter | 50 Faith | **Permanentes Grünfärben** (12:00 Uhr Effekt). Haus wird zum "Lichtpunkt". |
+| **Hausbesuch** ☕🍰🏠 | Interaktionen > 5 | Zeit (Dauer) | **Hunger/Health Refill**. Chance auf Materials-Spenden (`x · Interaktionen`). Bei Spende: **+5 Faith & +4 Interaktionen** (zusätzlich zum Material). |
+| **Jüngerschaftsgruppe** 📖👥🔥🧑‍🤝‍🧑 | Interaktionen > 20 + 1 Bekehrter | 50 Faith | **Permanentes Grünfärben** (12:00 Uhr Effekt). Haus wird zum "Lichtpunkt". **+0.5 Geistliche Erkenntnis.** |
 
 ### 1.2 Haustyp-Spezifisch
 - **House (Einfamilienhaus):** Höhere Spenden-Wahrscheinlichkeit beim Hausbesuch. Fokus: Seelsorge.
@@ -48,7 +50,7 @@ Diese Aktionen gelten für Shop, Supermarkt und Mall. Die Mall skaliert die Ertr
 | **Gespräch mit Chef** 💼🤝🗣️👂 | Keine | Zeit | **+3 Interaktionen**. Faith des Gebäudes steigt minimal. |
 | **Einkaufen** 🛒🍎📦🥯 | Keine | 5 Materials | **+1 Interaktion**. Pastor erhält +20 Hunger/Health (Versorgung). |
 | **Segnen** 🕊️🙌🙏🍞 | Keine | 15 Faith | **+2 Interaktionen**. Bereich in der unsichtbaren Welt wird grüner. |
-| **Um Spenden bitten** 🤲📦❤️🩹 | Interaktionen > 2 | **10 Health/Hunger** (Überwindung) | Erfolg basiert auf: `BuildingFaith + Interaktionen`. **Viel Materials bei Erfolg.** |
+| **Um Spenden bitten** 🤲📦❤️🩹 | Interaktionen > 2 | **10 Health/Hunger** (Überwindung) | Erfolg basiert auf: `BuildingFaith + Interaktionen`. **Viel Materials bei Erfolg. +5 Faith & +4 Interaktionen bei Erfolg.** |
 
 ---
 
@@ -67,7 +69,7 @@ Diese Aktionen gelten für Shop, Supermarkt und Mall. Die Mall skaliert die Ertr
 | **Brief an Schulleitung** ✉️🏫✍️📖 | Keine | 5 Materials | **+2 Interaktionen** (Fernwirkung). |
 | **Gespräch mit Direktor** 🏫🤝🗣️👂 | Interaktionen > 5 | Zeit | **+5 Interaktionen**. Schaltet "Vortrag" frei. |
 | **Werte-Vortrag halten** 🎤📖🎓🏫 | Interaktionen > 15 | Zeit | Viele Interaktionen bei NPCs. Faith steigt minimal. |
-| **Gebetskreis gründen** ⭕🙏🔥👥 | Interaktionen > 30 | 60 Faith | Boostet Faith aller NPCs im Viertel täglich um 12:00 Uhr. |
+| **Gebetskreis gründen** ⭕🙏🔥👥 | Interaktionen > 30 | 60 Faith | Boostet Faith aller NPCs im Viertel täglich um 12:00 Uhr. **+0.5 Geistliche Erkenntnis.** |
 
 ### 3.3 Polizei (Police) 👮‍♂️
 - **Aktion "Polizei segnen"** 👮‍♂️🛡️🙏🕊️: Verlangsamt das Auftauchen von Dämonen in diesem Distrikt für einen Tag.
@@ -83,10 +85,10 @@ Diese Aktionen gelten für Shop, Supermarkt und Mall. Die Mall skaliert die Ertr
 | **Für Politiker beten** 🏛️🙏🙌🕊️ | Interaktionen > 20 | **Max Faith & 50 Health/Hunger** | **Stadtweites Gebet:** Gesamte Stadt wird um **0.05 Punkte heller**. (1x pro Woche). |
 
 ### 4.2 Train Station (Bahnhof) 🚂
-- **Aktion "Reise"** 🚂🛤️🗺️🚆: Öffnet Dialog zur Auswahl eines anderen bekannten Bahnhofs. Kostet Materials nach Entfernung.
+- **Aktion "Reise"** 🚂🛤️🗺️🚆: Öffnet einen Dialog mit allen **bereits besuchten Bahnhöfen in der Stadt**. Der Pastor wird direkt zur gewählten Station teleportiert. Kosten: **10 Materials** (Pauschale, unabhängig von der Entfernung). Nur bekannte (bereits besuchte) Stationen sind auswählbar.
 
 ### 4.3 Post Office (Post) ✉️
-- **Aktion "Segensbriefe"** ✉️🕊️🌍📬 | Keine | 5 Materials | **10 zufällige NPCs weltweit** erhalten **mind. +10 Faith** (Wert steigt, wenn Absender-Zelle grün ist).
+- **Aktion "Ermutigung schicken"** ✉️🕊️💌📬 | Keine | 5 Materials | Das Spiel wählt **10 zufällige NPCs aus der gesamten Stadt** (aus der globalen NPC-Liste, auch wenn deren Chunk gerade nicht geladen ist). Diese NPCs erhalten **+10 Faith & +2 Interaktionen**, die beim nächsten Betreten ihres Chunks angewendet werden. Effekt steigt, wenn die Absender-Zelle grün ist.
 
 ---
 
@@ -95,14 +97,14 @@ Diese Aktionen gelten für Shop, Supermarkt und Mall. Die Mall skaliert die Ertr
 ### 5.1 Church / Cathedral ⛪
 | Aktion | Voraussetzung | Kosten | Auswirkung (Outcome) |
 | :--- | :--- | :--- | :--- |
-| **Gottesdienst** ⛪🎹🔥🙌🕊️ | Sonntag | **Fast alle Versorgung (80% Materials) & viel Kraft (60% Health)** | Massiver AOE-Impact auf unsichtbare Welt & NPCs. (Basiert auf aktuellem Zustand & Vor-Glauben). |
+| **Gottesdienst** ⛪🎹🔥🙌🕊️ | Sonntag | **Fast alle Versorgung (80% Materials) & viel Kraft (60% Health)** | Massiver AOE-Impact auf unsichtbare Welt & NPCs. (Basiert auf aktuellem Zustand der Gemeinde.) |
 | **Anbetung / Gebet** 🧘‍♂️🙏🕊️🙌 | Keine | Zeit | **Regeneriert Faith** beim Pastor (+1/Sek). |
 
 ### 5.2 Cemetery (Friedhof) ⚰️
 | Aktion | Voraussetzung | Kosten | Auswirkung (Outcome) |
 | :--- | :--- | :--- | :--- |
-| **Beerdigung** ⚰️🙏🕊️🤝 | Keine | Zeit | **Massive Interaktionsgewinne** bei allen NPCs in der Umgebung. |
-| **Trost** 🤝❤️🕊️🩹 | Keine | **Viel Health & Materials** | Ein NPC in der Nähe **bekehrt sich sofort** zum Glauben. |
+| **Beerdigung** ⚰️🙏🕊️🤝 | Keine | Zeit | **Massive Interaktionsgewinne** bei allen NPCs in der Umgebung. Schaltet "Trost" für diese Session frei. |
+| **Trost** 🤝❤️🕊️🩹 | Nur direkt nach "Beerdigung" (wird danach wieder ausgeblendet) | **75% Health & 75% Hunger** | Ein NPC in der Nähe **bekehrt sich sofort**. Aktion verschwindet nach einmaliger Nutzung bis zur nächsten Beerdigung. |
 
 ---
 
@@ -112,4 +114,4 @@ Diese Aktionen gelten für Shop, Supermarkt und Mall. Die Mall skaliert die Ertr
 - **Aktion "Bibelstudium"** 📖📚🧐🙏: Zeitaufwand. Erhöht temporär die Faith-Generierung beim Bibellesen.
 
 ### 6.2 Stadium (Stadion) 🏟️
-- **Aktion "Großveranstaltung"** 🏟️🙌🔥🎶🕊️: Benötigt Interaktionen > 50, 100 Faith & 100 Materials. Macht Bezirk der unsichtbaren Welt grün.
+- **Aktion "Großveranstaltung"** 🏟️🙌🔥🎶🕊️: Benötigt Interaktionen > 50, 100 Faith & 100 Materials. Macht Bezirk der unsichtbaren Welt grün. **+0.5 Geistliche Erkenntnis.**
