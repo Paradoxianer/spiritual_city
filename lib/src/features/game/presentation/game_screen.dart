@@ -14,6 +14,7 @@ import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
+import '../domain/models/prayer_combat.dart';
 import '../domain/services/building_interaction_service.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../presentation/components/building_component.dart';
@@ -1698,12 +1699,51 @@ class _ResourceHud extends StatelessWidget {
                     label: AppStrings.get('resource.supplies'),
                     color: Colors.blueGrey,
                   ),
+                  const SizedBox(height: 4),
+                  const Divider(height: 1, color: Colors.white12),
+                  const SizedBox(height: 2),
+                  _InsightDisplay(progress: gameRef.progress),
                 ],
               );
             },
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Compact Insight display shown below the resource bars in the HUD.
+/// Shows accumulated whole-point insight + fractional pending as 📖 N format.
+class _InsightDisplay extends StatelessWidget {
+  final PlayerProgress progress;
+  const _InsightDisplay({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _insightLabel(progress);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('📖', style: TextStyle(fontSize: 12)),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.amber,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          'Erkenntnis',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.55),
+            fontSize: 10,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1948,12 +1988,15 @@ class BuildingInteriorOverlay extends StatefulWidget {
       _BuildingInteriorOverlayState();
 }
 
-class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
+class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
+    with SingleTickerProviderStateMixin {
   /// Maximum height of the interior art widget.
   /// A 12 × 12 grid at _cellSize = 20 is 240 px; adding container padding
   /// yields ≈ 252 px — comfortably within this cap.
   static const double _maxInteriorArtHeight = 260.0;
 
+  /// Tab controller for the pastor house (Aktionen / Upgrades).
+  TabController? _tabController;
   /// `null`  = access check not yet done (residential) or always-open
   /// `true`  = access granted
   /// `false` = access denied
@@ -2034,6 +2077,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     final data = widget.game.activeBuildingData;
     if (data == null) return;
 
+    if (data.building.isHomebase) {
+      _tabController = TabController(length: 2, vsync: this);
+    }
+
     if (data.building.isAlwaysOpen) {
       _accessGranted = true;
       _actionTypes = _actionsFor(data.building.type);
@@ -2045,6 +2092,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
   void dispose() {
     widget.game.buildingActionIndex.removeListener(_onBuildingKey);
     _actionTimer?.cancel();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -2209,6 +2257,8 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
               _buildKnockScreen(data.building)
             else if (_accessGranted == false)
               _buildDeniedScreen()
+            else if (isHome && _tabController != null)
+              _buildHomeTabs(data.building)
             else
               _buildInteriorScreen(data.building),
           ],
@@ -2388,6 +2438,40 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 
   // ── Interior screen ───────────────────────────────────────────────────────
 
+  /// Tab-based interior for the pastor house: Aktionen | Upgrades.
+  Widget _buildHomeTabs(BuildingModel building) {
+    final tc = _tabController!;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TabBar(
+          controller: tc,
+          labelColor: const Color(0xFFFFD54F),
+          unselectedLabelColor: Colors.white54,
+          indicatorColor: const Color(0xFFFFD54F),
+          dividerColor: Colors.white12,
+          tabs: const [
+            Tab(text: 'Aktionen'),
+            Tab(text: '⚔️ Upgrades'),
+          ],
+        ),
+        SizedBox(
+          // Give the tab view a bounded height so the Column stays min-size.
+          height: 320,
+          child: TabBarView(
+            controller: tc,
+            children: [
+              SingleChildScrollView(child: _buildInteriorScreen(building)),
+              SingleChildScrollView(
+                child: _UpgradePanel(game: widget.game),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildInteriorScreen(BuildingModel building) {
     return IntrinsicHeight(
       child: Row(
@@ -2549,7 +2633,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '📖+0.5', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
         ];
 
       // ── Residential (Apartment) ───────────────────────────────────────
@@ -2558,7 +2642,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '📖+0.5', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
           _ActionMenuRow(leadingEmoji: '🏢', arrowText: '−10🙏→', trailingEmoji: '+1✝️/Bew.', tooltip: 'Hausgemeinschaft segnen', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('blessHousehold')),
         ];
 
@@ -2585,7 +2669,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           _ActionMenuRow(leadingEmoji: '✉️', arrowText: '−5💰→', trailingEmoji: '+2✝️', tooltip: 'Brief an Schulleitung', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('letterToManagement')),
           _ActionMenuRow(leadingEmoji: '🏫', arrowText: '⏱→', trailingEmoji: '+5✝️🎤', tooltip: 'Gespräch mit Direktor', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('talkDirector')),
           _ActionMenuRow(leadingEmoji: '🎤', arrowText: '⏱→', trailingEmoji: '+NPCs', tooltip: 'Werte-Vortrag', keyIndex: nk(), isDisabled: building.interactionCount <= 15 || !building.isLecturePrepared, onTap: () => _performAction('valueLecture')),
-          _ActionMenuRow(leadingEmoji: '⭕', arrowText: '−60🙏→', trailingEmoji: '🌟+0.5✨', tooltip: 'Gebetskreis gründen', keyIndex: nk(), isDisabled: building.interactionCount <= 30 || g.faith < 60, onTap: () => _performAction('prayerCircle')),
+          _ActionMenuRow(leadingEmoji: '⭕', arrowText: '−60🙏→', trailingEmoji: '📖+0.5', tooltip: 'Gebetskreis gründen', keyIndex: nk(), isDisabled: building.interactionCount <= 30 || g.faith < 60, onTap: () => _performAction('prayerCircle')),
         ];
 
       // ── Cemetery ──────────────────────────────────────────────────────
@@ -2619,7 +2703,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
       // ── Stadium ───────────────────────────────────────────────────────
       case BuildingType.stadium:
         rows = [
-          _ActionMenuRow(leadingEmoji: '🏟️', arrowText: '−100🙏💰→', trailingEmoji: '🌟+0.5✨', tooltip: 'Großveranstaltung', keyIndex: nk(), isDisabled: building.interactionCount <= 50 || g.faith < 100 || g.materials < 100, onTap: () => _performAction('majorEvent')),
+          _ActionMenuRow(leadingEmoji: '🏟️', arrowText: '−100🙏💰→', trailingEmoji: '📖+0.5', tooltip: 'Großveranstaltung', keyIndex: nk(), isDisabled: building.interactionCount <= 50 || g.faith < 100 || g.materials < 100, onTap: () => _performAction('majorEvent')),
         ];
 
       // ── Commercial ────────────────────────────────────────────────────
@@ -3353,6 +3437,440 @@ class _FaithBarWidget extends StatelessWidget {
             )
           else
             const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Upgrade-Zentrale (Issue #4) ───────────────────────────────────────────────
+
+/// Formats an insight total (whole + pending) as a compact string.
+/// Returns the integer string if the value is whole (e.g. "3"),
+/// otherwise one decimal place (e.g. "3.5").
+String _insightLabel(PlayerProgress progress) {
+  final total = progress.insight + progress.pendingInsight;
+  return total == total.truncateToDouble()
+      ? total.toInt().toString()
+      : total.toStringAsFixed(1);
+}
+
+/// Formats a modifier multiplier as a +N% percent string.
+/// E.g. multiplier 1.3 → '+30%'.
+String _pct(double multiplier) =>
+    '+${(multiplier * 100 - 100).toStringAsFixed(0)}%';
+
+/// Full upgrade panel shown inside the pastor-house "Upgrades" tab.
+/// Displays current Insight balance, two defense upgrades, and four prayer
+/// mode sections with four upgrades each.
+class _UpgradePanel extends StatefulWidget {
+  final SpiritWorldGame game;
+  const _UpgradePanel({required this.game});
+
+  @override
+  State<_UpgradePanel> createState() => _UpgradePanelState();
+}
+
+class _UpgradePanelState extends State<_UpgradePanel> {
+  PlayerProgress get _progress => widget.game.progress;
+  CombatProfile  get _profile  => _progress.combatProfile;
+
+  void _buyUpgrade(VoidCallback apply, int cost) {
+    setState(() {
+      if (_progress.spendInsight(cost)) apply();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _progress,
+      builder: (context, _) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Insight balance ─────────────────────────────────────────
+              _buildInsightHeader(),
+              const SizedBox(height: 12),
+              // ── Defense section ─────────────────────────────────────────
+              _sectionTitle('🛡️ Verteidigung'),
+              const SizedBox(height: 6),
+              _buildDefenseRow(
+                icon: '🛡️',
+                label: 'Schild',
+                description: 'Schadensreduktion (Faith-Drain)',
+                level: _profile.shieldLevel,
+                effectText: '−${(_profile.shieldDamageReduction * 100).toStringAsFixed(0)}% Faith-Schaden',
+                onBuy: () => _profile.shieldLevel++,
+              ),
+              const SizedBox(height: 6),
+              _buildDefenseRow(
+                icon: '⛑️',
+                label: 'Helm',
+                description: 'Hunger-Resistenz',
+                level: _profile.helmLevel,
+                effectText: '−${(_profile.helmHungerReduction * 100).toStringAsFixed(0)}% Hunger-Schaden',
+                onBuy: () => _profile.helmLevel++,
+              ),
+              const SizedBox(height: 14),
+              // ── Attack section ──────────────────────────────────────────
+              _sectionTitle('⚔️ Angriff'),
+              ...PrayerMode.values.map((mode) => _buildModeSection(mode)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInsightHeader() {
+    final label = _insightLabel(_progress);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('📖', style: TextStyle(fontSize: 18)),
+          const SizedBox(width: 6),
+          Text(
+            '$label Erkenntnis verfügbar',
+            style: const TextStyle(
+              color: Colors.amber,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: 13,
+      ),
+    );
+  }
+
+  Widget _buildDefenseRow({
+    required String icon,
+    required String label,
+    required String description,
+    required int level,
+    required String effectText,
+    required VoidCallback onBuy,
+  }) {
+    final cost = upgradeInsightCost(level);
+    final canAfford = _progress.insight >= cost;
+    return _UpgradeRow(
+      icon: icon,
+      label: label,
+      level: level,
+      description: description,
+      effectText: effectText,
+      cost: cost,
+      canAfford: canAfford,
+      onBuy: () => _buyUpgrade(onBuy, cost),
+    );
+  }
+
+  Widget _buildModeSection(PrayerMode mode) {
+    final stats = _profile.getFor(mode);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Mode header
+          Row(
+            children: [
+              Text(mode.icon, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 5),
+              Text(
+                _modeName(mode),
+                style: TextStyle(
+                  color: mode.color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // 4 tiles side by side
+          Row(
+            children: [
+              Expanded(child: _AttackTile(
+                icon: '🎯',
+                label: 'Radius',
+                level: stats.radiusLevel,
+                effectText: _pct(stats.radius),
+                cost: upgradeInsightCost(stats.radiusLevel),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.radiusLevel),
+                onBuy: () => _buyUpgrade(() => stats.radiusLevel++, upgradeInsightCost(stats.radiusLevel)),
+              )),
+              const SizedBox(width: 4),
+              Expanded(child: _AttackTile(
+                icon: '⚡',
+                label: 'Stärke',
+                level: stats.strengthLevel,
+                effectText: _pct(stats.strength),
+                cost: upgradeInsightCost(stats.strengthLevel),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.strengthLevel),
+                onBuy: () => _buyUpgrade(() => stats.strengthLevel++, upgradeInsightCost(stats.strengthLevel)),
+              )),
+              const SizedBox(width: 4),
+              Expanded(child: _AttackTile(
+                icon: '⏱️',
+                label: 'Dauer',
+                level: stats.durationLevel,
+                effectText: _pct(stats.duration),
+                cost: upgradeInsightCost(stats.durationLevel),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.durationLevel),
+                onBuy: () => _buyUpgrade(() => stats.durationLevel++, upgradeInsightCost(stats.durationLevel)),
+              )),
+              const SizedBox(width: 4),
+              Expanded(child: _AttackTile(
+                icon: '💨',
+                label: 'Geschw.',
+                level: stats.speedLevel,
+                effectText: _pct(stats.speed),
+                cost: upgradeInsightCost(stats.speedLevel),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.speedLevel),
+                onBuy: () => _buyUpgrade(() => stats.speedLevel++, upgradeInsightCost(stats.speedLevel)),
+              )),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _modeName(PrayerMode mode) {
+    switch (mode) {
+      case PrayerMode.liberation: return 'Befreiung';
+      case PrayerMode.rebuke:     return 'Zurechtweisung';
+      case PrayerMode.slow:       return 'Verlangsamung';
+      case PrayerMode.drain:      return 'Entziehung';
+    }
+  }
+}
+
+/// A single upgrade row with icon, label, level, effect text, cost, and buy button.
+class _UpgradeRow extends StatelessWidget {
+  final String icon;
+  final String label;
+  final int level;
+  final String description;
+  final String effectText;
+  final int cost;
+  final bool canAfford;
+  final VoidCallback onBuy;
+
+  const _UpgradeRow({
+    required this.icon,
+    required this.label,
+    required this.level,
+    required this.description,
+    required this.effectText,
+    required this.cost,
+    required this.canAfford,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          if (icon.isNotEmpty) ...[
+            Text(icon, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Lv $level',
+                        style: const TextStyle(color: Colors.amber, fontSize: 9),
+                      ),
+                    ),
+                  ],
+                ),
+                if (description.isNotEmpty)
+                  Text(
+                    description,
+                    style: const TextStyle(color: Colors.white54, fontSize: 10),
+                  ),
+                Text(
+                  effectText,
+                  style: const TextStyle(color: Colors.greenAccent, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _BuyButton(cost: cost, canAfford: canAfford, onBuy: onBuy),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small "Buy" button used in each upgrade row.
+class _BuyButton extends StatelessWidget {
+  final int cost;
+  final bool canAfford;
+  final VoidCallback onBuy;
+
+  const _BuyButton({required this.cost, required this.canAfford, required this.onBuy});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: canAfford ? onBuy : null,
+      child: Opacity(
+        opacity: canAfford ? 1.0 : 0.38,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: canAfford
+                ? Colors.amber.withValues(alpha: 0.25)
+                : Colors.white10,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: canAfford
+                  ? Colors.amber.withValues(alpha: 0.7)
+                  : Colors.white24,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('📖', style: TextStyle(fontSize: 11)),
+              const SizedBox(width: 2),
+              Text(
+                '$cost',
+                style: TextStyle(
+                  color: canAfford ? Colors.amber : Colors.white38,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact vertical tile for a single attack-stat upgrade.
+/// Used inside the horizontal 4-column grid in [_UpgradePanelState._buildModeSection].
+class _AttackTile extends StatelessWidget {
+  final String icon;
+  final String label;
+  final int level;
+  final String effectText;
+  final int cost;
+  final bool canAfford;
+  final VoidCallback onBuy;
+
+  const _AttackTile({
+    required this.icon,
+    required this.label,
+    required this.level,
+    required this.effectText,
+    required this.cost,
+    required this.canAfford,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Icon
+          Text(icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(height: 2),
+          // Stat name
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+          ),
+          const SizedBox(height: 2),
+          // Level badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Lv $level',
+              style: const TextStyle(color: Colors.amber, fontSize: 8),
+            ),
+          ),
+          const SizedBox(height: 2),
+          // Effect
+          Text(
+            effectText,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.greenAccent, fontSize: 9),
+          ),
+          const SizedBox(height: 4),
+          // Buy button
+          _BuyButton(cost: cost, canAfford: canAfford, onBuy: onBuy),
         ],
       ),
     );
