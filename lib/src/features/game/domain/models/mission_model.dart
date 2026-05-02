@@ -135,6 +135,59 @@ class MissionModel {
     'difficulty': difficulty.name,
   };
 
+  // ── Emoji helper ─────────────────────────────────────────────────────────
+
+  /// Returns the leading emoji of the action button the player must press to
+  /// advance this mission.  Used in banners and the mission board so the UI
+  /// stays language-agnostic.
+  String get actionEmoji => actionTypeEmoji(actionType);
+
+  /// Maps every [ActionType] to the emoji that is shown on the corresponding
+  /// action button in buildings or NPC dialogs.  Kept in sync with
+  /// `_buildBuildingChipsColumn` / NPC chips in game_screen.dart.
+  static String actionTypeEmoji(ActionType at) {
+    switch (at) {
+      // Residential
+      case ActionType.residentialPracticalHelp:    return '🛠️';
+      case ActionType.residentialPrayer:           return '🙏';
+      case ActionType.residentialHouseVisit:       return '☕';
+      case ActionType.residentialDiscipleshipGroup:return '📖';
+      case ActionType.residentialApartmentBless:   return '🏢';
+      // Commercial
+      case ActionType.commercialTalkToBoss:        return '💼';
+      case ActionType.commercialShopping:          return '🛒';
+      case ActionType.commercialBless:             return '🕊️';
+      case ActionType.commercialAskForDonation:    return '🤲';
+      // Hospital
+      case ActionType.hospitalMedicalHelp:         return '🏥';
+      case ActionType.hospitalPastoralCare:        return '👂';
+      case ActionType.hospitalChurchService:       return '⛪';
+      // School / University
+      case ActionType.schoolLetterToManagement:    return '✉️';
+      case ActionType.schoolTalkToDirector:        return '🏫';
+      case ActionType.schoolValuesTalk:            return '🎤';
+      case ActionType.schoolPrayerCircle:          return '⭕';
+      // Police
+      case ActionType.policeBless:                 return '👮';
+      // City Hall
+      case ActionType.cityHallAudience:            return '🏛️';
+      case ActionType.cityHallPrayForPoliticians:  return '🙏';
+      // Church / Cathedral
+      case ActionType.churchService:               return '⛪';
+      case ActionType.churchWorshipPrayer:         return '🧘';
+      // Cemetery
+      case ActionType.cemeteryFuneral:             return '⚰️';
+      case ActionType.cemeteryComfort:             return '🤝';
+      // Stadium
+      case ActionType.stadiumMajorEvent:           return '🏟️';
+      // Library
+      case ActionType.libraryBibleStudy:           return '📚';
+      // NPC
+      case ActionType.npcConversation:             return '💬';
+      case ActionType.npcGospelShare:              return '✝️';
+    }
+  }
+
   static MissionModel? fromJson(Map<String, dynamic> json) {
     try {
       final atName = json['actionType'] as String?;

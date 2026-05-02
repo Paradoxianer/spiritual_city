@@ -619,6 +619,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
   Widget _buildNpcMissionBanner(NPCModel model) {
     final mission = model.activeMission;
     if (mission == null) return const SizedBox.shrink();
+    final countLabel = mission.targetCount > 1 ? ' ×${mission.targetCount}' : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
@@ -626,14 +627,9 @@ class _DialogOverlayState extends State<DialogOverlay> {
         children: [
           const Text('📋', style: TextStyle(fontSize: 13)),
           const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              mission.description,
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 6),
+          Text('${mission.actionEmoji}$countLabel',
+              style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
           if (mission.targetCount > 1)
             _MissionProgressBar(
               progress: mission.progress,
@@ -1375,6 +1371,8 @@ class MissionEntry {
   final String targetEmoji;
   final String targetName;
   final String description;
+  /// Emoji of the action button the player must press (e.g. '🙏', '✉️').
+  final String actionEmoji;
   final int faithReward;
   final int materialsReward;
   final double insightReward;
@@ -1387,6 +1385,7 @@ class MissionEntry {
     required this.targetEmoji,
     required this.targetName,
     required this.description,
+    required this.actionEmoji,
     required this.faithReward,
     required this.materialsReward,
     this.insightReward = 0,
@@ -1486,36 +1485,39 @@ class MissionBoardOverlay extends StatelessWidget {
                       itemBuilder: (context, i) {
                         final m = data.entries[i];
                         final hasProgress = m.targetCount > 1;
+                        final countLabel = m.targetCount > 1
+                            ? ' ×${m.targetCount}'
+                            : '';
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              // Target (building / NPC)
                               Text(m.targetEmoji,
                                   style: const TextStyle(fontSize: 24)),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: Text('→',
+                                    style: TextStyle(
+                                        color: Colors.white54, fontSize: 14)),
+                              ),
+                              // Action emoji + optional repeat count
+                              Text('${m.actionEmoji}$countLabel',
+                                  style: const TextStyle(fontSize: 22)),
                               const SizedBox(width: 10),
+                              // Progress & address
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      m.description,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                    if (hasProgress) ...[
-                                      const SizedBox(height: 4),
+                                    if (hasProgress)
                                       _MissionProgressBar(
                                         progress: m.progress,
                                         targetCount: m.targetCount,
                                       ),
-                                    ],
                                     if (m.address != null) ...[
                                       const SizedBox(height: 3),
                                       Text(
@@ -1531,6 +1533,7 @@ class MissionBoardOverlay extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
+                              // Rewards
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 mainAxisSize: MainAxisSize.min,
@@ -2492,24 +2495,21 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
   // ── Mission banner ────────────────────────────────────────────────────────
 
   /// Thin banner shown below the header when the building has an active
-  /// mission.  Displays the mission description and current progress.
+  /// mission.  Shows the action emoji sequence so the player immediately
+  /// knows which button to press.
   Widget _buildMissionBanner(BuildingModel building) {
     final mission = building.activeMission;
     if (mission == null) return const SizedBox.shrink();
+    final countLabel = mission.targetCount > 1 ? ' ×${mission.targetCount}' : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
       child: Row(
         children: [
           const Text('📋', style: TextStyle(fontSize: 14)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              mission.description,
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          const SizedBox(width: 6),
+          Text('${mission.actionEmoji}$countLabel',
+              style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
           if (mission.targetCount > 1)
             _MissionProgressBar(
