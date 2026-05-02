@@ -147,14 +147,18 @@ class PlayerProgress extends ChangeNotifier {
       final stagesRaw = json['stages'];
       if (stagesRaw is Map) {
         final s = stagesRaw.cast<String, dynamic>();
-        if (s.containsKey('faith') && s['faith'] is Map)
+        if (s.containsKey('faith') && s['faith'] is Map) {
           faithStage.fromJson((s['faith'] as Map).cast<String, dynamic>());
-        if (s.containsKey('materials') && s['materials'] is Map)
+        }
+        if (s.containsKey('materials') && s['materials'] is Map) {
           materialsStage.fromJson((s['materials'] as Map).cast<String, dynamic>());
-        if (s.containsKey('health') && s['health'] is Map)
+        }
+        if (s.containsKey('health') && s['health'] is Map) {
           healthStage.fromJson((s['health'] as Map).cast<String, dynamic>());
-        if (s.containsKey('hunger') && s['hunger'] is Map)
+        }
+        if (s.containsKey('hunger') && s['hunger'] is Map) {
           hungerStage.fromJson((s['hunger'] as Map).cast<String, dynamic>());
+        }
       }
     }
 
