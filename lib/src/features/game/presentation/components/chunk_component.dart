@@ -94,13 +94,14 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
 
         // Fade: 1.0 at peak, 0.0 at expiry (linear fade-out).
         // Alpha uses a normalised minimum so that even small deltas (e.g.
-        // practicalHelp with delta=0.05) produce a clearly perceptible flash.
-        // Range: 0.55 (minimum, any non-zero influence) … 0.85 (maximum).
+        // practicalHelp with delta=0.05) produce a clearly perceptible flash
+        // while keeping the underlying tile (road, etc.) visible through it.
+        // Range: 0.20 (minimum, any non-zero influence) … 0.35 (maximum).
         final fade = (cell.glowTimer / kCellGlowDuration).clamp(0.0, 1.0);
         // Normalise intensity to [0..1] so we only scale the *amplitude* of
         // the base alpha range, not the visibility floor.
         final normIntensity = cell.glowStrength.abs().clamp(0.0, 1.0);
-        final alpha = fade * (0.55 + normIntensity * 0.30);
+        final alpha = fade * (0.20 + normIntensity * 0.15);
 
         final color = cell.glowStrength > 0
             ? Color.fromARGB((alpha * 255).round(), 0, 230, 80)   // green
