@@ -86,8 +86,9 @@ class CombatProfile {
   factory CombatProfile.fromJson(Map<String, dynamic> json) {
     final profile = CombatProfile();
     for (var mode in PrayerMode.values) {
-      if (json.containsKey(mode.id)) {
-        profile.modes[mode] = CombatModifierSet.fromJson(json[mode.id]);
+      if (json.containsKey(mode.id) && json[mode.id] is Map) {
+        profile.modes[mode] = CombatModifierSet.fromJson(
+            (json[mode.id] as Map).cast<String, dynamic>());
       }
     }
     return profile;
