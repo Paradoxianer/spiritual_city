@@ -28,6 +28,14 @@ class BuildingModel extends BaseInteractableEntity {
   /// Only one building in the city should have this set to `true`.
   final bool isHomebase;
 
+  /// Cemetery: set to `true` after a funeral is held, enabling the one-time
+  /// "Trost" (comfort) action.  Reset to `false` after comfort is used.
+  bool hasFuneralCompleted = false;
+
+  /// School/University: set to `true` after "Gespräch mit Direktor" unlocks
+  /// the "Werte-Vortrag halten" action.
+  bool isLecturePrepared = false;
+
   BuildingModel({
     required this.buildingId,
     required this.type,
@@ -126,17 +134,19 @@ class BuildingModel extends BaseInteractableEntity {
   /// Non-residential buildings are always accessible without knocking.
   bool get isAlwaysOpen => category == BuildingCategory.other;
 
-  // ── Access logic (Lastenheft §7.4 / Issue §A) ─────────────────────────────
+  // ── Access logic (building_actions.md §"Zugang & Interaktion") ───────────
 
   /// Returns the probability [0.0 – 1.0] that the player can enter this
   /// building given the current player [faith] level.
   ///
-  /// * faith > 30  → 85 %
-  /// * faith −30 .. +30 → 50 %
-  /// * faith < −30 → 15 %
-  /// * After 3+ successful interactions: +30 % (capped at 1.0)
+  /// Formula (per spec):  `base + interactionCount × 2 %`
+  /// * faith > 30  → base 85 %
+  /// * faith −30 .. +30 → base 50 %
+  /// * faith < −30 → base 15 %
+  /// * At 20 or more total interactions: always 100 % (guaranteed).
   double accessChance(double playerFaith) {
     if (isAlwaysOpen) return 1.0;
+    if (interactionCount >= 20) return 1.0;
 
     double base;
     if (playerFaith > 30) {
@@ -147,10 +157,7 @@ class BuildingModel extends BaseInteractableEntity {
       base = 0.15;
     }
 
-    if (interactionCount >= 3) {
-      base = (base + 0.30).clamp(0.0, 1.0);
-    }
-    return base;
+    return (base + interactionCount * 0.02).clamp(0.0, 1.0);
   }
 
   // ── NPC group influence ───────────────────────────────────────────────────
