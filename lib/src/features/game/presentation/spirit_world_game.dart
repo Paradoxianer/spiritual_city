@@ -666,27 +666,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     // Up to 3 enter/interact actions (NPCs + buildings)
     for (final (target, _) in nearby.take(3)) {
-      // Mission action – shown before the normal enter action when the target
-      // has an active mission so the player can complete it directly.
-      if (target is NPCComponent &&
-          target.model.activeMissionDescription != null) {
-        final desc = target.model.activeMissionDescription!;
-        actions.add(RadialAction(
-          label: '📋',
-          sublabel: desc.split(' ').first,
-          icon: Icons.task_alt,
-          onSelect: () => _completeMissionForNpc(target.model),
-        ));
-      } else if (target is BuildingComponent &&
-          target.buildingModel.activeMissionDescription != null) {
-        final desc = target.buildingModel.activeMissionDescription!;
-        actions.add(RadialAction(
-          label: '📋',
-          sublabel: desc.split(' ').first,
-          icon: Icons.task_alt,
-          onSelect: () => _completeMissionForBuilding(target.buildingModel),
-        ));
-      }
       actions.add(RadialAction(
         label: target.interactionEmoji,
         sublabel: target.interactionLabel.split(' ').first,
@@ -775,28 +754,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       '→ +${mission.rewardFaith}🙏 +${mission.rewardMaterials}📦 '
       '+${mission.insightReward}📖',
     );
-  }
-
-  void _completeMissionForNpc(NPCModel npc) {
-    final (faith, mats) = missionService.completeNpcMission(
-      npc,
-      chunkManager.allActiveNPCs.map((c) => c.model).toList(),
-      chunkManager.allActiveBuildings.map((c) => c.buildingModel).toList(),
-    );
-    gainFaith(faith.toDouble());
-    gainMaterials(mats.toDouble());
-    _log.info('Mission completed for NPC ${npc.name} → +$faith🙏 +$mats📦');
-  }
-
-  void _completeMissionForBuilding(BuildingModel building) {
-    final (faith, mats) = missionService.completeBuildingMission(
-      building,
-      chunkManager.allActiveNPCs.map((c) => c.model).toList(),
-      chunkManager.allActiveBuildings.map((c) => c.buildingModel).toList(),
-    );
-    gainFaith(faith.toDouble());
-    gainMaterials(mats.toDouble());
-    _log.info('Mission completed for building ${building.buildingId} → +$faith🙏 +$mats📦');
   }
 
   /// Called once the first chunk is loaded and we have NPCs + buildings.
