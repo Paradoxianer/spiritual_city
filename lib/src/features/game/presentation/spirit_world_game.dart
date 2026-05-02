@@ -932,6 +932,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     overlays.remove('MissionBoardOverlay');
   }
 
+  void toggleMissionBoard() {
+    if (activeMissionBoardData != null) {
+      closeMissionBoard();
+    } else {
+      openMissionBoard();
+    }
+  }
+
   String handleInteraction(String type) {
     if (_nearestInteractable == null) return '❓';
     final result = _nearestInteractable!.handleInteraction(type);
@@ -972,6 +980,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void closeBuildingInterior() {
     activeBuildingData = null;
     overlays.remove('BuildingInteriorOverlay');
+    // Also close the mission board if it was opened from inside the building.
+    if (activeMissionBoardData != null) closeMissionBoard();
     paused = false;
   }
 

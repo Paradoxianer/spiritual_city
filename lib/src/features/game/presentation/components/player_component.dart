@@ -136,6 +136,11 @@ class PlayerComponent extends PositionComponent
       game.toggleKeymapOverlay();
     }
 
+    // ── Mission board (M) ─────────────────────────────────────────────────────
+    if (event is KeyUpEvent && event.logicalKey == GameKeymap.missionBoard) {
+      game.toggleMissionBoard();
+    }
+
     // ── Digit quick-select (1–6): context-sensitive ───────────────────────────
     // Priority: chat dialog > building interior > radial menu.
     if (event is KeyUpEvent) {

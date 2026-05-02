@@ -72,6 +72,9 @@ class GameKeymap {
   /// Alternative key for the keymap overlay (`?` on most keyboards).
   static const LogicalKeyboardKey keymapOverlayAlt = LogicalKeyboardKey.slash;
 
+  /// Toggle the mission board (global shortcut).
+  static const LogicalKeyboardKey missionBoard = LogicalKeyboardKey.keyM;
+
   // ── Display entries (rendered by KeymapOverlay) ────────────────────────────
   static const List<KeymapEntry> entries = [
     // Bewegung
@@ -118,6 +121,11 @@ class GameKeymap {
     KeymapEntry(
       keys: 'F1 / ?',
       action: 'Tastenbelegung anzeigen',
+      category: 'Allgemein',
+    ),
+    KeymapEntry(
+      keys: 'M',
+      action: 'Missionsboard öffnen / schließen',
       category: 'Allgemein',
     ),
   ];
