@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart' hide Image;
 import '../../domain/models/city_chunk.dart';
+import '../../domain/services/influence_service.dart' show kCellGlowDuration;
 import 'cell_component.dart';
 import '../spirit_world_game.dart';
 import 'city_tile_renderer.dart';
@@ -93,8 +94,7 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
 
         // Fade: 1.0 at full glow, 0.0 at expiry.
         // Maximum raw alpha capped at 0.55 for a subtle but perceptible flash.
-        const maxGlow = 0.8; // kCellGlowDuration
-        final fade = (cell.glowTimer / maxGlow).clamp(0.0, 1.0);
+        final fade = (cell.glowTimer / kCellGlowDuration).clamp(0.0, 1.0);
         final intensity = fade * cell.glowStrength.abs().clamp(0.0, 1.0);
         final alpha = (intensity * 0.55).clamp(0.0, 0.55);
 

@@ -1118,9 +1118,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
       // ── All other actions: small generic nudge ────────────────────────────
       default:
-        if (actionType == 'pray' ||
-            actionType == 'houseVisit' ||
-            actionType == 'worship') {
+        if (actionType == 'pray' || actionType == 'houseVisit') {
           influenceService.applyAoE(
             grid: grid,
             originX: gx, originY: gy,
