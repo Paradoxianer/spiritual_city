@@ -1,3 +1,4 @@
+import '../../../../core/utils/game_time.dart';
 import 'base_interactable_entity.dart';
 import 'cell_object.dart';
 import 'npc_model.dart';
@@ -5,6 +6,89 @@ import 'npc_model.dart';
 /// Two-state category: residential buildings require knocking; everything else
 /// is always open.
 enum BuildingCategory { residential, other }
+
+// ── Influence constants (Issue #118 AC: "agentenlesbare Formel") ─────────────
+
+/// AoE building-influence constants shared by [InfluenceService] calls and
+/// [NPCComponent] passive influence.
+///
+/// All multipliers and radii are named here so no magic numbers appear at
+/// call sites.  The table below summarises the formula per action:
+///
+/// | Action                | delta | radius                         | duration                        | multiplier              |
+/// |---|---|---|---|---|
+/// | Praktische Hilfe (Resi)  | +0.05 | [radiusPracticalHelp]         | temporary 1 game-hour           | [multiplierSmall]       |
+/// | Jüngerschaftsgruppe (Resi)| +0.3 | [radiusDiscipleshipGroup]    | permanent                       | [multiplierSmall]       |
+/// | Gottesdienst (Kirche)    | +0.5  | [radiusWorship]               | decaying 12 game-hours          | [multiplierMedium]      |
+/// | Segnen (Shop/Police/…)   | +0.2  | [radiusBless]                 | temporary 1 game-hour           | [multiplierMedium]      |
+/// | Gebetskreis (School)     | +0.1  | [radiusPrayerCircle]          | temporary 1 game-day            | [multiplierMedium]      |
+/// | Bekehrte NPCs (passiv)   | +0.02 | [radiusNpcPassive]            | permanent (per tick)            | [multiplierSmall]       |
+abstract final class BuildingInfluenceConstants {
+  // ── Power multipliers per building size ──────────────────────────────────
+
+  /// Small residential (house, apartment): baseline influence multiplier.
+  static const double multiplierSmall = 1.0;
+
+  /// Medium civic / commercial (shop, church, school, hospital, …): 1.5× boost.
+  static const double multiplierMedium = 1.5;
+
+  /// Large public venues (stadium, skyscraper, cityHall, …): 2.5× boost.
+  static const double multiplierLarge = 2.5;
+
+  /// Spiritual / ministry buildings (cathedral, pastorHouse): 5× boost.
+  static const double multiplierSpiritual = 5.0;
+
+  // ── Default AoE radii (in grid cells) ────────────────────────────────────
+
+  /// Residential practical help: 1-cell radius.
+  static const double radiusPracticalHelp = 1.0;
+
+  /// Discipleship group: 3-cell radius.
+  static const double radiusDiscipleshipGroup = 3.0;
+
+  /// Worship service: 10-cell radius (spec: 8–15).
+  static const double radiusWorship = 10.0;
+
+  /// Bless action (shop, police, commercial): 3-cell radius (spec: 1–5).
+  static const double radiusBless = 3.0;
+
+  /// Prayer circle (school): 3-cell radius.
+  static const double radiusPrayerCircle = 3.0;
+
+  /// Converted NPC passive influence: 1-cell radius.
+  static const double radiusNpcPassive = 1.0;
+
+  // ── Duration helpers (in real seconds, derived from GameTime) ────────────
+
+  /// One in-game hour expressed as real seconds.
+  static const double gameHourSeconds = GameTime.gameDaySeconds / 24.0;
+
+  /// One in-game day expressed as real seconds.
+  static const double gameDaySeconds = GameTime.gameDaySeconds;
+
+  /// Twelve in-game hours expressed as real seconds.
+  static const double gameHalfDaySeconds = GameTime.gameDaySeconds / 2.0;
+
+  // ── Per-action deltas ────────────────────────────────────────────────────
+
+  /// Spiritual-state delta for residential practical help.
+  static const double deltaPracticalHelp = 0.05;
+
+  /// Spiritual-state delta for a discipleship group meeting.
+  static const double deltaDiscipleshipGroup = 0.3;
+
+  /// Spiritual-state delta for a worship service.
+  static const double deltaWorship = 0.5;
+
+  /// Spiritual-state delta for a bless action (shop / police / commercial).
+  static const double deltaBless = 0.2;
+
+  /// Spiritual-state delta for a prayer circle.
+  static const double deltaPrayerCircle = 0.1;
+
+  /// Spiritual-state delta per passive NPC tick.
+  static const double deltaNpcPassive = 0.02;
+}
 
 /// Runtime state for one building in the city.
 ///

@@ -19,6 +19,7 @@ import '../domain/models/player_progress.dart';
 export '../domain/models/player_progress.dart';
 import '../domain/models/prayer_combat.dart';
 import '../domain/services/building_interaction_service.dart';
+import '../domain/services/influence_service.dart';
 import '../domain/services/mission_service.dart';
 import '../domain/models/cell_object.dart';
 import 'components/building_component.dart';
@@ -79,6 +80,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Mission system – wired to all interaction hooks.
   final MissionService missionService = MissionService();
+
+  /// Influence system – manages AoE spiritual-state effects with duration/decay.
+  final InfluenceService influenceService = InfluenceService();
 
   /// World-pixel position of the pastor house once its chunk is first loaded.
   /// `null` until the first chunk containing the pastor house is generated.
@@ -1021,6 +1025,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         amount: 0.12,
       );
     }
+    // ── AoE influence with duration/decay (Issue #59) ─────────────────────
+    // Applies a cell-level spiritual-state change in the visible world around
+    // the building.  Each action carries a named delta/radius/duration combo.
+    if (result.success) {
+      _applyBuildingAoEInfluence(actionType, data.building);
+    }
     // Increment session interaction counter for buildings (mirrors NPC dialog
     // behaviour).  The homebase has an unlimited limit so this counter never
     // triggers an auto-leave there.
@@ -1028,6 +1038,127 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       data.building.currentSessionInteractions++;
     }
     return result;
+  }
+
+  /// Derives origin cell coordinates from the building's surrounding cells
+  /// and fires the appropriate [InfluenceService.applyAoE] call.
+  ///
+  /// Building-type multipliers from [BuildingInfluenceConstants] ensure that
+  /// larger/spiritual buildings have a proportionally stronger effect.
+  void _applyBuildingAoEInfluence(String actionType, BuildingModel building) {
+    // Resolve the building's rough world-cell position from the player's
+    // location (best we have without a dedicated building-cell lookup).
+    const cellSize = 32.0;
+    final gx = (player.position.x / cellSize).floor();
+    final gy = (player.position.y / cellSize).floor();
+
+    final multiplier = _buildingMultiplier(building.type);
+
+    switch (actionType) {
+      // ── Residential ──────────────────────────────────────────────────────
+      case 'practicalHelp':
+        influenceService.applyAoE(
+          grid: grid,
+          originX: gx, originY: gy,
+          delta: BuildingInfluenceConstants.deltaPracticalHelp,
+          radius: BuildingInfluenceConstants.radiusPracticalHelp,
+          durationType: InfluenceDurationType.temporary,
+          durationSeconds: BuildingInfluenceConstants.gameHourSeconds,
+          buildingMultiplier: multiplier,
+        );
+
+      case 'discipleshipGroup':
+        influenceService.applyAoE(
+          grid: grid,
+          originX: gx, originY: gy,
+          delta: BuildingInfluenceConstants.deltaDiscipleshipGroup,
+          radius: BuildingInfluenceConstants.radiusDiscipleshipGroup,
+          durationType: InfluenceDurationType.permanent,
+          buildingMultiplier: multiplier,
+        );
+
+      // ── Church ────────────────────────────────────────────────────────────
+      case 'worship':
+      case 'sundayService':
+        influenceService.applyAoE(
+          grid: grid,
+          originX: gx, originY: gy,
+          delta: BuildingInfluenceConstants.deltaWorship,
+          radius: BuildingInfluenceConstants.radiusWorship,
+          durationType: InfluenceDurationType.decaying,
+          durationSeconds: BuildingInfluenceConstants.gameHalfDaySeconds,
+          buildingMultiplier: multiplier,
+        );
+
+      // ── Bless actions (shop / police / commercial / household) ────────────
+      case 'bless':
+      case 'blessPolice':
+      case 'blessHousehold':
+        influenceService.applyAoE(
+          grid: grid,
+          originX: gx, originY: gy,
+          delta: BuildingInfluenceConstants.deltaBless,
+          radius: BuildingInfluenceConstants.radiusBless,
+          durationType: InfluenceDurationType.temporary,
+          durationSeconds: BuildingInfluenceConstants.gameHourSeconds,
+          buildingMultiplier: multiplier,
+        );
+
+      // ── School prayer circle ──────────────────────────────────────────────
+      case 'prayerCircle':
+        influenceService.applyAoE(
+          grid: grid,
+          originX: gx, originY: gy,
+          delta: BuildingInfluenceConstants.deltaPrayerCircle,
+          radius: BuildingInfluenceConstants.radiusPrayerCircle,
+          durationType: InfluenceDurationType.temporary,
+          durationSeconds: BuildingInfluenceConstants.gameDaySeconds,
+          buildingMultiplier: multiplier,
+        );
+
+      // ── All other actions: small generic nudge ────────────────────────────
+      default:
+        if (actionType == 'pray' ||
+            actionType == 'houseVisit' ||
+            actionType == 'worship') {
+          influenceService.applyAoE(
+            grid: grid,
+            originX: gx, originY: gy,
+            delta: 0.03,
+            radius: 2.0,
+            durationType: InfluenceDurationType.temporary,
+            durationSeconds: BuildingInfluenceConstants.gameHourSeconds,
+            buildingMultiplier: multiplier,
+          );
+        }
+    }
+  }
+
+  /// Returns the named AoE power multiplier for [type].
+  ///
+  /// Reads from [BuildingInfluenceConstants] so no magic numbers are used here.
+  double _buildingMultiplier(BuildingType type) {
+    switch (type) {
+      case BuildingType.cathedral:
+      case BuildingType.pastorHouse:
+        return BuildingInfluenceConstants.multiplierSpiritual;
+      case BuildingType.stadium:
+      case BuildingType.skyscraper:
+      case BuildingType.cityHall:
+        return BuildingInfluenceConstants.multiplierLarge;
+      case BuildingType.church:
+      case BuildingType.hospital:
+      case BuildingType.school:
+      case BuildingType.university:
+      case BuildingType.shop:
+      case BuildingType.supermarket:
+      case BuildingType.mall:
+      case BuildingType.office:
+      case BuildingType.policeStation:
+        return BuildingInfluenceConstants.multiplierMedium;
+      default:
+        return BuildingInfluenceConstants.multiplierSmall;
+    }
   }
 
   /// Attempts to access [building] on behalf of the player.
@@ -1153,6 +1284,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       _updatePassiveResources(dt);
       _updateStreetLabel();
       if (isSpiritualWorld) _updateHudVisibility(); // Dynamic dock update
+      // Tick influence effects (decay / reversal of timed AoE events).
+      influenceService.update(dt, grid);
     }
     // Always push player position so the Flutter HUD compass stays live.
     playerWorldPosition.value = player.position.clone();
