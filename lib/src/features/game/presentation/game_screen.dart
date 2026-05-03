@@ -2066,17 +2066,19 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
             children: [
               // Label + current value + fading delta + Stage Level
               Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '${widget.label} ${value.toInt()}/${widget.max.toInt()}',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      '${widget.label} ${value.toInt()}/${widget.max.toInt()}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 2),
                   Text(
                     'Lv.${widget.stage.stage}',
                     style: const TextStyle(
@@ -2085,7 +2087,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 2),
                   // Delta chip – only shown while the fade is in progress.
                   if (_fadeCtrl.isAnimating || _fadeCtrl.value < 1.0)
                     AnimatedBuilder(

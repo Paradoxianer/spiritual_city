@@ -190,6 +190,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Key: building.buildingId  Value: {faith, conv}
   Map<String, Map<String, dynamic>>? _savedBuildingStates;
 
+  /// Saved loot-system state loaded from Hive.
+  List<Map<String, dynamic>>? _savedLootState;
+
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
 
@@ -227,6 +230,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         _savedCellStates     = _parseSavedCellStates(savedState);
         _savedNPCStates      = _parseSavedNPCStates(savedState);
         _savedBuildingStates = _parseSavedBuildingStates(savedState);
+        _savedLootState      = _parseSavedLootState(savedState);
       }
 
       player = PlayerComponent(joystick: _createJoystick());
@@ -281,6 +285,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
       lootSystem = LootSystem(seed: seedManager.seed);
       await world.add(lootSystem);
+      // Restore loot positions from the save file.  When no saved state exists
+      // a startup grace period prevents loot from spawning right on the player.
+      if (_savedLootState != null) {
+        lootSystem.restoreState(_savedLootState!);
+      }
 
       camera.viewfinder.anchor = Anchor.center;
       camera.viewfinder.position = player.position.clone();
@@ -416,6 +425,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     };
   }
 
+  /// Parses the `loot` list from a serialised save.
+  List<Map<String, dynamic>>? _parseSavedLootState(
+      Map<String, dynamic> state) {
+    final raw = state['loot'];
+    if (raw is! List) return null;
+    return raw
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
+  }
+
   // ── ChunkManager callbacks (called when a chunk / NPC is first generated) ─
 
   /// Called by [ChunkManager] immediately after a chunk's cells are generated.
@@ -448,7 +468,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void applySavedNPCState(NPCModel npc) {
     final saved = _savedNPCStates?[npc.id];
     if (saved == null) return;
-    npc.faith             = (saved['faith']   as num?)?.toDouble() ?? npc.faith;
+    npc.faith             = ((saved['faith']   as num?)?.toDouble() ?? npc.faith).clamp(-100.0, 100.0);
     npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
     final posX = (saved['posX'] as num?)?.toDouble();
@@ -514,7 +534,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           npc.interactionCount != 0 ||
           npc.isConverted) {
         npcStates[npc.id] = {
-          'faith': npc.faith,
+          'faith': npc.faith.clamp(-100.0, 100.0),
           if (npc.interactionCount != 0) 'conv': npc.interactionCount,
           if (npc.isConverted)           'converted': true,
           'posX': npcComp.position.x,
@@ -523,6 +543,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         };
       }
     }
+    // Preserve states for NPCs in chunks not visited during this session so
+    // their faith / interactionCount survive repeated save→load cycles.
+    _savedNPCStates?.forEach((id, saved) => npcStates.putIfAbsent(id, () => saved));
 
     // ── Building states ──────────────────────────────────────────────────────
     final Map<String, Map<String, dynamic>> buildingStates = {};
@@ -537,6 +560,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         };
       }
     }
+    // Preserve states for buildings in chunks not visited during this session.
+    _savedBuildingStates?.forEach(
+      (id, saved) => buildingStates.putIfAbsent(id, () => saved),
+    );
 
     return {
       'schemaVersion':    kSaveDataVersion,
@@ -551,6 +578,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       'cells':            cellStates,
       'npcs':             npcStates,
       'buildings':        buildingStates,
+      'loot':             lootSystem.captureState(),
     };
   }
 

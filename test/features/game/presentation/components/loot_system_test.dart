@@ -55,4 +55,67 @@ void main() {
       }
     });
   });
+
+  // ── LootSystem save / restore ─────────────────────────────────────────────
+
+  group('LootSystem state save/restore', () {
+    LootSystem makeLootSystem() => LootSystem(seed: 42);
+
+    test('captureState returns empty list when no pickups exist', () {
+      final ls = makeLootSystem();
+      expect(ls.captureState(), isEmpty);
+    });
+
+    test('round-trip: restoreState → captureState preserves position, type, and flags', () {
+      final ls = makeLootSystem();
+
+      final saved = [
+        {'x': 100.0, 'y': 200.0, 'type': LootType.small.index,  'isPickedUp': false, 'respawnTimer': -1.0},
+        {'x': 300.0, 'y': 400.0, 'type': LootType.normal.index, 'isPickedUp': true,  'respawnTimer': 120.5},
+        {'x': 500.0, 'y': 600.0, 'type': LootType.large.index,  'isPickedUp': false, 'respawnTimer': -1.0},
+      ];
+
+      ls.restoreState(saved);
+      final captured = ls.captureState();
+
+      expect(captured.length, 3);
+
+      expect(captured[0]['x'],            100.0);
+      expect(captured[0]['y'],            200.0);
+      expect(captured[0]['type'],         LootType.small.index);
+      expect(captured[0]['isPickedUp'],   false);
+
+      expect(captured[1]['x'],            300.0);
+      expect(captured[1]['y'],            400.0);
+      expect(captured[1]['type'],         LootType.normal.index);
+      expect(captured[1]['isPickedUp'],   true);
+      expect(captured[1]['respawnTimer'], closeTo(120.5, 0.001));
+
+      expect(captured[2]['type'], LootType.large.index);
+    });
+
+    test('restoreState clears previous pickups', () {
+      final ls = makeLootSystem();
+
+      ls.restoreState([
+        {'x': 1.0, 'y': 2.0, 'type': LootType.small.index, 'isPickedUp': false, 'respawnTimer': -1.0},
+        {'x': 3.0, 'y': 4.0, 'type': LootType.large.index, 'isPickedUp': false, 'respawnTimer': -1.0},
+      ]);
+      expect(ls.captureState().length, 2);
+
+      // Second restore with a single item – old entries must be gone.
+      ls.restoreState([
+        {'x': 9.0, 'y': 8.0, 'type': LootType.normal.index, 'isPickedUp': false, 'respawnTimer': -1.0},
+      ]);
+      final captured = ls.captureState();
+      expect(captured.length, 1);
+      expect(captured[0]['x'], 9.0);
+    });
+
+    test('restoreState with empty list results in empty captureState', () {
+      final ls = makeLootSystem();
+      ls.restoreState([]);
+      expect(ls.captureState(), isEmpty);
+    });
+  });
 }
