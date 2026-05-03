@@ -1,15 +1,25 @@
 import 'dart:math';
 import 'package:flame/components.dart';
+import 'package:logging/logging.dart';
 import 'models/npc_model.dart';
 import '../presentation/components/cell_component.dart';
 import 'models/city_chunk.dart';
 import 'models/cell_object.dart';
 
 class NPCRegistry {
-  final Map<String, List<NPCModel>> _chunkNPCs = {};
-  final Random _random;
+  static final _log = Logger('NPCRegistry');
 
-  NPCRegistry({int? seed}) : _random = Random(seed ?? 42);
+  final Map<String, List<NPCModel>> _chunkNPCs = {};
+
+  /// Base seed used to derive per-chunk random seeds.  Using a per-chunk seed
+  /// (computed from cx/cy) ensures that the same chunk always generates the
+  /// same NPCs regardless of which other chunks were loaded before it.  Without
+  /// this guarantee the load order of chunks would advance the shared RNG
+  /// differently between sessions, producing different NPC counts / IDs for
+  /// the same building and breaking save-state restoration.
+  final int _seed;
+
+  NPCRegistry({int? seed}) : _seed = seed ?? 42;
 
   List<NPCModel> getNPCsInChunk(int cx, int cy, {CityChunk? chunk}) {
     final key = '$cx,$cy';
@@ -18,7 +28,7 @@ class NPCRegistry {
     }
 
     if (chunk != null) {
-      final npcs = _generateNPCsForChunk(chunk);
+      final npcs = _generateNPCsForChunk(chunk, cx, cy);
       _chunkNPCs[key] = npcs;
       return npcs;
     }
@@ -26,7 +36,19 @@ class NPCRegistry {
     return [];
   }
 
-  List<NPCModel> _generateNPCsForChunk(CityChunk chunk) {
+  /// Produces a deterministic seed for chunk [cx],[cy] by mixing the base
+  /// seed with the chunk coordinates using large primes (spatial hash).
+  int _chunkSeed(int cx, int cy) {
+    // Spread bits across the full int range to avoid clustering for small
+    // coordinate values.  Dart int arithmetic wraps silently on overflow.
+    return _seed ^ (cx * 73856093) ^ (cy * 19349663);
+  }
+
+  List<NPCModel> _generateNPCsForChunk(CityChunk chunk, int cx, int cy) {
+    // Each chunk gets its own RNG seeded deterministically from its coordinates.
+    // This isolates chunks from each other so that loading chunk A before B
+    // produces the same NPCs as loading B before A.
+    final rng = Random(_chunkSeed(cx, cy));
     final List<NPCModel> npcs = [];
 
     // ── Step 1: collect unique buildings and all their cells ─────────────────
@@ -48,7 +70,7 @@ class NPCRegistry {
 
     // ── Step 2: for each building spawn N NPCs at a walkable start position ──
     for (final bInfo in buildings.values) {
-      final count = _npcCountForType(bInfo.type);
+      final count = _npcCountForType(bInfo.type, rng);
       if (count == 0) continue;
 
       // Find a walkable spawn position: look for a road or open cell adjacent
@@ -71,21 +93,29 @@ class NPCRegistry {
         final isChurchWorker = bInfo.type == BuildingType.church ||
             bInfo.type == BuildingType.cathedral;
         final preConvertedChance = isChurchWorker ? 0.25 : 0.03;
-        final isConverted = _random.nextDouble() < preConvertedChance;
+        final isConverted = rng.nextDouble() < preConvertedChance;
+        final faith = isConverted
+            ? 65.0 + rng.nextDouble() * 35.0   // 65–100 for Christians
+            : -60.0 + rng.nextDouble() * 80.0; // –60 to +20 otherwise
+        if (isConverted) {
+          _log.fine(
+            'Chunk ($cx,$cy): pre-converted NPC $id generated '
+            '(faith=${faith.toStringAsFixed(1)})',
+          );
+        }
         npcs.add(NPCModel(
           id: id,
-          name: _getRandomName(),
-          type: _getNPCTypeForBuilding(bInfo.type),
+          name: _getRandomName(rng),
+          type: _getNPCTypeForBuilding(bInfo.type, rng),
           homePosition: spawnPos.clone(),
           homeBuildingId: bInfo.buildingId,
-          faith: isConverted
-              ? 65.0 + _random.nextDouble() * 35.0   // 65–100 for Christians
-              : -60.0 + _random.nextDouble() * 80.0, // –60 to +20 otherwise
+          faith: faith,
           isConverted: isConverted,
         ));
       }
     }
 
+    _log.fine('Chunk ($cx,$cy): generated ${npcs.length} NPCs');
     return npcs;
   }
 
@@ -120,12 +150,12 @@ class NPCRegistry {
   };
 
   /// How many NPCs live/work in a building of [type].
-  int _npcCountForType(BuildingType type) {
+  int _npcCountForType(BuildingType type, Random rng) {
     final (min, extra) = _buildingNPCDensity[type] ?? (1, 1);
-    return min + (extra > 0 ? _random.nextInt(extra) : 0);
+    return min + (extra > 0 ? rng.nextInt(extra) : 0);
   }
 
-  NPCType _getNPCTypeForBuilding(BuildingType type) {
+  NPCType _getNPCTypeForBuilding(BuildingType type, Random rng) {
     switch (type) {
       case BuildingType.church:
       case BuildingType.cathedral:
@@ -133,7 +163,7 @@ class NPCRegistry {
       case BuildingType.shop:
       case BuildingType.supermarket:
       case BuildingType.mall:
-        return _random.nextDouble() < 0.5 ? NPCType.merchant : NPCType.citizen;
+        return rng.nextDouble() < 0.5 ? NPCType.merchant : NPCType.citizen;
       case BuildingType.policeStation:
         return NPCType.officer;
       default:
@@ -165,10 +195,10 @@ class NPCRegistry {
     return null;
   }
 
-  String _getRandomName() {
+  String _getRandomName(Random rng) {
     final firstNames = ['Lukas', 'Maria', 'Johannes', 'Sarah', 'Peter', 'Anna', 'Thomas', 'Elisabeth', 'Matthias', 'Martha'];
     final lastNames = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann'];
-    return '${firstNames[_random.nextInt(firstNames.length)]} ${lastNames[_random.nextInt(lastNames.length)]}';
+    return '${firstNames[rng.nextInt(firstNames.length)]} ${lastNames[rng.nextInt(lastNames.length)]}';
   }
 
   List<NPCModel> getNPCsNear(Vector2 position, double radius) {

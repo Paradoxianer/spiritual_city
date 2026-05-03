@@ -469,7 +469,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// across sessions.
   void applySavedNPCState(NPCModel npc) {
     final saved = _savedNPCStates?[npc.id];
-    if (saved == null) return;
+    if (saved == null) {
+      _log.fine('applySavedNPCState: no saved state for ${npc.id} '
+          '(faith=${npc.faith.toStringAsFixed(1)}, '
+          'isConverted=${npc.isConverted})');
+      return;
+    }
     npc.faith             = ((saved['faith']   as num?)?.toDouble() ?? npc.faith).clamp(-100.0, 100.0);
     npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
@@ -484,6 +489,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         (saved['mission'] as Map).cast<String, dynamic>(),
       );
     }
+    _log.fine(
+      'applySavedNPCState: restored ${npc.id} '
+      '→ faith=${npc.faith.toStringAsFixed(1)}, '
+      'conv=${npc.interactionCount}, '
+      'isConverted=${npc.isConverted}',
+    );
   }
 
   /// Called by [ChunkManager] for every [BuildingModel] after generation.
@@ -548,6 +559,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     // Preserve states for NPCs in chunks not visited during this session so
     // their faith / interactionCount survive repeated save→load cycles.
     _savedNPCStates?.forEach((id, saved) => npcStates.putIfAbsent(id, () => saved));
+    final convertedCount = npcStates.values.where((s) => s['converted'] == true).length;
+    _log.info(
+      'captureGameState: saving ${npcStates.length} NPC states '
+      '($convertedCount Christians)',
+    );
 
     // ── Building states ──────────────────────────────────────────────────────
     final Map<String, Map<String, dynamic>> buildingStates = {};
