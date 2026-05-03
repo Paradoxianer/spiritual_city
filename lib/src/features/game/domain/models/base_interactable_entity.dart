@@ -1,3 +1,5 @@
+import 'mission_model.dart';
+
 /// Shared base class for all entities in the world that can be interacted
 /// with (NPCs and Buildings).
 ///
@@ -28,6 +30,15 @@ abstract class BaseInteractableEntity {
 
   /// Active mission attached to this entity (null = no mission).
   String? activeMissionDescription;
+
+  /// Structured mission model for the active mission.
+  /// When set, [activeMissionDescription] is automatically synchronised.
+  MissionModel? _activeMission;
+  MissionModel? get activeMission => _activeMission;
+  set activeMission(MissionModel? m) {
+    _activeMission = m;
+    activeMissionDescription = m?.description;
+  }
 
   BaseInteractableEntity({
     this.faith = 0.0,
