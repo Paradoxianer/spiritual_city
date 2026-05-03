@@ -285,8 +285,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
       lootSystem = LootSystem(seed: seedManager.seed);
       await world.add(lootSystem);
-      // Restore loot positions from the save file.  When no saved state exists
-      // a startup grace period prevents loot from spawning right on the player.
+      // Restore loot positions from the save file so pickups reappear at their
+      // original world positions rather than being re-spawned near the player.
+      // On fresh games LootSystem's built-in startup grace period handles the
+      // first spawn delay automatically.
       if (_savedLootState != null) {
         lootSystem.restoreState(_savedLootState!);
       }
