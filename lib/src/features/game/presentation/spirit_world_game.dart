@@ -648,7 +648,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       isSpiritualWorld ? '✝️' : '🖐️',
       isSpiritualWorld ? Colors.amber.withValues(alpha: 0.7) : Colors.blue.withValues(alpha: 0.6)
     );
-    actionButton.keyLabel = isSpiritualWorld ? 'Space' : 'E';
+    // keyLabel is set by _updateHudVisibility which always runs after this.
 
     worldToggleButton.updateContent(
       isSpiritualWorld ? '🏙️' : '🙏',
@@ -659,31 +659,51 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void _updateHudVisibility() {
     if (isSpiritualWorld) {
       if (joystick.parent != null) joystick.removeFromParent();
-      // Move combat button to left
-      actionButton.position = Vector2(80, size.y - 80);
+
+      // ── Spiritual-world dock layout ────────────────────────────────────────
+      // Lay all bottom buttons in a single non-overlapping row:
+      //   [combat btn]  [── mode buttons ──]  [return btn]
+      //
+      // The two side buttons (size 75) are anchored at x = 42 (left) and
+      // x = size.x - 42 (right), so their bounds are roughly [5, 79] and
+      // [size.x - 79, size.x - 5].  Mode buttons (size 50/60 selected) are
+      // distributed evenly in the gap between x = 90 and x = size.x - 90.
+
+      actionButton.position = Vector2(42, size.y - 80);
       actionButton.keyLabel = 'Space';
+
+      worldToggleButton.position = Vector2(size.x - 42, size.y - 80);
+
+      final n = modeButtons.length;
+      if (n > 0) {
+        // Available width between the fixed side-button inner edges (≈ 90 px
+        // on each side).  Clamp individual spacing so buttons never overlap
+        // each other even on very small screens.
+        final available = size.x - 180.0;
+        final spacing = n > 1 ? (available / (n - 1)).clamp(25.0, 65.0) : 0.0;
+        final totalModeWidth = (n - 1) * spacing;
+        final modeStartX = (size.x - totalModeWidth) / 2;
+
+        for (int i = 0; i < n; i++) {
+          final btn = modeButtons[i];
+          btn.opacity = 1.0;
+          final isSelected = player.currentMode == PrayerMode.values[i];
+          btn.size = Vector2.all(isSelected ? 60.0 : 45.0);
+          btn.position = Vector2(
+            modeStartX + i * spacing,
+            isSelected ? size.y - 88.0 : size.y - 80.0,
+          );
+          btn.keyLabel = '${i + 1}';
+        }
+      }
     } else {
       if (joystick.parent == null) camera.viewport.add(joystick);
-      // Move interaction button back to right
+      // Normal-world layout: interaction button bottom-right, toggle left of it.
       actionButton.position = Vector2(size.x - 80, size.y - 80);
       actionButton.keyLabel = 'E';
-    }
-
-    final dockWidth = modeButtons.length * 60.0;
-    final startX = (size.x - dockWidth) / 2 + 30;
-
-    for (int i = 0; i < modeButtons.length; i++) {
-      final btn = modeButtons[i];
-      btn.opacity = isSpiritualWorld ? 1.0 : 0.0;
-      
-      if (isSpiritualWorld) {
-        final isSelected = player.currentMode == PrayerMode.values[i];
-        final targetSize = isSelected ? 70.0 : 50.0;
-        final targetY = isSelected ? size.y - 90.0 : size.y - 80.0;
-        
-        btn.size = Vector2.all(targetSize);
-        btn.position = Vector2(startX + (i * 60), targetY);
-        btn.keyLabel = '${i + 1}';
+      worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
+      for (final btn in modeButtons) {
+        btn.opacity = 0.0;
       }
     }
   }
@@ -1665,7 +1685,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     super.onGameResize(size);
     if (isLoaded) {
       _updateHudVisibility();
-      worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
     }
   }
 }

@@ -157,21 +157,30 @@ class _GameScreenState extends State<GameScreen> {
               );
             },
           ),
-          // Pastorhouse HUD compass (shown when world is ready and house is far)
+          // Resource HUD + Pastorhouse compass – combined in a single Positioned
+          // column so the compass is always rendered directly below the resource
+          // bars, regardless of how tall the bar panel happens to be.
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
               if (!isReady) return const SizedBox.shrink();
-              return _PastorhouseHud(game: _game);
-            },
-          ),
-          // Resource HUD – Flutter widget so bars update even while the Flame
-          // game loop is paused (building / dialog overlays open).
-          ValueListenableBuilder<bool>(
-            valueListenable: _game.isWorldReady,
-            builder: (context, isReady, _) {
-              if (!isReady) return const SizedBox.shrink();
-              return _ResourceHud(gameRef: _game);
+              return Positioned(
+                top: 0,
+                left: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _ResourceHud(gameRef: _game),
+                        _PastorhouseHud(game: _game),
+                      ],
+                    ),
+                  ),
+                ),
+              );
             },
           ),
           // Street-name label – persistent top-center
@@ -1803,33 +1812,30 @@ class _PastorhouseHud extends StatelessWidget {
         final angleDeg = atan2(dy, dx) * 180 / pi;
         final arrow = _directionArrow(angleDeg);
 
-        return Positioned(
-          // Fixed position below the resource-bar panel (which ends at ≈ y 110).
-          top: 114,
-          left: 12,
-          child: SafeArea(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.7)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🏠', style: TextStyle(fontSize: 16)),
-                  const SizedBox(width: 4),
-                  Text(
-                    arrow,
-                    style: const TextStyle(
-                      color: Color(0xFFFFD54F),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+        // A small top margin separates the compass from the resource bar panel.
+        return Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.7)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🏠', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 4),
+                Text(
+                  arrow,
+                  style: const TextStyle(
+                    color: Color(0xFFFFD54F),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -1867,20 +1873,15 @@ class _ResourceHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: 6,
-      left: 6,
-      child: SafeArea(
-        child: Container(
-          // Keep padding tight so the panel stays ~96 px tall (matching the
-          // original Flame-rendered panel) and does not overlap the compass
-          // that is anchored at top: 114.
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: ListenableBuilder(
+    return Container(
+      // Keep padding tight so the panel stays compact and leaves room for
+      // the compass that is rendered directly below it in the column.
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: ListenableBuilder(
             listenable: gameRef.progress,
             builder: (context, _) {
               return Column(
@@ -1930,9 +1931,7 @@ class _ResourceHud extends StatelessWidget {
               );
             },
           ),
-        ),
-      ),
-    );
+        );
   }
 }
 
