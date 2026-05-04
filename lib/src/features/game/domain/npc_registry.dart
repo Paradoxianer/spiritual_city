@@ -39,8 +39,11 @@ class NPCRegistry {
   /// Produces a deterministic seed for chunk [cx],[cy] by mixing the base
   /// seed with the chunk coordinates using large primes (spatial hash).
   int _chunkSeed(int cx, int cy) {
-    // Spread bits across the full int range to avoid clustering for small
-    // coordinate values.  Dart int arithmetic wraps silently on overflow.
+    // Primes 73856093 and 19349663 are from the spatial hashing technique
+    // described in "Optimized Spatial Hashing for Collision Detection of
+    // Deformable Objects" (Teschner et al., 2003).  They spread small integer
+    // coordinate values across the full int range to reduce hash collisions.
+    // Dart int arithmetic wraps silently on overflow (no exception thrown).
     return _seed ^ (cx * 73856093) ^ (cy * 19349663);
   }
 

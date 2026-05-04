@@ -45,6 +45,15 @@ bool _shouldShowKeyHints() {
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
 
+  // ── Spiritual-world button dock constants ────────────────────────────────
+  /// Minimum pixel gap between adjacent mode-button centers on very small
+  /// screens.  25 px keeps buttons selectable even when spacing is compressed.
+  static const double _minModeButtonSpacing = 25.0;
+
+  /// Maximum pixel gap between adjacent mode-button centers on large screens.
+  /// 65 px matches the legacy fixed 60 px spacing with a small visual margin.
+  static const double _maxModeButtonSpacing = 65.0;
+
   // ── Save-data schema versioning ───────────────────────────────────────────
   /// Increment this constant whenever the structure of [captureGameState]
   /// changes in a way that is incompatible with older saved data.
@@ -680,7 +689,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         // on each side).  Clamp individual spacing so buttons never overlap
         // each other even on very small screens.
         final available = size.x - 180.0;
-        final spacing = n > 1 ? (available / (n - 1)).clamp(25.0, 65.0) : 0.0;
+        final spacing = n > 1 ? (available / (n - 1)).clamp(_minModeButtonSpacing, _maxModeButtonSpacing) : 0.0;
         final totalModeWidth = (n - 1) * spacing;
         final modeStartX = (size.x - totalModeWidth) / 2;
 
