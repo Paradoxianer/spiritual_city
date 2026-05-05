@@ -2295,6 +2295,8 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
   double _prevValue = 0.0;
   double _lastDelta = 0.0;
 
+  static const TextStyle _iconStyle = TextStyle(fontSize: 11);
+
   @override
   void initState() {
     super.initState();
@@ -2367,10 +2369,10 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
                 animation: _pulseAnim,
                 builder: (context, _) => Opacity(
                   opacity: (0.4 + _pulseAnim.value * 0.6).clamp(0.0, 1.0),
-                  child: Text(widget.icon, style: const TextStyle(fontSize: 11)),
+                  child: Text(widget.icon, style: _iconStyle),
                 ),
               )
-            : Text(widget.icon, style: const TextStyle(fontSize: 11)),
+            : Text(widget.icon, style: _iconStyle),
         const SizedBox(width: 4),
         SizedBox(
           width: _barWidth,

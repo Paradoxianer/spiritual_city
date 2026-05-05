@@ -1508,7 +1508,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (_hungerDrainTimer >= hungerDrainInterval) {
       _hungerDrainTimer = 0.0;
       spendHunger(hungerDrainAmount);
-      // If starving (hunger reached 0), health starts draining (1 HP/tick)
+      // If starving (hunger reached 0), health starts draining (1 HP per hunger
+      // tick, i.e. every [hungerDrainInterval] seconds)
       if (hunger <= 0) {
         spendHealth(1.0);
       }

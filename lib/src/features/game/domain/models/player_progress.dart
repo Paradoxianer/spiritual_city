@@ -83,7 +83,7 @@ class PlayerProgress extends ChangeNotifier {
     }
   }
 
-  /// Reduces [insight] by 10% (rounded up, minimum 1) as a faint penalty.
+  /// Reduces [insight] by 10% (rounded up, minimum loss of 1) as a faint penalty.
   /// Does nothing when [insight] is already 0.
   void applyFaintInsightPenalty() {
     if (insight <= 0) return;
