@@ -1962,16 +1962,24 @@ class HudButton extends PositionComponent with TapCallbacks {
   }
 }
 
-/// A [JoystickComponent] that detects a double-drag gesture (two successive
-/// drag-starts within [_kDoubleTapWindowMs] ms) and fires [onSprintStart].
-/// Sprint ends automatically when the drag ends or is cancelled.
-class _SprintJoystickComponent extends JoystickComponent {
+/// A [JoystickComponent] that detects a "double-tap" gesture (desktop: two
+/// quick [onTapDown] events; mobile: two successive drag starts) and fires
+/// [onSprintStart].  Sprint ends automatically when the drag is released.
+///
+/// Dedup guard: [onTapDown] and [onDragStart] can both fire for the same
+/// physical pointer-down (touch starts drag after slop), so we ignore any
+/// second event that arrives within [_kSameEventDedupeMs] of the first.
+class _SprintJoystickComponent extends JoystickComponent with TapCallbacks {
   final VoidCallback onSprintStart;
   final VoidCallback onSprintEnd;
 
-  static const int _kDoubleTapWindowMs = 350;
+  static const int _kDoubleTapWindowMs  = 400;
+  /// Two events closer than this belong to the same physical interaction
+  /// (e.g. onTapDown fires, then onDragStart fires ~5 ms later for the
+  /// same touch).  We only count ONE of them to avoid false double-taps.
+  static const int _kSameEventDedupeMs = 100;
 
-  int _lastDragEndMs = 0;
+  int _lastInteractionMs = 0;
   bool _sprinting = false;
 
   _SprintJoystickComponent({
@@ -1982,19 +1990,43 @@ class _SprintJoystickComponent extends JoystickComponent {
     required super.margin,
   });
 
-  @override
-  bool onDragStart(DragStartEvent event) {
+  /// Record an interaction start.  Returns true when sprint is activated.
+  bool _recordInteraction() {
     final now = DateTime.now().millisecondsSinceEpoch;
-    if (!_sprinting && now - _lastDragEndMs < _kDoubleTapWindowMs) {
+    final elapsed = _lastInteractionMs > 0 ? now - _lastInteractionMs : 99999;
+
+    if (!_sprinting &&
+        elapsed > _kSameEventDedupeMs &&
+        elapsed < _kDoubleTapWindowMs) {
       _sprinting = true;
       onSprintStart();
+      return true;
     }
+    // Only update timestamp if this is genuinely a new interaction (not a
+    // near-simultaneous duplicate of an already-counted event).
+    if (elapsed > _kSameEventDedupeMs) {
+      _lastInteractionMs = now;
+    }
+    return false;
+  }
+
+  // ── Desktop: quick double-click on joystick area ──────────────────────────
+  @override
+  bool onTapDown(TapDownEvent event) {
+    _recordInteraction();
+    return false; // don't consume – let drag events pass through
+  }
+
+  // ── Mobile / mouse drag: two rapid drag starts ────────────────────────────
+  @override
+  bool onDragStart(DragStartEvent event) {
+    _recordInteraction();
     return super.onDragStart(event);
   }
 
   @override
   bool onDragEnd(DragEndEvent event) {
-    _lastDragEndMs = DateTime.now().millisecondsSinceEpoch;
+    _lastInteractionMs = DateTime.now().millisecondsSinceEpoch;
     if (_sprinting) {
       _sprinting = false;
       onSprintEnd();
@@ -2004,7 +2036,7 @@ class _SprintJoystickComponent extends JoystickComponent {
 
   @override
   bool onDragCancel(DragCancelEvent event) {
-    _lastDragEndMs = DateTime.now().millisecondsSinceEpoch;
+    _lastInteractionMs = DateTime.now().millisecondsSinceEpoch;
     if (_sprinting) {
       _sprinting = false;
       onSprintEnd();

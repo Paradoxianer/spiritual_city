@@ -21,7 +21,7 @@ class PlayerComponent extends PositionComponent
   static const double kSprintMultiplier = 1.8;
 
   /// Additional hunger drained per second of active sprint movement.
-  static const double kSprintHungerDrainRate = 3.0;
+  static const double kSprintHungerDrainRate = 1.0;
 
   /// True when the player is holding a direction key after a double-tap.
   bool _isSprintingKeyboard = false;
