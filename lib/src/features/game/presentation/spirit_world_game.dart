@@ -174,7 +174,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double hungerCriticalThreshold = 0.10; // < 10%: even slower + faith cost +50%
 
   // Health alarm / faint thresholds
-  static const double healthAlarmThreshold = 0.15; // < 15%: red screen edge
+  static const double healthAlarmThreshold = 0.25; // < 25%: red screen edge
   static const double healthFaintThreshold = 1.0;  // ≤ 1 HP: trigger faint
 
   /// Fired when the player presses digit 1–6 while a chat dialog is open.

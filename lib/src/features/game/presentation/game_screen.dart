@@ -1286,21 +1286,19 @@ class _HealthAlarmOverlayState extends State<_HealthAlarmOverlay>
         return AnimatedBuilder(
           animation: _pulseAnim,
           builder: (context, _) {
-            final alpha = ((0.15 + _pulseAnim.value * 0.35) * severity)
+            final alpha = ((0.25 + _pulseAnim.value * 0.40) * severity)
                 .clamp(0.0, 1.0);
             return IgnorePointer(
-              child: SizedBox.expand(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 1.4,
-                      colors: [
-                        Colors.transparent,
-                        Colors.red.withValues(alpha: alpha),
-                      ],
-                      stops: const [0.5, 1.0],
-                    ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.4,
+                    colors: [
+                      Colors.transparent,
+                      Colors.red.withValues(alpha: alpha),
+                    ],
+                    stops: const [0.4, 1.0],
                   ),
                 ),
               ),
