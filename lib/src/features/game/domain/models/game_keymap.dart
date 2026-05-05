@@ -54,6 +54,12 @@ class GameKeymap {
   static const LogicalKeyboardKey radial5 = LogicalKeyboardKey.digit5;
   static const LogicalKeyboardKey radial6 = LogicalKeyboardKey.digit6;
 
+  // ── Sprint (real world only) ───────────────────────────────────────────────
+  /// Hold Shift to sprint (real world only; same physical key as prayerSize
+  /// in spiritual world, but handled separately per world context).
+  static const LogicalKeyboardKey sprint    = LogicalKeyboardKey.shiftLeft;
+  static const LogicalKeyboardKey sprintAlt = LogicalKeyboardKey.shiftRight;
+
   // ── Prayer / spiritual world ───────────────────────────────────────────────
   /// Hold Shift to grow the prayer zone (same as joystick held without direction).
   static const LogicalKeyboardKey prayerSize    = LogicalKeyboardKey.shiftLeft;
@@ -82,6 +88,7 @@ class GameKeymap {
     KeymapEntry(keys: 'S / ↓', action: 'Nach unten bewegen',  category: 'Bewegung'),
     KeymapEntry(keys: 'A / ←', action: 'Nach links bewegen',  category: 'Bewegung'),
     KeymapEntry(keys: 'D / →', action: 'Nach rechts bewegen', category: 'Bewegung'),
+    KeymapEntry(keys: 'Shift', action: 'Sprinten (erhöht Hunger-Verbrauch)', category: 'Bewegung'),
 
     // Interaktion (reale Welt)
     KeymapEntry(

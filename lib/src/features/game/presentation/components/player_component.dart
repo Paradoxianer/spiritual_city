@@ -15,7 +15,28 @@ class PlayerComponent extends PositionComponent
   final JoystickComponent joystick;
   
   final double speed = 100.0;
-  
+
+  // ── Sprint (Issue #50) ─────────────────────────────────────────────────────
+  /// Speed multiplier applied while sprinting.
+  static const double kSprintMultiplier = 1.8;
+
+  /// Additional hunger drained per second of active sprint movement.
+  static const double kSprintHungerDrainRate = 0.5;
+
+  /// True when the player is holding the Shift key (desktop sprint).
+  bool _isSprintingKeyboard = false;
+
+  /// True when the sprint HUD button is pressed (mobile sprint).
+  bool _isSprintingButton = false;
+
+  /// Whether the player is currently sprinting (real world only).
+  bool get isSprinting =>
+      (_isSprintingKeyboard || _isSprintingButton) && !game.isSpiritualWorld;
+
+  void startSprintButton() => _isSprintingButton = true;
+  void stopSprintButton()  => _isSprintingButton = false;
+  // ── End Sprint ─────────────────────────────────────────────────────────────
+
   // Prayer Combat State
   late final PrayerZoneComponent prayerZone;
   bool _isChargingIntensity = false;
@@ -78,6 +99,16 @@ class PlayerComponent extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) {
+      // Sprint glow: orange halo behind the player circle
+      if (isSprinting) {
+        canvas.drawCircle(
+          (size / 2).toOffset(),
+          size.x / 2 + 6,
+          Paint()
+            ..color = Colors.orangeAccent.withValues(alpha: 0.55)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+        );
+      }
       final isNear = game.nearestInteractable != null;
       final auraPaint = Paint()
         ..color = isNear ? Colors.yellow.withValues(alpha: 0.2) : Colors.blueAccent.withValues(alpha: 0.1)
@@ -107,6 +138,14 @@ class PlayerComponent extends PositionComponent
     if (keysPressed.contains(GameKeymap.moveLeft)  || keysPressed.contains(GameKeymap.moveLeftAlt))  _keyboardDirection.x -= 1;
     if (keysPressed.contains(GameKeymap.moveRight) || keysPressed.contains(GameKeymap.moveRightAlt)) _keyboardDirection.x += 1;
     if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
+
+    // ── Sprint (Shift, real world only) ──────────────────────────────────────
+    if (!game.isSpiritualWorld) {
+      _isSprintingKeyboard = keysPressed.contains(GameKeymap.sprint) ||
+          keysPressed.contains(GameKeymap.sprintAlt);
+    } else {
+      _isSprintingKeyboard = false;
+    }
 
     // ── Action button (Space) ─────────────────────────────────────────────────
     if (keysPressed.contains(GameKeymap.action)) {
@@ -237,9 +276,15 @@ class PlayerComponent extends PositionComponent
   void _updateMovement(double dt) {
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
     final moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
-    final effectiveSpeed = speed * _hungerSpeedMultiplier;
+    final sprintMult = isSprinting ? kSprintMultiplier : 1.0;
+    final effectiveSpeed = speed * _hungerSpeedMultiplier * sprintMult;
     final delta = moveDir * effectiveSpeed * dt;
     final newPos = position + delta;
+
+    // Sprint hunger drain: extra drain while actively moving at sprint speed
+    if (isSprinting) {
+      game.spendHunger(kSprintHungerDrainRate * dt);
+    }
 
     // Grid coordinates for target position
     final gx = (newPos.x / CellComponent.cellSize).floor();
