@@ -110,20 +110,28 @@ class PlayerComponent extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) {
-      // Sprint effect: small dust/speed particles behind the player.
+      // Sprint dust: scattered earthy particles kicked up behind the player.
       if (isSprinting && !_lastMoveDir.isZero()) {
-        final behind = Vector2(-_lastMoveDir.x, -_lastMoveDir.y)..normalize();
+        final behind = Vector2(-_lastMoveDir.x, -_lastMoveDir.y); // normalised
+        final perp   = Vector2(-behind.y,  behind.x);             // perpendicular
         final center = (size / 2).toOffset();
-        final baseOffset = Offset(behind.x, behind.y) * (size.x / 2 + 4);
-        for (int i = 1; i <= 4; i++) {
-          final pos = center + baseOffset + Offset(behind.x, behind.y) * (i * 4.0);
-          canvas.drawCircle(
-            pos,
-            3.5 - i * 0.6,
-            Paint()
-              ..color = Colors.white.withValues(
-                  alpha: (0.75 - i * 0.15).clamp(0.0, 1.0)),
-          );
+
+        // (behind-factor, perp-factor, radius, alpha, color) for each dust speck.
+        const dustSpecks = [
+          (10.0,  0.0, 4.5, 0.65, Color(0xFFA07050)), // central clump
+          ( 7.0,  5.0, 5.0, 0.50, Color(0xFF8B5E3C)), // near left
+          ( 7.0, -5.0, 3.5, 0.45, Color(0xFFC4A882)), // near right
+          (16.0,  8.0, 3.0, 0.42, Color(0xFF9E8B72)), // mid left
+          (16.0, -9.0, 2.5, 0.38, Color(0xFF7D6B4F)), // mid right
+          (23.0, 12.0, 2.0, 0.28, Color(0xFFA07050)), // far left
+          (22.0,-13.0, 2.0, 0.25, Color(0xFF8B5E3C)), // far right
+        ];
+
+        for (final (bf, pf, r, a, col) in dustSpecks) {
+          final pos = center
+              + Offset(behind.x, behind.y) * bf
+              + Offset(perp.x,   perp.y)   * pf;
+          canvas.drawCircle(pos, r, Paint()..color = col.withValues(alpha: a));
         }
       }
       final isNear = game.nearestInteractable != null;
@@ -312,11 +320,6 @@ class PlayerComponent extends PositionComponent
   }
 
   void _updateMovement(double dt) {
-    // Auto-stop joystick sprint when joystick is released.
-    if (_isSprintingJoystick && joystick.delta.isZero()) {
-      _isSprintingJoystick = false;
-    }
-
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
     final moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
     // Track the last non-zero direction for particle rendering.

@@ -80,6 +80,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final CityGenerator generator;
   late final PlayerComponent player;
   late final JoystickComponent joystick;
+  late final _SprintJoystickComponent _sprintJoystick;
   late final ChunkManager chunkManager;
   late final SpiritualDynamicsSystem spiritualDynamics;
   late final HudButton actionButton;
@@ -1793,13 +1794,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   _SprintJoystickComponent _createJoystick() {
-    return joystick = _SprintJoystickComponent(
+    _sprintJoystick = _SprintJoystickComponent(
       onSprintStart: () => player.startSprintJoystick(),
       onSprintEnd:   () => player.stopSprintJoystick(),
       knob: CircleComponent(radius: 20, paint: Paint()..color = Colors.white.withValues(alpha: 0.5)),
       background: CircleComponent(radius: 50, paint: Paint()..color = Colors.white.withValues(alpha: 0.2)),
       margin: const EdgeInsets.only(left: 40, bottom: 40),
     );
+    return joystick = _sprintJoystick;
   }
 
   Future<void> _addHudButtons() async {
@@ -1829,6 +1831,29 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (isLoaded) {
       _updateHudVisibility();
     }
+  }
+
+  // Joystick geometry constants (must match _createJoystick margin + background).
+  static const double _kJoystickMarginLeft   = 40.0;
+  static const double _kJoystickMarginBottom = 40.0;
+  static const double _kJoystickBgRadius     = 50.0;
+
+  /// Game-level tap handler.  Detects double-taps within the joystick area
+  /// for desktop / web sprint activation.  This is more reliable than
+  /// relying on TapCallbacks propagation through JoystickComponent's child
+  /// hierarchy, where mouse events can be inconsistently routed.
+  @override
+  bool onTapDown(TapDownEvent event) {
+    if (!isSpiritualWorld && isLoaded && joystick.parent != null) {
+      final jCenter = Vector2(
+        _kJoystickMarginLeft + _kJoystickBgRadius,
+        camera.viewport.size.y - _kJoystickMarginBottom - _kJoystickBgRadius,
+      );
+      if ((event.canvasPosition - jCenter).length <= _kJoystickBgRadius + 15) {
+        _sprintJoystick.recordTapInteraction();
+      }
+    }
+    return false;
   }
 }
 
@@ -1962,22 +1987,21 @@ class HudButton extends PositionComponent with TapCallbacks {
   }
 }
 
-/// A [JoystickComponent] that detects a "double-tap" gesture (desktop: two
-/// quick [onTapDown] events; mobile: two successive drag starts) and fires
-/// [onSprintStart].  Sprint ends automatically when the drag is released.
+/// A [JoystickComponent] that detects a "double-drag" gesture (two successive
+/// drag starts within [_kDoubleTapWindowMs] ms) and fires [onSprintStart].
+/// Sprint ends automatically when the drag is released.
 ///
-/// Dedup guard: [onTapDown] and [onDragStart] can both fire for the same
-/// physical pointer-down (touch starts drag after slop), so we ignore any
-/// second event that arrives within [_kSameEventDedupeMs] of the first.
-class _SprintJoystickComponent extends JoystickComponent with TapCallbacks {
+/// On desktop/web a second source of interactions comes from
+/// [SpiritWorldGame.onTapDown], which calls [recordTapInteraction] when the
+/// user double-clicks inside the joystick area.  A 100 ms dedup guard
+/// prevents [onDragStart] and the game-level tap from counting the same
+/// physical pointer-down twice.
+class _SprintJoystickComponent extends JoystickComponent {
   final VoidCallback onSprintStart;
   final VoidCallback onSprintEnd;
 
   static const int _kDoubleTapWindowMs  = 400;
-  /// Two events closer than this belong to the same physical interaction
-  /// (e.g. onTapDown fires, then onDragStart fires ~5 ms later for the
-  /// same touch).  We only count ONE of them to avoid false double-taps.
-  static const int _kSameEventDedupeMs = 100;
+  static const int _kSameEventDedupeMs  = 100;
 
   int _lastInteractionMs = 0;
   bool _sprinting = false;
@@ -1989,6 +2013,10 @@ class _SprintJoystickComponent extends JoystickComponent with TapCallbacks {
     required super.background,
     required super.margin,
   });
+
+  /// Called by [SpiritWorldGame.onTapDown] when a tap lands within the joystick
+  /// area.  Tracks double-taps for sprint activation on desktop / web.
+  void recordTapInteraction() => _recordInteraction();
 
   /// Record an interaction start.  Returns true when sprint is activated.
   bool _recordInteraction() {
@@ -2002,19 +2030,10 @@ class _SprintJoystickComponent extends JoystickComponent with TapCallbacks {
       onSprintStart();
       return true;
     }
-    // Only update timestamp if this is genuinely a new interaction (not a
-    // near-simultaneous duplicate of an already-counted event).
     if (elapsed > _kSameEventDedupeMs) {
       _lastInteractionMs = now;
     }
     return false;
-  }
-
-  // ── Desktop: quick double-click on joystick area ──────────────────────────
-  @override
-  bool onTapDown(TapDownEvent event) {
-    _recordInteraction();
-    return false; // don't consume – let drag events pass through
   }
 
   // ── Mobile / mouse drag: two rapid drag starts ────────────────────────────
