@@ -15,7 +15,39 @@ class PlayerComponent extends PositionComponent
   final JoystickComponent joystick;
   
   final double speed = 100.0;
-  
+
+  // ── Sprint (Issue #50) ─────────────────────────────────────────────────────
+  /// Speed multiplier applied while sprinting.
+  static const double kSprintMultiplier = 1.8;
+
+  /// Additional hunger drained per second of active sprint movement.
+  static const double kSprintHungerDrainRate = 1.0;
+
+  /// True when the player is holding a direction key after a double-tap.
+  bool _isSprintingKeyboard = false;
+
+  /// True when the joystick double-drag sprint is active (set by game).
+  bool _isSprintingJoystick = false;
+
+  /// Whether the player is currently sprinting (real world only).
+  bool get isSprinting =>
+      (_isSprintingKeyboard || _isSprintingJoystick) && !game.isSpiritualWorld;
+
+  void startSprintJoystick() => _isSprintingJoystick = true;
+  void stopSprintJoystick()  => _isSprintingJoystick = false;
+
+  // Keyboard double-tap detection state.
+  LogicalKeyboardKey? _lastDirKeyDown;
+  int _lastDirKeyDownTime = 0;
+  static const int _kDoubleTapWindowMs = 350;
+
+  // Accumulated sprint hunger (batched to avoid sub-integer HUD flicker).
+  double _sprintHungerAccum = 0.0;
+
+  // Last non-zero movement direction (used to place dust particles).
+  final Vector2 _lastMoveDir = Vector2.zero();
+  // ── End Sprint ─────────────────────────────────────────────────────────────
+
   // Prayer Combat State
   late final PrayerZoneComponent prayerZone;
   bool _isChargingIntensity = false;
@@ -57,6 +89,17 @@ class PlayerComponent extends PositionComponent
           priority: 100,
         );
 
+  /// Returns a speed multiplier based on current hunger level.
+  /// - Hunger < 10% of max → 40% speed
+  /// - Hunger < 30% of max → 60% speed
+  /// - Otherwise           → 100% speed
+  double get _hungerSpeedMultiplier {
+    final hungerPct = game.hunger / game.progress.maxHunger;
+    if (hungerPct < SpiritWorldGame.hungerCriticalThreshold) return 0.4;
+    if (hungerPct < SpiritWorldGame.hungerWarnThreshold) return 0.6;
+    return 1.0;
+  }
+
   @override
   Future<void> onLoad() async {
     add(CircleHitbox());
@@ -96,6 +139,35 @@ class PlayerComponent extends PositionComponent
     if (keysPressed.contains(GameKeymap.moveLeft)  || keysPressed.contains(GameKeymap.moveLeftAlt))  _keyboardDirection.x -= 1;
     if (keysPressed.contains(GameKeymap.moveRight) || keysPressed.contains(GameKeymap.moveRightAlt)) _keyboardDirection.x += 1;
     if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
+
+    // ── Sprint: double-tap direction key (real world only) ────────────────────
+    if (!game.isSpiritualWorld && event is KeyDownEvent) {
+      LogicalKeyboardKey? pressedDir;
+      if (event.logicalKey == GameKeymap.moveUp    || event.logicalKey == GameKeymap.moveUpAlt)    pressedDir = GameKeymap.moveUp;
+      if (event.logicalKey == GameKeymap.moveDown  || event.logicalKey == GameKeymap.moveDownAlt)  pressedDir = GameKeymap.moveDown;
+      if (event.logicalKey == GameKeymap.moveLeft  || event.logicalKey == GameKeymap.moveLeftAlt)  pressedDir = GameKeymap.moveLeft;
+      if (event.logicalKey == GameKeymap.moveRight || event.logicalKey == GameKeymap.moveRightAlt) pressedDir = GameKeymap.moveRight;
+      if (pressedDir != null) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (pressedDir == _lastDirKeyDown &&
+            now - _lastDirKeyDownTime < _kDoubleTapWindowMs) {
+          _isSprintingKeyboard = true;
+        }
+        _lastDirKeyDown = pressedDir;
+        _lastDirKeyDownTime = now;
+      }
+    }
+    // Also allow Shift as a direct sprint toggle (desktop convenience).
+    if (!game.isSpiritualWorld) {
+      if (keysPressed.contains(GameKeymap.sprint) ||
+          keysPressed.contains(GameKeymap.sprintAlt)) {
+        _isSprintingKeyboard = true;
+      }
+    }
+    // Sprint ends when all direction keys are released.
+    if (_isSprintingKeyboard && _keyboardDirection.isZero()) {
+      _isSprintingKeyboard = false;
+    }
 
     // ── Action button (Space) ─────────────────────────────────────────────────
     if (keysPressed.contains(GameKeymap.action)) {
@@ -194,8 +266,8 @@ class PlayerComponent extends PositionComponent
       game.faith,
     );
 
-    // Faith cost per wave (higher cost for stronger waves)
-    final cost = 5.0 * game.modifiers.faithCostMultiplier;
+    // Faith cost per wave (higher cost for stronger waves; +50% if hunger critical)
+    final cost = 5.0 * game.modifiers.faithCostMultiplier * game.hungerFaithCostMultiplier;
     if (game.faith < cost) {
       _isChargingIntensity = false;
       return;
@@ -226,8 +298,24 @@ class PlayerComponent extends PositionComponent
   void _updateMovement(double dt) {
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
     final moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
-    final delta = moveDir * speed * dt;
+    // Track the last non-zero direction for particle rendering.
+    if (!moveDir.isZero()) _lastMoveDir.setFrom(moveDir.normalized());
+    final sprintMult = isSprinting ? kSprintMultiplier : 1.0;
+    final effectiveSpeed = speed * _hungerSpeedMultiplier * sprintMult;
+    final delta = moveDir * effectiveSpeed * dt;
     final newPos = position + delta;
+
+    // Sprint hunger drain: batch into 1-unit chunks so the HUD delta is visible.
+    if (isSprinting) {
+      _sprintHungerAccum += kSprintHungerDrainRate * dt;
+      if (_sprintHungerAccum >= 1.0) {
+        final chunk = _sprintHungerAccum.floorToDouble();
+        game.spendHunger(chunk);
+        _sprintHungerAccum -= chunk;
+      }
+    } else {
+      _sprintHungerAccum = 0.0;
+    }
 
     // Grid coordinates for target position
     final gx = (newPos.x / CellComponent.cellSize).floor();

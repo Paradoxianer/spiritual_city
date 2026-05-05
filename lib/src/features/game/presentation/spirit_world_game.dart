@@ -80,6 +80,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final CityGenerator generator;
   late final PlayerComponent player;
   late final JoystickComponent joystick;
+  late final _SprintJoystickComponent _sprintJoystick;
   late final ChunkManager chunkManager;
   late final SpiritualDynamicsSystem spiritualDynamics;
   late final HudButton actionButton;
@@ -94,6 +95,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Brief mission-completion toast message (reuses the loot-toast widget).
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> missionCompleteMessage = ValueNotifier(null);
+
+  /// True while the faint/game-over animation is playing.
+  /// Flutter overlays listen to this to show the blackout screen.
+  final ValueNotifier<bool> isFainting = ValueNotifier(false);
+
+  /// Wakeup message shown after a faint event.
+  /// Set to null after the toast has been dismissed.
+  final ValueNotifier<String?> wakeupMessage = ValueNotifier(null);
 
   /// Influence system – manages AoE spiritual-state effects with duration/decay.
   final InfluenceService influenceService = InfluenceService();
@@ -157,7 +166,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   double _hungerDrainTimer = 0.0;
   static const double hungerDrainInterval = 30.0; // drain 1 hunger every 30 seconds
   static const double hungerDrainAmount = 1.0;
-  static const double healthFromHungerThreshold = 20.0;
+
+  // Faint / game-over state
+  bool _faintTriggered = false;
+
+  // Hunger mechanics thresholds (as fractions of maxHunger)
+  static const double hungerWarnThreshold     = 0.30; // < 30%: slower movement
+  static const double hungerCriticalThreshold = 0.10; // < 10%: even slower + faith cost +50%
+
+  // Health alarm / faint thresholds
+  static const double healthAlarmThreshold = 0.25; // < 25%: red screen edge
+  static const double healthFaintThreshold = 1.0;  // ≤ 1 HP: trigger faint
 
   /// Fired when the player presses digit 1–6 while a chat dialog is open.
   /// Value is the 0-based index of the action to trigger; -1 = idle.
@@ -1490,11 +1509,123 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (_hungerDrainTimer >= hungerDrainInterval) {
       _hungerDrainTimer = 0.0;
       spendHunger(hungerDrainAmount);
-      // If starving, health starts draining
-      if (hunger < healthFromHungerThreshold) {
-        spendHealth(0.5);
+      // If critically hungry (hunger < 10), health starts draining (1 HP per
+      // hunger tick, i.e. every [hungerDrainInterval] seconds)
+      if (hunger < 10.0) {
+        spendHealth(1.0);
       }
     }
+    // Check faint condition every frame (health can drop from combat too)
+    _checkFaintCondition();
+  }
+
+  /// Checks whether the player should faint (health ≤ [healthFaintThreshold]).
+  void _checkFaintCondition() {
+    if (_faintTriggered || isFainting.value) return;
+    if (health <= healthFaintThreshold) {
+      _faintTriggered = true;
+      _triggerFaint();
+    }
+  }
+
+  /// Triggers the full faint sequence:
+  /// 1. Shows the blackout overlay.
+  /// 2. Teleports the player to the nearest recovery point (pastor house / hospital).
+  /// 3. Resets resources and applies a spiritual setback around the faint location.
+  /// 4. Shows the wakeup message.
+  Future<void> _triggerFaint() async {
+    final faintPosition = player.position.clone();
+    isFainting.value = true;
+
+    // Wait for the faint animation to play out
+    await Future.delayed(const Duration(milliseconds: 2000));
+
+    // Find the nearest recovery point (pastor house or hospital)
+    final recoveryPos = _findNearestRecoveryPoint();
+    if (recoveryPos != null) {
+      player.position.setFrom(recoveryPos);
+      camera.viewfinder.position = recoveryPos.clone();
+    }
+
+    // Reset resources (per spec)
+    health    = progress.maxHealth;
+    hunger    = progress.maxHunger;
+    faith     = 0;
+    materials = 0;
+
+    // Insight: -10% (min 0)
+    progress.applyFaintInsightPenalty();
+
+    // Spiritual setback: darken the area around the faint location
+    _applyFaintSetback(faintPosition);
+
+    // Return to real world if the player was in the spiritual world
+    if (isSpiritualWorld) {
+      isSpiritualWorld = false;
+      _updateHudVisibility();
+      _updateButtonStyles();
+    }
+
+    isFainting.value = false;
+
+    // Show wakeup message
+    wakeupMessage.value =
+        'Während du ohnmächtig warst, ist die Finsternis zurückgekehrt...';
+    Future.delayed(const Duration(seconds: 6), () {
+      wakeupMessage.value = null;
+    });
+
+    // Allow fainting again after a short grace period
+    Future.delayed(const Duration(seconds: 3), () {
+      _faintTriggered = false;
+    });
+  }
+
+  /// Returns the world-pixel position of the nearest recovery building
+  /// (pastor house first, then any loaded hospital).
+  Vector2? _findNearestRecoveryPoint() {
+    final pastorPos = pastorhousePosition.value;
+
+    Vector2? bestPos = pastorPos;
+    double bestDist = pastorPos != null
+        ? player.position.distanceTo(pastorPos)
+        : double.infinity;
+
+    for (final comp in chunkManager.allActiveBuildings) {
+      if (comp.buildingModel.type == BuildingType.hospital) {
+        final dist = player.position.distanceTo(comp.position);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestPos = comp.position.clone();
+        }
+      }
+    }
+
+    return bestPos;
+  }
+
+  /// Applies a negative spiritual influence around [faintPosition],
+  /// darkening previously-liberated cells near the faint location.
+  void _applyFaintSetback(Vector2 faintPosition) {
+    const cellSize = 32.0;
+    final gx = (faintPosition.x / cellSize).floor();
+    final gy = (faintPosition.y / cellSize).floor();
+
+    influenceService.applyAoE(
+      grid: grid,
+      originX: gx,
+      originY: gy,
+      delta: -0.8,
+      radius: 12.0,
+      durationType: InfluenceDurationType.permanent,
+    );
+  }
+
+  /// Faith cost multiplier from hunger: +50% when hunger is critically low
+  /// (below [hungerCriticalThreshold]).
+  double get hungerFaithCostMultiplier {
+    final hungerPct = hunger / progress.maxHunger;
+    return hungerPct < hungerCriticalThreshold ? 1.5 : 1.0;
   }
 
   /// Spend resources (clamped to 0)
@@ -1565,6 +1696,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     hungerNotifier.dispose();
     materialsNotifier.dispose();
     missionCompleteMessage.dispose();
+    isFainting.dispose();
+    wakeupMessage.dispose();
     super.onRemove();
   }
 
@@ -1660,12 +1793,15 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
   }
 
-  JoystickComponent _createJoystick() {
-    return joystick = JoystickComponent(
+  _SprintJoystickComponent _createJoystick() {
+    _sprintJoystick = _SprintJoystickComponent(
+      onSprintStart: () => player.startSprintJoystick(),
+      onSprintEnd:   () => player.stopSprintJoystick(),
       knob: CircleComponent(radius: 20, paint: Paint()..color = Colors.white.withValues(alpha: 0.5)),
       background: CircleComponent(radius: 50, paint: Paint()..color = Colors.white.withValues(alpha: 0.2)),
       margin: const EdgeInsets.only(left: 40, bottom: 40),
     );
+    return joystick = _sprintJoystick;
   }
 
   Future<void> _addHudButtons() async {
@@ -1695,6 +1831,29 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (isLoaded) {
       _updateHudVisibility();
     }
+  }
+
+  // Joystick geometry constants (must match _createJoystick margin + background).
+  static const double _kJoystickMarginLeft   = 40.0;
+  static const double _kJoystickMarginBottom = 40.0;
+  static const double _kJoystickBgRadius     = 50.0;
+
+  /// Game-level tap handler.  Detects double-taps within the joystick area
+  /// for desktop / web sprint activation.  This is more reliable than
+  /// relying on TapCallbacks propagation through JoystickComponent's child
+  /// hierarchy, where mouse events can be inconsistently routed.
+  @override
+  bool onTapDown(TapDownEvent event) {
+    if (!isSpiritualWorld && isLoaded && joystick.parent != null) {
+      final jCenter = Vector2(
+        _kJoystickMarginLeft + _kJoystickBgRadius,
+        camera.viewport.size.y - _kJoystickMarginBottom - _kJoystickBgRadius,
+      );
+      if ((event.canvasPosition - jCenter).length <= _kJoystickBgRadius + 15) {
+        _sprintJoystick.recordTapInteraction();
+      }
+    }
+    return false;
   }
 }
 
@@ -1825,5 +1984,82 @@ class HudButton extends PositionComponent with TapCallbacks {
   @override
   void onTapCancel(TapCancelEvent event) {
     if (opacity > 0) onUp?.call();
+  }
+}
+
+/// A [JoystickComponent] that detects a "double-drag" gesture (two successive
+/// drag starts within [_kDoubleTapWindowMs] ms) and fires [onSprintStart].
+/// Sprint ends automatically when the drag is released.
+///
+/// On desktop/web a second source of interactions comes from
+/// [SpiritWorldGame.onTapDown], which calls [recordTapInteraction] when the
+/// user double-clicks inside the joystick area.  A 100 ms dedup guard
+/// prevents [onDragStart] and the game-level tap from counting the same
+/// physical pointer-down twice.
+class _SprintJoystickComponent extends JoystickComponent {
+  final VoidCallback onSprintStart;
+  final VoidCallback onSprintEnd;
+
+  static const int _kDoubleTapWindowMs  = 400;
+  static const int _kSameEventDedupeMs  = 100;
+
+  int _lastInteractionMs = 0;
+  bool _sprinting = false;
+
+  _SprintJoystickComponent({
+    required this.onSprintStart,
+    required this.onSprintEnd,
+    required super.knob,
+    required super.background,
+    required super.margin,
+  });
+
+  /// Called by [SpiritWorldGame.onTapDown] when a tap lands within the joystick
+  /// area.  Tracks double-taps for sprint activation on desktop / web.
+  void recordTapInteraction() => _recordInteraction();
+
+  /// Record an interaction start.  Returns true when sprint is activated.
+  bool _recordInteraction() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final elapsed = _lastInteractionMs > 0 ? now - _lastInteractionMs : 99999;
+
+    if (!_sprinting &&
+        elapsed > _kSameEventDedupeMs &&
+        elapsed < _kDoubleTapWindowMs) {
+      _sprinting = true;
+      onSprintStart();
+      return true;
+    }
+    if (elapsed > _kSameEventDedupeMs) {
+      _lastInteractionMs = now;
+    }
+    return false;
+  }
+
+  // ── Mobile / mouse drag: two rapid drag starts ────────────────────────────
+  @override
+  bool onDragStart(DragStartEvent event) {
+    _recordInteraction();
+    return super.onDragStart(event);
+  }
+
+  @override
+  bool onDragEnd(DragEndEvent event) {
+    _lastInteractionMs = DateTime.now().millisecondsSinceEpoch;
+    if (_sprinting) {
+      _sprinting = false;
+      onSprintEnd();
+    }
+    return super.onDragEnd(event);
+  }
+
+  @override
+  bool onDragCancel(DragCancelEvent event) {
+    _lastInteractionMs = DateTime.now().millisecondsSinceEpoch;
+    if (_sprinting) {
+      _sprinting = false;
+      onSprintEnd();
+    }
+    return super.onDragCancel(event);
   }
 }

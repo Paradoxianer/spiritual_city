@@ -83,6 +83,15 @@ class PlayerProgress extends ChangeNotifier {
     }
   }
 
+  /// Reduces [insight] by 10% (rounded up, minimum loss of 1) as a faint penalty.
+  /// Does nothing when [insight] is already 0.
+  void applyFaintInsightPenalty() {
+    if (insight <= 0) return;
+    final loss = (insight * 0.1).ceil().clamp(1, insight);
+    insight = (insight - loss).clamp(0, insight);
+    notifyListeners();
+  }
+
   // --- Resource Stages (Issue #61) ---
   final ResourceStage faithStage = ResourceStage();
   final ResourceStage materialsStage = ResourceStage();
