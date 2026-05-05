@@ -93,6 +93,10 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   static const double _respawnMin = 180.0;
   static const double _respawnMax = 360.0;
 
+  /// Grace period (seconds) before the first spawn on a fresh game (no saved
+  /// state).  Prevents a pickup from appearing right beside the spawn point.
+  static const double _initialSpawnDelay = 30.0;
+
   final Random _rng;
   final List<_MaterialPickup> _pickups = [];
   final _log = Logger('LootSystem');
@@ -101,11 +105,56 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   double _debugTimer = 0.0;
   static const double _debugInterval = 5.0;
 
-  LootSystem({int? seed}) : _rng = Random(seed), super(priority: _renderPriority);
+  /// Countdown before the very first spawn.  Set to [_initialSpawnDelay] for
+  /// fresh games; set to 0 when state is restored from a save.
+  double _spawnDelay;
+
+  LootSystem({int? seed})
+      : _rng = Random(seed),
+        _spawnDelay = _initialSpawnDelay,
+        super(priority: _renderPriority);
+
+  // ── Save / restore ────────────────────────────────────────────────────────
+
+  /// Serialises all current pickups (active and respawning) for persistence.
+  List<Map<String, dynamic>> captureState() {
+    return _pickups.map((p) => {
+      'x':            p.worldPos.x,
+      'y':            p.worldPos.y,
+      'type':         p.type.index,
+      'isPickedUp':   p.isPickedUp,
+      'respawnTimer': p.respawnTimer,
+    }).toList();
+  }
+
+  /// Restores pickups from a previously serialised state.
+  ///
+  /// After a restore the spawn delay is cleared so the loot system does not
+  /// add extra pickups on top of the restored ones immediately.
+  void restoreState(List<Map<String, dynamic>> data) {
+    _pickups.clear();
+    for (final d in data) {
+      final pos  = Vector2((d['x'] as num).toDouble(), (d['y'] as num).toDouble());
+      final type = LootType.values[(d['type'] as num).toInt()];
+      final p    = _MaterialPickup(pos, type);
+      p.isPickedUp   = d['isPickedUp']   as bool?   ?? false;
+      p.respawnTimer = (d['respawnTimer'] as num?)?.toDouble() ?? -1.0;
+      _pickups.add(p);
+    }
+    // State restored – no extra startup delay needed.
+    _spawnDelay = 0.0;
+    _log.info('[LootSystem] restored ${_pickups.length} pickups from save');
+  }
 
   @override
   void update(double dt) {
     _debugTimer += dt;
+
+    // Startup grace-period countdown (only active on fresh games).
+    if (_spawnDelay > 0) {
+      _spawnDelay -= dt;
+      if (_spawnDelay < 0) _spawnDelay = 0;
+    }
 
     // Respawn timer countdown
     for (final p in _pickups) {
@@ -118,7 +167,9 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     // Only spawn genuinely new pickups when the total pool hasn't reached the
     // minimum yet.  Collected items already have a respawn timer running – they
     // will reappear on their own, so we must NOT create an extra entry here.
-    if (_pickups.length < _minPickups) {
+    // Also honour the startup delay so no loot spawns right next to the player
+    // when first loading into the world.
+    if (_spawnDelay <= 0 && _pickups.length < _minPickups) {
       _trySpawn();
     }
 
