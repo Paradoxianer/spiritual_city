@@ -2351,7 +2351,7 @@ class _InsightDisplay extends StatelessWidget {
 }
 
 /// Compact conversion counter shown below the Insight display in the HUD.
-/// Shows ✝ converted / total NPCs loaded so far.
+/// Shows ✝ converted / totalNpcsSeen (persisted across chunks/sessions).
 class _ConversionCounter extends StatelessWidget {
   final SpiritWorldGame gameRef;
   const _ConversionCounter({required this.gameRef});
@@ -2361,7 +2361,9 @@ class _ConversionCounter extends StatelessWidget {
     final converted = gameRef.chunkManager.allNPCModels
         .where((m) => m.isConverted)
         .length;
-    final total = gameRef.chunkManager.npcCount;
+    // Use the persistent high-water mark so the denominator reflects all NPCs
+    // ever discovered, not just those in the currently loaded chunks.
+    final total = gameRef.progress.totalNpcsSeen;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

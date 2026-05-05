@@ -109,6 +109,20 @@ class PlayerProgress extends ChangeNotifier {
   // --- Territory tracking ---
   int maxChristiansInOneCell = 0;
 
+  // --- City exploration tracking ---
+  /// Running maximum of NPC components ever loaded across all visited chunks.
+  /// Persisted so the HUD denominator never shrinks between sessions.
+  int totalNpcsSeen = 0;
+
+  /// Called whenever new NPCs are created for a freshly loaded chunk.
+  /// Only updates (and notifies) when [count] exceeds the previous maximum.
+  void trackNpcsDiscovered(int count) {
+    if (count > totalNpcsSeen) {
+      totalNpcsSeen = count;
+      notifyListeners();
+    }
+  }
+
   void recordPrayerCombat() => prayerCombatsCompleted++;
   void recordBibleReading() => bibleReadingsCompleted++;
   void recordConversion() {
@@ -133,6 +147,7 @@ class PlayerProgress extends ChangeNotifier {
     'territoriesPartially': territoriesPartiallyTaken,
     'territoriesFully': territoriesFullyTaken,
     'maxChristians': maxChristiansInOneCell,
+    'totalNpcsSeen': totalNpcsSeen,
     'insight': insight,
     'pendingInsight': pendingInsight,
     'combatProfile': combatProfile.toJson(),
@@ -152,6 +167,7 @@ class PlayerProgress extends ChangeNotifier {
     territoriesPartiallyTaken = (json['territoriesPartially'] as num?)?.toInt() ?? 0;
     territoriesFullyTaken = (json['territoriesFully'] as num?)?.toInt() ?? 0;
     maxChristiansInOneCell = (json['maxChristians'] as num?)?.toInt() ?? 0;
+    totalNpcsSeen = (json['totalNpcsSeen'] as num?)?.toInt() ?? 0;
     insight = (json['insight'] as num?)?.toInt() ?? 0;
     pendingInsight = (json['pendingInsight'] as num?)?.toDouble() ?? 0.0;
     

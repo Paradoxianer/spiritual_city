@@ -186,6 +186,10 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         parent?.add(npcComp);
       }
 
+      // Keep track of the running total across all discovered chunks so the
+      // HUD denominator grows correctly as the player explores the city.
+      game.progress.trackNpcsDiscovered(_allNPCs.length);
+
       // Spawn building entrance components.
       _spawnBuildingComponents(chunk, npcsByBuilding);
 
