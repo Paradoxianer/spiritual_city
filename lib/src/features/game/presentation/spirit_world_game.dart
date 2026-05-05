@@ -84,7 +84,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final SpiritualDynamicsSystem spiritualDynamics;
   late final HudButton actionButton;
   late final HudButton worldToggleButton;
-  late final HudButton sprintButton;
   late final List<HudButton> modeButtons;
   late final PrayerHudComponent prayerHud;
   late final LootSystem lootSystem;
@@ -687,7 +686,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void _updateHudVisibility() {
     if (isSpiritualWorld) {
       if (joystick.parent != null) joystick.removeFromParent();
-      sprintButton.opacity = 0.0;
 
       // ── Spiritual-world dock layout ────────────────────────────────────────
       // Lay all bottom buttons in a single non-overlapping row:
@@ -731,8 +729,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       actionButton.position = Vector2(size.x - 80, size.y - 80);
       actionButton.keyLabel = 'E';
       worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
-      sprintButton.position = Vector2(120, size.y - 80);
-      sprintButton.opacity = 1.0;
       for (final btn in modeButtons) {
         btn.opacity = 0.0;
       }
@@ -1796,8 +1792,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
   }
 
-  JoystickComponent _createJoystick() {
-    return joystick = JoystickComponent(
+  _SprintJoystickComponent _createJoystick() {
+    return joystick = _SprintJoystickComponent(
+      onSprintStart: () => player.startSprintJoystick(),
+      onSprintEnd:   () => player.stopSprintJoystick(),
       knob: CircleComponent(radius: 20, paint: Paint()..color = Colors.white.withValues(alpha: 0.5)),
       background: CircleComponent(radius: 50, paint: Paint()..color = Colors.white.withValues(alpha: 0.2)),
       margin: const EdgeInsets.only(left: 40, bottom: 40),
@@ -1823,17 +1821,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       position: Vector2(size.x - 170, size.y - 80)
     );
     await camera.viewport.add(worldToggleButton);
-
-    sprintButton = HudButton(
-      icon: '💨',
-      color: Colors.orange.withValues(alpha: 0.6),
-      onDown: () => player.startSprintButton(),
-      onUp:   () => player.stopSprintButton(),
-      isActive: () => player.isSprinting,
-      keyLabel: '⇧',
-      position: Vector2(120, size.y - 80),
-    );
-    await camera.viewport.add(sprintButton);
   }
 
   @override
@@ -1972,5 +1959,56 @@ class HudButton extends PositionComponent with TapCallbacks {
   @override
   void onTapCancel(TapCancelEvent event) {
     if (opacity > 0) onUp?.call();
+  }
+}
+
+/// A [JoystickComponent] that detects a double-drag gesture (two successive
+/// drag-starts within [_kDoubleTapWindowMs] ms) and fires [onSprintStart].
+/// Sprint ends automatically when the drag ends or is cancelled.
+class _SprintJoystickComponent extends JoystickComponent {
+  final VoidCallback onSprintStart;
+  final VoidCallback onSprintEnd;
+
+  static const int _kDoubleTapWindowMs = 350;
+
+  int _lastDragEndMs = 0;
+  bool _sprinting = false;
+
+  _SprintJoystickComponent({
+    required this.onSprintStart,
+    required this.onSprintEnd,
+    required super.knob,
+    required super.background,
+    required super.margin,
+  });
+
+  @override
+  bool onDragStart(DragStartEvent event) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (!_sprinting && now - _lastDragEndMs < _kDoubleTapWindowMs) {
+      _sprinting = true;
+      onSprintStart();
+    }
+    return super.onDragStart(event);
+  }
+
+  @override
+  bool onDragEnd(DragEndEvent event) {
+    _lastDragEndMs = DateTime.now().millisecondsSinceEpoch;
+    if (_sprinting) {
+      _sprinting = false;
+      onSprintEnd();
+    }
+    return super.onDragEnd(event);
+  }
+
+  @override
+  bool onDragCancel(DragCancelEvent event) {
+    _lastDragEndMs = DateTime.now().millisecondsSinceEpoch;
+    if (_sprinting) {
+      _sprinting = false;
+      onSprintEnd();
+    }
+    return super.onDragCancel(event);
   }
 }

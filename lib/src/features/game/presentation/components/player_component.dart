@@ -21,20 +21,31 @@ class PlayerComponent extends PositionComponent
   static const double kSprintMultiplier = 1.8;
 
   /// Additional hunger drained per second of active sprint movement.
-  static const double kSprintHungerDrainRate = 0.5;
+  static const double kSprintHungerDrainRate = 3.0;
 
-  /// True when the player is holding the Shift key (desktop sprint).
+  /// True when the player is holding a direction key after a double-tap.
   bool _isSprintingKeyboard = false;
 
-  /// True when the sprint HUD button is pressed (mobile sprint).
-  bool _isSprintingButton = false;
+  /// True when the joystick double-drag sprint is active (set by game).
+  bool _isSprintingJoystick = false;
 
   /// Whether the player is currently sprinting (real world only).
   bool get isSprinting =>
-      (_isSprintingKeyboard || _isSprintingButton) && !game.isSpiritualWorld;
+      (_isSprintingKeyboard || _isSprintingJoystick) && !game.isSpiritualWorld;
 
-  void startSprintButton() => _isSprintingButton = true;
-  void stopSprintButton()  => _isSprintingButton = false;
+  void startSprintJoystick() => _isSprintingJoystick = true;
+  void stopSprintJoystick()  => _isSprintingJoystick = false;
+
+  // Keyboard double-tap detection state.
+  LogicalKeyboardKey? _lastDirKeyDown;
+  int _lastDirKeyDownTime = 0;
+  static const int _kDoubleTapWindowMs = 350;
+
+  // Accumulated sprint hunger (batched to avoid sub-integer HUD flicker).
+  double _sprintHungerAccum = 0.0;
+
+  // Last non-zero movement direction (used to place dust particles).
+  final Vector2 _lastMoveDir = Vector2.zero();
   // ── End Sprint ─────────────────────────────────────────────────────────────
 
   // Prayer Combat State
@@ -99,15 +110,21 @@ class PlayerComponent extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) {
-      // Sprint glow: orange halo behind the player circle
-      if (isSprinting) {
-        canvas.drawCircle(
-          (size / 2).toOffset(),
-          size.x / 2 + 6,
-          Paint()
-            ..color = Colors.orangeAccent.withValues(alpha: 0.55)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
-        );
+      // Sprint effect: small dust/speed particles behind the player.
+      if (isSprinting && !_lastMoveDir.isZero()) {
+        final behind = Vector2(-_lastMoveDir.x, -_lastMoveDir.y)..normalize();
+        final center = (size / 2).toOffset();
+        final baseOffset = Offset(behind.x, behind.y) * (size.x / 2 + 4);
+        for (int i = 1; i <= 4; i++) {
+          final pos = center + baseOffset + Offset(behind.x, behind.y) * (i * 4.0);
+          canvas.drawCircle(
+            pos,
+            3.5 - i * 0.6,
+            Paint()
+              ..color = Colors.white.withValues(
+                  alpha: (0.75 - i * 0.15).clamp(0.0, 1.0)),
+          );
+        }
       }
       final isNear = game.nearestInteractable != null;
       final auraPaint = Paint()
@@ -139,11 +156,32 @@ class PlayerComponent extends PositionComponent
     if (keysPressed.contains(GameKeymap.moveRight) || keysPressed.contains(GameKeymap.moveRightAlt)) _keyboardDirection.x += 1;
     if (!_keyboardDirection.isZero()) _keyboardDirection.normalize();
 
-    // ── Sprint (Shift, real world only) ──────────────────────────────────────
+    // ── Sprint: double-tap direction key (real world only) ────────────────────
+    if (!game.isSpiritualWorld && event is KeyDownEvent) {
+      LogicalKeyboardKey? pressedDir;
+      if (event.logicalKey == GameKeymap.moveUp    || event.logicalKey == GameKeymap.moveUpAlt)    pressedDir = GameKeymap.moveUp;
+      if (event.logicalKey == GameKeymap.moveDown  || event.logicalKey == GameKeymap.moveDownAlt)  pressedDir = GameKeymap.moveDown;
+      if (event.logicalKey == GameKeymap.moveLeft  || event.logicalKey == GameKeymap.moveLeftAlt)  pressedDir = GameKeymap.moveLeft;
+      if (event.logicalKey == GameKeymap.moveRight || event.logicalKey == GameKeymap.moveRightAlt) pressedDir = GameKeymap.moveRight;
+      if (pressedDir != null) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (pressedDir == _lastDirKeyDown &&
+            now - _lastDirKeyDownTime < _kDoubleTapWindowMs) {
+          _isSprintingKeyboard = true;
+        }
+        _lastDirKeyDown = pressedDir;
+        _lastDirKeyDownTime = now;
+      }
+    }
+    // Also allow Shift as a direct sprint toggle (desktop convenience).
     if (!game.isSpiritualWorld) {
-      _isSprintingKeyboard = keysPressed.contains(GameKeymap.sprint) ||
-          keysPressed.contains(GameKeymap.sprintAlt);
-    } else {
+      if (keysPressed.contains(GameKeymap.sprint) ||
+          keysPressed.contains(GameKeymap.sprintAlt)) {
+        _isSprintingKeyboard = true;
+      }
+    }
+    // Sprint ends when all direction keys are released.
+    if (_isSprintingKeyboard && _keyboardDirection.isZero()) {
       _isSprintingKeyboard = false;
     }
 
@@ -274,16 +312,30 @@ class PlayerComponent extends PositionComponent
   }
 
   void _updateMovement(double dt) {
+    // Auto-stop joystick sprint when joystick is released.
+    if (_isSprintingJoystick && joystick.delta.isZero()) {
+      _isSprintingJoystick = false;
+    }
+
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
     final moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
+    // Track the last non-zero direction for particle rendering.
+    if (!moveDir.isZero()) _lastMoveDir.setFrom(moveDir.normalized());
     final sprintMult = isSprinting ? kSprintMultiplier : 1.0;
     final effectiveSpeed = speed * _hungerSpeedMultiplier * sprintMult;
     final delta = moveDir * effectiveSpeed * dt;
     final newPos = position + delta;
 
-    // Sprint hunger drain: extra drain while actively moving at sprint speed
+    // Sprint hunger drain: batch into 1-unit chunks so the HUD delta is visible.
     if (isSprinting) {
-      game.spendHunger(kSprintHungerDrainRate * dt);
+      _sprintHungerAccum += kSprintHungerDrainRate * dt;
+      if (_sprintHungerAccum >= 1.0) {
+        final chunk = _sprintHungerAccum.floorToDouble();
+        game.spendHunger(chunk);
+        _sprintHungerAccum -= chunk;
+      }
+    } else {
+      _sprintHungerAccum = 0.0;
     }
 
     // Grid coordinates for target position

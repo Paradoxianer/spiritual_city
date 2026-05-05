@@ -88,7 +88,8 @@ class GameKeymap {
     KeymapEntry(keys: 'S / ↓', action: 'Nach unten bewegen',  category: 'Bewegung'),
     KeymapEntry(keys: 'A / ←', action: 'Nach links bewegen',  category: 'Bewegung'),
     KeymapEntry(keys: 'D / →', action: 'Nach rechts bewegen', category: 'Bewegung'),
-    KeymapEntry(keys: 'Shift', action: 'Sprinten (erhöht Hunger-Verbrauch)', category: 'Bewegung'),
+    KeymapEntry(keys: 'WW / SS / AA / DD', action: 'Sprinten (Doppeltippen, erhöht Hunger-Verbrauch)', category: 'Bewegung'),
+    KeymapEntry(keys: 'Shift', action: 'Sprinten (halten, Alternative)', category: 'Bewegung'),
 
     // Interaktion (reale Welt)
     KeymapEntry(
