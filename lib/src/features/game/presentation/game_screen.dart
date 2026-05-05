@@ -207,6 +207,30 @@ class _GameScreenState extends State<GameScreen> {
               return _MissionCompleteToast(game: _game);
             },
           ),
+          // Health alarm – red pulsing edge overlay when health < 15%
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _HealthAlarmOverlay(game: _game);
+            },
+          ),
+          // Faint overlay – full-screen blackout during faint animation
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _FaintOverlay(game: _game);
+            },
+          ),
+          // Wakeup toast – shown after recovering from a faint
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _WakeupToast(game: _game);
+            },
+          ),
           // Saving overlay – centered indicator shown while persisting to Hive.
           if (_isSaving)
             Container(
@@ -1215,6 +1239,251 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast>
   }
 }
 
+// ── Health alarm overlay ──────────────────────────────────────────────────────
+
+/// Pulsing red gradient at the screen edges when health is critically low.
+/// Invisible when health is at or above [SpiritWorldGame.healthAlarmThreshold].
+class _HealthAlarmOverlay extends StatefulWidget {
+  final SpiritWorldGame game;
+  const _HealthAlarmOverlay({required this.game});
+
+  @override
+  State<_HealthAlarmOverlay> createState() => _HealthAlarmOverlayState();
+}
+
+class _HealthAlarmOverlayState extends State<_HealthAlarmOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    _pulseAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<double>(
+      valueListenable: widget.game.healthNotifier,
+      builder: (context, health, _) {
+        final pct = health / widget.game.progress.maxHealth;
+        if (pct >= SpiritWorldGame.healthAlarmThreshold) {
+          return const SizedBox.shrink();
+        }
+        // Stronger pulse when very close to fainting
+        final severity = (1.0 - pct / SpiritWorldGame.healthAlarmThreshold).clamp(0.0, 1.0);
+        return AnimatedBuilder(
+          animation: _pulseAnim,
+          builder: (context, _) {
+            final alpha = ((0.15 + _pulseAnim.value * 0.35) * severity)
+                .clamp(0.0, 1.0);
+            return IgnorePointer(
+              child: SizedBox.expand(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.4,
+                      colors: [
+                        Colors.transparent,
+                        Colors.red.withValues(alpha: alpha),
+                      ],
+                      stops: const [0.5, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// ── Faint overlay ─────────────────────────────────────────────────────────────
+
+/// Full-screen blackout animation played when the player faints.
+/// Driven by [SpiritWorldGame.isFainting].
+class _FaintOverlay extends StatefulWidget {
+  final SpiritWorldGame game;
+  const _FaintOverlay({required this.game});
+
+  @override
+  State<_FaintOverlay> createState() => _FaintOverlayState();
+}
+
+class _FaintOverlayState extends State<_FaintOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    widget.game.isFainting.addListener(_onFaintChanged);
+  }
+
+  void _onFaintChanged() {
+    if (!mounted) return;
+    if (widget.game.isFainting.value) {
+      _ctrl.forward(from: 0.0);
+    } else {
+      _ctrl.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.game.isFainting.removeListener(_onFaintChanged);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Container(
+        color: Colors.black,
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('💫', style: TextStyle(fontSize: 52)),
+              SizedBox(height: 16),
+              Text(
+                'Der Pastor ist ohnmächtig...',
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 16,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Wakeup toast ──────────────────────────────────────────────────────────────
+
+/// Toast shown when the player wakes up after fainting, informing them that
+/// the darkness has returned near the faint location.
+class _WakeupToast extends StatefulWidget {
+  final SpiritWorldGame game;
+  const _WakeupToast({required this.game});
+
+  @override
+  State<_WakeupToast> createState() => _WakeupToastState();
+}
+
+class _WakeupToastState extends State<_WakeupToast>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  Timer? _dismissTimer;
+  String? _message;
+
+  static const Duration _fadeDuration    = Duration(milliseconds: 400);
+  static const Duration _visibleDuration = Duration(seconds: 5);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: _fadeDuration);
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    widget.game.wakeupMessage.addListener(_onMessage);
+  }
+
+  void _onMessage() {
+    final msg = widget.game.wakeupMessage.value;
+    if (msg == null || !mounted) return;
+    _dismissTimer?.cancel();
+    setState(() => _message = msg);
+    _ctrl.forward(from: 0.0);
+    _dismissTimer = Timer(_visibleDuration, _dismiss);
+  }
+
+  void _dismiss() {
+    _dismissTimer?.cancel();
+    _ctrl.reverse().then((_) {
+      if (mounted) widget.game.wakeupMessage.value = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    widget.game.wakeupMessage.removeListener(_onMessage);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_message == null) return const SizedBox.shrink();
+    return Positioned(
+      top: MediaQuery.of(context).size.height * 0.30,
+      left: 24,
+      right: 24,
+      child: Center(
+        child: FadeTransition(
+          opacity: _opacity,
+          child: GestureDetector(
+            onTap: _dismiss,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xDD1A0A0A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.7), width: 1.5),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black87, blurRadius: 12),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('😔', style: TextStyle(fontSize: 32)),
+                  const SizedBox(height: 8),
+                  Text(
+                    _message!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.red[200],
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Look Overlay ──────────────────────────────────────────────────────────────
 
 /// Rich look overlay – shows spiritual state, building/NPC info, and street
@@ -1895,6 +2164,7 @@ class _ResourceHud extends StatelessWidget {
                     icon: '❤️',
                     label: AppStrings.get('resource.health'),
                     color: Colors.redAccent,
+                    criticalThreshold: SpiritWorldGame.healthAlarmThreshold,
                   ),
                   const SizedBox(height: 2),
                   _AnimatedResourceBar(
@@ -1904,6 +2174,8 @@ class _ResourceHud extends StatelessWidget {
                     icon: '🍞',
                     label: AppStrings.get('resource.provision'),
                     color: Colors.orange,
+                    warnThreshold: SpiritWorldGame.hungerWarnThreshold,
+                    criticalThreshold: SpiritWorldGame.hungerCriticalThreshold,
                   ),
                   const SizedBox(height: 2),
                   _AnimatedResourceBar(
@@ -1975,6 +2247,9 @@ class _InsightDisplay extends StatelessWidget {
 ///
 /// Listens directly to a [ValueNotifier] so it rebuilds immediately on any
 /// resource change, regardless of the Flame game pause state.
+///
+/// Optional [warnThreshold] and [criticalThreshold] (as fractions 0.0–1.0 of
+/// [max]) activate colour changes and icon pulsing when the resource is low.
 class _AnimatedResourceBar extends StatefulWidget {
   final ValueNotifier<double> notifier;
   final ResourceStage stage;
@@ -1983,6 +2258,12 @@ class _AnimatedResourceBar extends StatefulWidget {
   final String label;
   final Color color;
 
+  /// When value/max drops below this fraction the bar turns amber.
+  final double? warnThreshold;
+
+  /// When value/max drops below this fraction the bar turns red and the icon pulses.
+  final double? criticalThreshold;
+
   const _AnimatedResourceBar({
     required this.notifier,
     required this.stage,
@@ -1990,6 +2271,8 @@ class _AnimatedResourceBar extends StatefulWidget {
     required this.icon,
     required this.label,
     required this.color,
+    this.warnThreshold,
+    this.criticalThreshold,
   });
 
   @override
@@ -1997,13 +2280,18 @@ class _AnimatedResourceBar extends StatefulWidget {
 }
 
 class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const double _barWidth  = 130.0;
   static const double _barHeight = 8.0;
   static const double _stageBarHeight = 2.0;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
+
+  /// Continuously repeating pulse animation used when value is critically low.
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulseAnim;
+
   double _prevValue = 0.0;
   double _lastDelta = 0.0;
 
@@ -2019,6 +2307,11 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
     _fadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn),
     );
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
+    _pulseAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut);
     widget.notifier.addListener(_onValueChanged);
   }
 
@@ -2038,6 +2331,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
   void dispose() {
     widget.notifier.removeListener(_onValueChanged);
     _fadeCtrl.dispose();
+    _pulseCtrl.dispose();
     super.dispose();
   }
 
@@ -2050,12 +2344,33 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
     final deltaText = '$deltaSign${_lastDelta.toInt()}';
     final deltaColor = _lastDelta >= 0 ? Colors.amber : Colors.redAccent;
 
+    // Dynamic bar colour based on warning/critical thresholds
+    final bool isCritical = widget.criticalThreshold != null &&
+        progress < widget.criticalThreshold!;
+    final bool isWarn = !isCritical &&
+        widget.warnThreshold != null &&
+        progress < widget.warnThreshold!;
+    Color effectiveColor = widget.color;
+    if (isCritical) {
+      effectiveColor = Colors.redAccent;
+    } else if (isWarn) {
+      effectiveColor = Colors.amber;
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Emoji icon
-        Text(widget.icon, style: const TextStyle(fontSize: 11)),
+        // Emoji icon – pulses when critically low
+        isCritical
+            ? AnimatedBuilder(
+                animation: _pulseAnim,
+                builder: (context, _) => Opacity(
+                  opacity: (0.4 + _pulseAnim.value * 0.6).clamp(0.0, 1.0),
+                  child: Text(widget.icon, style: const TextStyle(fontSize: 11)),
+                ),
+              )
+            : Text(widget.icon, style: const TextStyle(fontSize: 11)),
         const SizedBox(width: 4),
         SizedBox(
           width: _barWidth,
@@ -2146,7 +2461,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
                     widthFactor: progress,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: widget.color,
+                        color: effectiveColor,
                         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
                       ),
                     ),

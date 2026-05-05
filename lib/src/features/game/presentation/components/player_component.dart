@@ -57,6 +57,17 @@ class PlayerComponent extends PositionComponent
           priority: 100,
         );
 
+  /// Returns a speed multiplier based on current hunger level.
+  /// - Hunger < 10% of max → 40% speed
+  /// - Hunger < 30% of max → 60% speed
+  /// - Otherwise           → 100% speed
+  double get _hungerSpeedMultiplier {
+    final hungerPct = game.hunger / game.progress.maxHunger;
+    if (hungerPct < SpiritWorldGame.hungerCriticalThreshold) return 0.4;
+    if (hungerPct < SpiritWorldGame.hungerWarnThreshold) return 0.6;
+    return 1.0;
+  }
+
   @override
   Future<void> onLoad() async {
     add(CircleHitbox());
@@ -194,8 +205,8 @@ class PlayerComponent extends PositionComponent
       game.faith,
     );
 
-    // Faith cost per wave (higher cost for stronger waves)
-    final cost = 5.0 * game.modifiers.faithCostMultiplier;
+    // Faith cost per wave (higher cost for stronger waves; +50% if hunger critical)
+    final cost = 5.0 * game.modifiers.faithCostMultiplier * game.hungerFaithCostMultiplier;
     if (game.faith < cost) {
       _isChargingIntensity = false;
       return;
@@ -226,7 +237,8 @@ class PlayerComponent extends PositionComponent
   void _updateMovement(double dt) {
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
     final moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
-    final delta = moveDir * speed * dt;
+    final effectiveSpeed = speed * _hungerSpeedMultiplier;
+    final delta = moveDir * effectiveSpeed * dt;
     final newPos = position + delta;
 
     // Grid coordinates for target position
