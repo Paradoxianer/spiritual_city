@@ -209,7 +209,11 @@ class _DifficultyCard extends StatelessWidget {
     };
 
     return GestureDetector(
-      onTap: isLoading ? null : onTap,
+      // behavior: HitTestBehavior.opaque ensures the widget always participates
+      // in hit testing on iOS Safari / WebKit, where a GestureDetector with a
+      // null onTap may silently ignore touch events (pointer-events issue).
+      behavior: HitTestBehavior.opaque,
+      onTap: isLoading ? () {} : onTap,
       child: Container(
         width: 280,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
