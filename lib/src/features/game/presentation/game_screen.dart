@@ -1358,28 +1358,38 @@ class _FaintOverlayState extends State<_FaintOverlay>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: Container(
-        color: Colors.black,
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('💫', style: TextStyle(fontSize: 52)),
-              SizedBox(height: 16),
-              Text(
-                'Der Pastor ist ohnmächtig...',
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 16,
-                  fontStyle: FontStyle.italic,
+    return ListenableBuilder(
+      listenable: _ctrl,
+      builder: (context, _) {
+        // When the animation is completely at 0, skip hit-testing entirely so
+        // the invisible overlay does not block taps on dialogs beneath it.
+        return IgnorePointer(
+          ignoring: _ctrl.value == 0.0,
+          child: FadeTransition(
+            opacity: _opacity,
+            child: Container(
+              color: Colors.black,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('💫', style: TextStyle(fontSize: 52)),
+                    SizedBox(height: 16),
+                    Text(
+                      'Der Pastor ist ohnmächtig...',
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 16,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
