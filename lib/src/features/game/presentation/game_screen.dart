@@ -207,6 +207,14 @@ class _GameScreenState extends State<GameScreen> {
               return _MissionCompleteToast(game: _game);
             },
           ),
+          // Conversion toast – briefly shown when an NPC is converted.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _ConversionToast(game: _game);
+            },
+          ),
           // Health alarm – red pulsing edge overlay when health < 15%
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
@@ -1239,6 +1247,96 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast>
   }
 }
 
+// ── Conversion Toast ──────────────────────────────────────────────────────────
+
+/// Brief toast shown near the HUD when an NPC is converted ("+1 ✝").
+/// Fades in, stays for 2 s, then fades out.
+class _ConversionToast extends StatefulWidget {
+  final SpiritWorldGame game;
+  const _ConversionToast({required this.game});
+
+  @override
+  State<_ConversionToast> createState() => _ConversionToastState();
+}
+
+class _ConversionToastState extends State<_ConversionToast>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  Timer? _dismissTimer;
+  String? _message;
+
+  static const Duration _fadeDuration = Duration(milliseconds: 250);
+  static const Duration _visibleDuration = Duration(seconds: 2);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: _fadeDuration);
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    widget.game.conversionToastMessage.addListener(_onMessage);
+  }
+
+  void _onMessage() {
+    final msg = widget.game.conversionToastMessage.value;
+    if (msg == null || !mounted) return;
+    _dismissTimer?.cancel();
+    setState(() => _message = msg);
+    _ctrl.forward(from: 0.0);
+    _dismissTimer = Timer(_visibleDuration, _dismiss);
+  }
+
+  void _dismiss() {
+    _dismissTimer?.cancel();
+    _ctrl.reverse().then((_) {
+      if (mounted) {
+        widget.game.conversionToastMessage.value = null;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    widget.game.conversionToastMessage.removeListener(_onMessage);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_message == null) return const SizedBox.shrink();
+    return Positioned(
+      top: 8,
+      left: 8,
+      child: SafeArea(
+        child: FadeTransition(
+          opacity: _opacity,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xCC0D1A3A),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFB0C4FF), width: 1.2),
+              boxShadow: const [
+                BoxShadow(color: Colors.black54, blurRadius: 6),
+              ],
+            ),
+            child: Text(
+              _message!,
+              style: const TextStyle(
+                color: Color(0xFFB0C4FF),
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Health alarm overlay ──────────────────────────────────────────────────────
 
 /// Pulsing red gradient at the screen edges when health is critically low.
@@ -2207,6 +2305,8 @@ class _ResourceHud extends StatelessWidget {
                   const Divider(height: 1, color: Colors.white12),
                   const SizedBox(height: 2),
                   _InsightDisplay(progress: gameRef.progress),
+                  const SizedBox(height: 2),
+                  _ConversionCounter(gameRef: gameRef),
                 ],
               );
             },
@@ -2240,6 +2340,44 @@ class _InsightDisplay extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           'Erkenntnis',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.55),
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Compact conversion counter shown below the Insight display in the HUD.
+/// Shows ✝ converted / total NPCs loaded so far.
+class _ConversionCounter extends StatelessWidget {
+  final SpiritWorldGame gameRef;
+  const _ConversionCounter({required this.gameRef});
+
+  @override
+  Widget build(BuildContext context) {
+    final converted = gameRef.chunkManager.allNPCModels
+        .where((m) => m.isConverted)
+        .length;
+    final total = gameRef.chunkManager.npcCount;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('✝', style: TextStyle(fontSize: 12, color: Color(0xFFB0C4FF))),
+        const SizedBox(width: 3),
+        Text(
+          '$converted / $total',
+          style: const TextStyle(
+            color: Color(0xFFB0C4FF),
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          'Bekehrt',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.55),
             fontSize: 10,
