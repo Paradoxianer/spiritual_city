@@ -118,13 +118,13 @@ class PlayerComponent extends PositionComponent
 
         // (behind-factor, perp-factor, radius, alpha, color) for each dust speck.
         const dustSpecks = [
-          (10.0,  0.0, 4.5, 0.65, Color(0xFFA07050)), // central clump
-          ( 7.0,  5.0, 5.0, 0.50, Color(0xFF8B5E3C)), // near left
-          ( 7.0, -5.0, 3.5, 0.45, Color(0xFFC4A882)), // near right
-          (16.0,  8.0, 3.0, 0.42, Color(0xFF9E8B72)), // mid left
-          (16.0, -9.0, 2.5, 0.38, Color(0xFF7D6B4F)), // mid right
-          (23.0, 12.0, 2.0, 0.28, Color(0xFFA07050)), // far left
-          (22.0,-13.0, 2.0, 0.25, Color(0xFF8B5E3C)), // far right
+          (10.0,  0.0, 7.0, 0.90, Color(0xFFE8DCCF)), // central clump – light sand
+          ( 7.0,  6.0, 7.5, 0.80, Color(0xFFD9C9B5)), // near left
+          ( 7.0, -6.0, 6.0, 0.78, Color(0xFFF0E6DA)), // near right – lightest
+          (17.0,  9.0, 5.0, 0.70, Color(0xFFCCB89E)), // mid left
+          (17.0,-10.0, 4.5, 0.65, Color(0xFFBDA88E)), // mid right
+          (25.0, 14.0, 3.5, 0.55, Color(0xFFD5C4AA)), // far left
+          (24.0,-15.0, 3.0, 0.50, Color(0xFFC4B49A)), // far right
         ];
 
         for (final (bf, pf, r, a, col) in dustSpecks) {
