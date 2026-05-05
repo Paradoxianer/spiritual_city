@@ -110,30 +110,6 @@ class PlayerComponent extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) {
-      // Sprint dust: scattered earthy particles kicked up behind the player.
-      if (isSprinting && !_lastMoveDir.isZero()) {
-        final behind = Vector2(-_lastMoveDir.x, -_lastMoveDir.y); // normalised
-        final perp   = Vector2(-behind.y,  behind.x);             // perpendicular
-        final center = (size / 2).toOffset();
-
-        // (behind-factor, perp-factor, radius, alpha, color) for each dust speck.
-        const dustSpecks = [
-          (10.0,  0.0, 7.0, 0.90, Color(0xFFE8DCCF)), // central clump – light sand
-          ( 7.0,  6.0, 7.5, 0.80, Color(0xFFD9C9B5)), // near left
-          ( 7.0, -6.0, 6.0, 0.78, Color(0xFFF0E6DA)), // near right – lightest
-          (17.0,  9.0, 5.0, 0.70, Color(0xFFCCB89E)), // mid left
-          (17.0,-10.0, 4.5, 0.65, Color(0xFFBDA88E)), // mid right
-          (25.0, 14.0, 3.5, 0.55, Color(0xFFD5C4AA)), // far left
-          (24.0,-15.0, 3.0, 0.50, Color(0xFFC4B49A)), // far right
-        ];
-
-        for (final (bf, pf, r, a, col) in dustSpecks) {
-          final pos = center
-              + Offset(behind.x, behind.y) * bf
-              + Offset(perp.x,   perp.y)   * pf;
-          canvas.drawCircle(pos, r, Paint()..color = col.withValues(alpha: a));
-        }
-      }
       final isNear = game.nearestInteractable != null;
       final auraPaint = Paint()
         ..color = isNear ? Colors.yellow.withValues(alpha: 0.2) : Colors.blueAccent.withValues(alpha: 0.1)
