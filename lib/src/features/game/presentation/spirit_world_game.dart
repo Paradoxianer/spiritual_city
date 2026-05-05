@@ -1618,8 +1618,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       grid: grid,
       originX: gx,
       originY: gy,
-      delta: -0.4,
-      radius: 8.0,
+      delta: -0.8,
+      radius: 12.0,
       durationType: InfluenceDurationType.permanent,
     );
   }
