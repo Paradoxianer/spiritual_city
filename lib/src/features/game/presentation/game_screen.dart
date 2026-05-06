@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:math' show atan2, pi;
+import 'dart:math' show atan2, pi, Random, sin;
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -17,6 +17,7 @@ import '../domain/models/npc_reaction.dart';
 import '../domain/models/prayer_combat.dart';
 import '../domain/services/building_interaction_service.dart';
 import '../domain/services/faith_calculator_service.dart';
+import '../domain/services/tutorial_service.dart';
 import '../presentation/components/building_component.dart';
 import 'spirit_world_game.dart';
 
@@ -249,6 +250,14 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
+          // Tutorial overlay – shown for new players until tutorial is complete.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return _TutorialOverlay(game: _game);
+            },
+          ),
         ],
       ),
     );
@@ -4581,4 +4590,401 @@ class _AttackTile extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Tutorial Overlay ──────────────────────────────────────────────────────────
+
+/// Step-by-step tutorial overlay shown to new players.
+///
+/// Displays a speech bubble with the current tutorial step message, a "Weiter"
+/// button for steps that require manual advance, and an "Überspringen" button
+/// from step 4 onward. The final step shows a simple confetti celebration.
+class _TutorialOverlay extends StatefulWidget {
+  final SpiritWorldGame game;
+  const _TutorialOverlay({required this.game});
+
+  @override
+  State<_TutorialOverlay> createState() => _TutorialOverlayState();
+}
+
+class _TutorialOverlayState extends State<_TutorialOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _confettiCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+    widget.game.tutorialService.currentStepNotifier
+        .addListener(_onStepChanged);
+  }
+
+  void _onStepChanged() {
+    if (!mounted) return;
+    final step = widget.game.tutorialService.currentStep;
+    if (step == TutorialStep.completed) {
+      _confettiCtrl.forward(from: 0.0);
+    }
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.game.tutorialService.currentStepNotifier
+        .removeListener(_onStepChanged);
+    _confettiCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Step content ─────────────────────────────────────────────────────────
+
+  static const _stepContent = <TutorialStep,
+      ({
+        String emoji,
+        String title,
+        String message,
+        bool needsNextButton,
+      })>{
+    TutorialStep.welcome: (
+      emoji: '✝️',
+      title: 'Willkommen!',
+      message: 'Willkommen in der Stadt!\n'
+          'Du bist ein Christ mit einer Mission.\n'
+          'Gott hat dich gesandt, um Licht in diese Stadt zu bringen. 🌟',
+      needsNextButton: true,
+    ),
+    TutorialStep.movement: (
+      emoji: '🗺️',
+      title: 'Bewegung',
+      message: 'Tippe auf die Stadt um dich zu bewegen!\n'
+          '(Auf dem PC: Pfeiltasten oder WASD)',
+      needsNextButton: false,
+    ),
+    TutorialStep.npcTalk: (
+      emoji: '💬',
+      title: 'Menschen ansprechen',
+      message: 'Sprich mit jemandem in der Stadt!\n'
+          'Gehe nah an eine Person heran und öffne das Aktions-Menü.',
+      needsNextButton: false,
+    ),
+    TutorialStep.radialMenu: (
+      emoji: '🖐️',
+      title: 'Aktions-Menü',
+      message: 'Öffne das Aktions-Menü (🖐️-Button rechts unten)\n'
+          'und wähle eine Aktion aus!\n'
+          '(PC: Taste E)',
+      needsNextButton: false,
+    ),
+    TutorialStep.spiritWorld: (
+      emoji: '🙏',
+      title: 'Geistliche Welt',
+      message: 'Wechsle in die geistliche Welt!\n'
+          'Tippe auf den 🙏-Button unten rechts.\n'
+          '(PC: Taste Q)',
+      needsNextButton: false,
+    ),
+    TutorialStep.prayer: (
+      emoji: '⚡',
+      title: 'Gebet & Kampf',
+      message: 'Bete für diesen Bereich – vertreibe die Dunkelheit!\n'
+          'Halte den ✝️-Button gedrückt und lass ihn dann los.',
+      needsNextButton: false,
+    ),
+    TutorialStep.returnToCity: (
+      emoji: '🏙️',
+      title: 'Zurück in die Stadt',
+      message: 'Gut gemacht! Kehre zurück in die Stadt.\n'
+          'Tippe auf den 🏙️-Button unten rechts.',
+      needsNextButton: false,
+    ),
+    TutorialStep.hudExplain: (
+      emoji: '📊',
+      title: 'Dein Status-Anzeige',
+      message: '❤️ Gesundheit  •  🍞 Hunger  •  🙏 Glaube\n'
+          '📦 Materialien  •  📖 Erkenntnis  •  ✝ Bekehrungen\n\n'
+          'Halte deine Ressourcen im Blick –\nsie sind wichtig für deine Mission!',
+      needsNextButton: true,
+    ),
+    TutorialStep.firstMission: (
+      emoji: '📋',
+      title: 'Erste Mission',
+      message: 'Du hast deine erste Mission!\n'
+          'Besuche ein Gebäude in der Nähe\nund führe eine Aktion durch.',
+      needsNextButton: false,
+    ),
+    TutorialStep.completed: (
+      emoji: '🎉',
+      title: 'Tutorial abgeschlossen!',
+      message: 'Du bist bereit!\nGott sei mit dir. ✝\n\n'
+          'Die Stadt braucht dich –\ngeh und bringe Licht!',
+      needsNextButton: true,
+    ),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<TutorialStep?>(
+      valueListenable: widget.game.tutorialService.currentStepNotifier,
+      builder: (context, step, _) {
+        if (step == null) return const SizedBox.shrink();
+
+        final content = _stepContent[step];
+        if (content == null) return const SizedBox.shrink();
+
+        final isCompleted = step == TutorialStep.completed;
+        final canSkip = widget.game.tutorialService.canSkip;
+
+        return Stack(
+          children: [
+            // ── Semi-transparent dark background ──────────────────────────
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withValues(
+                  alpha: isCompleted ? 0.75 : 0.55,
+                ),
+              ),
+            ),
+            // ── Confetti (completion step only) ───────────────────────────
+            if (isCompleted)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _confettiCtrl,
+                  builder: (context, _) => CustomPaint(
+                    painter: _ConfettiPainter(_confettiCtrl.value),
+                  ),
+                ),
+              ),
+            // ── Speech bubble card ────────────────────────────────────────
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 28, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: isCompleted
+                          ? const Color(0xEE0A1A0A)
+                          : const Color(0xEE080818),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: isCompleted
+                            ? Colors.greenAccent.withValues(alpha: 0.7)
+                            : Colors.white.withValues(alpha: 0.25),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isCompleted
+                                  ? Colors.greenAccent
+                                  : Colors.purpleAccent)
+                              .withValues(alpha: 0.18),
+                          blurRadius: 24,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Emoji
+                        Text(
+                          content.emoji,
+                          style: const TextStyle(fontSize: 44),
+                        ),
+                        const SizedBox(height: 8),
+                        // Title
+                        Text(
+                          content.title,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Message
+                        Text(
+                          content.message,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.90),
+                            fontSize: 15,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // ── Buttons ───────────────────────────────────────
+                        if (content.needsNextButton || isCompleted)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: isCompleted
+                                  ? widget.game.tutorialService.completeTutorial
+                                  : widget.game.tutorialService.nextStep,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isCompleted
+                                    ? Colors.green.shade700
+                                    : Colors.blue.shade700,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              child: Text(isCompleted
+                                  ? 'Los geht\'s! 🚀'
+                                  : 'Weiter →'),
+                            ),
+                          ),
+                        if (canSkip && !isCompleted) ...[
+                          const SizedBox(height: 10),
+                          TextButton(
+                            onPressed:
+                                widget.game.tutorialService.skipTutorial,
+                            style: TextButton.styleFrom(
+                              foregroundColor:
+                                  Colors.white.withValues(alpha: 0.45),
+                              textStyle: const TextStyle(fontSize: 13),
+                            ),
+                            child: const Text('Tutorial überspringen'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // ── Step indicator dots ───────────────────────────────────────
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: _TutorialStepDots(currentStep: step),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Step indicator dots ───────────────────────────────────────────────────────
+
+class _TutorialStepDots extends StatelessWidget {
+  final TutorialStep currentStep;
+  const _TutorialStepDots({required this.currentStep});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = TutorialStep.values.length;
+    final current = currentStep.index;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(total, (i) {
+        final active = i == current;
+        final done = i < current;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          width: active ? 20 : 8,
+          height: 8,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            color: active
+                ? Colors.white.withValues(alpha: 0.9)
+                : done
+                    ? Colors.white.withValues(alpha: 0.5)
+                    : Colors.white.withValues(alpha: 0.18),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+// ── Confetti painter ──────────────────────────────────────────────────────────
+
+/// Paints simple colored circles falling across the screen to celebrate
+/// tutorial completion.  [progress] is a 0..1 animation value.
+class _ConfettiPainter extends CustomPainter {
+  final double progress;
+
+  static final List<_ConfettiParticle> _particles = _generateParticles();
+
+  static List<_ConfettiParticle> _generateParticles() {
+    final rng = Random(42);
+    return List.generate(60, (_) => _ConfettiParticle(
+          x: rng.nextDouble(),
+          startY: -rng.nextDouble() * 0.3,
+          size: 5.0 + rng.nextDouble() * 7.0,
+          speed: 0.5 + rng.nextDouble() * 0.8,
+          wobble: rng.nextDouble() * 2 * pi,
+          wobbleFreq: 2.0 + rng.nextDouble() * 4.0,
+          color: _confettiColors[rng.nextInt(_confettiColors.length)],
+        ));
+  }
+
+  static const _confettiColors = [
+    Color(0xFFFFD700),
+    Color(0xFF00E676),
+    Color(0xFF40C4FF),
+    Color(0xFFFF4081),
+    Color(0xFFFFAB40),
+    Color(0xFFE040FB),
+    Color(0xFFFFFFFF),
+  ];
+
+  const _ConfettiPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final p in _particles) {
+      final t = ((progress * p.speed) % 1.0).clamp(0.0, 1.0);
+      final y = (p.startY + t) * size.height;
+      if (y < 0 || y > size.height) continue;
+      final wobbleX = sin(t * p.wobbleFreq * pi + p.wobble) * 30.0;
+      final x = p.x * size.width + wobbleX;
+      final alpha = (1.0 - t * 0.8).clamp(0.0, 1.0);
+      final paint = Paint()
+        ..color = p.color.withValues(alpha: alpha)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(x, y), p.size * (1.0 - t * 0.4), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) => old.progress != progress;
+}
+
+class _ConfettiParticle {
+  final double x;
+  final double startY;
+  final double size;
+  final double speed;
+  final double wobble;
+  final double wobbleFreq;
+  final Color color;
+
+  const _ConfettiParticle({
+    required this.x,
+    required this.startY,
+    required this.size,
+    required this.speed,
+    required this.wobble,
+    required this.wobbleFreq,
+    required this.color,
+  });
 }

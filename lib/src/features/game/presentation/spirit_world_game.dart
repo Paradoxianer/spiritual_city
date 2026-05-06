@@ -22,6 +22,7 @@ import '../domain/models/prayer_combat.dart';
 import '../domain/services/building_interaction_service.dart';
 import '../domain/services/influence_service.dart';
 import '../domain/services/mission_service.dart';
+import '../domain/services/tutorial_service.dart';
 import '../domain/models/cell_object.dart';
 import 'components/building_component.dart';
 import 'components/chunk_manager.dart';
@@ -92,6 +93,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Mission system – wired to all interaction hooks.
   late final MissionService missionService;
 
+  /// Interactive tutorial – guides new players through the core mechanics.
+  final TutorialService tutorialService = TutorialService();
+
   /// Brief mission-completion toast message (reuses the loot-toast widget).
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> missionCompleteMessage = ValueNotifier(null);
@@ -130,6 +134,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   int _lastStreetCellX = -999999;
   int _lastStreetCellY = -999999;
+  /// True after [_updateStreetLabel] has run once (sets the spawn-position
+  /// baseline).  Prevents firing the tutorial movement hook on the very first
+  /// cell-position detection (which is not a real player movement).
+  bool _streetLabelInitialized = false;
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
@@ -341,6 +349,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         'playerPos=${player.position}',
       );
 
+      // Start tutorial for new players (or players who haven't finished it yet).
+      if (!tutorialService.isTutorialCompleted) {
+        // Short delay so the loading overlay has faded before the tutorial appears.
+        Future.delayed(const Duration(milliseconds: 600), tutorialService.startTutorial);
+      }
+
       // Assign starting missions to NPCs / buildings in the spawn chunk.
       // Run after a short delay so chunk NPCs/buildings are all registered.
       Future.delayed(const Duration(milliseconds: 500), _tryAssignStartMissions);
@@ -424,6 +438,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       }
       _checkAndApplyModifiers(); // Sync modifiers with loaded progress
     }
+
+    // Restore tutorial completion flag so the tutorial isn't shown again.
+    tutorialService.isTutorialCompleted = state['tutorialCompleted'] == true;
   }
 
   /// Parses the `cells` sub-map from a serialised save into a flat lookup.
@@ -616,19 +633,20 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     );
 
     return {
-      'schemaVersion':    kSaveDataVersion,
-      'faith':            faith,
-      'health':           health,
-      'hunger':           hunger,
-      'materials':        materials,
-      'playerX':          player.position.x,
-      'playerY':          player.position.y,
-      'isSpiritualWorld': isSpiritualWorld,
-      'progress':         progress.toJson(),
-      'cells':            cellStates,
-      'npcs':             npcStates,
-      'buildings':        buildingStates,
-      'loot':             lootSystem.captureState(),
+      'schemaVersion':      kSaveDataVersion,
+      'faith':              faith,
+      'health':             health,
+      'hunger':             hunger,
+      'materials':          materials,
+      'playerX':            player.position.x,
+      'playerY':            player.position.y,
+      'isSpiritualWorld':   isSpiritualWorld,
+      'tutorialCompleted':  tutorialService.isTutorialCompleted,
+      'progress':           progress.toJson(),
+      'cells':              cellStates,
+      'npcs':               npcStates,
+      'buildings':          buildingStates,
+      'loot':               lootSystem.captureState(),
     };
   }
 
@@ -642,10 +660,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       spendFaith(worldToggleCost);
     }
     
+    final wasInSpiritWorld = isSpiritualWorld;
     isSpiritualWorld = !isSpiritualWorld;
     _updateHudVisibility();
     _updateButtonStyles();
     _log.info('Switched World: $isSpiritualWorld');
+
+    // Tutorial hooks for world-switching steps.
+    if (isSpiritualWorld) {
+      tutorialService.onEnteredSpiritWorld();
+    } else if (wasInSpiritWorld) {
+      tutorialService.onReturnedToCity();
+    }
 
     // Immediately spawn daemons around the player when entering the spiritual
     // world so they are visible from the first moment (difficulty-scaled count).
@@ -742,7 +768,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   void _openRadialMenu() {
     final actions = <RadialAction>[
-      RadialAction(label: '👀', icon: Icons.search, onSelect: openLookOverlay),
+      RadialAction(
+        label: '👀',
+        icon: Icons.search,
+        onSelect: () {
+          tutorialService.onRadialMenuActionSelected();
+          openLookOverlay();
+        },
+      ),
     ];
 
     // Collect all interactables within range, sorted by distance (closest first)
@@ -769,6 +802,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         sublabel: target.interactionLabel.split(' ').first,
         icon: Icons.chat_bubble,
         onSelect: () {
+          tutorialService.onRadialMenuActionSelected();
           _nearestInteractable = target;
           target.onInteract();
         },
@@ -784,7 +818,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         label: BuildingComponent.buildingEmoji(model.type),
         sublabel: BuildingComponent.buildingName(model.type).split(' ').first,
         icon: Icons.meeting_room,
-        onSelect: () => openBuildingInterior(model),
+        onSelect: () {
+          tutorialService.onRadialMenuActionSelected();
+          openBuildingInterior(model);
+        },
       ));
     }
 
@@ -824,7 +861,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void showDialog(String name, String emoji, NPCModel model) {
     activeDialog = GameDialogData(npcName: name, npcEmoji: emoji, npcModel: model);
     overlays.add('DialogOverlay');
-    paused = true; 
+    paused = true;
+    tutorialService.onNpcDialogOpened();
   }
 
   // ── Mission helpers ───────────────────────────────────────────────────────
@@ -1072,6 +1110,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     activeBuildingData = GameBuildingData(building: building);
     overlays.add('BuildingInteriorOverlay');
     paused = true;
+    tutorialService.onBuildingInteracted();
   }
 
   /// Closes the building-interior overlay.
@@ -1456,8 +1495,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     final cx = (player.position.x / cellSize).floor();
     final cy = (player.position.y / cellSize).floor();
     if (cx == _lastStreetCellX && cy == _lastStreetCellY) return;
+    final wasInitialized = _streetLabelInitialized;
+    _streetLabelInitialized = true;
     _lastStreetCellX = cx;
     _lastStreetCellY = cy;
+
+    // Fire tutorial movement hook only after the initial position has been
+    // established (first call sets the spawn-cell baseline, not real movement).
+    if (wasInitialized) tutorialService.onPlayerMoved();
 
     // Try the player's own cell first, then the 4 cardinal neighbours.
     // Accept ANY road cell (named or unnamed) for address lookup so the
@@ -1703,6 +1748,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     conversionToastMessage.dispose();
     isFainting.dispose();
     wakeupMessage.dispose();
+    tutorialService.dispose();
     super.onRemove();
   }
 
@@ -1710,6 +1756,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void recordPrayerCombat() {
     progress.recordPrayerCombat();
     missionService.onPrayerCombat();
+    tutorialService.onPrayerPerformed();
     _checkAndApplyModifiers();
   }
 
