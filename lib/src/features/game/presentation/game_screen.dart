@@ -1239,6 +1239,8 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast>
   }
 }
 
+
+
 // ── Health alarm overlay ──────────────────────────────────────────────────────
 
 /// Pulsing red gradient at the screen edges when health is critically low.
@@ -2207,6 +2209,8 @@ class _ResourceHud extends StatelessWidget {
                   const Divider(height: 1, color: Colors.white12),
                   const SizedBox(height: 2),
                   _InsightDisplay(progress: gameRef.progress),
+                  const SizedBox(height: 2),
+                  _ConversionCounter(gameRef: gameRef),
                 ],
               );
             },
@@ -2240,6 +2244,114 @@ class _InsightDisplay extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           'Erkenntnis',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.55),
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Formats an integer with compact suffixes for large numbers.
+/// E.g. 999 → '999', 1000 → '1K', 1500 → '1.5K', 1000000 → '1M'.
+String _compactInt(int n) {
+  if (n >= 1000000) {
+    final d = n / 1000000;
+    return '${d == d.truncateToDouble() ? d.toInt() : d.toStringAsFixed(1)}M';
+  }
+  if (n >= 1000) {
+    final d = n / 1000;
+    return '${d == d.truncateToDouble() ? d.toInt() : d.toStringAsFixed(1)}K';
+  }
+  return '$n';
+}
+
+/// Compact conversion counter shown below the Insight display in the HUD.
+/// Shows ✝ N Bekehrt, and briefly flashes a fading "+1" delta chip inline
+/// (same pattern as [_AnimatedResourceBar]) whenever an NPC is converted.
+class _ConversionCounter extends StatefulWidget {
+  final SpiritWorldGame gameRef;
+  const _ConversionCounter({required this.gameRef});
+
+  @override
+  State<_ConversionCounter> createState() => _ConversionCounterState();
+}
+
+class _ConversionCounterState extends State<_ConversionCounter>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fadeCtrl;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    // Opacity goes 1.0 → 0.0 so the "+1" chip fades out completely.
+    _fadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn),
+    );
+    widget.gameRef.conversionToastMessage.addListener(_onConversion);
+  }
+
+  void _onConversion() {
+    final msg = widget.gameRef.conversionToastMessage.value;
+    if (msg == null || !mounted) return;
+    setState(() {}); // rebuild to update converted count
+    _fadeCtrl.forward(from: 0.0).then((_) {
+      if (mounted) widget.gameRef.conversionToastMessage.value = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.gameRef.conversionToastMessage.removeListener(_onConversion);
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final converted = widget.gameRef.chunkManager.allNPCModels
+        .where((m) => m.isConverted)
+        .length;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('✝', style: TextStyle(fontSize: 12, color: Color(0xFFB0C4FF))),
+        const SizedBox(width: 3),
+        Text(
+          _compactInt(converted),
+          style: const TextStyle(
+            color: Color(0xFFB0C4FF),
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(width: 2),
+        // Inline "+1" delta chip – only visible while the fade is running.
+        if (_fadeCtrl.isAnimating || _fadeCtrl.value > 0.0)
+          AnimatedBuilder(
+            animation: _fadeAnim,
+            builder: (context, _) => Opacity(
+              opacity: _fadeAnim.value.clamp(0.0, 1.0),
+              child: const Text(
+                '+1',
+                style: TextStyle(
+                  color: Colors.amber,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(width: 4),
+        Text(
+          AppStrings.get('hud.christians'),
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.55),
             fontSize: 10,

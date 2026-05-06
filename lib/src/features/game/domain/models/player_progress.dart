@@ -111,7 +111,10 @@ class PlayerProgress extends ChangeNotifier {
 
   void recordPrayerCombat() => prayerCombatsCompleted++;
   void recordBibleReading() => bibleReadingsCompleted++;
-  void recordConversion() => npcsConverted++;
+  void recordConversion() {
+    npcsConverted++;
+    notifyListeners();
+  }
   void recordConversation() => conversationsHeld++;
   void recordTerritoryTaken({bool full = false}) {
     territoriesPartiallyTaken++;

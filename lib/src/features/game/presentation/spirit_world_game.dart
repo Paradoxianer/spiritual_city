@@ -96,6 +96,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> missionCompleteMessage = ValueNotifier(null);
 
+  /// Brief conversion toast shown when an NPC is converted (e.g. "+1 ✝").
+  /// Set to null after the toast has been dismissed.
+  final ValueNotifier<String?> conversionToastMessage = ValueNotifier(null);
+
   /// True while the faint/game-over animation is playing.
   /// Flutter overlays listen to this to show the blackout screen.
   final ValueNotifier<bool> isFainting = ValueNotifier(false);
@@ -1696,6 +1700,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     hungerNotifier.dispose();
     materialsNotifier.dispose();
     missionCompleteMessage.dispose();
+    conversionToastMessage.dispose();
     isFainting.dispose();
     wakeupMessage.dispose();
     super.onRemove();
@@ -1718,6 +1723,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Record an NPC conversion
   void recordConversion() {
     progress.recordConversion();
+    conversionToastMessage.value = '+1 ✝';
     _checkAndApplyModifiers();
   }
 
