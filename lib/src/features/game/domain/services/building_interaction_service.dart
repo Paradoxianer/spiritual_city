@@ -264,12 +264,13 @@ class BuildingInteractionService {
           );
         }
         building.interactionCount++;
-        building.applyInfluence(30.0);
-        building.influenceResidents(10.0);
+        building.applyInfluence(50.0);
+        building.influenceResidents(20.0);
         return const BuildingInteractionResult(
           playerFaithDelta: -50.0,
           playerInsightDelta: 0.5,
           reactionEmoji: '📖👥🔥',
+          actionDurationSeconds: 2,
         );
 
       // ── Hausgemeinschaft segnen (Apartment only): +1 Interaktion bei allen Bewohnern
@@ -372,7 +373,7 @@ class BuildingInteractionService {
 
   // Base durations for time-based church actions.
   static const int sundayServiceSeconds = 20;
-  static const int worshipSeconds = 15;
+  static const int worshipSeconds = 30;
 
   BuildingInteractionResult _churchAction(
     String actionType,
@@ -382,23 +383,23 @@ class BuildingInteractionService {
       // ── Gottesdienst: (Sonntag), -80% Materials, -60% Health → massiver AOE
       case 'sundayService':
         building.interactionCount++;
-        building.applyInfluence(50.0);
-        building.influenceResidents(30.0);
+        building.applyInfluence(80.0);
+        building.influenceResidents(50.0);
         return const BuildingInteractionResult(
           playerMaterialsDelta: -50.0,
           playerHealthDelta: -60.0,
-          reactionEmoji: '⛪🎹🔥🕊️',
+          reactionEmoji: '⛪🎹🔥🙌🕊️',
           actionDurationSeconds: sundayServiceSeconds,
         );
 
-      // ── Anbetung/Gebet: Zeit → Faith regeneriert (+1/Sek beim Pastor)
+      // ── Anbetung/Gebet: Zeit → Faith regeneriert (+3/Sek beim Pastor), Kirche gestärkt
       case 'worship':
         building.interactionCount++;
-        building.applyInfluence(8.0);
-        building.influenceResidents(5.0);
-        return BuildingInteractionResult(
-          playerFaithDelta: worshipSeconds.toDouble(),
-          reactionEmoji: '🧘‍♂️🙏🕊️',
+        building.applyInfluence(20.0);
+        building.influenceResidents(15.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: worshipSeconds * 3.0,
+          reactionEmoji: '🧘‍♂️🙏🕊️🙌',
           actionDurationSeconds: worshipSeconds,
         );
 

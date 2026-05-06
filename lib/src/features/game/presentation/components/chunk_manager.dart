@@ -275,7 +275,14 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         residents: residents,
         isHomebase: bInfo.type == BuildingType.pastorHouse,
         // Pastor house starts fully sanctified so the faith bar is immediately visible.
-        faith: bInfo.type == BuildingType.pastorHouse ? 100.0 : 0.0,
+        // Churches and cathedrals start at 50% faith – they are already active
+        // congregations before the pastor arrives.
+        faith: bInfo.type == BuildingType.pastorHouse
+            ? 100.0
+            : (bInfo.type == BuildingType.church ||
+                      bInfo.type == BuildingType.cathedral)
+                ? 50.0
+                : 0.0,
       );
       game.applySavedBuildingState(model);
       _buildingModels[bInfo.buildingId] = model;

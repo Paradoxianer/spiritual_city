@@ -277,6 +277,14 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     _log.info('[LootSystem] spawned ${type.emoji} +${type.reward.toInt()} MP at ($cx,$cy)');
   }
 
+  // ── Insight reward on loot pickup ─────────────────────────────────────────
+
+  /// Probability (0–1) that picking up any loot also grants insight.
+  static const double insightChance = 0.20;
+
+  /// Amount of insight awarded per eligible loot pickup.
+  static const double insightReward = 0.1;
+
   void _collect(_MaterialPickup p) {
     p.isPickedUp = true;
     p.respawnTimer = _respawnMin + _rng.nextDouble() * (_respawnMax - _respawnMin);
@@ -287,15 +295,28 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     // TODO(spirit-combat): also grant p.type.xpReward when XP system is active.
     // TODO(spirit-combat): apply p.type.combatModifier as a timed buff.
 
+    // ── Insight bonus (Enhancement #141) ──────────────────────────────────
+    // With a small probability the pastor receives a flash of spiritual insight
+    // while collecting material – reflecting that everyday provision can carry
+    // divine wisdom.
+    final bool grantsInsight = _rng.nextDouble() < insightChance;
+    if (grantsInsight) {
+      game.progress.addInsight(insightReward);
+    }
+
     _log.info(
       '[LootSystem] collected ${p.type.emoji} (+${p.type.reward.toInt()} MP) '
       'at world pixel (${p.worldPos.x},${p.worldPos.y}) | '
-      'respawns in ${p.respawnTimer.toStringAsFixed(1)}s',
+      'respawns in ${p.respawnTimer.toStringAsFixed(1)}s'
+      '${grantsInsight ? ' | +${insightReward.toStringAsFixed(1)} 💡 insight' : ''}',
     );
 
     // Show pickup toast in HUD.
     final mp = p.type.reward.toInt();
-    game.lootPickupMessage.value = '${p.type.emoji} +$mp MP';
+    final insightSuffix = grantsInsight
+        ? '  +${insightReward.toStringAsFixed(1)} 💡'
+        : '';
+    game.lootPickupMessage.value = '${p.type.emoji} +$mp MP$insightSuffix';
 
     // Notify mission service
     game.missionService.onMaterialCollected();
