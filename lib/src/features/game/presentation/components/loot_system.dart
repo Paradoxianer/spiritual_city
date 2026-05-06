@@ -292,7 +292,8 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   /// common and large values (≈ [insightRewardMax]) are rare.
   double _rollInsightReward() {
     final x = _rng.nextDouble(); // uniform [0, 1)
-    return insightRewardMin + x * x * (insightRewardMax - insightRewardMin);
+    final raw = insightRewardMin + x * x * (insightRewardMax - insightRewardMin);
+    return (raw * 10).round() / 10; // round to 1 decimal place
   }
 
   void _trySpawn() {
@@ -325,11 +326,11 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
       final reward = _rollInsightReward();
       game.progress.addInsight(reward);
       _log.info(
-        '[LootSystem] collected $kInsightPickupEmoji (+${reward.toStringAsFixed(2)} insight) '
+        '[LootSystem] collected $kInsightPickupEmoji (+${reward.toStringAsFixed(1)} insight) '
         'at world pixel (${p.worldPos.x},${p.worldPos.y}) | '
         'respawns in ${p.respawnTimer.toStringAsFixed(1)}s',
       );
-      game.lootPickupMessage.value = '$kInsightPickupEmoji +${reward.toStringAsFixed(2)} 💡';
+      game.lootPickupMessage.value = '$kInsightPickupEmoji +${reward.toStringAsFixed(1)} 💡';
     } else {
       // Material pickup: gives resources to the player.
       game.gainMaterials(p.type.reward);
