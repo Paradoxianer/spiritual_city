@@ -5364,10 +5364,11 @@ class _WinConfettiPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    int idx = 0;
     for (final p in _particles) {
       final t = ((progress * p.speed) % 1.0).clamp(0.0, 1.0);
       final y = (p.startY + t) * size.height;
-      if (y < 0 || y > size.height) continue;
+      if (y < 0 || y > size.height) { idx++; continue; }
       final wobbleX = sin(t * p.wobbleFreq * pi + p.wobble) * 28.0;
       final x = p.x * size.width + wobbleX;
       final alpha = (1.0 - t * 0.7).clamp(0.0, 1.0);
@@ -5375,7 +5376,6 @@ class _WinConfettiPainter extends CustomPainter {
         ..color = p.color.withValues(alpha: alpha)
         ..style = PaintingStyle.fill;
       // Alternate between circles and small crosses for a divine touch.
-      final idx = _particles.indexOf(p);
       if (idx % 4 == 0) {
         // Draw a tiny cross ✝ shape
         final cx = Offset(x, y);
@@ -5395,6 +5395,7 @@ class _WinConfettiPainter extends CustomPainter {
       } else {
         canvas.drawCircle(Offset(x, y), p.size * (1.0 - t * 0.4), paint);
       }
+      idx++;
     }
   }
 
