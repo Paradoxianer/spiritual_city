@@ -399,7 +399,7 @@ class BuildingInteractionService {
         building.influenceResidents(15.0);
         return const BuildingInteractionResult(
           playerFaithDelta: worshipSeconds * 3.0,
-          reactionEmoji: '🧘‍♂️🙏🕊️🙌',
+          reactionEmoji: '🤲🙏🕊️🙌',
           actionDurationSeconds: worshipSeconds,
         );
 

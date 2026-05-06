@@ -3296,7 +3296,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       case 'funeral':      return '⚰️';
       case 'mayorAudience': return '🏛️';
       case 'prayForPoliticians': return '🙏';
-      case 'worship':     return '🧘‍♂️';
+      case 'worship':     return '🤲';
       case 'sundayService': return '⛪';
       default:          return '⏳';
     }
@@ -3372,7 +3372,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       case BuildingType.cathedral:
         rows = [
           _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−50💰−60❤️→', trailingEmoji: '🔥AOE', tooltip: 'Gottesdienst', keyIndex: nk(), isDisabled: g.materials < 50 || g.health < 60, onTap: () => _performAction('sundayService')),
-          _ActionMenuRow(leadingEmoji: '🧘‍♂️', arrowText: '⏱→', trailingEmoji: '+🙏/Sek', tooltip: 'Anbetung', keyIndex: nk(), onTap: () => _performAction('worship')),
+          _ActionMenuRow(leadingEmoji: '🤲', arrowText: '⏱→', trailingEmoji: '+🙏/Sek', tooltip: 'Anbetung', keyIndex: nk(), onTap: () => _performAction('worship')),
         ];
 
       // ── Hospital ──────────────────────────────────────────────────────

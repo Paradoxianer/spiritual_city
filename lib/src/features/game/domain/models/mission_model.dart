@@ -174,7 +174,7 @@ class MissionModel {
       case ActionType.cityHallPrayForPoliticians:  return '🙏';
       // Church / Cathedral
       case ActionType.churchService:               return '⛪';
-      case ActionType.churchWorshipPrayer:         return '🧘';
+      case ActionType.churchWorshipPrayer:         return '🤲';
       // Cemetery
       case ActionType.cemeteryFuneral:             return '⚰️';
       case ActionType.cemeteryComfort:             return '🤝';
