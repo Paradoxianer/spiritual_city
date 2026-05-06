@@ -2334,7 +2334,7 @@ class _ConversionCounterState extends State<_ConversionCounter>
         ),
         const SizedBox(width: 2),
         // Inline "+1" delta chip – only visible while the fade is running.
-        if (_fadeCtrl.isAnimating || _fadeCtrl.value < 1.0)
+        if (_fadeCtrl.isAnimating || _fadeCtrl.value > 0.0)
           AnimatedBuilder(
             animation: _fadeAnim,
             builder: (context, _) => Opacity(
