@@ -124,8 +124,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// "time played" statistic shown on the win screen.
   late DateTime _sessionStartTime;
 
-  /// Elapsed play time since the session started.
-  Duration get sessionPlayTime => DateTime.now().difference(_sessionStartTime);
+  /// The play time captured the moment the win condition was triggered.
+  /// Fixed so the stats panel shows the time at which the player won, not a
+  /// live clock that keeps incrementing after the win screen is shown.
+  Duration sessionPlayTime = Duration.zero;
 
   /// Influence system – manages AoE spiritual-state effects with duration/decay.
   final InfluenceService influenceService = InfluenceService();
@@ -1828,6 +1830,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
 
     _winTriggered = true;
+    sessionPlayTime = DateTime.now().difference(_sessionStartTime);
     isWon.value = true;
     _log.info('WIN CONDITION MET – all NPCs converted and all cells positive');
   }

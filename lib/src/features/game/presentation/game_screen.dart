@@ -5169,7 +5169,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay>
                     const SizedBox(height: 12),
                     // Main heading
                     const Text(
-                      'Die Stadt gehört Gott!',
+                      'Die Stadt gehört Gott! 🙌',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.amber,
