@@ -32,8 +32,24 @@ class MenuService {
     final settings = await _repository.loadSettings();
     languageNotifier.setLanguage(settings.language);
     difficultyNotifier.value = settings.lastDifficulty;
+    _isTutorialCompleted = settings.tutorialCompleted;
     _log.info('MenuService init: lang=${settings.language}, '
-        'difficulty=${settings.lastDifficulty}');
+        'difficulty=${settings.lastDifficulty}, '
+        'tutorialCompleted=$_isTutorialCompleted');
+  }
+
+  // --------------- Tutorial -------------------------------------------------
+
+  bool _isTutorialCompleted = false;
+
+  /// Whether the player has ever completed (or skipped) the tutorial.
+  bool get isTutorialCompleted => _isTutorialCompleted;
+
+  /// Marks the tutorial as globally completed so new saves skip it.
+  Future<void> markTutorialCompleted() async {
+    if (_isTutorialCompleted) return; // already persisted
+    _isTutorialCompleted = true;
+    await _persistSettings();
   }
 
   // --------------- Language -------------------------------------------------
@@ -108,6 +124,7 @@ class MenuService {
     final settings = AppSettings(
       language: AppStrings.currentLanguage,
       lastDifficulty: difficultyNotifier.value,
+      tutorialCompleted: _isTutorialCompleted,
     );
     await _repository.saveSettings(settings);
   }
