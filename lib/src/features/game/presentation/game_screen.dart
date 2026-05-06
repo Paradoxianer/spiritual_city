@@ -207,14 +207,6 @@ class _GameScreenState extends State<GameScreen> {
               return _MissionCompleteToast(game: _game);
             },
           ),
-          // Conversion toast – briefly shown when an NPC is converted.
-          ValueListenableBuilder<bool>(
-            valueListenable: _game.isWorldReady,
-            builder: (context, isReady, _) {
-              if (!isReady) return const SizedBox.shrink();
-              return _ConversionToast(game: _game);
-            },
-          ),
           // Health alarm – red pulsing edge overlay when health < 15%
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
@@ -1247,95 +1239,7 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast>
   }
 }
 
-// ── Conversion Toast ──────────────────────────────────────────────────────────
 
-/// Brief toast shown near the HUD when an NPC is converted ("+1 ✝").
-/// Fades in, stays for 2 s, then fades out.
-class _ConversionToast extends StatefulWidget {
-  final SpiritWorldGame game;
-  const _ConversionToast({required this.game});
-
-  @override
-  State<_ConversionToast> createState() => _ConversionToastState();
-}
-
-class _ConversionToastState extends State<_ConversionToast>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _opacity;
-  Timer? _dismissTimer;
-  String? _message;
-
-  static const Duration _fadeDuration = Duration(milliseconds: 250);
-  static const Duration _visibleDuration = Duration(seconds: 2);
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: _fadeDuration);
-    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
-    widget.game.conversionToastMessage.addListener(_onMessage);
-  }
-
-  void _onMessage() {
-    final msg = widget.game.conversionToastMessage.value;
-    if (msg == null || !mounted) return;
-    _dismissTimer?.cancel();
-    setState(() => _message = msg);
-    _ctrl.forward(from: 0.0);
-    _dismissTimer = Timer(_visibleDuration, _dismiss);
-  }
-
-  void _dismiss() {
-    _dismissTimer?.cancel();
-    _ctrl.reverse().then((_) {
-      if (mounted) {
-        widget.game.conversionToastMessage.value = null;
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _dismissTimer?.cancel();
-    widget.game.conversionToastMessage.removeListener(_onMessage);
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_message == null) return const SizedBox.shrink();
-    return Positioned(
-      top: 8,
-      left: 8,
-      child: SafeArea(
-        child: FadeTransition(
-          opacity: _opacity,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xCC0D1A3A),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFB0C4FF), width: 1.2),
-              boxShadow: const [
-                BoxShadow(color: Colors.black54, blurRadius: 6),
-              ],
-            ),
-            child: Text(
-              _message!,
-              style: const TextStyle(
-                color: Color(0xFFB0C4FF),
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ── Health alarm overlay ──────────────────────────────────────────────────────
 
@@ -2365,14 +2269,54 @@ String _compactInt(int n) {
 }
 
 /// Compact conversion counter shown below the Insight display in the HUD.
-/// Shows ✝ N Bekehrt where N is the count of converted NPCs seen so far.
-class _ConversionCounter extends StatelessWidget {
+/// Shows ✝ N Bekehrt, and briefly flashes a fading "+1" delta chip inline
+/// (same pattern as [_AnimatedResourceBar]) whenever an NPC is converted.
+class _ConversionCounter extends StatefulWidget {
   final SpiritWorldGame gameRef;
   const _ConversionCounter({required this.gameRef});
 
   @override
+  State<_ConversionCounter> createState() => _ConversionCounterState();
+}
+
+class _ConversionCounterState extends State<_ConversionCounter>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fadeCtrl;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    // Opacity goes 1.0 → 0.0 so the "+1" chip fades out completely.
+    _fadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn),
+    );
+    widget.gameRef.conversionToastMessage.addListener(_onConversion);
+  }
+
+  void _onConversion() {
+    final msg = widget.gameRef.conversionToastMessage.value;
+    if (msg == null || !mounted) return;
+    setState(() {}); // rebuild to update converted count
+    _fadeCtrl.forward(from: 0.0).then((_) {
+      if (mounted) widget.gameRef.conversionToastMessage.value = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.gameRef.conversionToastMessage.removeListener(_onConversion);
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final converted = gameRef.chunkManager.allNPCModels
+    final converted = widget.gameRef.chunkManager.allNPCModels
         .where((m) => m.isConverted)
         .length;
     return Row(
@@ -2388,6 +2332,23 @@ class _ConversionCounter extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(width: 2),
+        // Inline "+1" delta chip – only visible while the fade is running.
+        if (_fadeCtrl.isAnimating || _fadeCtrl.value < 1.0)
+          AnimatedBuilder(
+            animation: _fadeAnim,
+            builder: (context, _) => Opacity(
+              opacity: _fadeAnim.value.clamp(0.0, 1.0),
+              child: const Text(
+                '+1',
+                style: TextStyle(
+                  color: Colors.amber,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
         const SizedBox(width: 4),
         Text(
           'Bekehrt',
