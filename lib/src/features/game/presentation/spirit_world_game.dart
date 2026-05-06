@@ -112,6 +112,21 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> wakeupMessage = ValueNotifier(null);
 
+  /// True once the win condition has been met (all NPCs converted + all loaded
+  /// cells positive).  Set to true at most once per session to prevent
+  /// double-triggering.  Flutter overlays listen to this to show the win screen.
+  final ValueNotifier<bool> isWon = ValueNotifier(false);
+
+  /// Guards against re-triggering the win screen a second time.
+  bool _winTriggered = false;
+
+  /// Timestamp of the moment [onLoad] completed – used to compute the
+  /// "time played" statistic shown on the win screen.
+  late DateTime _sessionStartTime;
+
+  /// Elapsed play time since the session started.
+  Duration get sessionPlayTime => DateTime.now().difference(_sessionStartTime);
+
   /// Influence system – manages AoE spiritual-state effects with duration/decay.
   final InfluenceService influenceService = InfluenceService();
 
@@ -181,6 +196,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   // Faint / game-over state
   bool _faintTriggered = false;
+
+  // Win-condition polling timer (checked every 5 seconds when the world is ready)
+  double _winCheckTimer = 0.0;
+  static const double _winCheckInterval = 5.0;
 
   // Hunger mechanics thresholds (as fractions of maxHunger)
   static const double hungerWarnThreshold     = 0.30; // < 30%: slower movement
@@ -343,6 +362,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         _updateButtonStyles();
       }
       isWorldReady.value = true;
+      _sessionStartTime = DateTime.now();
       _log.info(
         '--- GAME READY --- '
         'pastorhousePos=${pastorhousePosition.value} '
@@ -1484,6 +1504,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       if (isSpiritualWorld) _updateHudVisibility(); // Dynamic dock update
       // Tick influence effects (decay / reversal of timed AoE events).
       influenceService.update(dt, grid);
+      // Periodically check the win condition (spiritual state can change from
+      // prayer combat and natural decay, not just NPC conversions).
+      _winCheckTimer += dt;
+      if (_winCheckTimer >= _winCheckInterval) {
+        _winCheckTimer = 0.0;
+        _checkWinCondition();
+      }
     }
     // Always push player position so the Flutter HUD compass stays live.
     playerWorldPosition.value = player.position.clone();
@@ -1747,6 +1774,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     missionCompleteMessage.dispose();
     conversionToastMessage.dispose();
     isFainting.dispose();
+    isWon.dispose();
     wakeupMessage.dispose();
     tutorialService.dispose();
     super.onRemove();
@@ -1772,6 +1800,36 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     progress.recordConversion();
     conversionToastMessage.value = '+1 ✝';
     _checkAndApplyModifiers();
+    _checkWinCondition();
+  }
+
+  /// Checks whether the win condition is met and fires [isWon] if so.
+  ///
+  /// Win condition (both must be true simultaneously):
+  /// 1. Every loaded NPC is a Christian ([NPCModel.isChristian]).
+  /// 2. Every loaded cell has a positive spiritual state (> 0).
+  ///
+  /// Requires at least one NPC to be present so the condition cannot be
+  /// satisfied trivially before the world has finished generating.
+  void _checkWinCondition() {
+    if (_winTriggered) return;
+
+    final npcs = chunkManager.allNPCModels;
+    if (npcs.isEmpty) return;
+
+    // All NPCs must be Christians.
+    if (!npcs.every((n) => n.isChristian)) return;
+
+    // All loaded cells must have a positive spiritual state.
+    for (final chunk in grid.getLoadedChunks()) {
+      for (final cell in chunk.cells.values) {
+        if (cell.spiritualState <= 0) return;
+      }
+    }
+
+    _winTriggered = true;
+    isWon.value = true;
+    _log.info('WIN CONDITION MET – all NPCs converted and all cells positive');
   }
 
   void _checkAndApplyModifiers() {
