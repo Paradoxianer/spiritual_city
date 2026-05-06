@@ -2351,7 +2351,7 @@ class _ConversionCounterState extends State<_ConversionCounter>
           ),
         const SizedBox(width: 4),
         Text(
-          'Bekehrt',
+          AppStrings.get('hud.christians'),
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.55),
             fontSize: 10,

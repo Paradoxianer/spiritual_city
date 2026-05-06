@@ -67,6 +67,9 @@ class AppStrings {
       'resource.provision': 'Versorgung',
       'resource.faith': 'Glaube',
       'resource.supplies': 'Vorräte',
+
+      // HUD
+      'hud.christians': 'Christen',
     },
     'en': {
       // Main Menu
@@ -132,6 +135,9 @@ class AppStrings {
       'resource.provision': 'Provision',
       'resource.faith': 'Faith',
       'resource.supplies': 'Supplies',
+
+      // HUD
+      'hud.christians': 'Christians',
     },
   };
 
