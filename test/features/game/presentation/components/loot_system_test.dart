@@ -122,14 +122,12 @@ void main() {
   // ── Insight reward constants ──────────────────────────────────────────────
 
   group('LootSystem insight reward constants', () {
-    test('insightChance is between 0.15 and 0.25 (15–25 %)', () {
-      expect(LootSystem.insightChance, greaterThanOrEqualTo(0.15));
-      expect(LootSystem.insightChance, lessThanOrEqualTo(0.25));
+    test('insightChance is 20 % (0.20)', () {
+      expect(LootSystem.insightChance, closeTo(0.20, 0.0001));
     });
 
-    test('insightReward is between 0.1 and 0.2', () {
-      expect(LootSystem.insightReward, greaterThanOrEqualTo(0.1));
-      expect(LootSystem.insightReward, lessThanOrEqualTo(0.2));
+    test('insightReward is 0.1', () {
+      expect(LootSystem.insightReward, closeTo(0.1, 0.0001));
     });
   });
 }
