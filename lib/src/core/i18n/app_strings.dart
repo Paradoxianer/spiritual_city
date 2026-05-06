@@ -70,6 +70,53 @@ class AppStrings {
 
       // HUD
       'hud.christians': 'Christen',
+
+      // Tutorial
+      'tutorial.welcome.title': 'Willkommen!',
+      'tutorial.welcome.message': 'Willkommen in der Stadt!\n'
+          'Du bist ein Christ mit einer Mission.\n'
+          'Gott hat dich gesandt, um Licht in diese Stadt zu bringen. 🌟',
+      'tutorial.movement.title': 'Bewegung',
+      'tutorial.movement.message': 'Tippe auf die Stadt um dich zu bewegen!\n'
+          '(Auf dem PC: Pfeiltasten oder WASD)',
+      'tutorial.npcTalk.title': 'Menschen ansprechen',
+      'tutorial.npcTalk.message': 'Sprich mit jemandem in der Stadt!\n'
+          'Gehe nah an eine Person heran und öffne das Aktions-Menü.',
+      'tutorial.radialMenu.title': 'Aktions-Menü',
+      'tutorial.radialMenu.message':
+          'Öffne das Aktions-Menü (🖐️-Button rechts unten)\n'
+          'und wähle eine Aktion aus!\n'
+          '(PC: Taste E)',
+      'tutorial.spiritWorld.title': 'Geistliche Welt',
+      'tutorial.spiritWorld.message': 'Wechsle in die geistliche Welt!\n'
+          'Tippe auf den 🙏-Button unten rechts.\n'
+          '(PC: Taste Q)',
+      'tutorial.prayer.title': 'Gebet & Kampf',
+      'tutorial.prayer.message':
+          'Bete für diesen Bereich – vertreibe die Dunkelheit!\n'
+          'Halte den ✝️-Button gedrückt und lass ihn dann los.',
+      'tutorial.returnToCity.title': 'Zurück in die Stadt',
+      'tutorial.returnToCity.message':
+          'Gut gemacht! Kehre zurück in die Stadt.\n'
+          'Tippe auf den 🏙️-Button unten rechts.',
+      'tutorial.hudExplain.title': 'Deine Status-Anzeige',
+      'tutorial.hudExplain.message':
+          '❤️ Gesundheit  •  🍞 Hunger  •  🙏 Glaube\n'
+          '📦 Materialien  •  📖 Erkenntnis  •  ✝ Bekehrungen\n\n'
+          'Halte deine Ressourcen im Blick –\n'
+          'sie sind wichtig für deine Mission!',
+      'tutorial.firstMission.title': 'Erste Mission',
+      'tutorial.firstMission.message': 'Du hast deine erste Mission!\n'
+          'Besuche ein Gebäude in der Nähe\n'
+          'und führe eine Aktion durch.',
+      'tutorial.completed.title': 'Tutorial abgeschlossen!',
+      'tutorial.completed.message': 'Du bist bereit!\n'
+          'Gott sei mit dir. ✝\n\n'
+          'Die Stadt braucht dich –\n'
+          'geh und bringe Licht!',
+      'tutorial.next': 'Weiter →',
+      'tutorial.start': 'Los geht\'s! 🚀',
+      'tutorial.skip': 'Tutorial überspringen',
     },
     'en': {
       // Main Menu
@@ -138,6 +185,52 @@ class AppStrings {
 
       // HUD
       'hud.christians': 'Christians',
+
+      // Tutorial
+      'tutorial.welcome.title': 'Welcome!',
+      'tutorial.welcome.message': 'Welcome to the city!\n'
+          'You are a Christian on a mission.\n'
+          'God has sent you to bring light to this city. 🌟',
+      'tutorial.movement.title': 'Movement',
+      'tutorial.movement.message': 'Tap on the city to move around!\n'
+          '(On PC: arrow keys or WASD)',
+      'tutorial.npcTalk.title': 'Talk to People',
+      'tutorial.npcTalk.message': 'Talk to someone in the city!\n'
+          'Get close to a person and open the action menu.',
+      'tutorial.radialMenu.title': 'Action Menu',
+      'tutorial.radialMenu.message':
+          'Open the action menu (🖐️ button bottom right)\n'
+          'and choose an action!\n'
+          '(PC: key E)',
+      'tutorial.spiritWorld.title': 'Spiritual World',
+      'tutorial.spiritWorld.message': 'Switch to the spiritual world!\n'
+          'Tap the 🙏 button at the bottom right.\n'
+          '(PC: key Q)',
+      'tutorial.prayer.title': 'Prayer & Combat',
+      'tutorial.prayer.message':
+          'Pray for this area – drive out the darkness!\n'
+          'Hold the ✝️ button and then release it.',
+      'tutorial.returnToCity.title': 'Back to the City',
+      'tutorial.returnToCity.message': 'Well done! Return to the city.\n'
+          'Tap the 🏙️ button at the bottom right.',
+      'tutorial.hudExplain.title': 'Your Status Display',
+      'tutorial.hudExplain.message':
+          '❤️ Health  •  🍞 Hunger  •  🙏 Faith\n'
+          '📦 Supplies  •  📖 Insight  •  ✝ Conversions\n\n'
+          'Keep track of your resources –\n'
+          'they are vital for your mission!',
+      'tutorial.firstMission.title': 'First Mission',
+      'tutorial.firstMission.message': 'You have your first mission!\n'
+          'Visit a nearby building\n'
+          'and perform an action.',
+      'tutorial.completed.title': 'Tutorial Complete!',
+      'tutorial.completed.message': 'You are ready!\n'
+          'God be with you. ✝\n\n'
+          'The city needs you –\n'
+          'go and bring light!',
+      'tutorial.next': 'Next →',
+      'tutorial.start': 'Let\'s go! 🚀',
+      'tutorial.skip': 'Skip Tutorial',
     },
   };
 

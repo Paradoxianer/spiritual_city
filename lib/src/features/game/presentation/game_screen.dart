@@ -4641,88 +4641,30 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
 
   // ── Step content ─────────────────────────────────────────────────────────
 
-  static const _stepContent = <TutorialStep,
-      ({
-        String emoji,
-        String title,
-        String message,
-        bool needsNextButton,
-      })>{
-    TutorialStep.welcome: (
-      emoji: '✝️',
-      title: 'Willkommen!',
-      message: 'Willkommen in der Stadt!\n'
-          'Du bist ein Christ mit einer Mission.\n'
-          'Gott hat dich gesandt, um Licht in diese Stadt zu bringen. 🌟',
-      needsNextButton: true,
-    ),
-    TutorialStep.movement: (
-      emoji: '🗺️',
-      title: 'Bewegung',
-      message: 'Tippe auf die Stadt um dich zu bewegen!\n'
-          '(Auf dem PC: Pfeiltasten oder WASD)',
-      needsNextButton: false,
-    ),
-    TutorialStep.npcTalk: (
-      emoji: '💬',
-      title: 'Menschen ansprechen',
-      message: 'Sprich mit jemandem in der Stadt!\n'
-          'Gehe nah an eine Person heran und öffne das Aktions-Menü.',
-      needsNextButton: false,
-    ),
-    TutorialStep.radialMenu: (
-      emoji: '🖐️',
-      title: 'Aktions-Menü',
-      message: 'Öffne das Aktions-Menü (🖐️-Button rechts unten)\n'
-          'und wähle eine Aktion aus!\n'
-          '(PC: Taste E)',
-      needsNextButton: false,
-    ),
-    TutorialStep.spiritWorld: (
-      emoji: '🙏',
-      title: 'Geistliche Welt',
-      message: 'Wechsle in die geistliche Welt!\n'
-          'Tippe auf den 🙏-Button unten rechts.\n'
-          '(PC: Taste Q)',
-      needsNextButton: false,
-    ),
-    TutorialStep.prayer: (
-      emoji: '⚡',
-      title: 'Gebet & Kampf',
-      message: 'Bete für diesen Bereich – vertreibe die Dunkelheit!\n'
-          'Halte den ✝️-Button gedrückt und lass ihn dann los.',
-      needsNextButton: false,
-    ),
-    TutorialStep.returnToCity: (
-      emoji: '🏙️',
-      title: 'Zurück in die Stadt',
-      message: 'Gut gemacht! Kehre zurück in die Stadt.\n'
-          'Tippe auf den 🏙️-Button unten rechts.',
-      needsNextButton: false,
-    ),
-    TutorialStep.hudExplain: (
-      emoji: '📊',
-      title: 'Dein Status-Anzeige',
-      message: '❤️ Gesundheit  •  🍞 Hunger  •  🙏 Glaube\n'
-          '📦 Materialien  •  📖 Erkenntnis  •  ✝ Bekehrungen\n\n'
-          'Halte deine Ressourcen im Blick –\nsie sind wichtig für deine Mission!',
-      needsNextButton: true,
-    ),
-    TutorialStep.firstMission: (
-      emoji: '📋',
-      title: 'Erste Mission',
-      message: 'Du hast deine erste Mission!\n'
-          'Besuche ein Gebäude in der Nähe\nund führe eine Aktion durch.',
-      needsNextButton: false,
-    ),
-    TutorialStep.completed: (
-      emoji: '🎉',
-      title: 'Tutorial abgeschlossen!',
-      message: 'Du bist bereit!\nGott sei mit dir. ✝\n\n'
-          'Die Stadt braucht dich –\ngeh und bringe Licht!',
-      needsNextButton: true,
-    ),
+  static const _stepMeta = <TutorialStep, ({String emoji, bool needsNextButton})>{
+    TutorialStep.welcome: (emoji: '✝️', needsNextButton: true),
+    TutorialStep.movement: (emoji: '🗺️', needsNextButton: false),
+    TutorialStep.npcTalk: (emoji: '💬', needsNextButton: false),
+    TutorialStep.radialMenu: (emoji: '🖐️', needsNextButton: false),
+    TutorialStep.spiritWorld: (emoji: '🙏', needsNextButton: false),
+    TutorialStep.prayer: (emoji: '⚡', needsNextButton: false),
+    TutorialStep.returnToCity: (emoji: '🏙️', needsNextButton: false),
+    TutorialStep.hudExplain: (emoji: '📊', needsNextButton: true),
+    TutorialStep.firstMission: (emoji: '📋', needsNextButton: false),
+    TutorialStep.completed: (emoji: '🎉', needsNextButton: true),
   };
+
+  static ({String emoji, String title, String message, bool needsNextButton})?
+      _contentFor(TutorialStep step) {
+    final meta = _stepMeta[step];
+    if (meta == null) return null;
+    return (
+      emoji: meta.emoji,
+      title: AppStrings.get('tutorial.${step.name}.title'),
+      message: AppStrings.get('tutorial.${step.name}.message'),
+      needsNextButton: meta.needsNextButton,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -4731,7 +4673,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
       builder: (context, step, _) {
         if (step == null) return const SizedBox.shrink();
 
-        final content = _stepContent[step];
+        final content = _contentFor(step);
         if (content == null) return const SizedBox.shrink();
 
         final isCompleted = step == TutorialStep.completed;
@@ -4844,8 +4786,8 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
                                 ),
                               ),
                               child: Text(isCompleted
-                                  ? 'Los geht\'s! 🚀'
-                                  : 'Weiter →'),
+                                  ? AppStrings.get('tutorial.start')
+                                  : AppStrings.get('tutorial.next')),
                             ),
                           ),
                         if (canSkip && !isCompleted) ...[
@@ -4858,7 +4800,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
                                   Colors.white.withValues(alpha: 0.45),
                               textStyle: const TextStyle(fontSize: 13),
                             ),
-                            child: const Text('Tutorial überspringen'),
+                            child: Text(AppStrings.get('tutorial.skip')),
                           ),
                         ],
                       ],
