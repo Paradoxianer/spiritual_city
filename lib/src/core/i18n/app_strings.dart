@@ -142,6 +142,7 @@ class AppStrings {
           'andere Aktionen und Möglichkeiten.\n\n'
           'Im Pastorenhaus kannst du außerdem\n'
           'deine aktiven Missionen einsehen.',
+      'tutorial.homebase.trigger': '🏠 Betritt das Pastorenhaus, um fortzufahren.',
       'tutorial.firstMission.title': 'Erste Mission',
       'tutorial.firstMission.message': 'Du hast deine erste Mission!\n'
           'Besuche ein Gebäude in der Nähe\n'
@@ -293,6 +294,7 @@ class AppStrings {
           'actions and opportunities.\n\n'
           'In the pastor\'s house you can also\n'
           'view your active missions.',
+      'tutorial.homebase.trigger': '🏠 Enter the pastor\'s house to continue.',
       'tutorial.firstMission.title': 'First Mission',
       'tutorial.firstMission.message': 'You have your first mission!\n'
           'Visit a nearby building\n'

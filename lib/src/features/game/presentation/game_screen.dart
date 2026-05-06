@@ -4650,7 +4650,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
     TutorialStep.radialMenu:   (emoji: '🖐️', needsNextButton: false, hasTrigger: true,  isInteractive: true),
     TutorialStep.npcTalk:      (emoji: '💬',  needsNextButton: true,  hasTrigger: false, isInteractive: true),
     TutorialStep.hudExplain:   (emoji: '📊',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
-    TutorialStep.homebase:     (emoji: '🏠',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
+    TutorialStep.homebase:     (emoji: '🏠',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
     TutorialStep.firstMission: (emoji: '📋',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
     TutorialStep.completed:    (emoji: '🎉',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
   };

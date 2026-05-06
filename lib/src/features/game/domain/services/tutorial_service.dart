@@ -10,8 +10,8 @@ enum TutorialStep {
   radialMenu,    // Step 6:  Use radial menu near an NPC (auto-advance)
   npcTalk,       // Step 7:  Open NPC dialog and interact (auto-advance)
   hudExplain,    // Step 8:  HUD / resource explanation (manual advance)
-  homebase,      // Step 9:  Pastor house / homebase (manual advance)
-  firstMission,  // Step 10: First mission – enter a building (auto-advance)
+  homebase,      // Step 9:  Pastor house / homebase – auto-advances + skips firstMission on building entry
+  firstMission,  // Step 10: First mission – only reached if homebase was already done separately (auto-advance)
   completed,     // Step 11: Tutorial completed (manual dismiss)
 }
 
@@ -111,7 +111,17 @@ class TutorialService {
   }
 
   /// Call when the player opens a building interior.
+  ///
+  /// Advances [TutorialStep.homebase] and [TutorialStep.firstMission] in one
+  /// go: entering the pastor house (or any building while the homebase step is
+  /// active) satisfies both steps so the player is not asked to enter a second
+  /// building separately.
   void onBuildingInteracted() {
-    if (currentStep == TutorialStep.firstMission) nextStep();
+    if (currentStep == TutorialStep.homebase) {
+      nextStep(); // homebase → firstMission
+      nextStep(); // firstMission → completed
+    } else if (currentStep == TutorialStep.firstMission) {
+      nextStep();
+    }
   }
 }
