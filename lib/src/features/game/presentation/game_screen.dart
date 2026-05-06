@@ -2350,8 +2350,22 @@ class _InsightDisplay extends StatelessWidget {
   }
 }
 
+/// Formats an integer with compact suffixes for large numbers.
+/// E.g. 999 → '999', 1000 → '1K', 1500 → '1.5K', 1000000 → '1M'.
+String _compactInt(int n) {
+  if (n >= 1000000) {
+    final d = n / 1000000;
+    return '${d == d.truncateToDouble() ? d.toInt() : d.toStringAsFixed(1)}M';
+  }
+  if (n >= 1000) {
+    final d = n / 1000;
+    return '${d == d.truncateToDouble() ? d.toInt() : d.toStringAsFixed(1)}K';
+  }
+  return '$n';
+}
+
 /// Compact conversion counter shown below the Insight display in the HUD.
-/// Shows ✝ converted / totalNpcsSeen (persisted across chunks/sessions).
+/// Shows ✝ N Bekehrt where N is the count of converted NPCs seen so far.
 class _ConversionCounter extends StatelessWidget {
   final SpiritWorldGame gameRef;
   const _ConversionCounter({required this.gameRef});
@@ -2361,16 +2375,13 @@ class _ConversionCounter extends StatelessWidget {
     final converted = gameRef.chunkManager.allNPCModels
         .where((m) => m.isConverted)
         .length;
-    // Use the persistent high-water mark so the denominator reflects all NPCs
-    // ever discovered, not just those in the currently loaded chunks.
-    final total = gameRef.progress.totalNpcsSeen;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text('✝', style: TextStyle(fontSize: 12, color: Color(0xFFB0C4FF))),
         const SizedBox(width: 3),
         Text(
-          '$converted / $total',
+          _compactInt(converted),
           style: const TextStyle(
             color: Color(0xFFB0C4FF),
             fontSize: 12,
