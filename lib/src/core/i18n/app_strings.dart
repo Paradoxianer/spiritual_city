@@ -133,15 +133,10 @@ class AppStrings {
           'Tipp: Homebase aufsuchen, um Hunger & Gesundheit aufzufüllen!',
       'tutorial.homebase.title': 'Deine Homebase',
       'tutorial.homebase.message':
-          '🏠 Gehe zum Pastorenhaus – nutze den Kompass\n'
-          'oben links (▲), um es zu finden.\n\n'
-          'Drücke E (oder den 🖐️-Button) → wähle\n'
-          '\'Pastorenhaus\' → und fülle deine Ressourcen auf!\n\n'
-          'Du kannst auch andere Häuser und Gebäude\n'
-          'in der Stadt besuchen – jedes bietet\n'
-          'andere Aktionen und Möglichkeiten.\n\n'
-          'Im Pastorenhaus kannst du außerdem\n'
-          'deine aktiven Missionen einsehen.',
+          '🏠 Nutze den Kompass ▲ (oben links),\n'
+          'um das Pastorenhaus zu finden.\n\n'
+          'Drücke E (oder 🖐️) → wähle\n'
+          '\'Pastorenhaus\' → fülle deine Ressourcen auf!',
       'tutorial.homebase.trigger': '🏠 Betritt das Pastorenhaus, um fortzufahren.',
       'tutorial.firstMission.title': 'Erste Mission',
       'tutorial.firstMission.message': 'Du hast deine erste Mission!\n'
@@ -285,15 +280,10 @@ class AppStrings {
           'Tip: Visit your homebase to refill hunger & health!',
       'tutorial.homebase.title': 'Your Homebase',
       'tutorial.homebase.message':
-          '🏠 Go to the pastor\'s house – use the compass\n'
-          'at the top left (▲) to find it.\n\n'
-          'Press E (or 🖐️ button) → select\n'
-          '"Pastor\'s House" → and refill your resources!\n\n'
-          'You can also visit other houses and buildings\n'
-          'in the city – each offers different\n'
-          'actions and opportunities.\n\n'
-          'In the pastor\'s house you can also\n'
-          'view your active missions.',
+          '🏠 Use the compass ▲ (top left)\n'
+          'to find the pastor\'s house.\n\n'
+          'Press E (or 🖐️) → select\n'
+          '"Pastor\'s House" → refill your resources!',
       'tutorial.homebase.trigger': '🏠 Enter the pastor\'s house to continue.',
       'tutorial.firstMission.title': 'First Mission',
       'tutorial.firstMission.message': 'You have your first mission!\n'

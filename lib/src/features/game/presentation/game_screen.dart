@@ -4775,7 +4775,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
     bool canSkip,
   ) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 440),
+      constraints: const BoxConstraints(maxWidth: 500),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
       decoration: BoxDecoration(
         color: isCompleted
