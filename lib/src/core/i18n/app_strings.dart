@@ -81,36 +81,47 @@ class AppStrings {
           'um dich in der Stadt zu bewegen!\n'
           '(Auf dem PC: Pfeiltasten oder WASD)',
       'tutorial.movement.trigger': '👟 Bewege dich, um fortzufahren.',
-      'tutorial.npcTalk.title': 'Menschen ansprechen',
-      'tutorial.npcTalk.message': 'Sprich mit jemandem in der Stadt!\n'
-          'Gehe nah an eine Person heran und öffne das Aktions-Menü.\n\n'
-          'Tipp: Verschiedene Aktionen haben unterschiedliche Kosten\n'
-          'und Auswirkungen – abhängig vom Zustand der unsichtbaren Welt! 👁',
-      'tutorial.npcTalk.trigger': '💬 Öffne einen NPC-Dialog, um fortzufahren.',
-      'tutorial.radialMenu.title': 'Aktions-Menü',
-      'tutorial.radialMenu.message':
-          'Öffne das Aktions-Menü (🖐️-Button rechts unten)\n'
-          'und wähle eine Aktion aus!\n'
-          '(PC: Taste E)',
-      'tutorial.radialMenu.trigger': '🖐️ Wähle eine Aktion aus, um fortzufahren.',
-      'tutorial.spiritWorld.title': 'Geistliche Welt',
-      'tutorial.spiritWorld.message': 'Wechsle in die geistliche Welt!\n'
+      'tutorial.spiritWorld.title': 'Unsichtbare Welt',
+      'tutorial.spiritWorld.message':
+          'Wechsle jetzt in die geistliche Welt!\n'
           'Tippe auf den 🙏-Button unten rechts.\n'
-          '(PC: Taste Q)',
+          '(PC: Taste Q)\n\n'
+          'Dort kannst du verborgene Kräfte sehen\n'
+          'und aktiv eingreifen.',
       'tutorial.spiritWorld.trigger':
           '🙏 Betritt die geistliche Welt, um fortzufahren.',
-      'tutorial.prayer.title': 'Gebet & Kampf',
+      'tutorial.prayer.title': 'Beten & Befreien',
       'tutorial.prayer.message':
-          'Bete für diesen Bereich – vertreibe die Dunkelheit!\n'
-          'Halte den ✝️-Button gedrückt und lass ihn dann los.\n'
-          '(PC: Leertaste gedrückt halten)',
+          'Halte den ✝️-Button gedrückt, bis sich\n'
+          'die Bereiche unter dir grün färben –\n'
+          'so befreist du sie von der Dunkelheit!\n'
+          '(PC: Leertaste gedrückt halten)\n\n'
+          'Es gibt verschiedene Modi:\n'
+          'Befreiung, Zurückdrängen u.v.m.',
       'tutorial.prayer.trigger': '⚡ Bete einmal, um fortzufahren.',
       'tutorial.returnToCity.title': 'Zurück in die Stadt',
       'tutorial.returnToCity.message':
           'Gut gemacht! Kehre zurück in die Stadt.\n'
-          'Tippe auf den 🏙️-Button unten rechts.',
+          'Tippe auf den 🏙️-Button unten rechts.\n'
+          '(PC: Taste Q)',
       'tutorial.returnToCity.trigger':
           '🏙️ Kehre in die Stadt zurück, um fortzufahren.',
+      'tutorial.radialMenu.title': 'Aktions-Menü',
+      'tutorial.radialMenu.message':
+          'Gehe auf eine Person in der Stadt zu.\n'
+          'Drücke dann den 🖐️-Button rechts unten\n'
+          '(PC: Taste E), um das Aktions-Menü zu öffnen.\n\n'
+          'Wähle eine Aktion aus der Liste aus.',
+      'tutorial.radialMenu.trigger': '🖐️ Wähle eine Aktion aus, um fortzufahren.',
+      'tutorial.npcTalk.title': 'Mit Personen interagieren',
+      'tutorial.npcTalk.message':
+          'Du bist jetzt im Gespräch!\n'
+          'Aktionen haben Auswirkungen in der realen Welt –\n'
+          'manchmal auch in der unsichtbaren.\n'
+          'Die unsichtbare Welt beeinflusst\n'
+          'den Erfolg deiner Aktionen.\n\n'
+          'Interagiere mit der Person und drücke\n'
+          'dann unten „Weiter".',
       'tutorial.hudExplain.title': 'Deine Ressourcen',
       'tutorial.hudExplain.message':
           '❤️ Gesundheit – sinkt bei Hunger oder Gefahren\n'
@@ -122,13 +133,15 @@ class AppStrings {
           'Tipp: Homebase aufsuchen, um Hunger & Gesundheit aufzufüllen!',
       'tutorial.homebase.title': 'Deine Homebase',
       'tutorial.homebase.message':
-          '🏠 Das Pastorenhaus ist dein Ausgangspunkt.\n'
-          'Nutze den Kompass oben links (▲), um es zu finden.\n\n'
-          'Dort kannst du:\n'
-          '• Hunger & Gesundheit auffüllen\n'
-          '• Materialien auffüllen\n'
-          '• Deine aktiven Missionen einsehen\n\n'
-          'Kehre regelmäßig zurück, wenn du Ressourcen brauchst!',
+          '🏠 Gehe zum Pastorenhaus – nutze den Kompass\n'
+          'oben links (▲), um es zu finden.\n\n'
+          'Drücke E (oder den 🖐️-Button) → wähle\n'
+          '\'Pastorenhaus\' → und fülle deine Ressourcen auf!\n\n'
+          'Du kannst auch andere Häuser und Gebäude\n'
+          'in der Stadt besuchen – jedes bietet\n'
+          'andere Aktionen und Möglichkeiten.\n\n'
+          'Im Pastorenhaus kannst du außerdem\n'
+          'deine aktiven Missionen einsehen.',
       'tutorial.firstMission.title': 'Erste Mission',
       'tutorial.firstMission.message': 'Du hast deine erste Mission!\n'
           'Besuche ein Gebäude in der Nähe\n'
@@ -221,33 +234,45 @@ class AppStrings {
           'to move around the city!\n'
           '(On PC: arrow keys or WASD)',
       'tutorial.movement.trigger': '👟 Move to continue.',
-      'tutorial.npcTalk.title': 'Talk to People',
-      'tutorial.npcTalk.message': 'Talk to someone in the city!\n'
-          'Get close to a person and open the action menu.\n\n'
-          'Tip: Different actions have different costs and effects –\n'
-          'depending on the state of the invisible world! 👁',
-      'tutorial.npcTalk.trigger': '💬 Open an NPC dialog to continue.',
-      'tutorial.radialMenu.title': 'Action Menu',
-      'tutorial.radialMenu.message':
-          'Open the action menu (🖐️ button bottom right)\n'
-          'and choose an action!\n'
-          '(PC: key E)',
-      'tutorial.radialMenu.trigger': '🖐️ Choose an action to continue.',
-      'tutorial.spiritWorld.title': 'Spiritual World',
-      'tutorial.spiritWorld.message': 'Switch to the spiritual world!\n'
+      'tutorial.spiritWorld.title': 'Invisible World',
+      'tutorial.spiritWorld.message':
+          'Switch to the spiritual world now!\n'
           'Tap the 🙏 button at the bottom right.\n'
-          '(PC: key Q)',
+          '(PC: key Q)\n\n'
+          'There you can see hidden forces\n'
+          'and actively intervene.',
       'tutorial.spiritWorld.trigger': '🙏 Enter the spiritual world to continue.',
-      'tutorial.prayer.title': 'Prayer & Combat',
+      'tutorial.prayer.title': 'Prayer & Liberation',
       'tutorial.prayer.message':
-          'Pray for this area – drive out the darkness!\n'
-          'Hold the ✝️ button and then release it.\n'
-          '(PC: hold Space bar)',
+          'Hold the ✝️ button until the areas\n'
+          'beneath you turn green –\n'
+          'that\'s how you liberate them!\n'
+          '(PC: hold Space bar)\n\n'
+          'There are different modes:\n'
+          'Liberation, Pushback, and more.',
       'tutorial.prayer.trigger': '⚡ Perform a prayer to continue.',
       'tutorial.returnToCity.title': 'Back to the City',
-      'tutorial.returnToCity.message': 'Well done! Return to the city.\n'
-          'Tap the 🏙️ button at the bottom right.',
+      'tutorial.returnToCity.message':
+          'Well done! Return to the city.\n'
+          'Tap the 🏙️ button at the bottom right.\n'
+          '(PC: key Q)',
       'tutorial.returnToCity.trigger': '🏙️ Return to the city to continue.',
+      'tutorial.radialMenu.title': 'Action Menu',
+      'tutorial.radialMenu.message':
+          'Walk up to a person in the city.\n'
+          'Then press the 🖐️ button (bottom right)\n'
+          '(PC: key E) to open the action menu.\n\n'
+          'Select an action from the list.',
+      'tutorial.radialMenu.trigger': '🖐️ Choose an action to continue.',
+      'tutorial.npcTalk.title': 'Interact with People',
+      'tutorial.npcTalk.message':
+          'You are now in a conversation!\n'
+          'Actions have effects in the real world –\n'
+          'and sometimes in the invisible world too.\n'
+          'The invisible world influences\n'
+          'the success of your actions.\n\n'
+          'Interact with the person and then\n'
+          'press "Next" below.',
       'tutorial.hudExplain.title': 'Your Resources',
       'tutorial.hudExplain.message':
           '❤️ Health – drops from hunger or danger\n'
@@ -259,13 +284,15 @@ class AppStrings {
           'Tip: Visit your homebase to refill hunger & health!',
       'tutorial.homebase.title': 'Your Homebase',
       'tutorial.homebase.message':
-          '🏠 The pastor\'s house is your starting point.\n'
-          'Use the compass at the top left (▲) to find it.\n\n'
-          'There you can:\n'
-          '• Refill hunger & health\n'
-          '• Refill supplies\n'
-          '• View your active missions\n\n'
-          'Return regularly whenever you need resources!',
+          '🏠 Go to the pastor\'s house – use the compass\n'
+          'at the top left (▲) to find it.\n\n'
+          'Press E (or 🖐️ button) → select\n'
+          '"Pastor\'s House" → and refill your resources!\n\n'
+          'You can also visit other houses and buildings\n'
+          'in the city – each offers different\n'
+          'actions and opportunities.\n\n'
+          'In the pastor\'s house you can also\n'
+          'view your active missions.',
       'tutorial.firstMission.title': 'First Mission',
       'tutorial.firstMission.message': 'You have your first mission!\n'
           'Visit a nearby building\n'

@@ -4644,11 +4644,11 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
   static const _stepMeta = <TutorialStep, ({String emoji, bool needsNextButton, bool hasTrigger, bool isInteractive})>{
     TutorialStep.welcome:      (emoji: '✝️',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
     TutorialStep.movement:     (emoji: '🗺️', needsNextButton: false, hasTrigger: true,  isInteractive: true),
-    TutorialStep.radialMenu:   (emoji: '🖐️', needsNextButton: false, hasTrigger: true,  isInteractive: true),
-    TutorialStep.npcTalk:      (emoji: '💬',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
     TutorialStep.spiritWorld:  (emoji: '🙏',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
     TutorialStep.prayer:       (emoji: '⚡',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
     TutorialStep.returnToCity: (emoji: '🏙️', needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.radialMenu:   (emoji: '🖐️', needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.npcTalk:      (emoji: '💬',  needsNextButton: true,  hasTrigger: false, isInteractive: true),
     TutorialStep.hudExplain:   (emoji: '📊',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
     TutorialStep.homebase:     (emoji: '🏠',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
     TutorialStep.firstMission: (emoji: '📋',  needsNextButton: false, hasTrigger: true,  isInteractive: true),

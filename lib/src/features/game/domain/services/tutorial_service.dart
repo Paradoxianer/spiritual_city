@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 enum TutorialStep {
   welcome,       // Step 1:  Welcome dialog (manual advance)
   movement,      // Step 2:  Move around (auto-advance on cell change)
-  radialMenu,    // Step 3:  Use radial menu action (auto-advance)
-  npcTalk,       // Step 4:  Talk to NPC (auto-advance on dialog open)
-  spiritWorld,   // Step 5:  Enter spiritual world (auto-advance)
-  prayer,        // Step 6:  Pray / combat (auto-advance)
-  returnToCity,  // Step 7:  Return to city (auto-advance)
-  hudExplain,    // Step 8:  HUD explanation (manual advance)
+  spiritWorld,   // Step 3:  Enter spiritual world (auto-advance)
+  prayer,        // Step 4:  Pray / combat in spirit world (auto-advance)
+  returnToCity,  // Step 5:  Return to city (auto-advance)
+  radialMenu,    // Step 6:  Use radial menu near an NPC (auto-advance)
+  npcTalk,       // Step 7:  Open NPC dialog and interact (auto-advance)
+  hudExplain,    // Step 8:  HUD / resource explanation (manual advance)
   homebase,      // Step 9:  Pastor house / homebase (manual advance)
   firstMission,  // Step 10: First mission – enter a building (auto-advance)
   completed,     // Step 11: Tutorial completed (manual dismiss)
@@ -82,8 +82,11 @@ class TutorialService {
   }
 
   /// Call when an NPC dialog overlay opens.
+  ///
+  /// No longer auto-advances the tutorial; [TutorialStep.npcTalk] is a
+  /// manual-advance step so the player can read the info and press "Weiter".
   void onNpcDialogOpened() {
-    if (currentStep == TutorialStep.npcTalk) nextStep();
+    // npcTalk is now a manual-advance step – nothing to do here.
   }
 
   /// Call when the player selects any action from the radial menu.
