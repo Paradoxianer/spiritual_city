@@ -373,7 +373,7 @@ class BuildingInteractionService {
 
   // Base durations for time-based church actions.
   static const int sundayServiceSeconds = 20;
-  static const int worshipSeconds = 30;
+  static const int worshipSeconds = 7;
 
   BuildingInteractionResult _churchAction(
     String actionType,

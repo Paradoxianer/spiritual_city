@@ -3834,11 +3834,14 @@ class _ActionMenuRow extends StatelessWidget {
                   ),
                 Text(leadingEmoji, style: const TextStyle(fontSize: 22)),
                 const SizedBox(width: 8),
-                Text(
-                  arrowText,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.45),
+                Flexible(
+                  child: Text(
+                    arrowText,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.45),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 4),
