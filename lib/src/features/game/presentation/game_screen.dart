@@ -4641,20 +4641,20 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
 
   // ── Step content ─────────────────────────────────────────────────────────
 
-  static const _stepMeta = <TutorialStep, ({String emoji, bool needsNextButton})>{
-    TutorialStep.welcome: (emoji: '✝️', needsNextButton: true),
-    TutorialStep.movement: (emoji: '🗺️', needsNextButton: false),
-    TutorialStep.npcTalk: (emoji: '💬', needsNextButton: false),
-    TutorialStep.radialMenu: (emoji: '🖐️', needsNextButton: false),
-    TutorialStep.spiritWorld: (emoji: '🙏', needsNextButton: false),
-    TutorialStep.prayer: (emoji: '⚡', needsNextButton: false),
-    TutorialStep.returnToCity: (emoji: '🏙️', needsNextButton: false),
-    TutorialStep.hudExplain: (emoji: '📊', needsNextButton: true),
-    TutorialStep.firstMission: (emoji: '📋', needsNextButton: false),
-    TutorialStep.completed: (emoji: '🎉', needsNextButton: true),
+  static const _stepMeta = <TutorialStep, ({String emoji, bool needsNextButton, bool hasTrigger})>{
+    TutorialStep.welcome: (emoji: '✝️', needsNextButton: true, hasTrigger: false),
+    TutorialStep.movement: (emoji: '🗺️', needsNextButton: false, hasTrigger: true),
+    TutorialStep.npcTalk: (emoji: '💬', needsNextButton: false, hasTrigger: true),
+    TutorialStep.radialMenu: (emoji: '🖐️', needsNextButton: false, hasTrigger: true),
+    TutorialStep.spiritWorld: (emoji: '🙏', needsNextButton: false, hasTrigger: true),
+    TutorialStep.prayer: (emoji: '⚡', needsNextButton: false, hasTrigger: true),
+    TutorialStep.returnToCity: (emoji: '🏙️', needsNextButton: false, hasTrigger: true),
+    TutorialStep.hudExplain: (emoji: '📊', needsNextButton: true, hasTrigger: false),
+    TutorialStep.firstMission: (emoji: '📋', needsNextButton: false, hasTrigger: true),
+    TutorialStep.completed: (emoji: '🎉', needsNextButton: true, hasTrigger: false),
   };
 
-  static ({String emoji, String title, String message, bool needsNextButton})?
+  static ({String emoji, String title, String message, String? triggerHint, bool needsNextButton})?
       _contentFor(TutorialStep step) {
     final meta = _stepMeta[step];
     if (meta == null) return null;
@@ -4662,6 +4662,9 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
       emoji: meta.emoji,
       title: AppStrings.get('tutorial.${step.name}.title'),
       message: AppStrings.get('tutorial.${step.name}.message'),
+      triggerHint: meta.hasTrigger
+          ? AppStrings.get('tutorial.${step.name}.trigger')
+          : null,
       needsNextButton: meta.needsNextButton,
     );
   }
@@ -4762,6 +4765,31 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
                           ),
                         ),
                         const SizedBox(height: 24),
+                        // ── Trigger hint (auto-advance steps) ────────────
+                        if (content.triggerHint != null) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.07),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.15),
+                              ),
+                            ),
+                            child: Text(
+                              content.triggerHint!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.amber.withValues(alpha: 0.85),
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         // ── Buttons ───────────────────────────────────────
                         if (content.needsNextButton || isCompleted)
                           SizedBox(

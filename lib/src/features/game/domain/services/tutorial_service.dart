@@ -33,12 +33,12 @@ class TutorialService {
 
   /// Whether the skip button should be shown for the current step.
   ///
-  /// Skip is allowed from [TutorialStep.radialMenu] (step 4) onward so that
-  /// the player must first learn basic movement and NPC interaction.
+  /// Skip is allowed from the very first step so that returning players are not
+  /// forced through the tutorial again.
   bool get canSkip {
     final step = currentStepNotifier.value;
     if (step == null) return false;
-    return step.index >= TutorialStep.radialMenu.index;
+    return step != TutorialStep.completed;
   }
 
   /// Starts the tutorial from the welcome step.
