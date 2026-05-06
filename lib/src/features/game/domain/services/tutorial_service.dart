@@ -2,16 +2,17 @@ import 'package:flutter/foundation.dart';
 
 /// All interactive tutorial steps shown to new players.
 enum TutorialStep {
-  welcome,       // Step 1: Welcome dialog (manual advance)
-  movement,      // Step 2: Move around (auto-advance on cell change)
-  npcTalk,       // Step 3: Talk to NPC (auto-advance on dialog open)
-  radialMenu,    // Step 4: Use radial menu action (auto-advance, skip allowed)
-  spiritWorld,   // Step 5: Enter spiritual world (auto-advance)
-  prayer,        // Step 6: Pray / combat (auto-advance)
-  returnToCity,  // Step 7: Return to city (auto-advance)
-  hudExplain,    // Step 8: HUD explanation (manual advance)
-  firstMission,  // Step 9: First mission – enter a building (auto-advance)
-  completed,     // Step 10: Tutorial completed (manual dismiss)
+  welcome,       // Step 1:  Welcome dialog (manual advance)
+  movement,      // Step 2:  Move around (auto-advance on cell change)
+  radialMenu,    // Step 3:  Use radial menu action (auto-advance)
+  npcTalk,       // Step 4:  Talk to NPC (auto-advance on dialog open)
+  spiritWorld,   // Step 5:  Enter spiritual world (auto-advance)
+  prayer,        // Step 6:  Pray / combat (auto-advance)
+  returnToCity,  // Step 7:  Return to city (auto-advance)
+  hudExplain,    // Step 8:  HUD explanation (manual advance)
+  homebase,      // Step 9:  Pastor house / homebase (manual advance)
+  firstMission,  // Step 10: First mission – enter a building (auto-advance)
+  completed,     // Step 11: Tutorial completed (manual dismiss)
 }
 
 /// Manages the interactive tutorial for new players.

@@ -102,7 +102,8 @@ class AppStrings {
       'tutorial.prayer.title': 'Gebet & Kampf',
       'tutorial.prayer.message':
           'Bete für diesen Bereich – vertreibe die Dunkelheit!\n'
-          'Halte den ✝️-Button gedrückt und lass ihn dann los.',
+          'Halte den ✝️-Button gedrückt und lass ihn dann los.\n'
+          '(PC: Leertaste gedrückt halten)',
       'tutorial.prayer.trigger': '⚡ Bete einmal, um fortzufahren.',
       'tutorial.returnToCity.title': 'Zurück in die Stadt',
       'tutorial.returnToCity.message':
@@ -110,12 +111,24 @@ class AppStrings {
           'Tippe auf den 🏙️-Button unten rechts.',
       'tutorial.returnToCity.trigger':
           '🏙️ Kehre in die Stadt zurück, um fortzufahren.',
-      'tutorial.hudExplain.title': 'Deine Status-Anzeige',
+      'tutorial.hudExplain.title': 'Deine Ressourcen',
       'tutorial.hudExplain.message':
-          '❤️ Gesundheit  •  🍞 Hunger  •  🙏 Glaube\n'
-          '📦 Materialien  •  📖 Erkenntnis  •  ✝ Bekehrungen\n\n'
-          'Halte deine Ressourcen im Blick –\n'
-          'sie sind wichtig für deine Mission!',
+          '❤️ Gesundheit – sinkt bei Hunger oder Gefahren\n'
+          '🍞 Hunger – sinkt mit der Zeit; iss, um ihn zu füllen\n'
+          '🙏 Glaube – für geistliche Aktionen & Gebet nötig\n'
+          '📦 Materialien – für praktische Hilfe benötigt\n'
+          '📖 Erkenntnis – durch Jüngerschaft & Studium\n'
+          '✝ Bekehrungen – Menschen, die den Glauben gefunden haben\n\n'
+          'Tipp: Homebase aufsuchen, um Hunger & Gesundheit aufzufüllen!',
+      'tutorial.homebase.title': 'Deine Homebase',
+      'tutorial.homebase.message':
+          '🏠 Das Pastorenhaus ist dein Ausgangspunkt.\n'
+          'Nutze den Kompass oben links (▲), um es zu finden.\n\n'
+          'Dort kannst du:\n'
+          '• Hunger & Gesundheit auffüllen\n'
+          '• Materialien auffüllen\n'
+          '• Deine aktiven Missionen einsehen\n\n'
+          'Kehre regelmäßig zurück, wenn du Ressourcen brauchst!',
       'tutorial.firstMission.title': 'Erste Mission',
       'tutorial.firstMission.message': 'Du hast deine erste Mission!\n'
           'Besuche ein Gebäude in der Nähe\n'
@@ -228,18 +241,31 @@ class AppStrings {
       'tutorial.prayer.title': 'Prayer & Combat',
       'tutorial.prayer.message':
           'Pray for this area – drive out the darkness!\n'
-          'Hold the ✝️ button and then release it.',
+          'Hold the ✝️ button and then release it.\n'
+          '(PC: hold Space bar)',
       'tutorial.prayer.trigger': '⚡ Perform a prayer to continue.',
       'tutorial.returnToCity.title': 'Back to the City',
       'tutorial.returnToCity.message': 'Well done! Return to the city.\n'
           'Tap the 🏙️ button at the bottom right.',
       'tutorial.returnToCity.trigger': '🏙️ Return to the city to continue.',
-      'tutorial.hudExplain.title': 'Your Status Display',
+      'tutorial.hudExplain.title': 'Your Resources',
       'tutorial.hudExplain.message':
-          '❤️ Health  •  🍞 Hunger  •  🙏 Faith\n'
-          '📦 Supplies  •  📖 Insight  •  ✝ Conversions\n\n'
-          'Keep track of your resources –\n'
-          'they are vital for your mission!',
+          '❤️ Health – drops from hunger or danger\n'
+          '🍞 Hunger – decreases over time; eat to refill\n'
+          '🙏 Faith – needed for spiritual actions & prayer\n'
+          '📦 Supplies – required for practical help\n'
+          '📖 Insight – gained through discipleship & study\n'
+          '✝ Conversions – people who have found faith\n\n'
+          'Tip: Visit your homebase to refill hunger & health!',
+      'tutorial.homebase.title': 'Your Homebase',
+      'tutorial.homebase.message':
+          '🏠 The pastor\'s house is your starting point.\n'
+          'Use the compass at the top left (▲) to find it.\n\n'
+          'There you can:\n'
+          '• Refill hunger & health\n'
+          '• Refill supplies\n'
+          '• View your active missions\n\n'
+          'Return regularly whenever you need resources!',
       'tutorial.firstMission.title': 'First Mission',
       'tutorial.firstMission.message': 'You have your first mission!\n'
           'Visit a nearby building\n'
