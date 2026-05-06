@@ -60,6 +60,12 @@ class _GameScreenState extends State<GameScreen> {
       difficulty: widget.difficulty,
       gameSave: widget.gameSave,
     );
+    // Seed the tutorial-completed flag from global app settings so that a
+    // fresh save doesn't re-show the tutorial if the player has already
+    // finished it in a previous session.
+    if (getIt<MenuService>().isTutorialCompleted) {
+      _game.tutorialService.isTutorialCompleted = true;
+    }
   }
 
   /// Captures the current game state, persists it to Hive and returns to the
@@ -4859,7 +4865,10 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: isCompleted
-                    ? widget.game.tutorialService.completeTutorial
+                    ? () {
+                        widget.game.tutorialService.completeTutorial();
+                        getIt<MenuService>().markTutorialCompleted();
+                      }
                     : widget.game.tutorialService.nextStep,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isCompleted
@@ -4883,7 +4892,10 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
           if (canSkip && !isCompleted) ...[
             const SizedBox(height: 8),
             TextButton(
-              onPressed: widget.game.tutorialService.skipTutorial,
+              onPressed: () {
+                widget.game.tutorialService.skipTutorial();
+                getIt<MenuService>().markTutorialCompleted();
+              },
               style: TextButton.styleFrom(
                 foregroundColor: Colors.white.withValues(alpha: 0.45),
                 textStyle: const TextStyle(fontSize: 13),
