@@ -137,8 +137,16 @@ void main() {
       expect(LootSystem.insightChance, closeTo(0.20, 0.0001));
     });
 
-    test('insightReward is 0.1 – insight given by an insight pickup', () {
-      expect(LootSystem.insightReward, closeTo(0.1, 0.0001));
+    test('insightRewardMin is 0.1', () {
+      expect(LootSystem.insightRewardMin, closeTo(0.1, 0.0001));
+    });
+
+    test('insightRewardMax is 1.0', () {
+      expect(LootSystem.insightRewardMax, closeTo(1.0, 0.0001));
+    });
+
+    test('insightRewardMin < insightRewardMax', () {
+      expect(LootSystem.insightRewardMin, lessThan(LootSystem.insightRewardMax));
     });
   });
 }

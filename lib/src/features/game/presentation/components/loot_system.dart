@@ -276,12 +276,24 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   // ── Insight loot ──────────────────────────────────────────────────────────
 
   /// Probability (0–1) that a newly-spawned pickup is an insight loot instead
-  /// of a material pickup.  Insight loot gives [insightReward] on collection
-  /// and grants *no* materials.
+  /// of a material pickup.  Insight loot gives a random reward in
+  /// [[insightRewardMin]..[insightRewardMax]] on collection and grants *no* materials.
   static const double insightChance = 0.20;
 
-  /// Insight awarded when an insight-loot pickup is collected.
-  static const double insightReward = 0.1;
+  /// Minimum insight awarded by an insight-loot pickup.
+  static const double insightRewardMin = 0.1;
+
+  /// Maximum insight awarded by an insight-loot pickup (rare).
+  static const double insightRewardMax = 1.0;
+
+  /// Returns a random insight reward in [[insightRewardMin]..[insightRewardMax]].
+  ///
+  /// Uses a squared distribution so small values (≈ [insightRewardMin]) are
+  /// common and large values (≈ [insightRewardMax]) are rare.
+  double _rollInsightReward() {
+    final x = _rng.nextDouble(); // uniform [0, 1)
+    return insightRewardMin + x * x * (insightRewardMax - insightRewardMin);
+  }
 
   void _trySpawn() {
     if (_pickups.length >= _maxPickups) return;
@@ -298,7 +310,7 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     final cx = (pos.x / CellComponent.cellSize).floor();
     final cy = (pos.y / CellComponent.cellSize).floor();
     if (isInsight) {
-      _log.info('[LootSystem] spawned $kInsightPickupEmoji +${insightReward.toStringAsFixed(1)} insight at ($cx,$cy)');
+      _log.info('[LootSystem] spawned $kInsightPickupEmoji insight loot at ($cx,$cy)');
     } else {
       _log.info('[LootSystem] spawned ${type.emoji} +${type.reward.toInt()} MP at ($cx,$cy)');
     }
@@ -310,13 +322,14 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
 
     if (p.isInsight) {
       // Insight pickup: grants spiritual insight instead of materials.
-      game.progress.addInsight(insightReward);
+      final reward = _rollInsightReward();
+      game.progress.addInsight(reward);
       _log.info(
-        '[LootSystem] collected $kInsightPickupEmoji (+${insightReward.toStringAsFixed(1)} insight) '
+        '[LootSystem] collected $kInsightPickupEmoji (+${reward.toStringAsFixed(2)} insight) '
         'at world pixel (${p.worldPos.x},${p.worldPos.y}) | '
         'respawns in ${p.respawnTimer.toStringAsFixed(1)}s',
       );
-      game.lootPickupMessage.value = '$kInsightPickupEmoji +${insightReward.toStringAsFixed(1)} 💡';
+      game.lootPickupMessage.value = '$kInsightPickupEmoji +${reward.toStringAsFixed(2)} 💡';
     } else {
       // Material pickup: gives resources to the player.
       game.gainMaterials(p.type.reward);
