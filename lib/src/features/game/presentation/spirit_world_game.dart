@@ -352,7 +352,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       // Start tutorial for new players (or players who haven't finished it yet).
       if (!tutorialService.isTutorialCompleted) {
         // Short delay so the loading overlay has faded before the tutorial appears.
-        Future.delayed(const Duration(milliseconds: 600), tutorialService.startTutorial);
+        Future.delayed(const Duration(milliseconds: 600), () => tutorialService.startTutorial());
       }
 
       // Assign starting missions to NPCs / buildings in the spawn chunk.
@@ -1502,7 +1502,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     // Fire tutorial movement hook only after the initial position has been
     // established (first call sets the spawn-cell baseline, not real movement).
-    if (wasInitialized) tutorialService.onPlayerMoved();
+    if (wasInitialized) { tutorialService.onPlayerMoved(); }
 
     // Try the player's own cell first, then the 4 cardinal neighbours.
     // Accept ANY road cell (named or unnamed) for address lookup so the
