@@ -203,6 +203,14 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   double _winCheckTimer = 0.0;
   static const double _winCheckInterval = 5.0;
 
+  // City scope for global win checks.
+  // DistrictSelector uses _outskirtsRadius=650 and _ringNoiseAmp=40, so the
+  // city can extend to roughly 690 cells from origin.
+  static const double _cityScopeRadiusCells = 690.0;
+  static const double _cityScopeRadiusCellsSquared =
+      _cityScopeRadiusCells * _cityScopeRadiusCells;
+  static const int _cityScopeChunkRadius = 22; // ceil(690 / 32)
+
   // Hunger mechanics thresholds (as fractions of maxHunger)
   static const double hungerWarnThreshold     = 0.30; // < 30%: slower movement
   static const double hungerCriticalThreshold = 0.10; // < 10%: even slower + faith cost +50%
@@ -1808,31 +1816,74 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Checks whether the win condition is met and fires [isWon] if so.
   ///
   /// Win condition (both must be true simultaneously):
-  /// 1. Every loaded NPC is a Christian ([NPCModel.isChristian]).
-  /// 2. Every loaded cell has a positive spiritual state (> 0).
+  /// 1. Every generated NPC in the whole city scope is Christian.
+  /// 2. Every generated city cell in the whole city scope is positive (> 0).
   ///
-  /// Requires at least one NPC to be present so the condition cannot be
-  /// satisfied trivially before the world has finished generating.
+  /// We first run a cheap loaded-world pre-check and only then run the global
+  /// deterministic city-wide scan.
   void _checkWinCondition() {
     if (_winTriggered) return;
 
-    final npcs = chunkManager.allNPCModels;
-    if (npcs.isEmpty) return;
-
-    // All NPCs must be Christians.
-    if (!npcs.every((n) => n.isChristian)) return;
-
-    // All loaded cells must have a positive spiritual state.
+    // Cheap pre-check: if loaded entities already fail, city-wide scan can be skipped.
+    final loadedNpcs = chunkManager.allNPCModels;
+    if (!loadedNpcs.every((n) => n.isChristian)) return;
     for (final chunk in grid.getLoadedChunks()) {
       for (final cell in chunk.cells.values) {
+        if (!_isCellWithinCityScope(cell.x, cell.y)) continue;
         if (cell.spiritualState <= 0) return;
       }
     }
 
+    bool hasAnyNpc = false;
+
+    // Global deterministic scan across the full city scope.
+    for (int cy = -_cityScopeChunkRadius; cy <= _cityScopeChunkRadius; cy++) {
+      for (int cx = -_cityScopeChunkRadius; cx <= _cityScopeChunkRadius; cx++) {
+        final chunk = _chunkForGlobalWinCheck(cx, cy);
+
+        bool chunkTouchesCityScope = false;
+        for (final cell in chunk.cells.values) {
+          if (!_isCellWithinCityScope(cell.x, cell.y)) continue;
+          chunkTouchesCityScope = true;
+          if (cell.spiritualState <= 0) return;
+        }
+        if (!chunkTouchesCityScope) continue;
+
+        final npcs =
+            chunkManager.npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
+        for (final npc in npcs) {
+          final npcCellX = (npc.homePosition.x / 32).floor();
+          final npcCellY = (npc.homePosition.y / 32).floor();
+          if (!_isCellWithinCityScope(npcCellX, npcCellY)) continue;
+          hasAnyNpc = true;
+          if (!npc.isChristian) return;
+        }
+      }
+    }
+
+    if (!hasAnyNpc) return;
+
     _winTriggered = true;
     sessionPlayTime = DateTime.now().difference(_sessionStartTime);
     isWon.value = true;
-    _log.info('WIN CONDITION MET – all NPCs converted and all cells positive');
+    _log.info(
+      'WIN CONDITION MET – all generated city NPCs are Christian and all city cells are positive',
+    );
+  }
+
+  bool _isCellWithinCityScope(int wx, int wy) {
+    final distSq = (wx * wx + wy * wy).toDouble();
+    return distSq <= _cityScopeRadiusCellsSquared;
+  }
+
+  /// Returns an existing loaded chunk or a temporary generated chunk for
+  /// deterministic city-wide win checks.
+  CityChunk _chunkForGlobalWinCheck(int chunkX, int chunkY) {
+    final loaded = grid.getLoadedChunk(chunkX, chunkY);
+    if (loaded != null) return loaded;
+    final chunk = CityChunk(chunkX: chunkX, chunkY: chunkY);
+    generator.generateChunk(chunk);
+    return chunk;
   }
 
   void _checkAndApplyModifiers() {
