@@ -98,7 +98,7 @@ Diese Aktionen gelten für Shop, Supermarkt und Mall. Die Mall skaliert die Ertr
 | Aktion | Voraussetzung | Kosten | Auswirkung (Outcome) |
 | :--- | :--- | :--- | :--- |
 | **Gottesdienst** ⛪🎹🔥🙌🕊️ | Sonntag | **Fast alle Versorgung (80% Materials) & viel Kraft (60% Health)** | Massiver AOE-Impact auf unsichtbare Welt & NPCs. (Basiert auf aktuellem Zustand der Gemeinde.) |
-| **Anbetung / Gebet** 🧘‍♂️🙏🕊️🙌 | Keine | Zeit | **Regeneriert Faith** beim Pastor (+1/Sek). |
+| **Anbetung / Gebet** 🤲🙏🕊️🙌 | Keine | Zeit | **Regeneriert Faith** beim Pastor (+3/Sek). |
 
 ### 5.2 Cemetery (Friedhof) ⚰️
 | Aktion | Voraussetzung | Kosten | Auswirkung (Outcome) |

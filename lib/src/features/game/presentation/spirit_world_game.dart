@@ -1278,7 +1278,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         );
 
       // ── Church ────────────────────────────────────────────────────────────
+      // Worship: permanent, positive faith boost in the surrounding area.
       case 'worship':
+        influenceService.applyAoE(
+          grid: grid,
+          originX: gx, originY: gy,
+          delta: BuildingInfluenceConstants.deltaWorship,
+          radius: BuildingInfluenceConstants.radiusWorship,
+          durationType: InfluenceDurationType.permanent,
+          buildingMultiplier: multiplier,
+        );
+
+      // Sunday service: massive decaying AoE over half a game-day.
       case 'sundayService':
         influenceService.applyAoE(
           grid: grid,

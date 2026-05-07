@@ -75,7 +75,7 @@ class MissionService {
       buildingTypes: [BuildingType.house, BuildingType.apartment],
     ),
     _MissionTemplate(
-      description: '🧘 Anbetung in der Kirche',
+      description: '🤲 Anbetung in der Kirche',
       actionType: ActionType.churchWorshipPrayer,
       targetCount: 1,
       insightReward: 1.0,

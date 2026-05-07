@@ -353,7 +353,7 @@ void main() {
         expect(result.success, isFalse);
       });
 
-      test('discipleshipGroup: succeeds with >20 interactions + converted resident, +0.5 insight', () {
+      test('discipleshipGroup: succeeds with >20 interactions + converted resident, +0.5 insight, has duration', () {
         final resident = NPCModel(id: 'n', name: 'X', type: NPCType.citizen,
             homePosition: Vector2.zero(), faith: 80.0, isConverted: true);
         final b = house(residents: [resident]);
@@ -362,6 +362,7 @@ void main() {
         expect(result.success, isTrue);
         expect(result.playerFaithDelta, -50.0);
         expect(result.playerInsightDelta, 0.5);
+        expect(result.actionDurationSeconds, greaterThan(0));
       });
 
       test('blessHousehold: increments all resident interactionCounts', () {
@@ -439,12 +440,12 @@ void main() {
         expect(b.faith, greaterThan(0));
       });
 
-      test('worship: faith gain equals duration (1/sec), timed', () {
+      test('worship: faith gain is 3× duration (3/sec), timed', () {
         final b = church();
         final result = BuildingInteractionService().performAction('worship', b, 0.0);
         expect(result.playerFaithDelta, greaterThan(0));
         expect(result.actionDurationSeconds, greaterThan(0));
-        expect(result.playerFaithDelta, closeTo(result.actionDurationSeconds.toDouble(), 0.001));
+        expect(result.playerFaithDelta, closeTo(result.actionDurationSeconds * 3.0, 0.001));
         expect(b.faith, greaterThan(0));
       });
 

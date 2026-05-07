@@ -36,7 +36,7 @@ extension LootTypeExt on LootType {
   //       LootType.large  => 0.20,
   //     };
 
-  /// Emoji displayed on the road cell for this loot type.
+  /// Emoji displayed on the road cell for this loot type (material pickup).
   String get emoji => switch (this) {
         LootType.small  => '📦',
         LootType.normal => '🎁',
@@ -52,6 +52,9 @@ extension LootTypeExt on LootType {
   }
 }
 
+/// Emoji shown on the road for an insight pickup (replaces the material emoji).
+const String kInsightPickupEmoji = '💡';
+
 // ── Single pickup data ─────────────────────────────────────────────────────
 
 class _MaterialPickup {
@@ -63,11 +66,18 @@ class _MaterialPickup {
   /// Countdown (seconds) until this pickup re-spawns.
   double respawnTimer = -1;
 
+  /// When `true` this pickup gives insight instead of materials.
+  /// Determined at spawn time; stored for save/restore.
+  final bool isInsight;
+
   // TODO(spirit-combat): track if this pickup was "charged" in the spiritual
   // world so it can grant xpReward / combatModifier on collection.
   // bool isCharged = false;
 
-  _MaterialPickup(this.worldPos, this.type);
+  /// Emoji rendered on the road: insight pickups use [kInsightPickupEmoji].
+  String get emoji => isInsight ? kInsightPickupEmoji : type.emoji;
+
+  _MaterialPickup(this.worldPos, this.type, {this.isInsight = false});
 }
 
 // ── LootSystem Component ──────────────────────────────────────────────────
@@ -124,6 +134,7 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
       'type':         p.type.index,
       'isPickedUp':   p.isPickedUp,
       'respawnTimer': p.respawnTimer,
+      'isInsight':    p.isInsight,
     }).toList();
   }
 
@@ -134,9 +145,10 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   void restoreState(List<Map<String, dynamic>> data) {
     _pickups.clear();
     for (final d in data) {
-      final pos  = Vector2((d['x'] as num).toDouble(), (d['y'] as num).toDouble());
-      final type = LootType.values[(d['type'] as num).toInt()];
-      final p    = _MaterialPickup(pos, type);
+      final pos      = Vector2((d['x'] as num).toDouble(), (d['y'] as num).toDouble());
+      final type     = LootType.values[(d['type'] as num).toInt()];
+      final isInsight = d['isInsight'] as bool? ?? false;
+      final p        = _MaterialPickup(pos, type, isInsight: isInsight);
       p.isPickedUp   = d['isPickedUp']   as bool?   ?? false;
       p.respawnTimer = (d['respawnTimer'] as num?)?.toDouble() ?? -1.0;
       _pickups.add(p);
@@ -226,7 +238,7 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     // Draw the emoji centered on the cell so it looks like it's lying on the road.
     final tp = TextPainter(
       text: TextSpan(
-        text: p.type.emoji,
+        text: p.emoji,
         style: const TextStyle(fontSize: 20),
       ),
       textDirection: TextDirection.ltr,
@@ -261,6 +273,29 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
     return null;
   }
 
+  // ── Insight loot ──────────────────────────────────────────────────────────
+
+  /// Probability (0–1) that a newly-spawned pickup is an insight loot instead
+  /// of a material pickup.  Insight loot gives a random reward in
+  /// [[insightRewardMin]..[insightRewardMax]] on collection and grants *no* materials.
+  static const double insightChance = 0.20;
+
+  /// Minimum insight awarded by an insight-loot pickup.
+  static const double insightRewardMin = 0.1;
+
+  /// Maximum insight awarded by an insight-loot pickup (rare).
+  static const double insightRewardMax = 1.0;
+
+  /// Returns a random insight reward in [[insightRewardMin]..[insightRewardMax]].
+  ///
+  /// Uses a squared distribution so small values (≈ [insightRewardMin]) are
+  /// common and large values (≈ [insightRewardMax]) are rare.
+  double _rollInsightReward() {
+    final x = _rng.nextDouble(); // uniform [0, 1)
+    final raw = insightRewardMin + x * x * (insightRewardMax - insightRewardMin);
+    return (raw * 10).round() / 10; // round to 1 decimal place
+  }
+
   void _trySpawn() {
     if (_pickups.length >= _maxPickups) return;
 
@@ -270,32 +305,44 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
       return;
     }
 
-    final type = LootTypeExt.random(_rng);
-    _pickups.add(_MaterialPickup(pos, type));
+    final type      = LootTypeExt.random(_rng);
+    final isInsight = _rng.nextDouble() < insightChance;
+    _pickups.add(_MaterialPickup(pos, type, isInsight: isInsight));
     final cx = (pos.x / CellComponent.cellSize).floor();
     final cy = (pos.y / CellComponent.cellSize).floor();
-    _log.info('[LootSystem] spawned ${type.emoji} +${type.reward.toInt()} MP at ($cx,$cy)');
+    if (isInsight) {
+      _log.info('[LootSystem] spawned $kInsightPickupEmoji insight loot at ($cx,$cy)');
+    } else {
+      _log.info('[LootSystem] spawned ${type.emoji} +${type.reward.toInt()} MP at ($cx,$cy)');
+    }
   }
 
   void _collect(_MaterialPickup p) {
     p.isPickedUp = true;
     p.respawnTimer = _respawnMin + _rng.nextDouble() * (_respawnMax - _respawnMin);
 
-    // Give materials to player (real-world resource only – no spiritual effect).
-    game.gainMaterials(p.type.reward);
-
-    // TODO(spirit-combat): also grant p.type.xpReward when XP system is active.
-    // TODO(spirit-combat): apply p.type.combatModifier as a timed buff.
-
-    _log.info(
-      '[LootSystem] collected ${p.type.emoji} (+${p.type.reward.toInt()} MP) '
-      'at world pixel (${p.worldPos.x},${p.worldPos.y}) | '
-      'respawns in ${p.respawnTimer.toStringAsFixed(1)}s',
-    );
-
-    // Show pickup toast in HUD.
-    final mp = p.type.reward.toInt();
-    game.lootPickupMessage.value = '${p.type.emoji} +$mp MP';
+    if (p.isInsight) {
+      // Insight pickup: grants spiritual insight instead of materials.
+      final reward = _rollInsightReward();
+      game.progress.addInsight(reward);
+      _log.info(
+        '[LootSystem] collected $kInsightPickupEmoji (+${reward.toStringAsFixed(1)} insight) '
+        'at world pixel (${p.worldPos.x},${p.worldPos.y}) | '
+        'respawns in ${p.respawnTimer.toStringAsFixed(1)}s',
+      );
+      game.lootPickupMessage.value = '$kInsightPickupEmoji +${reward.toStringAsFixed(1)} 💡';
+    } else {
+      // Material pickup: gives resources to the player.
+      game.gainMaterials(p.type.reward);
+      // TODO(spirit-combat): also grant p.type.xpReward when XP system is active.
+      // TODO(spirit-combat): apply p.type.combatModifier as a timed buff.
+      _log.info(
+        '[LootSystem] collected ${p.type.emoji} (+${p.type.reward.toInt()} MP) '
+        'at world pixel (${p.worldPos.x},${p.worldPos.y}) | '
+        'respawns in ${p.respawnTimer.toStringAsFixed(1)}s',
+      );
+      game.lootPickupMessage.value = '${p.type.emoji} +${p.type.reward.toInt()} MP';
+    }
 
     // Notify mission service
     game.missionService.onMaterialCollected();

@@ -66,13 +66,13 @@ void main() {
       expect(ls.captureState(), isEmpty);
     });
 
-    test('round-trip: restoreState → captureState preserves position, type, and flags', () {
+    test('round-trip: restoreState → captureState preserves position, type, isInsight, and flags', () {
       final ls = makeLootSystem();
 
       final saved = [
-        {'x': 100.0, 'y': 200.0, 'type': LootType.small.index,  'isPickedUp': false, 'respawnTimer': -1.0},
-        {'x': 300.0, 'y': 400.0, 'type': LootType.normal.index, 'isPickedUp': true,  'respawnTimer': 120.5},
-        {'x': 500.0, 'y': 600.0, 'type': LootType.large.index,  'isPickedUp': false, 'respawnTimer': -1.0},
+        {'x': 100.0, 'y': 200.0, 'type': LootType.small.index,  'isPickedUp': false, 'respawnTimer': -1.0,   'isInsight': false},
+        {'x': 300.0, 'y': 400.0, 'type': LootType.normal.index, 'isPickedUp': true,  'respawnTimer': 120.5,  'isInsight': true},
+        {'x': 500.0, 'y': 600.0, 'type': LootType.large.index,  'isPickedUp': false, 'respawnTimer': -1.0,   'isInsight': false},
       ];
 
       ls.restoreState(saved);
@@ -84,28 +84,31 @@ void main() {
       expect(captured[0]['y'],            200.0);
       expect(captured[0]['type'],         LootType.small.index);
       expect(captured[0]['isPickedUp'],   false);
+      expect(captured[0]['isInsight'],    false);
 
       expect(captured[1]['x'],            300.0);
       expect(captured[1]['y'],            400.0);
       expect(captured[1]['type'],         LootType.normal.index);
       expect(captured[1]['isPickedUp'],   true);
       expect(captured[1]['respawnTimer'], closeTo(120.5, 0.001));
+      expect(captured[1]['isInsight'],    true);
 
-      expect(captured[2]['type'], LootType.large.index);
+      expect(captured[2]['type'],         LootType.large.index);
+      expect(captured[2]['isInsight'],    false);
     });
 
     test('restoreState clears previous pickups', () {
       final ls = makeLootSystem();
 
       ls.restoreState([
-        {'x': 1.0, 'y': 2.0, 'type': LootType.small.index, 'isPickedUp': false, 'respawnTimer': -1.0},
-        {'x': 3.0, 'y': 4.0, 'type': LootType.large.index, 'isPickedUp': false, 'respawnTimer': -1.0},
+        {'x': 1.0, 'y': 2.0, 'type': LootType.small.index,  'isPickedUp': false, 'respawnTimer': -1.0, 'isInsight': false},
+        {'x': 3.0, 'y': 4.0, 'type': LootType.large.index,  'isPickedUp': false, 'respawnTimer': -1.0, 'isInsight': true},
       ]);
       expect(ls.captureState().length, 2);
 
       // Second restore with a single item – old entries must be gone.
       ls.restoreState([
-        {'x': 9.0, 'y': 8.0, 'type': LootType.normal.index, 'isPickedUp': false, 'respawnTimer': -1.0},
+        {'x': 9.0, 'y': 8.0, 'type': LootType.normal.index, 'isPickedUp': false, 'respawnTimer': -1.0, 'isInsight': false},
       ]);
       final captured = ls.captureState();
       expect(captured.length, 1);
@@ -116,6 +119,34 @@ void main() {
       final ls = makeLootSystem();
       ls.restoreState([]);
       expect(ls.captureState(), isEmpty);
+    });
+
+    test('restoreState: old save without isInsight key defaults to false', () {
+      final ls = makeLootSystem();
+      ls.restoreState([
+        {'x': 50.0, 'y': 60.0, 'type': LootType.small.index, 'isPickedUp': false, 'respawnTimer': -1.0},
+      ]);
+      expect(ls.captureState()[0]['isInsight'], false);
+    });
+  });
+
+  // ── Insight loot constants ────────────────────────────────────────────────
+
+  group('LootSystem insight loot constants', () {
+    test('insightChance is 20 % (0.20) – probability a pickup is insight loot', () {
+      expect(LootSystem.insightChance, closeTo(0.20, 0.0001));
+    });
+
+    test('insightRewardMin is 0.1', () {
+      expect(LootSystem.insightRewardMin, closeTo(0.1, 0.0001));
+    });
+
+    test('insightRewardMax is 1.0', () {
+      expect(LootSystem.insightRewardMax, closeTo(1.0, 0.0001));
+    });
+
+    test('insightRewardMin < insightRewardMax', () {
+      expect(LootSystem.insightRewardMin, lessThan(LootSystem.insightRewardMax));
     });
   });
 }
