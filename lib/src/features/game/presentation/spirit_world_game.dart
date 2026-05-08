@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
@@ -1874,6 +1874,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   bool _isCellWithinCityScope(int wx, int wy) {
     final distSq = (wx * wx + wy * wy).toDouble();
     return distSq <= _cityScopeRadiusCellsSquared;
+  }
+
+  /// Instantly triggers the win screen without checking the normal win
+  /// condition.  Only available in debug builds ([kDebugMode] must be true).
+  void debugForceWin() {
+    if (!kDebugMode) return;
+    if (_winTriggered) return;
+    _winTriggered = true;
+    sessionPlayTime = DateTime.now().difference(_sessionStartTime);
+    isWon.value = true;
+    _log.info('DEBUG – win screen forced via F9 shortcut');
   }
 
   /// Returns an existing loaded chunk or a temporary generated chunk for
