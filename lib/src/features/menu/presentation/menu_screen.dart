@@ -63,14 +63,14 @@ class _MenuScreenState extends State<MenuScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildHeader(),
-                          const _MenuGap(32),
+                          const SizedBox(height: 32),
                           _buildMenuButtons(context),
-                          const _MenuGap(24),
+                          const SizedBox(height: 24),
                           LanguageToggle(
                             languageNotifier:
                                 widget.menuService.languageNotifier,
                           ),
-                          const _MenuGap(8),
+                          const SizedBox(height: 8),
                         ],
                       ),
                     ),
@@ -169,12 +169,4 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
     );
   }
-}
-
-class _MenuGap extends StatelessWidget {
-  final double height;
-  const _MenuGap(this.height);
-
-  @override
-  Widget build(BuildContext context) => SizedBox(height: height);
 }

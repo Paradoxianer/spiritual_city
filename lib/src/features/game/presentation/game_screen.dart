@@ -102,7 +102,8 @@ class _GameScreenState extends State<GameScreen> {
               'LookOverlay': (context, game) => LookOverlay(game: _game),
               'MissionBoardOverlay': (context, game) =>
                   MissionBoardOverlay(game: _game),
-              'KeymapOverlay': (context, game) => KeymapOverlay(game: _game),
+              'KeymapOverlay': (context, game) =>
+                  KeymapOverlay(game: _game),
             },
           ),
           // Loading overlay – shown until the world is ready
@@ -389,8 +390,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.purpleAccent
-                                  .withValues(alpha: dotPhase * 0.5),
+                              color: Colors.purpleAccent.withValues(alpha: dotPhase * 0.5),
                               blurRadius: 8,
                             ),
                           ],
@@ -456,8 +456,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
   /// Reading duration derived from the same difficulty factor used for costs:
   /// base 5 s × (1 / factor) → easy ≈ 3 s, normal = 5 s, hard = 10 s.
   int get _bibleDuration {
-    final factor =
-        FaithCalculatorService.difficultyFactorFor(widget.game.difficulty);
+    final factor = FaithCalculatorService.difficultyFactorFor(widget.game.difficulty);
     return (5.0 / factor).round();
   }
 
@@ -501,28 +500,21 @@ class _DialogOverlayState extends State<DialogOverlay> {
   /// This keeps key numbers stable even when conditional chips are hidden.
   static (String, String)? _slotAction(int slotIndex, NPCModel model) {
     switch (slotIndex) {
-      case 0:
-        return ('talk', '💬');
-      case 1:
-        return ('counsel', '👂');
-      case 2:
-        return ('pray', '🙏');
-      case 3:
-        return ('bible', '📖');
-      case 4:
-        return model.wantsGift ? ('help', '📦') : null;
-      case 5:
-        return model.isChristian ? null : ('convert', '✝️?');
-      default:
-        return null;
+      case 0: return ('talk',    '💬');
+      case 1: return ('counsel', '👂');
+      case 2: return ('pray',    '🙏');
+      case 3: return ('bible',   '📖');
+      case 4: return model.wantsGift    ? ('help',    '📦')  : null;
+      case 5: return model.isChristian  ? null        : ('convert', '✝️?');
+      default: return null;
     }
   }
 
   /// Returns true when [type] is currently disabled due to insufficient
   /// resources, mirroring the [isDisabled] logic of the rendered chips.
   bool _isChipActionDisabled(String type) {
-    final factor =
-        FaithCalculatorService.difficultyFactorFor(widget.game.difficulty);
+    final factor = FaithCalculatorService.difficultyFactorFor(
+        widget.game.difficulty);
     switch (type) {
       case 'counsel':
         final hpCost = (2.0 / factor).round().clamp(1, 99);
@@ -568,10 +560,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
       });
       _bibleTimer?.cancel();
       _bibleTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-        if (!mounted) {
-          t.cancel();
-          return;
-        }
+        if (!mounted) { t.cancel(); return; }
         setState(() => _bibleSecondsLeft--);
         if (_bibleSecondsLeft <= 0) {
           t.cancel();
@@ -667,25 +656,19 @@ class _DialogOverlayState extends State<DialogOverlay> {
   }
 
   /// Formats a delta value as a signed string, e.g. "+3" or "-8".
-  String _fmtDelta(double v) =>
-      v >= 0 ? '+${v.toStringAsFixed(0)}' : v.toStringAsFixed(0);
+  String _fmtDelta(double v) => v >= 0 ? '+${v.toStringAsFixed(0)}' : v.toStringAsFixed(0);
 
   /// Builds the delta text shown in the header after an interaction.
   Widget _buildDeltaRow() {
     final parts = <String>[];
     if (_lastNpcDelta != 0) parts.add('${_fmtDelta(_lastNpcDelta)}✝️');
     if (_lastPlayerDelta != 0) parts.add('${_fmtDelta(_lastPlayerDelta)}🙏');
-    if (_lastPlayerHealthDelta != 0) {
-      parts.add('${_fmtDelta(_lastPlayerHealthDelta)}❤️');
-    }
-    if (_lastMaterialsDelta != 0) {
-      parts.add('${_fmtDelta(_lastMaterialsDelta)}📦');
-    }
+    if (_lastPlayerHealthDelta != 0) parts.add('${_fmtDelta(_lastPlayerHealthDelta)}❤️');
+    if (_lastMaterialsDelta != 0) parts.add('${_fmtDelta(_lastMaterialsDelta)}📦');
     if (parts.isEmpty) return const SizedBox.shrink();
     return Text(
       parts.join('  '),
-      style: const TextStyle(
-          color: Colors.amber, fontSize: 13, fontWeight: FontWeight.w600),
+      style: const TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.w600),
     );
   }
 
@@ -693,8 +676,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
   Widget _buildNpcMissionBanner(NPCModel model) {
     final mission = model.activeMission;
     if (mission == null) return const SizedBox.shrink();
-    final countLabel =
-        mission.targetCount > 1 ? ' ×${mission.targetCount}' : '';
+    final countLabel = mission.targetCount > 1 ? ' ×${mission.targetCount}' : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
@@ -755,182 +737,170 @@ class _DialogOverlayState extends State<DialogOverlay> {
           child: Container(
             height: targetHeight,
             margin: EdgeInsets.all(isLandscape ? 10 : 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF075E54).withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(color: Colors.black54, blurRadius: 10)
-              ],
+        decoration: BoxDecoration(
+          color: const Color(0xFF075E54).withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10)],
+        ),
+        child: Column(
+          children: [
+            // ── Header ────────────────────────────────────────────────────────
+            _InteractionHeader(
+              bgColor: const Color(0xFF128C7E),
+              verticalPadding: 10,
+              leading: CircleAvatar(
+                backgroundColor: Colors.white24,
+                child: Text(dialog.npcEmoji),
+              ),
+              title: dialog.npcName,
+              titleStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+              subtitle: _showDelta ? _buildDeltaRow() : null,
+              sessionDone: model.currentSessionInteractions,
+              sessionMax: model.maxSessionInteractions,
+              onClose: _isReadingBible ? null : () => widget.game.closeDialog(),
+              closeIconColor: Colors.white,
             ),
-            child: Column(
-              children: [
-                // ── Header ────────────────────────────────────────────────────────
-                _InteractionHeader(
-                  bgColor: const Color(0xFF128C7E),
-                  verticalPadding: 10,
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.white24,
-                    child: Text(dialog.npcEmoji),
-                  ),
-                  title: dialog.npcName,
-                  titleStyle: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                  subtitle: _showDelta ? _buildDeltaRow() : null,
-                  sessionDone: model.currentSessionInteractions,
-                  sessionMax: model.maxSessionInteractions,
-                  onClose:
-                      _isReadingBible ? null : () => widget.game.closeDialog(),
-                  closeIconColor: Colors.white,
-                ),
 
-                // ── Active mission banner ─────────────────────────────────────────
-                if (model.activeMission != null) _buildNpcMissionBanner(model),
+            // ── Active mission banner ─────────────────────────────────────────
+            if (model.activeMission != null) _buildNpcMissionBanner(model),
 
-                // ── Chat body + faith bar ─────────────────────────────────────────
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                          child: Scrollbar(
-                            controller: _scrollController,
-                            thumbVisibility: true,
-                            child: ListView.builder(
-                              controller: _scrollController,
-                              itemCount: _messages.length,
-                              itemBuilder: (context, index) =>
-                                  _ChatBubble(message: _messages[index]),
-                            ),
-                          ),
+            // ── Chat body + faith bar ─────────────────────────────────────────
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
+                      child: Scrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
                         ),
                       ),
-                      // Progressive faith reveal bar
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 4),
-                        child: _FaithBarWidget(entity: model),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ── Action chips ──────────────────────────────────────────────────
-                if (!_isSessionOver)
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 8, vertical: isLandscape ? 6 : 10),
-                    decoration: const BoxDecoration(
-                      color: Colors.black26,
-                      borderRadius:
-                          BorderRadius.vertical(bottom: Radius.circular(20)),
                     ),
-                    child: _isReadingBible
-                        // ── Bible reading in progress: show countdown ──────────────
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text('📖', style: TextStyle(fontSize: 20)),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${_bibleSecondsLeft}s',
-                                style: const TextStyle(
-                                  color: Colors.amber,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('📖', style: TextStyle(fontSize: 20)),
-                            ],
-                          )
-                        // ── Normal action chips ────────────────────────────────────
-                        : Builder(builder: (context) {
-                            // Compute resource costs once for disabled-state checks.
-                            final factor =
-                                FaithCalculatorService.difficultyFactorFor(
-                                    widget.game.difficulty);
-                            final counselHpCost =
-                                (2.0 / factor).round().clamp(1, 99);
-                            final prayFaithCost =
-                                (2.0 / factor).round().clamp(1, 99);
-                            const helpMaterialCost = _helpMaterialCost;
-
-                            // Fixed key indices: talk=1, counsel=2, pray=3,
-                            // bible=4, help=5, convert=6. The numbers are stable
-                            // even when optional chips (help/convert) are hidden.
-                            return SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _EmojiChip(
-                                    emoji: '💬',
-                                    hint: '→✝️',
-                                    keyIndex: 1,
-                                    onTap: () =>
-                                        _handleInteraction('talk', '💬'),
-                                  ),
-                                  _EmojiChip(
-                                    emoji: '👂',
-                                    hint: '−❤️→✝️',
-                                    keyIndex: 2,
-                                    isDisabled:
-                                        widget.game.health <= counselHpCost,
-                                    onTap: () =>
-                                        _handleInteraction('counsel', '👂'),
-                                  ),
-                                  _EmojiChip(
-                                    emoji: '🙏',
-                                    hint: '−🙏→✝️🌍',
-                                    keyIndex: 3,
-                                    isDisabled:
-                                        widget.game.faith < prayFaithCost,
-                                    onTap: () =>
-                                        _handleInteraction('pray', '🙏'),
-                                  ),
-                                  _EmojiChip(
-                                    emoji: '📖',
-                                    hint: '→🙏🙏+✝️',
-                                    keyIndex: 4,
-                                    onTap: () =>
-                                        _handleInteraction('bible', '📖'),
-                                  ),
-                                  if (model.wantsGift)
-                                    _EmojiChip(
-                                      emoji: '📦',
-                                      hint: '−8📦→✝️',
-                                      keyIndex: 5,
-                                      isDisabled: widget.game.materials <
-                                          helpMaterialCost,
-                                      onTap: () =>
-                                          _handleInteraction('help', '📦'),
-                                    ),
-                                  if (!model.isChristian)
-                                    _EmojiChip(
-                                      emoji: '✝️🕊️',
-                                      hint: '→?',
-                                      keyIndex: 6,
-                                      isSpecial: true,
-                                      onTap: () =>
-                                          _handleInteraction('convert', '✝️?'),
-                                    ),
-                                ],
-                              ),
-                            );
-                          }),
                   ),
-              ],
+                  // Progressive faith reveal bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: _FaithBarWidget(entity: model),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
+
+            // ── Action chips ──────────────────────────────────────────────────
+            if (!_isSessionOver)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: isLandscape ? 6 : 10),
+                decoration: const BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                ),
+                child: _isReadingBible
+                    // ── Bible reading in progress: show countdown ──────────────
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('📖', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_bibleSecondsLeft}s',
+                            style: const TextStyle(
+                              color: Colors.amber,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('📖', style: TextStyle(fontSize: 20)),
+                        ],
+                      )
+                    // ── Normal action chips ────────────────────────────────────
+                    : Builder(builder: (context) {
+                        // Compute resource costs once for disabled-state checks.
+                        final factor = FaithCalculatorService.difficultyFactorFor(
+                            widget.game.difficulty);
+                        final counselHpCost =
+                            (2.0 / factor).round().clamp(1, 99);
+                        final prayFaithCost =
+                            (2.0 / factor).round().clamp(1, 99);
+                        const helpMaterialCost = _helpMaterialCost;
+
+                        // Fixed key indices: talk=1, counsel=2, pray=3,
+                        // bible=4, help=5, convert=6. The numbers are stable
+                        // even when optional chips (help/convert) are hidden.
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                            _EmojiChip(
+                              emoji: '💬',
+                              hint: '→✝️',
+                              keyIndex: 1,
+                              onTap: () => _handleInteraction('talk', '💬'),
+                            ),
+                            _EmojiChip(
+                              emoji: '👂',
+                              hint: '−❤️→✝️',
+                              keyIndex: 2,
+                              isDisabled:
+                                  widget.game.health <= counselHpCost,
+                              onTap: () =>
+                                  _handleInteraction('counsel', '👂'),
+                            ),
+                            _EmojiChip(
+                              emoji: '🙏',
+                              hint: '−🙏→✝️🌍',
+                              keyIndex: 3,
+                              isDisabled:
+                                  widget.game.faith < prayFaithCost,
+                              onTap: () => _handleInteraction('pray', '🙏'),
+                            ),
+                            _EmojiChip(
+                              emoji: '📖',
+                              hint: '→🙏🙏+✝️',
+                              keyIndex: 4,
+                              onTap: () =>
+                                  _handleInteraction('bible', '📖'),
+                            ),
+                            if (model.wantsGift)
+                              _EmojiChip(
+                                emoji: '📦',
+                                hint: '−8📦→✝️',
+                                keyIndex: 5,
+                                isDisabled: widget.game.materials <
+                                    helpMaterialCost,
+                                onTap: () =>
+                                    _handleInteraction('help', '📦'),
+                              ),
+                            if (!model.isChristian)
+                              _EmojiChip(
+                                emoji: '✝️🕊️',
+                                hint: '→?',
+                                keyIndex: 6,
+                                isSpecial: true,
+                                onTap: () =>
+                                    _handleInteraction('convert', '✝️?'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+              ),
+          ],
+        ),
+      ),
+    );
       },
     );
   }
@@ -943,8 +913,7 @@ class _ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment:
-          message.isPlayer ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: message.isPlayer ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -971,10 +940,8 @@ class _EmojiChip extends StatelessWidget {
   final VoidCallback onTap;
   final bool isSpecial;
   final bool isDisabled;
-
   /// Short cost/benefit hint shown below the emoji, e.g. "→✝️" or "−8📦→✝️".
   final String? hint;
-
   /// 1-based keyboard shortcut shown as an amber badge (null = no badge).
   final int? keyIndex;
 
@@ -1061,16 +1028,15 @@ class GameDialogData {
   final String npcName;
   final String npcEmoji;
   final NPCModel npcModel;
-  GameDialogData(
-      {required this.npcName, required this.npcEmoji, required this.npcModel});
+  GameDialogData({required this.npcName, required this.npcEmoji, required this.npcModel});
 }
 
 /// Data passed to the [LookOverlay].
 class LookCellInfo {
-  final String label; // e.g. "Hauptstraße" or "Rathaus Nr. 12"
-  final double spiritualState; // -1..1
-  final String? npcName; // first NPC name seen in that cell, or null
-  final String? streetName; // nearest named road, or null
+  final String label;           // e.g. "Hauptstraße" or "Rathaus Nr. 12"
+  final double spiritualState;  // -1..1
+  final String? npcName;        // first NPC name seen in that cell, or null
+  final String? streetName;     // nearest named road, or null
 
   const LookCellInfo({
     required this.label,
@@ -1294,11 +1260,13 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast>
           child: GestureDetector(
             onTap: _dismiss,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
                 color: const Color(0xCC0D2C0D),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFFFD54F), width: 1.5),
+                border: Border.all(
+                    color: const Color(0xFFFFD54F), width: 1.5),
                 boxShadow: const [
                   BoxShadow(color: Colors.black54, blurRadius: 10),
                 ],
@@ -1318,6 +1286,8 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast>
     );
   }
 }
+
+
 
 // ── Health alarm overlay ──────────────────────────────────────────────────────
 
@@ -1362,13 +1332,12 @@ class _HealthAlarmOverlayState extends State<_HealthAlarmOverlay>
           return const SizedBox.shrink();
         }
         // Stronger pulse when very close to fainting
-        final severity =
-            (1.0 - pct / SpiritWorldGame.healthAlarmThreshold).clamp(0.0, 1.0);
+        final severity = (1.0 - pct / SpiritWorldGame.healthAlarmThreshold).clamp(0.0, 1.0);
         return AnimatedBuilder(
           animation: _pulseAnim,
           builder: (context, _) {
-            final alpha =
-                ((0.25 + _pulseAnim.value * 0.40) * severity).clamp(0.0, 1.0);
+            final alpha = ((0.25 + _pulseAnim.value * 0.40) * severity)
+                .clamp(0.0, 1.0);
             return IgnorePointer(
               child: Container(
                 decoration: BoxDecoration(
@@ -1492,7 +1461,7 @@ class _WakeupToastState extends State<_WakeupToast>
   Timer? _dismissTimer;
   String? _message;
 
-  static const Duration _fadeDuration = Duration(milliseconds: 400);
+  static const Duration _fadeDuration    = Duration(milliseconds: 400);
   static const Duration _visibleDuration = Duration(seconds: 5);
 
   @override
@@ -1544,8 +1513,7 @@ class _WakeupToastState extends State<_WakeupToast>
               decoration: BoxDecoration(
                 color: const Color(0xDD1A0A0A),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: Colors.redAccent.withValues(alpha: 0.7), width: 1.5),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.7), width: 1.5),
                 boxShadow: const [
                   BoxShadow(color: Colors.black87, blurRadius: 12),
                 ],
@@ -1668,8 +1636,9 @@ class _LookCellRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spiritualPct = (cell.spiritualState * 100).round();
-    final spiritualLabel =
-        cell.spiritualState >= 0 ? '+$spiritualPct%' : '$spiritualPct%';
+    final spiritualLabel = cell.spiritualState >= 0
+        ? '+$spiritualPct%'
+        : '$spiritualPct%';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Column(
@@ -1730,6 +1699,7 @@ class _LookCellRow extends StatelessWidget {
   }
 }
 
+
 // ── Mission board data classes ─────────────────────────────────────────────────
 
 /// A single mission entry shown in [MissionBoardOverlay].
@@ -1737,7 +1707,6 @@ class MissionEntry {
   final String targetEmoji;
   final String targetName;
   final String description;
-
   /// Emoji of the action button the player must press (e.g. '🙏', '✉️').
   final String actionEmoji;
   final int faithReward;
@@ -1745,7 +1714,6 @@ class MissionEntry {
   final double insightReward;
   final int progress;
   final int targetCount;
-
   /// Formatted address, e.g. "Lindenallee 14" or "Nr. 22". May be null.
   final String? address;
 
@@ -1801,10 +1769,12 @@ class MissionBoardOverlay extends StatelessWidget {
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
                 color: Color(0xFF2E4A2E),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Row(
                 children: [
@@ -1851,8 +1821,9 @@ class MissionBoardOverlay extends StatelessWidget {
                       itemBuilder: (context, i) {
                         final m = data.entries[i];
                         final hasProgress = m.targetCount > 1;
-                        final countLabel =
-                            m.targetCount > 1 ? ' ×${m.targetCount}' : '';
+                        final countLabel = m.targetCount > 1
+                            ? ' ×${m.targetCount}'
+                            : '';
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Row(
@@ -1874,7 +1845,8 @@ class MissionBoardOverlay extends StatelessWidget {
                               // Progress & address
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     if (hasProgress)
@@ -1887,8 +1859,8 @@ class MissionBoardOverlay extends StatelessWidget {
                                       Text(
                                         '📍 ${m.address}',
                                         style: TextStyle(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.60),
+                                          color: Colors.white.withValues(
+                                              alpha: 0.60),
                                           fontSize: 11,
                                         ),
                                       ),
@@ -1957,8 +1929,9 @@ class _MissionProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pct =
-        targetCount > 0 ? (progress / targetCount).clamp(0.0, 1.0) : 0.0;
+    final pct = targetCount > 0
+        ? (progress / targetCount).clamp(0.0, 1.0)
+        : 0.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2015,8 +1988,7 @@ class KeymapOverlay extends StatelessWidget {
               children: [
                 // ── Header ────────────────────────────────────────────────────
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Row(
                     children: [
                       const Text('⌨️', style: TextStyle(fontSize: 22)),
@@ -2175,8 +2147,7 @@ class _PastorhouseHud extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.black54,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: const Color(0xFFFFD54F).withValues(alpha: 0.7)),
+              border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.7)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -2205,14 +2176,16 @@ class _PastorhouseHud extends StatelessWidget {
   String _directionArrow(double deg) {
     if (deg < -157.5 || deg >= 157.5) return '←';
     if (deg < -112.5) return '↖';
-    if (deg < -67.5) return '↑';
-    if (deg < -22.5) return '↗';
-    if (deg < 22.5) return '→';
-    if (deg < 67.5) return '↘';
-    if (deg < 112.5) return '↓';
+    if (deg < -67.5)  return '↑';
+    if (deg < -22.5)  return '↗';
+    if (deg <  22.5)  return '→';
+    if (deg <  67.5)  return '↘';
+    if (deg < 112.5)  return '↓';
     return '↙';
   }
 }
+
+
 
 // ── Resource HUD (Flutter overlay) ──────────────────────────────────────────
 
@@ -2236,61 +2209,61 @@ class _ResourceHud extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListenableBuilder(
-        listenable: gameRef.progress,
-        builder: (context, _) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _AnimatedResourceBar(
-                notifier: gameRef.healthNotifier,
-                stage: gameRef.progress.healthStage,
-                max: gameRef.progress.maxHealth,
-                icon: '❤️',
-                label: AppStrings.get('resource.health'),
-                color: Colors.redAccent,
-                criticalThreshold: SpiritWorldGame.healthAlarmThreshold,
-              ),
-              const SizedBox(height: 2),
-              _AnimatedResourceBar(
-                notifier: gameRef.hungerNotifier,
-                stage: gameRef.progress.hungerStage,
-                max: gameRef.progress.maxHunger,
-                icon: '🍞',
-                label: AppStrings.get('resource.provision'),
-                color: Colors.orange,
-                warnThreshold: SpiritWorldGame.hungerWarnThreshold,
-                criticalThreshold: SpiritWorldGame.hungerCriticalThreshold,
-              ),
-              const SizedBox(height: 2),
-              _AnimatedResourceBar(
-                notifier: gameRef.faithNotifier,
-                stage: gameRef.progress.faithStage,
-                max: gameRef.progress.maxFaith,
-                icon: '🙏',
-                label: AppStrings.get('resource.faith'),
-                color: Colors.purpleAccent,
-              ),
-              const SizedBox(height: 2),
-              _AnimatedResourceBar(
-                notifier: gameRef.materialsNotifier,
-                stage: gameRef.progress.materialsStage,
-                max: gameRef.progress.maxMaterials,
-                icon: '📦',
-                label: AppStrings.get('resource.supplies'),
-                color: Colors.blueGrey,
-              ),
-              const SizedBox(height: 4),
-              const Divider(height: 1, color: Colors.white12),
-              const SizedBox(height: 2),
-              _InsightDisplay(progress: gameRef.progress),
-              const SizedBox(height: 2),
-              _ConversionCounter(gameRef: gameRef),
-            ],
-          );
-        },
-      ),
-    );
+            listenable: gameRef.progress,
+            builder: (context, _) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                      _AnimatedResourceBar(
+                    notifier: gameRef.healthNotifier,
+                    stage: gameRef.progress.healthStage,
+                    max: gameRef.progress.maxHealth,
+                    icon: '❤️',
+                    label: AppStrings.get('resource.health'),
+                    color: Colors.redAccent,
+                    criticalThreshold: SpiritWorldGame.healthAlarmThreshold,
+                  ),
+                  const SizedBox(height: 2),
+                  _AnimatedResourceBar(
+                    notifier: gameRef.hungerNotifier,
+                    stage: gameRef.progress.hungerStage,
+                    max: gameRef.progress.maxHunger,
+                    icon: '🍞',
+                    label: AppStrings.get('resource.provision'),
+                    color: Colors.orange,
+                    warnThreshold: SpiritWorldGame.hungerWarnThreshold,
+                    criticalThreshold: SpiritWorldGame.hungerCriticalThreshold,
+                  ),
+                  const SizedBox(height: 2),
+                  _AnimatedResourceBar(
+                    notifier: gameRef.faithNotifier,
+                    stage: gameRef.progress.faithStage,
+                    max: gameRef.progress.maxFaith,
+                    icon: '🙏',
+                    label: AppStrings.get('resource.faith'),
+                    color: Colors.purpleAccent,
+                  ),
+                  const SizedBox(height: 2),
+                  _AnimatedResourceBar(
+                    notifier: gameRef.materialsNotifier,
+                    stage: gameRef.progress.materialsStage,
+                    max: gameRef.progress.maxMaterials,
+                    icon: '📦',
+                    label: AppStrings.get('resource.supplies'),
+                    color: Colors.blueGrey,
+                  ),
+                  const SizedBox(height: 4),
+                  const Divider(height: 1, color: Colors.white12),
+                  const SizedBox(height: 2),
+                  _InsightDisplay(progress: gameRef.progress),
+                  const SizedBox(height: 2),
+                  _ConversionCounter(gameRef: gameRef),
+                ],
+              );
+            },
+          ),
+        );
   }
 }
 
@@ -2397,8 +2370,7 @@ class _ConversionCounterState extends State<_ConversionCounter>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('✝',
-            style: TextStyle(fontSize: 12, color: Color(0xFFB0C4FF))),
+        const Text('✝', style: TextStyle(fontSize: 12, color: Color(0xFFB0C4FF))),
         const SizedBox(width: 3),
         Text(
           _compactInt(converted),
@@ -2477,7 +2449,7 @@ class _AnimatedResourceBar extends StatefulWidget {
 
 class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
     with TickerProviderStateMixin {
-  static const double _barWidth = 130.0;
+  static const double _barWidth  = 130.0;
   static const double _barHeight = 8.0;
   static const double _stageBarHeight = 2.0;
 
@@ -2651,8 +2623,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
                 height: _barHeight,
                 decoration: const BoxDecoration(
                   color: Colors.white12,
-                  borderRadius:
-                      BorderRadius.vertical(bottom: Radius.circular(3)),
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(3)),
                 ),
                 child: Align(
                   alignment: Alignment.centerLeft,
@@ -2661,8 +2632,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
                     child: Container(
                       decoration: BoxDecoration(
                         color: effectiveColor,
-                        borderRadius: const BorderRadius.vertical(
-                            bottom: Radius.circular(3)),
+                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
                       ),
                     ),
                   ),
@@ -2675,6 +2645,8 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar>
     );
   }
 }
+
+
 
 // ── Interior art abstraction ──────────────────────────────────────────────────
 
@@ -2698,6 +2670,8 @@ class ImageArt extends InteriorArt {
   final String assetPath;
   ImageArt(this.assetPath);
 }
+
+
 
 // ── Building interior data & overlay ──────────────────────────────────────────
 
@@ -2732,7 +2706,6 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
 
   /// Tab controller for the pastor house (Aktionen / Upgrades).
   TabController? _tabController;
-
   /// `null`  = access check not yet done (residential) or always-open
   /// `true`  = access granted
   /// `false` = access denied
@@ -2774,17 +2747,13 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
   int _durationFor(String actionType) {
     switch (actionType) {
       case 'readBible':
-        return _scaledDuration(
-            BuildingInteractionService.pastorHouseReadBibleSeconds);
+        return _scaledDuration(BuildingInteractionService.pastorHouseReadBibleSeconds);
       case 'eat':
-        return _scaledDuration(
-            BuildingInteractionService.pastorHouseEatSeconds);
+        return _scaledDuration(BuildingInteractionService.pastorHouseEatSeconds);
       case 'sleep':
-        return _scaledDuration(
-            BuildingInteractionService.pastorHouseSleepSeconds);
+        return _scaledDuration(BuildingInteractionService.pastorHouseSleepSeconds);
       case 'pray':
-        return _scaledDuration(
-            BuildingInteractionService.pastorHousePraySeconds);
+        return _scaledDuration(BuildingInteractionService.pastorHousePraySeconds);
       case 'houseVisit':
         return _scaledDuration(BuildingInteractionService.houseVisitSeconds);
       case 'talkBoss':
@@ -2800,8 +2769,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       case 'mayorAudience':
         return _scaledDuration(BuildingInteractionService.mayorAudienceSeconds);
       case 'prayForPoliticians':
-        return _scaledDuration(
-            BuildingInteractionService.prayForPoliticiansSeconds);
+        return _scaledDuration(BuildingInteractionService.prayForPoliticiansSeconds);
       case 'worship':
         return _scaledDuration(BuildingInteractionService.worshipSeconds);
       case 'sundayService':
@@ -2863,13 +2831,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       case BuildingType.house:
         return ['practicalHelp', 'pray', 'houseVisit', 'discipleshipGroup'];
       case BuildingType.apartment:
-        return [
-          'practicalHelp',
-          'pray',
-          'houseVisit',
-          'discipleshipGroup',
-          'blessHousehold'
-        ];
+        return ['practicalHelp', 'pray', 'houseVisit', 'discipleshipGroup', 'blessHousehold'];
       case BuildingType.church:
       case BuildingType.cathedral:
         return ['sundayService', 'worship'];
@@ -2877,12 +2839,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
         return ['medicalHelp', 'counseling', 'chapelService'];
       case BuildingType.school:
       case BuildingType.university:
-        return [
-          'letterToManagement',
-          'talkDirector',
-          'valueLecture',
-          'prayerCircle'
-        ];
+        return ['letterToManagement', 'talkDirector', 'valueLecture', 'prayerCircle'];
       case BuildingType.cemetery:
         return ['funeral', 'comfort'];
       case BuildingType.policeStation:
@@ -2927,10 +2884,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       });
       _actionTimer?.cancel();
       _actionTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-        if (!mounted) {
-          t.cancel();
-          return;
-        }
+        if (!mounted) { t.cancel(); return; }
         setState(() => _actionSecondsLeft--);
         if (_actionSecondsLeft <= 0) {
           t.cancel();
@@ -3032,8 +2986,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
   Widget _buildMissionBanner(BuildingModel building) {
     final mission = building.activeMission;
     if (mission == null) return const SizedBox.shrink();
-    final countLabel =
-        mission.targetCount > 1 ? ' ×${mission.targetCount}' : '';
+    final countLabel = mission.targetCount > 1 ? ' ×${mission.targetCount}' : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
@@ -3167,8 +3120,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber[700],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     shape: const StadiumBorder(),
                   ),
                   icon: const Text('🔔', style: TextStyle(fontSize: 22)),
@@ -3207,7 +3159,8 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
   }
 
   String _accessHint(BuildingModel building, double faith) {
-    final accessPercentage = (building.accessChance(faith) * 100).round();
+    final accessPercentage =
+        (building.accessChance(faith) * 100).round();
     final bonus = building.interactionCount >= 3 ? ' (+30 % Bonus)' : '';
     return 'Erfolgschance: $accessPercentage %$bonus';
   }
@@ -3230,8 +3183,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           const SizedBox(height: 20),
           TextButton(
             onPressed: () => widget.game.closeBuildingInterior(),
-            child:
-                const Text('Weggehen', style: TextStyle(color: Colors.amber)),
+            child: const Text('Weggehen', style: TextStyle(color: Colors.amber)),
           ),
         ],
       ),
@@ -3299,13 +3251,11 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(maxHeight: _maxInteriorArtHeight),
+                    constraints: const BoxConstraints(maxHeight: _maxInteriorArtHeight),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.topCenter,
-                      child:
-                          _InteriorArtWidget(art: _interiorArt(building.type)),
+                      child: _InteriorArtWidget(art: _interiorArt(building.type)),
                     ),
                   ),
                   if (building.residents.isNotEmpty) ...[
@@ -3367,71 +3317,41 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
 
   static String _actionEmojiFor(String actionType) {
     switch (actionType) {
-      case 'readBible':
-        return '📖';
-      case 'eat':
-        return '🍽️';
-      case 'sleep':
-        return '😴';
-      case 'pray':
-        return '🙏';
-      case 'houseVisit':
-        return '☕';
-      case 'talkBoss':
-        return '💼';
-      case 'counseling':
-        return '👂';
-      case 'talkDirector':
-        return '🏫';
-      case 'valueLecture':
-        return '🎤';
-      case 'funeral':
-        return '⚰️';
-      case 'mayorAudience':
-        return '🏛️';
-      case 'prayForPoliticians':
-        return '🙏';
-      case 'worship':
-        return '🤲';
-      case 'sundayService':
-        return '⛪';
-      default:
-        return '⏳';
+      case 'readBible': return '📖';
+      case 'eat':       return '🍽️';
+      case 'sleep':     return '😴';
+      case 'pray':      return '🙏';
+      case 'houseVisit':  return '☕';
+      case 'talkBoss':    return '💼';
+      case 'counseling':  return '👂';
+      case 'talkDirector': return '🏫';
+      case 'valueLecture': return '🎤';
+      case 'funeral':      return '⚰️';
+      case 'mayorAudience': return '🏛️';
+      case 'prayForPoliticians': return '🙏';
+      case 'worship':     return '🤲';
+      case 'sundayService': return '⛪';
+      default:          return '⏳';
     }
   }
 
   static String _actionLabelFor(String actionType) {
     switch (actionType) {
-      case 'readBible':
-        return 'Bibel lesen …';
-      case 'eat':
-        return 'Essen …';
-      case 'sleep':
-        return 'Schlafen …';
-      case 'pray':
-        return 'Beten …';
-      case 'houseVisit':
-        return 'Hausbesuch …';
-      case 'talkBoss':
-        return 'Gespräch mit Chef …';
-      case 'counseling':
-        return 'Seelsorge …';
-      case 'talkDirector':
-        return 'Gespräch mit Direktor …';
-      case 'valueLecture':
-        return 'Vortrag halten …';
-      case 'funeral':
-        return 'Beerdigung …';
-      case 'mayorAudience':
-        return 'Audienz beim Bürgermeister …';
-      case 'prayForPoliticians':
-        return 'Für Politiker beten …';
-      case 'worship':
-        return 'Anbetung …';
-      case 'sundayService':
-        return 'Gottesdienst …';
-      default:
-        return 'Warten …';
+      case 'readBible':   return 'Bibel lesen …';
+      case 'eat':         return 'Essen …';
+      case 'sleep':       return 'Schlafen …';
+      case 'pray':        return 'Beten …';
+      case 'houseVisit':  return 'Hausbesuch …';
+      case 'talkBoss':    return 'Gespräch mit Chef …';
+      case 'counseling':  return 'Seelsorge …';
+      case 'talkDirector': return 'Gespräch mit Direktor …';
+      case 'valueLecture': return 'Vortrag halten …';
+      case 'funeral':      return 'Beerdigung …';
+      case 'mayorAudience': return 'Audienz beim Bürgermeister …';
+      case 'prayForPoliticians': return 'Für Politiker beten …';
+      case 'worship':     return 'Anbetung …';
+      case 'sundayService': return 'Gottesdienst …';
+      default:            return 'Warten …';
     }
   }
 
@@ -3454,319 +3374,90 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       // ── Pastor's house ─────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '📖',
-              arrowText: '↔',
-              trailingEmoji: '🙏+20',
-              tooltip: 'Bibel lesen',
-              keyIndex: nk(),
-              isDisabled: g.health <= 5,
-              onTap: () => _performAction('readBible')),
-          _ActionMenuRow(
-              leadingEmoji: '🍽️',
-              arrowText: '→',
-              trailingEmoji: '🍞+50',
-              tooltip: 'Essen',
-              keyIndex: nk(),
-              onTap: () => _performAction('eat')),
-          _ActionMenuRow(
-              leadingEmoji: '😴',
-              arrowText: '→',
-              trailingEmoji: '❤️+50',
-              tooltip: 'Schlafen',
-              keyIndex: nk(),
-              onTap: () => _performAction('sleep')),
-          _ActionMenuRow(
-              leadingEmoji: '🙏',
-              arrowText: '↔',
-              trailingEmoji: '🕊️+15',
-              tooltip: 'Beten',
-              keyIndex: nk(),
-              isDisabled: g.health <= 5,
-              onTap: () => _performAction('pray')),
-          _ActionMenuRow(
-              leadingEmoji: '📋',
-              arrowText: '→',
-              trailingEmoji: '📜',
-              tooltip: 'Missionen',
-              keyIndex: nk(),
-              onTap: () => _performAction('missions')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen', keyIndex: nk(), onTap: () => _performAction('eat')),
+          _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen', keyIndex: nk(), onTap: () => _performAction('sleep')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🕊️+15', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionen', keyIndex: nk(), onTap: () => _performAction('missions')),
         ];
 
       // ── Residential (House) ───────────────────────────────────────────
       case BuildingType.house:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '🛠️',
-              arrowText: '−10💰→',
-              trailingEmoji: '+5✝️',
-              tooltip: 'Praktische Hilfe',
-              keyIndex: nk(),
-              isDisabled: g.materials < 10,
-              onTap: () => _performAction('practicalHelp')),
-          _ActionMenuRow(
-              leadingEmoji: '🙏',
-              arrowText: '−10🙏→',
-              trailingEmoji: '🕊️?',
-              tooltip: 'Gebet',
-              keyIndex: nk(),
-              isDisabled: g.faith < 10,
-              onTap: () => _performAction('pray')),
-          _ActionMenuRow(
-              leadingEmoji: '☕',
-              arrowText: '⏱→',
-              trailingEmoji: '❤️🍞',
-              tooltip: 'Hausbesuch',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 5,
-              onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(
-              leadingEmoji: '📖',
-              arrowText: '−50🙏→',
-              trailingEmoji: '📖+0.5',
-              tooltip: 'Jüngerschaftsgruppe',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 20 ||
-                  !building.residents.any((n) => n.isChristian) ||
-                  g.faith < 50,
-              onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '📖+0.5', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
         ];
 
       // ── Residential (Apartment) ───────────────────────────────────────
       case BuildingType.apartment:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '🛠️',
-              arrowText: '−10💰→',
-              trailingEmoji: '+5✝️',
-              tooltip: 'Praktische Hilfe',
-              keyIndex: nk(),
-              isDisabled: g.materials < 10,
-              onTap: () => _performAction('practicalHelp')),
-          _ActionMenuRow(
-              leadingEmoji: '🙏',
-              arrowText: '−10🙏→',
-              trailingEmoji: '🕊️?',
-              tooltip: 'Gebet',
-              keyIndex: nk(),
-              isDisabled: g.faith < 10,
-              onTap: () => _performAction('pray')),
-          _ActionMenuRow(
-              leadingEmoji: '☕',
-              arrowText: '⏱→',
-              trailingEmoji: '❤️🍞',
-              tooltip: 'Hausbesuch',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 5,
-              onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(
-              leadingEmoji: '📖',
-              arrowText: '−50🙏→',
-              trailingEmoji: '📖+0.5',
-              tooltip: 'Jüngerschaftsgruppe',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 20 ||
-                  !building.residents.any((n) => n.isChristian) ||
-                  g.faith < 50,
-              onTap: () => _performAction('discipleshipGroup')),
-          _ActionMenuRow(
-              leadingEmoji: '🏢',
-              arrowText: '−10🙏→',
-              trailingEmoji: '+1✝️/Bew.',
-              tooltip: 'Hausgemeinschaft segnen',
-              keyIndex: nk(),
-              isDisabled: g.faith < 10,
-              onTap: () => _performAction('blessHousehold')),
+          _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '📖+0.5', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '🏢', arrowText: '−10🙏→', trailingEmoji: '+1✝️/Bew.', tooltip: 'Hausgemeinschaft segnen', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('blessHousehold')),
         ];
 
       // ── Church ────────────────────────────────────────────────────────
       case BuildingType.church:
       case BuildingType.cathedral:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '⛪',
-              arrowText: '−50💰−60❤️→',
-              trailingEmoji: '🔥AOE',
-              tooltip: 'Gottesdienst',
-              keyIndex: nk(),
-              isDisabled: g.materials < 50 || g.health < 60,
-              onTap: () => _performAction('sundayService')),
-          _ActionMenuRow(
-              leadingEmoji: '🤲',
-              arrowText: '⏱→',
-              trailingEmoji: '+🙏/Sek',
-              tooltip: 'Anbetung',
-              keyIndex: nk(),
-              onTap: () => _performAction('worship')),
+          _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−50💰−60❤️→', trailingEmoji: '🔥AOE', tooltip: 'Gottesdienst', keyIndex: nk(), isDisabled: g.materials < 50 || g.health < 60, onTap: () => _performAction('sundayService')),
+          _ActionMenuRow(leadingEmoji: '🤲', arrowText: '⏱→', trailingEmoji: '+🙏/Sek', tooltip: 'Anbetung', keyIndex: nk(), onTap: () => _performAction('worship')),
         ];
 
       // ── Hospital ──────────────────────────────────────────────────────
       case BuildingType.hospital:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '🏥',
-              arrowText: '−15💰→',
-              trailingEmoji: '❤️🍞100%',
-              tooltip: 'Medizinische Hilfe',
-              keyIndex: nk(),
-              isDisabled: g.materials < 15,
-              onTap: () => _performAction('medicalHelp')),
-          _ActionMenuRow(
-              leadingEmoji: '👂',
-              arrowText: '⏱→',
-              trailingEmoji: '+Interakt.',
-              tooltip: 'Seelsorge',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 3,
-              onTap: () => _performAction('counseling')),
-          _ActionMenuRow(
-              leadingEmoji: '⛪',
-              arrowText: '−30🙏→',
-              trailingEmoji: '+15🙏NPCs',
-              tooltip: 'Gottesdienst Kapelle',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 10 || g.faith < 30,
-              onTap: () => _performAction('chapelService')),
+          _ActionMenuRow(leadingEmoji: '🏥', arrowText: '−15💰→', trailingEmoji: '❤️🍞100%', tooltip: 'Medizinische Hilfe', keyIndex: nk(), isDisabled: g.materials < 15, onTap: () => _performAction('medicalHelp')),
+          _ActionMenuRow(leadingEmoji: '👂', arrowText: '⏱→', trailingEmoji: '+Interakt.', tooltip: 'Seelsorge', keyIndex: nk(), isDisabled: building.interactionCount <= 3, onTap: () => _performAction('counseling')),
+          _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−30🙏→', trailingEmoji: '+15🙏NPCs', tooltip: 'Gottesdienst Kapelle', keyIndex: nk(), isDisabled: building.interactionCount <= 10 || g.faith < 30, onTap: () => _performAction('chapelService')),
         ];
 
       // ── School / University ───────────────────────────────────────────
       case BuildingType.school:
       case BuildingType.university:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '✉️',
-              arrowText: '−5💰→',
-              trailingEmoji: '+2✝️',
-              tooltip: 'Brief an Schulleitung',
-              keyIndex: nk(),
-              isDisabled: g.materials < 5,
-              onTap: () => _performAction('letterToManagement')),
-          _ActionMenuRow(
-              leadingEmoji: '🏫',
-              arrowText: '⏱→',
-              trailingEmoji: '+5✝️🎤',
-              tooltip: 'Gespräch mit Direktor',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 5,
-              onTap: () => _performAction('talkDirector')),
-          _ActionMenuRow(
-              leadingEmoji: '🎤',
-              arrowText: '⏱→',
-              trailingEmoji: '+NPCs',
-              tooltip: 'Werte-Vortrag',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 15 ||
-                  !building.isLecturePrepared,
-              onTap: () => _performAction('valueLecture')),
-          _ActionMenuRow(
-              leadingEmoji: '⭕',
-              arrowText: '−60🙏→',
-              trailingEmoji: '📖+0.5',
-              tooltip: 'Gebetskreis gründen',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 30 || g.faith < 60,
-              onTap: () => _performAction('prayerCircle')),
+          _ActionMenuRow(leadingEmoji: '✉️', arrowText: '−5💰→', trailingEmoji: '+2✝️', tooltip: 'Brief an Schulleitung', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('letterToManagement')),
+          _ActionMenuRow(leadingEmoji: '🏫', arrowText: '⏱→', trailingEmoji: '+5✝️🎤', tooltip: 'Gespräch mit Direktor', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('talkDirector')),
+          _ActionMenuRow(leadingEmoji: '🎤', arrowText: '⏱→', trailingEmoji: '+NPCs', tooltip: 'Werte-Vortrag', keyIndex: nk(), isDisabled: building.interactionCount <= 15 || !building.isLecturePrepared, onTap: () => _performAction('valueLecture')),
+          _ActionMenuRow(leadingEmoji: '⭕', arrowText: '−60🙏→', trailingEmoji: '📖+0.5', tooltip: 'Gebetskreis gründen', keyIndex: nk(), isDisabled: building.interactionCount <= 30 || g.faith < 60, onTap: () => _performAction('prayerCircle')),
         ];
 
       // ── Cemetery ──────────────────────────────────────────────────────
       case BuildingType.cemetery:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '⚰️',
-              arrowText: '⏱→',
-              trailingEmoji: '+Interakt.',
-              tooltip: 'Beerdigung',
-              keyIndex: nk(),
-              onTap: () => _performAction('funeral')),
-          _ActionMenuRow(
-              leadingEmoji: '🤝',
-              arrowText: '−75%❤️🍞→',
-              trailingEmoji: '✝️!',
-              tooltip: 'Trost',
-              keyIndex: nk(),
-              isDisabled: !building.hasFuneralCompleted ||
-                  g.health < 75 ||
-                  g.hunger < 75,
-              onTap: () => _performAction('comfort')),
+          _ActionMenuRow(leadingEmoji: '⚰️', arrowText: '⏱→', trailingEmoji: '+Interakt.', tooltip: 'Beerdigung', keyIndex: nk(), onTap: () => _performAction('funeral')),
+          _ActionMenuRow(leadingEmoji: '🤝', arrowText: '−75%❤️🍞→', trailingEmoji: '✝️!', tooltip: 'Trost', keyIndex: nk(), isDisabled: !building.hasFuneralCompleted || g.health < 75 || g.hunger < 75, onTap: () => _performAction('comfort')),
         ];
 
       // ── Police Station ────────────────────────────────────────────────
       case BuildingType.policeStation:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '👮‍♂️',
-              arrowText: '−15🙏→',
-              trailingEmoji: '🛡️1Tag',
-              tooltip: 'Polizei segnen',
-              keyIndex: nk(),
-              isDisabled: g.faith < 15,
-              onTap: () => _performAction('blessPolice')),
-          _ActionMenuRow(
-              leadingEmoji: '🙏',
-              arrowText: '→',
-              trailingEmoji: '✝️',
-              tooltip: 'Beten',
-              keyIndex: nk(),
-              onTap: () => _performAction('pray')),
-          _ActionMenuRow(
-              leadingEmoji: '💬',
-              arrowText: '−3💰→',
-              trailingEmoji: '✝️',
-              tooltip: 'Zeugnis geben',
-              keyIndex: nk(),
-              isDisabled: g.materials < 3,
-              onTap: () => _performAction('witness')),
+          _ActionMenuRow(leadingEmoji: '👮‍♂️', arrowText: '−15🙏→', trailingEmoji: '🛡️1Tag', tooltip: 'Polizei segnen', keyIndex: nk(), isDisabled: g.faith < 15, onTap: () => _performAction('blessPolice')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Zeugnis geben', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('witness')),
         ];
 
       // ── City Hall ─────────────────────────────────────────────────────
       case BuildingType.cityHall:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '🏛️',
-              arrowText: '⏱→',
-              trailingEmoji: '+3✝️',
-              tooltip: 'Audienz Bürgermeister',
-              keyIndex: nk(),
-              onTap: () => _performAction('mayorAudience')),
-          _ActionMenuRow(
-              leadingEmoji: '🙏',
-              arrowText: '−🙏−50❤️🍞→',
-              trailingEmoji: '🌍+0.05',
-              tooltip: 'Für Politiker beten',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 20 ||
-                  g.faith < 100 ||
-                  g.health < 50 ||
-                  g.hunger < 50,
-              onTap: () => _performAction('prayForPoliticians')),
+          _ActionMenuRow(leadingEmoji: '🏛️', arrowText: '⏱→', trailingEmoji: '+3✝️', tooltip: 'Audienz Bürgermeister', keyIndex: nk(), onTap: () => _performAction('mayorAudience')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−🙏−50❤️🍞→', trailingEmoji: '🌍+0.05', tooltip: 'Für Politiker beten', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || g.faith < 100 || g.health < 50 || g.hunger < 50, onTap: () => _performAction('prayForPoliticians')),
         ];
 
       // ── Train Station ─────────────────────────────────────────────────
       case BuildingType.trainStation:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '🚂',
-              arrowText: '−10💰→',
-              trailingEmoji: '🗺️Teleport',
-              tooltip: 'Reise',
-              keyIndex: nk(),
-              isDisabled: g.materials < 10,
-              onTap: () => _performAction('travel')),
+          _ActionMenuRow(leadingEmoji: '🚂', arrowText: '−10💰→', trailingEmoji: '🗺️Teleport', tooltip: 'Reise', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('travel')),
         ];
 
       // ── Stadium ───────────────────────────────────────────────────────
       case BuildingType.stadium:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '🏟️',
-              arrowText: '−100🙏💰→',
-              trailingEmoji: '📖+0.5',
-              tooltip: 'Großveranstaltung',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 50 ||
-                  g.faith < 100 ||
-                  g.materials < 100,
-              onTap: () => _performAction('majorEvent')),
+          _ActionMenuRow(leadingEmoji: '🏟️', arrowText: '−100🙏💰→', trailingEmoji: '📖+0.5', tooltip: 'Großveranstaltung', keyIndex: nk(), isDisabled: building.interactionCount <= 50 || g.faith < 100 || g.materials < 100, onTap: () => _performAction('majorEvent')),
         ];
 
       // ── Commercial ────────────────────────────────────────────────────
@@ -3776,67 +3467,18 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       case BuildingType.office:
       case BuildingType.skyscraper:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '💼',
-              arrowText: '⏱→',
-              trailingEmoji: '+3✝️',
-              tooltip: 'Gespräch mit Chef',
-              keyIndex: nk(),
-              onTap: () => _performAction('talkBoss')),
-          _ActionMenuRow(
-              leadingEmoji: '🛒',
-              arrowText: '−5💰→',
-              trailingEmoji: '+20🍞❤️',
-              tooltip: 'Einkaufen',
-              keyIndex: nk(),
-              isDisabled: g.materials < 5,
-              onTap: () => _performAction('shopping')),
-          _ActionMenuRow(
-              leadingEmoji: '🕊️',
-              arrowText: '−15🙏→',
-              trailingEmoji: '+2✝️',
-              tooltip: 'Segnen',
-              keyIndex: nk(),
-              isDisabled: g.faith < 15,
-              onTap: () => _performAction('bless')),
-          _ActionMenuRow(
-              leadingEmoji: '🤲',
-              arrowText: '−10❤️🍞→',
-              trailingEmoji: '💰?',
-              tooltip: 'Um Spenden bitten',
-              keyIndex: nk(),
-              isDisabled: building.interactionCount <= 2 ||
-                  g.health < 10 ||
-                  g.hunger < 10,
-              onTap: () => _performAction('requestDonation')),
+          _ActionMenuRow(leadingEmoji: '💼', arrowText: '⏱→', trailingEmoji: '+3✝️', tooltip: 'Gespräch mit Chef', keyIndex: nk(), onTap: () => _performAction('talkBoss')),
+          _ActionMenuRow(leadingEmoji: '🛒', arrowText: '−5💰→', trailingEmoji: '+20🍞❤️', tooltip: 'Einkaufen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('shopping')),
+          _ActionMenuRow(leadingEmoji: '🕊️', arrowText: '−15🙏→', trailingEmoji: '+2✝️', tooltip: 'Segnen', keyIndex: nk(), isDisabled: g.faith < 15, onTap: () => _performAction('bless')),
+          _ActionMenuRow(leadingEmoji: '🤲', arrowText: '−10❤️🍞→', trailingEmoji: '💰?', tooltip: 'Um Spenden bitten', keyIndex: nk(), isDisabled: building.interactionCount <= 2 || g.health < 10 || g.hunger < 10, onTap: () => _performAction('requestDonation')),
         ];
 
       // ── Everything else ───────────────────────────────────────────────
       default:
         rows = [
-          _ActionMenuRow(
-              leadingEmoji: '🙏',
-              arrowText: '→',
-              trailingEmoji: '✝️',
-              tooltip: 'Beten',
-              keyIndex: nk(),
-              onTap: () => _performAction('pray')),
-          _ActionMenuRow(
-              leadingEmoji: '💬',
-              arrowText: '−3💰→',
-              trailingEmoji: '✝️',
-              tooltip: 'Zeugnis geben',
-              keyIndex: nk(),
-              isDisabled: g.materials < 3,
-              onTap: () => _performAction('witness')),
-          _ActionMenuRow(
-              leadingEmoji: '📦',
-              arrowText: '−8💰→',
-              trailingEmoji: '✝️',
-              tooltip: 'Verteilen',
-              keyIndex: nk(),
-              isDisabled: g.materials < 8,
-              onTap: () => _performAction('distribute')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '→', trailingEmoji: '✝️', tooltip: 'Beten', keyIndex: nk(), onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '💬', arrowText: '−3💰→', trailingEmoji: '✝️', tooltip: 'Zeugnis geben', keyIndex: nk(), isDisabled: g.materials < 3, onTap: () => _performAction('witness')),
+          _ActionMenuRow(leadingEmoji: '📦', arrowText: '−8💰→', trailingEmoji: '✝️', tooltip: 'Verteilen', keyIndex: nk(), isDisabled: g.materials < 8, onTap: () => _performAction('distribute')),
         ];
     }
 
@@ -3844,11 +3486,11 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: rows
-          .map((r) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 1), child: r))
+          .map((r) => Padding(padding: const EdgeInsets.symmetric(vertical: 1), child: r))
           .toList(),
     );
   }
+
 
   /// Delegates to the static helpers in [BuildingComponent] to stay DRY.
   String _buildingTypeEmoji(BuildingType type) =>
@@ -3913,14 +3555,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
 
   String _npcRoleLabel(NPCType type) {
     switch (type) {
-      case NPCType.priest:
-        return 'Pastor';
-      case NPCType.merchant:
-        return 'Händler';
-      case NPCType.officer:
-        return 'Beamter';
-      default:
-        return 'Bürger';
+      case NPCType.priest:    return 'Pastor';
+      case NPCType.merchant:  return 'Händler';
+      case NPCType.officer:   return 'Beamter';
+      default:                return 'Bürger';
     }
   }
 
@@ -3952,316 +3590,217 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       case BuildingType.pastorHouse:
         return EmojiGridArt(_makeRoom({
           (1, 5): '✝️',
-          (2, 2): '📚',
-          (2, 9): '🛏️',
-          (4, 4): '📖',
-          (4, 8): '🕯️',
+          (2, 2): '📚', (2, 9): '🛏️',
+          (4, 4): '📖', (4, 8): '🕯️',
           (6, 5): '🙏',
-          (8, 2): '🪴',
-          (8, 8): '☕',
+          (8, 2): '🪴', (8, 8): '☕',
         }));
       case BuildingType.house:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '🛋️',
-          (2, 8): '🛏️',
+          (2, 2): '🛋️', (2, 8): '🛏️',
           (4, 5): '📺',
-          (6, 2): '🍳',
-          (6, 9): '🪑',
-          (8, 4): '🪴',
-          (8, 8): '🧸',
+          (6, 2): '🍳', (6, 9): '🪑',
+          (8, 4): '🪴', (8, 8): '🧸',
           (10, 5): '🐾',
         }));
       case BuildingType.apartment:
         return EmojiGridArt(_makeRoom({
-          (2, 3): '🛏️',
-          (2, 8): '🚿',
+          (2, 3): '🛏️', (2, 8): '🚿',
           (4, 6): '💻',
-          (6, 2): '🛋️',
-          (6, 8): '📺',
-          (8, 4): '🍳',
-          (8, 9): '☕',
+          (6, 2): '🛋️', (6, 8): '📺',
+          (8, 4): '🍳', (8, 9): '☕',
           (10, 5): '🪴',
         }));
       // ── Religion ─────────────────────────────────────────────────────────────
       case BuildingType.church:
         return EmojiGridArt(_makeRoom({
           (1, 5): '✝️',
-          (3, 2): '🕯️',
-          (3, 9): '🕯️',
+          (3, 2): '🕯️', (3, 9): '🕯️',
           (5, 5): '📖',
-          (7, 2): '🪑',
-          (7, 5): '🙏',
-          (7, 9): '🪑',
-          (9, 3): '🪑',
-          (9, 8): '🪑',
+          (7, 2): '🪑', (7, 5): '🙏', (7, 9): '🪑',
+          (9, 3): '🪑', (9, 8): '🪑',
         }));
       case BuildingType.cathedral:
         return EmojiGridArt(_makeRoom({
           (1, 5): '✝️',
-          (2, 2): '🕯️',
-          (2, 9): '🕯️',
+          (2, 2): '🕯️', (2, 9): '🕯️',
           (3, 5): '🔔',
-          (5, 3): '📖',
-          (5, 8): '📖',
+          (5, 3): '📖', (5, 8): '📖',
           (6, 5): '🙏',
-          (8, 2): '🪑',
-          (8, 9): '🪑',
-          (10, 4): '🎵',
-          (10, 7): '🎵',
+          (8, 2): '🪑', (8, 9): '🪑',
+          (10, 4): '🎵', (10, 7): '🎵',
         }));
       case BuildingType.cemetery:
         return EmojiGridArt(_makeRoom({
-          (2, 3): '✝️',
-          (2, 8): '✝️',
-          (4, 1): '🌿',
-          (4, 6): '✝️',
-          (4, 10): '🌿',
-          (6, 3): '🕯️',
-          (6, 8): '🕯️',
+          (2, 3): '✝️', (2, 8): '✝️',
+          (4, 1): '🌿', (4, 6): '✝️', (4, 10): '🌿',
+          (6, 3): '🕯️', (6, 8): '🕯️',
           (8, 5): '⛪',
-          (10, 2): '🌹',
-          (10, 9): '🌹',
+          (10, 2): '🌹', (10, 9): '🌹',
         }));
       // ── Health & Education ───────────────────────────────────────────────────
       case BuildingType.hospital:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '🛏️',
-          (2, 7): '🛏️',
+          (2, 2): '🛏️', (2, 7): '🛏️',
           (4, 4): '🩺',
-          (6, 2): '💊',
-          (6, 8): '🔬',
+          (6, 2): '💊', (6, 8): '🔬',
           (8, 5): '📋',
-          (10, 2): '🏥',
-          (10, 8): '🧴',
+          (10, 2): '🏥', (10, 8): '🧴',
         }));
       case BuildingType.school:
         return EmojiGridArt(_makeRoom({
           (1, 5): '🖊️',
-          (3, 2): '🪑',
-          (3, 5): '🪑',
-          (3, 9): '🪑',
-          (6, 3): '📝',
-          (6, 7): '📚',
-          (8, 2): '🪑',
-          (8, 5): '🪑',
-          (8, 9): '🪑',
+          (3, 2): '🪑', (3, 5): '🪑', (3, 9): '🪑',
+          (6, 3): '📝', (6, 7): '📚',
+          (8, 2): '🪑', (8, 5): '🪑', (8, 9): '🪑',
           (10, 5): '📐',
         }));
       case BuildingType.university:
         return EmojiGridArt(_makeRoom({
-          (2, 3): '📚',
-          (2, 8): '🔬',
+          (2, 3): '📚', (2, 8): '🔬',
           (4, 5): '🎓',
-          (6, 2): '💻',
-          (6, 9): '🗂️',
-          (8, 4): '📖',
-          (8, 8): '🧪',
+          (6, 2): '💻', (6, 9): '🗂️',
+          (8, 4): '📖', (8, 8): '🧪',
           (10, 5): '🏛️',
         }));
       // ── Commercial ───────────────────────────────────────────────────────────
       case BuildingType.shop:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '📦',
-          (2, 8): '📦',
+          (2, 2): '📦', (2, 8): '📦',
           (4, 5): '🛒',
-          (6, 2): '🏷️',
-          (6, 5): '🛍️',
-          (6, 9): '💰',
-          (8, 3): '📦',
-          (8, 8): '📦',
+          (6, 2): '🏷️', (6, 5): '🛍️', (6, 9): '💰',
+          (8, 3): '📦', (8, 8): '📦',
           (10, 5): '🪙',
         }));
       case BuildingType.supermarket:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '🥦',
-          (2, 5): '🥩',
-          (2, 9): '🥛',
-          (4, 4): '🥫',
-          (4, 8): '🍞',
+          (2, 2): '🥦', (2, 5): '🥩', (2, 9): '🥛',
+          (4, 4): '🥫', (4, 8): '🍞',
           (6, 5): '🛒',
-          (8, 2): '🧃',
-          (8, 8): '🧴',
-          (10, 4): '💳',
-          (10, 7): '🧾',
+          (8, 2): '🧃', (8, 8): '🧴',
+          (10, 4): '💳', (10, 7): '🧾',
         }));
       case BuildingType.mall:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '👗',
-          (2, 9): '👟',
+          (2, 2): '👗', (2, 9): '👟',
           (4, 5): '☕',
-          (6, 2): '💎',
-          (6, 5): '🛍️',
-          (6, 9): '🍕',
-          (8, 3): '👜',
-          (8, 8): '🎁',
+          (6, 2): '💎', (6, 5): '🛍️', (6, 9): '🍕',
+          (8, 3): '👜', (8, 8): '🎁',
           (10, 5): '💳',
         }));
       case BuildingType.office:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '🖥️',
-          (2, 8): '📁',
+          (2, 2): '🖥️', (2, 8): '📁',
           (4, 5): '☕',
-          (6, 2): '🪑',
-          (6, 5): '📋',
-          (6, 9): '🖊️',
-          (8, 3): '📞',
-          (8, 8): '💼',
+          (6, 2): '🪑', (6, 5): '📋', (6, 9): '🖊️',
+          (8, 3): '📞', (8, 8): '💼',
           (10, 5): '📊',
         }));
       case BuildingType.skyscraper:
         return EmojiGridArt(_makeRoom({
-          (2, 3): '📊',
-          (2, 8): '💹',
+          (2, 3): '📊', (2, 8): '💹',
           (4, 5): '💻',
-          (6, 2): '📱',
-          (6, 5): '🤝',
-          (6, 9): '💼',
-          (8, 3): '🖥️',
-          (8, 8): '📋',
+          (6, 2): '📱', (6, 5): '🤝', (6, 9): '💼',
+          (8, 3): '🖥️', (8, 8): '📋',
           (10, 5): '🏙️',
         }));
       // ── Industrial ───────────────────────────────────────────────────────────
       case BuildingType.factory:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '⚙️',
-          (2, 8): '🔧',
+          (2, 2): '⚙️', (2, 8): '🔧',
           (4, 5): '⚡',
-          (6, 2): '🔩',
-          (6, 5): '📦',
-          (6, 9): '🔨',
-          (8, 3): '⚙️',
-          (8, 8): '🪛',
+          (6, 2): '🔩', (6, 5): '📦', (6, 9): '🔨',
+          (8, 3): '⚙️', (8, 8): '🪛',
           (10, 5): '🏭',
         }));
       case BuildingType.warehouse:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '📦',
-          (2, 5): '📦',
-          (2, 9): '📦',
-          (4, 2): '📦',
-          (4, 9): '📦',
+          (2, 2): '📦', (2, 5): '📦', (2, 9): '📦',
+          (4, 2): '📦', (4, 9): '📦',
           (5, 5): '📋',
-          (7, 2): '📦',
-          (7, 9): '📦',
-          (9, 3): '🔦',
-          (9, 7): '📦',
+          (7, 2): '📦', (7, 9): '📦',
+          (9, 3): '🔦', (9, 7): '📦',
         }));
       case BuildingType.powerPlant:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '⚡',
-          (2, 9): '⚡',
-          (4, 4): '🔌',
-          (4, 8): '🔌',
+          (2, 2): '⚡', (2, 9): '⚡',
+          (4, 4): '🔌', (4, 8): '🔌',
           (6, 5): '⚡',
-          (8, 2): '🔧',
-          (8, 5): '🔌',
-          (8, 9): '🔧',
+          (8, 2): '🔧', (8, 5): '🔌', (8, 9): '🔧',
           (10, 5): '🏭',
         }));
       // ── Culture ──────────────────────────────────────────────────────────────
       case BuildingType.library:
         return EmojiGridArt(_makeRoom({
-          (2, 1): '📚',
-          (2, 4): '📚',
-          (2, 8): '📚',
-          (4, 1): '📚',
-          (4, 10): '📚',
-          (6, 4): '📖',
-          (6, 7): '📖',
-          (8, 2): '🪑',
-          (8, 5): '📖',
-          (8, 9): '🪑',
+          (2, 1): '📚', (2, 4): '📚', (2, 8): '📚',
+          (4, 1): '📚', (4, 10): '📚',
+          (6, 4): '📖', (6, 7): '📖',
+          (8, 2): '🪑', (8, 5): '📖', (8, 9): '🪑',
           (10, 5): '🔎',
         }));
       case BuildingType.museum:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '🖼️',
-          (2, 9): '🖼️',
+          (2, 2): '🖼️', (2, 9): '🖼️',
           (4, 5): '🏺',
-          (6, 2): '🗿',
-          (6, 9): '📜',
+          (6, 2): '🗿', (6, 9): '📜',
           (7, 5): '🔎',
-          (8, 3): '🎭',
-          (8, 8): '🪆',
+          (8, 3): '🎭', (8, 8): '🪆',
           (10, 5): '🏛️',
         }));
       case BuildingType.stadium:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '📣',
-          (2, 5): '⚽',
-          (2, 9): '📣',
+          (2, 2): '📣', (2, 5): '⚽', (2, 9): '📣',
           (4, 5): '🏟️',
-          (6, 2): '🏆',
-          (6, 5): '🎫',
-          (6, 9): '🎽',
-          (8, 3): '🎵',
-          (8, 8): '📸',
+          (6, 2): '🏆', (6, 5): '🎫', (6, 9): '🎽',
+          (8, 3): '🎵', (8, 8): '📸',
           (10, 5): '🏅',
         }));
       // ── Civic / Government ───────────────────────────────────────────────────
       case BuildingType.cityHall:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '⚖️',
-          (2, 9): '📜',
+          (2, 2): '⚖️', (2, 9): '📜',
           (4, 5): '🗳️',
-          (6, 2): '📋',
-          (6, 5): '🤝',
-          (6, 9): '🏛️',
-          (8, 3): '🖊️',
-          (8, 8): '📁',
+          (6, 2): '📋', (6, 5): '🤝', (6, 9): '🏛️',
+          (8, 3): '🖊️', (8, 8): '📁',
           (10, 5): '🔏',
         }));
       case BuildingType.postOffice:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '📮',
-          (2, 9): '📫',
+          (2, 2): '📮', (2, 9): '📫',
           (4, 5): '✉️',
-          (6, 2): '📦',
-          (6, 5): '💳',
-          (6, 9): '📝',
-          (8, 3): '📬',
-          (8, 8): '🔖',
+          (6, 2): '📦', (6, 5): '💳', (6, 9): '📝',
+          (8, 3): '📬', (8, 8): '🔖',
           (10, 5): '🏣',
         }));
       case BuildingType.policeStation:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '👮',
-          (2, 9): '🔑',
+          (2, 2): '👮', (2, 9): '🔑',
           (4, 5): '🔵',
-          (6, 2): '📋',
-          (6, 5): '🔒',
-          (6, 9): '📡',
-          (8, 3): '🚓',
-          (8, 8): '🔍',
+          (6, 2): '📋', (6, 5): '🔒', (6, 9): '📡',
+          (8, 3): '🚓', (8, 8): '🔍',
           (10, 5): '🛡️',
         }));
       case BuildingType.fireStation:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '🧯',
-          (2, 9): '🪓',
+          (2, 2): '🧯', (2, 9): '🪓',
           (4, 5): '🔴',
-          (6, 2): '🪣',
-          (6, 5): '🚒',
-          (6, 9): '📡',
-          (8, 3): '🧰',
-          (8, 8): '⛑️',
+          (6, 2): '🪣', (6, 5): '🚒', (6, 9): '📡',
+          (8, 3): '🧰', (8, 8): '⛑️',
           (10, 5): '🔥',
         }));
       case BuildingType.trainStation:
         return EmojiGridArt(_makeRoom({
-          (2, 2): '🚂',
-          (2, 9): '🕐',
+          (2, 2): '🚂', (2, 9): '🕐',
           (4, 5): '🎫',
-          (6, 2): '🧳',
-          (6, 5): '📋',
-          (6, 9): '🚂',
-          (8, 3): '🪑',
-          (8, 8): '🗺️',
+          (6, 2): '🧳', (6, 5): '📋', (6, 9): '🚂',
+          (8, 3): '🪑', (8, 8): '🗺️',
           (10, 5): '🚉',
         }));
     }
   }
 }
+
+
 
 /// A tappable action menu row shown in the left panel of the interior overlay.
 ///
@@ -4277,10 +3816,8 @@ class _ActionMenuRow extends StatelessWidget {
   final String trailingEmoji;
   final String tooltip;
   final VoidCallback onTap;
-
   /// 1-based keyboard shortcut shown as an amber badge (null = no badge).
   final int? keyIndex;
-
   /// When true the row is rendered at reduced opacity and taps are ignored.
   final bool isDisabled;
 
@@ -4538,7 +4075,7 @@ class _SessionDotsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Cap the display at 12 dots to avoid overflow on very high counts.
-    final displayMax = max.clamp(1, 12);
+    final displayMax  = max.clamp(1, 12);
     final displayDone = done.clamp(0, displayMax);
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -4602,8 +4139,7 @@ class _FaithBarWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Center(
-                child: Text('?',
-                    style: TextStyle(color: Colors.white38, fontSize: 9)),
+                child: Text('?', style: TextStyle(color: Colors.white38, fontSize: 9)),
               ),
             ),
           ],
@@ -4612,8 +4148,7 @@ class _FaithBarWidget extends StatelessWidget {
     }
 
     final faithNorm = ((entity.faith + 100) / 200.0).clamp(0.0, 1.0);
-    final barColor =
-        Color.lerp(Colors.red[700]!, Colors.green[600]!, faithNorm)!;
+    final barColor = Color.lerp(Colors.red[700]!, Colors.green[600]!, faithNorm)!;
 
     // Vague: round to nearest 25 %; revealed: exact value.
     final displayNorm = entity.isFaithRevealed
@@ -4658,8 +4193,7 @@ class _FaithBarWidget extends StatelessWidget {
               style: const TextStyle(color: Colors.white60, fontSize: 9),
             )
           else
-            const Text('~',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
+            const Text('~', style: TextStyle(color: Colors.white38, fontSize: 11)),
         ],
       ),
     );
@@ -4696,7 +4230,7 @@ class _UpgradePanel extends StatefulWidget {
 
 class _UpgradePanelState extends State<_UpgradePanel> {
   PlayerProgress get _progress => widget.game.progress;
-  CombatProfile get _profile => _progress.combatProfile;
+  CombatProfile  get _profile  => _progress.combatProfile;
 
   void _buyUpgrade(VoidCallback apply, int cost) {
     setState(() {
@@ -4726,8 +4260,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                 label: 'Schild',
                 description: 'Schadensreduktion (Faith-Drain)',
                 level: _profile.shieldLevel,
-                effectText:
-                    '−${(_profile.shieldDamageReduction * 100).toStringAsFixed(0)}% Faith-Schaden',
+                effectText: '−${(_profile.shieldDamageReduction * 100).toStringAsFixed(0)}% Faith-Schaden',
                 onBuy: () => _profile.shieldLevel++,
               ),
               const SizedBox(height: 6),
@@ -4736,8 +4269,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                 label: 'Helm',
                 description: 'Hunger-Resistenz',
                 level: _profile.helmLevel,
-                effectText:
-                    '−${(_profile.helmHungerReduction * 100).toStringAsFixed(0)}% Hunger-Schaden',
+                effectText: '−${(_profile.helmHungerReduction * 100).toStringAsFixed(0)}% Hunger-Schaden',
                 onBuy: () => _profile.helmLevel++,
               ),
               const SizedBox(height: 14),
@@ -4838,56 +4370,44 @@ class _UpgradePanelState extends State<_UpgradePanel> {
           // 4 tiles side by side
           Row(
             children: [
-              Expanded(
-                  child: _AttackTile(
+              Expanded(child: _AttackTile(
                 icon: '🎯',
                 label: 'Radius',
                 level: stats.radiusLevel,
                 effectText: _pct(stats.radius),
                 cost: upgradeInsightCost(stats.radiusLevel),
-                canAfford:
-                    _progress.insight >= upgradeInsightCost(stats.radiusLevel),
-                onBuy: () => _buyUpgrade(() => stats.radiusLevel++,
-                    upgradeInsightCost(stats.radiusLevel)),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.radiusLevel),
+                onBuy: () => _buyUpgrade(() => stats.radiusLevel++, upgradeInsightCost(stats.radiusLevel)),
               )),
               const SizedBox(width: 4),
-              Expanded(
-                  child: _AttackTile(
+              Expanded(child: _AttackTile(
                 icon: '⚡',
                 label: 'Stärke',
                 level: stats.strengthLevel,
                 effectText: _pct(stats.strength),
                 cost: upgradeInsightCost(stats.strengthLevel),
-                canAfford: _progress.insight >=
-                    upgradeInsightCost(stats.strengthLevel),
-                onBuy: () => _buyUpgrade(() => stats.strengthLevel++,
-                    upgradeInsightCost(stats.strengthLevel)),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.strengthLevel),
+                onBuy: () => _buyUpgrade(() => stats.strengthLevel++, upgradeInsightCost(stats.strengthLevel)),
               )),
               const SizedBox(width: 4),
-              Expanded(
-                  child: _AttackTile(
+              Expanded(child: _AttackTile(
                 icon: '⏱️',
                 label: 'Dauer',
                 level: stats.durationLevel,
                 effectText: _pct(stats.duration),
                 cost: upgradeInsightCost(stats.durationLevel),
-                canAfford: _progress.insight >=
-                    upgradeInsightCost(stats.durationLevel),
-                onBuy: () => _buyUpgrade(() => stats.durationLevel++,
-                    upgradeInsightCost(stats.durationLevel)),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.durationLevel),
+                onBuy: () => _buyUpgrade(() => stats.durationLevel++, upgradeInsightCost(stats.durationLevel)),
               )),
               const SizedBox(width: 4),
-              Expanded(
-                  child: _AttackTile(
+              Expanded(child: _AttackTile(
                 icon: '💨',
                 label: 'Geschw.',
                 level: stats.speedLevel,
                 effectText: _pct(stats.speed),
                 cost: upgradeInsightCost(stats.speedLevel),
-                canAfford:
-                    _progress.insight >= upgradeInsightCost(stats.speedLevel),
-                onBuy: () => _buyUpgrade(() => stats.speedLevel++,
-                    upgradeInsightCost(stats.speedLevel)),
+                canAfford: _progress.insight >= upgradeInsightCost(stats.speedLevel),
+                onBuy: () => _buyUpgrade(() => stats.speedLevel++, upgradeInsightCost(stats.speedLevel)),
               )),
             ],
           ),
@@ -4898,14 +4418,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
 
   static String _modeName(PrayerMode mode) {
     switch (mode) {
-      case PrayerMode.liberation:
-        return 'Befreiung';
-      case PrayerMode.rebuke:
-        return 'Zurechtweisung';
-      case PrayerMode.slow:
-        return 'Verlangsamung';
-      case PrayerMode.drain:
-        return 'Entziehung';
+      case PrayerMode.liberation: return 'Befreiung';
+      case PrayerMode.rebuke:     return 'Zurechtweisung';
+      case PrayerMode.slow:       return 'Verlangsamung';
+      case PrayerMode.drain:      return 'Entziehung';
     }
   }
 }
@@ -4964,16 +4480,14 @@ class _UpgradeRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         'Lv $level',
-                        style:
-                            const TextStyle(color: Colors.amber, fontSize: 9),
+                        style: const TextStyle(color: Colors.amber, fontSize: 9),
                       ),
                     ),
                   ],
@@ -4985,8 +4499,7 @@ class _UpgradeRow extends StatelessWidget {
                   ),
                 Text(
                   effectText,
-                  style:
-                      const TextStyle(color: Colors.greenAccent, fontSize: 10),
+                  style: const TextStyle(color: Colors.greenAccent, fontSize: 10),
                 ),
               ],
             ),
@@ -5005,8 +4518,7 @@ class _BuyButton extends StatelessWidget {
   final bool canAfford;
   final VoidCallback onBuy;
 
-  const _BuyButton(
-      {required this.cost, required this.canAfford, required this.onBuy});
+  const _BuyButton({required this.cost, required this.canAfford, required this.onBuy});
 
   @override
   Widget build(BuildContext context) {
@@ -5148,7 +4660,8 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
       vsync: this,
       duration: const Duration(seconds: 3),
     );
-    widget.game.tutorialService.currentStepNotifier.addListener(_onStepChanged);
+    widget.game.tutorialService.currentStepNotifier
+        .addListener(_onStepChanged);
   }
 
   void _onStepChanged() {
@@ -5170,88 +4683,22 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
 
   // ── Step content ─────────────────────────────────────────────────────────
 
-  static const _stepMeta = <TutorialStep,
-      ({
-    String emoji,
-    bool needsNextButton,
-    bool hasTrigger,
-    bool isInteractive
-  })>{
-    TutorialStep.welcome: (
-      emoji: '✝️',
-      needsNextButton: true,
-      hasTrigger: false,
-      isInteractive: false
-    ),
-    TutorialStep.movement: (
-      emoji: '🗺️',
-      needsNextButton: false,
-      hasTrigger: true,
-      isInteractive: true
-    ),
-    TutorialStep.spiritWorld: (
-      emoji: '🙏',
-      needsNextButton: false,
-      hasTrigger: true,
-      isInteractive: true
-    ),
-    TutorialStep.prayer: (
-      emoji: '⚡',
-      needsNextButton: false,
-      hasTrigger: true,
-      isInteractive: true
-    ),
-    TutorialStep.returnToCity: (
-      emoji: '🏙️',
-      needsNextButton: false,
-      hasTrigger: true,
-      isInteractive: true
-    ),
-    TutorialStep.radialMenu: (
-      emoji: '🖐️',
-      needsNextButton: false,
-      hasTrigger: true,
-      isInteractive: true
-    ),
-    TutorialStep.npcTalk: (
-      emoji: '💬',
-      needsNextButton: true,
-      hasTrigger: false,
-      isInteractive: true
-    ),
-    TutorialStep.hudExplain: (
-      emoji: '📊',
-      needsNextButton: true,
-      hasTrigger: false,
-      isInteractive: false
-    ),
-    TutorialStep.homebase: (
-      emoji: '🏠',
-      needsNextButton: false,
-      hasTrigger: true,
-      isInteractive: true
-    ),
-    TutorialStep.firstMission: (
-      emoji: '📋',
-      needsNextButton: false,
-      hasTrigger: true,
-      isInteractive: true
-    ),
-    TutorialStep.completed: (
-      emoji: '🎉',
-      needsNextButton: true,
-      hasTrigger: false,
-      isInteractive: false
-    ),
+  static const _stepMeta = <TutorialStep, ({String emoji, bool needsNextButton, bool hasTrigger, bool isInteractive})>{
+    TutorialStep.welcome:      (emoji: '✝️',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
+    TutorialStep.movement:     (emoji: '🗺️', needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.spiritWorld:  (emoji: '🙏',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.prayer:       (emoji: '⚡',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.returnToCity: (emoji: '🏙️', needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.radialMenu:   (emoji: '🖐️', needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.npcTalk:      (emoji: '💬',  needsNextButton: true,  hasTrigger: false, isInteractive: true),
+    TutorialStep.hudExplain:   (emoji: '📊',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
+    TutorialStep.homebase:     (emoji: '🏠',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.firstMission: (emoji: '📋',  needsNextButton: false, hasTrigger: true,  isInteractive: true),
+    TutorialStep.completed:    (emoji: '🎉',  needsNextButton: true,  hasTrigger: false, isInteractive: false),
   };
 
-  static ({
-    String emoji,
-    String title,
-    String message,
-    String? triggerHint,
-    bool needsNextButton
-  })? _contentFor(TutorialStep step) {
+  static ({String emoji, String title, String message, String? triggerHint, bool needsNextButton})?
+      _contentFor(TutorialStep step) {
     final meta = _stepMeta[step];
     if (meta == null) return null;
     return (
@@ -5365,13 +4812,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
   }
 
   Widget _buildCard(
-    ({
-      String emoji,
-      String title,
-      String message,
-      String? triggerHint,
-      bool needsNextButton
-    }) content,
+    ({String emoji, String title, String message, String? triggerHint, bool needsNextButton}) content,
     bool isCompleted,
     bool canSkip,
   ) {
@@ -5379,7 +4820,9 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
       constraints: const BoxConstraints(maxWidth: 500),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
       decoration: BoxDecoration(
-        color: isCompleted ? const Color(0xEE0A1A0A) : const Color(0xEE080818),
+        color: isCompleted
+            ? const Color(0xEE0A1A0A)
+            : const Color(0xEE080818),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isCompleted
@@ -5430,7 +4873,8 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
           // Trigger hint (auto-advance steps)
           if (content.triggerHint != null) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(10),
@@ -5546,17 +4990,15 @@ class _ConfettiPainter extends CustomPainter {
 
   static List<_ConfettiParticle> _generateParticles() {
     final rng = Random(42);
-    return List.generate(
-        60,
-        (_) => _ConfettiParticle(
-              x: rng.nextDouble(),
-              startY: -rng.nextDouble() * 0.3,
-              size: 5.0 + rng.nextDouble() * 7.0,
-              speed: 0.5 + rng.nextDouble() * 0.8,
-              wobble: rng.nextDouble() * 2 * pi,
-              wobbleFreq: 2.0 + rng.nextDouble() * 4.0,
-              color: _confettiColors[rng.nextInt(_confettiColors.length)],
-            ));
+    return List.generate(60, (_) => _ConfettiParticle(
+          x: rng.nextDouble(),
+          startY: -rng.nextDouble() * 0.3,
+          size: 5.0 + rng.nextDouble() * 7.0,
+          speed: 0.5 + rng.nextDouble() * 0.8,
+          wobble: rng.nextDouble() * 2 * pi,
+          wobbleFreq: 2.0 + rng.nextDouble() * 4.0,
+          color: _confettiColors[rng.nextInt(_confettiColors.length)],
+        ));
   }
 
   static const _confettiColors = [
@@ -5924,17 +5366,15 @@ class _WinConfettiPainter extends CustomPainter {
 
   static List<_ConfettiParticle> _generateParticles() {
     final rng = Random(137);
-    return List.generate(
-        80,
-        (_) => _ConfettiParticle(
-              x: rng.nextDouble(),
-              startY: -rng.nextDouble() * 0.5,
-              size: 4.0 + rng.nextDouble() * 9.0,
-              speed: 0.3 + rng.nextDouble() * 0.6,
-              wobble: rng.nextDouble() * 2 * pi,
-              wobbleFreq: 1.5 + rng.nextDouble() * 3.5,
-              color: _winColors[rng.nextInt(_winColors.length)],
-            ));
+    return List.generate(80, (_) => _ConfettiParticle(
+          x: rng.nextDouble(),
+          startY: -rng.nextDouble() * 0.5,
+          size: 4.0 + rng.nextDouble() * 9.0,
+          speed: 0.3 + rng.nextDouble() * 0.6,
+          wobble: rng.nextDouble() * 2 * pi,
+          wobbleFreq: 1.5 + rng.nextDouble() * 3.5,
+          color: _winColors[rng.nextInt(_winColors.length)],
+        ));
   }
 
   static const _winColors = [
@@ -5955,10 +5395,7 @@ class _WinConfettiPainter extends CustomPainter {
     for (final p in _particles) {
       final t = ((progress * p.speed) % 1.0).clamp(0.0, 1.0);
       final y = (p.startY + t) * size.height;
-      if (y < 0 || y > size.height) {
-        idx++;
-        continue;
-      }
+      if (y < 0 || y > size.height) { idx++; continue; }
       final wobbleX = sin(t * p.wobbleFreq * pi + p.wobble) * 28.0;
       final x = p.x * size.width + wobbleX;
       final alpha = (1.0 - t * 0.7).clamp(0.0, 1.0);
