@@ -1881,6 +1881,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   void debugForceWin() {
     if (!kDebugMode) return;
     if (_winTriggered) return;
+    if (!isWorldReady.value) return;
     _winTriggered = true;
     sessionPlayTime = DateTime.now().difference(_sessionStartTime);
     isWon.value = true;
