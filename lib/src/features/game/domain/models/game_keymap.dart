@@ -71,6 +71,11 @@ class GameKeymap {
   // ── World toggle ───────────────────────────────────────────────────────────
   static const LogicalKeyboardKey worldToggle = LogicalKeyboardKey.keyQ;
 
+  // ── Debug (only active in debug builds) ────────────────────────────────────
+  /// Instantly triggers the win screen without meeting the win condition.
+  /// Only evaluated when [kDebugMode] is true.
+  static const LogicalKeyboardKey debugForceWin = LogicalKeyboardKey.f9;
+
   // ── Overlay ────────────────────────────────────────────────────────────────
   /// Show/hide the keymap overlay.
   static const LogicalKeyboardKey keymapOverlay    = LogicalKeyboardKey.f1;
@@ -134,6 +139,11 @@ class GameKeymap {
     KeymapEntry(
       keys: 'M',
       action: 'Missionsboard öffnen / schließen',
+      category: 'Allgemein',
+    ),
+    KeymapEntry(
+      keys: 'F9',
+      action: 'Win-Screen sofort auslösen (nur Debug-Build)',
       category: 'Allgemein',
     ),
   ];

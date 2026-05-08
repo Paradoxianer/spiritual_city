@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
@@ -112,6 +112,23 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> wakeupMessage = ValueNotifier(null);
 
+  /// True once the win condition has been met (all NPCs converted + all loaded
+  /// cells positive).  Set to true at most once per session to prevent
+  /// double-triggering.  Flutter overlays listen to this to show the win screen.
+  final ValueNotifier<bool> isWon = ValueNotifier(false);
+
+  /// Guards against re-triggering the win screen a second time.
+  bool _winTriggered = false;
+
+  /// Timestamp of the moment [onLoad] completed – used to compute the
+  /// "time played" statistic shown on the win screen.
+  late DateTime _sessionStartTime;
+
+  /// The play time captured the moment the win condition was triggered.
+  /// Fixed so the stats panel shows the time at which the player won, not a
+  /// live clock that keeps incrementing after the win screen is shown.
+  Duration sessionPlayTime = Duration.zero;
+
   /// Influence system – manages AoE spiritual-state effects with duration/decay.
   final InfluenceService influenceService = InfluenceService();
 
@@ -181,6 +198,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   // Faint / game-over state
   bool _faintTriggered = false;
+
+  // Win-condition polling timer (checked every 5 seconds when the world is ready)
+  double _winCheckTimer = 0.0;
+  static const double _winCheckInterval = 5.0;
+
+  // City scope for global win checks.
+  // DistrictSelector uses _outskirtsRadius=650 and _ringNoiseAmp=40, so the
+  // city can extend to roughly 690 cells from origin.
+  static const double _cityScopeRadiusCells = 690.0;
+  static const double _cityScopeRadiusCellsSquared =
+      _cityScopeRadiusCells * _cityScopeRadiusCells;
+  static const int _cityScopeChunkRadius = 22; // ceil(690 / 32)
 
   // Hunger mechanics thresholds (as fractions of maxHunger)
   static const double hungerWarnThreshold     = 0.30; // < 30%: slower movement
@@ -343,6 +372,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         _updateButtonStyles();
       }
       isWorldReady.value = true;
+      _sessionStartTime = DateTime.now();
       _log.info(
         '--- GAME READY --- '
         'pastorhousePos=${pastorhousePosition.value} '
@@ -1495,6 +1525,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       if (isSpiritualWorld) _updateHudVisibility(); // Dynamic dock update
       // Tick influence effects (decay / reversal of timed AoE events).
       influenceService.update(dt, grid);
+      // Periodically check the win condition (spiritual state can change from
+      // prayer combat and natural decay, not just NPC conversions).
+      _winCheckTimer += dt;
+      if (_winCheckTimer >= _winCheckInterval) {
+        _winCheckTimer = 0.0;
+        _checkWinCondition();
+      }
     }
     // Always push player position so the Flutter HUD compass stays live.
     playerWorldPosition.value = player.position.clone();
@@ -1758,6 +1795,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     missionCompleteMessage.dispose();
     conversionToastMessage.dispose();
     isFainting.dispose();
+    isWon.dispose();
     wakeupMessage.dispose();
     tutorialService.dispose();
     super.onRemove();
@@ -1783,6 +1821,92 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     progress.recordConversion();
     conversionToastMessage.value = '+1 ✝';
     _checkAndApplyModifiers();
+    _checkWinCondition();
+  }
+
+  /// Checks whether the win condition is met and fires [isWon] if so.
+  ///
+  /// Win condition (both must be true simultaneously):
+  /// 1. Every generated NPC in the whole city scope is Christian.
+  /// 2. Every generated city cell in the whole city scope is positive (> 0).
+  ///
+  /// We first run a cheap loaded-world pre-check and only then run the global
+  /// deterministic city-wide scan.
+  void _checkWinCondition() {
+    if (_winTriggered) return;
+
+    // Cheap pre-check: if loaded entities already fail, city-wide scan can be skipped.
+    final loadedNpcs = chunkManager.allNPCModels;
+    if (!loadedNpcs.every((n) => n.isChristian)) return;
+    for (final chunk in grid.getLoadedChunks()) {
+      for (final cell in chunk.cells.values) {
+        if (!_isCellWithinCityScope(cell.x, cell.y)) continue;
+        if (cell.spiritualState <= 0) return;
+      }
+    }
+
+    bool hasAnyNpc = false;
+
+    // Global deterministic scan across the full city scope.
+    for (int cy = -_cityScopeChunkRadius; cy <= _cityScopeChunkRadius; cy++) {
+      for (int cx = -_cityScopeChunkRadius; cx <= _cityScopeChunkRadius; cx++) {
+        final chunk = _chunkForGlobalWinCheck(cx, cy);
+
+        bool chunkTouchesCityScope = false;
+        for (final cell in chunk.cells.values) {
+          if (!_isCellWithinCityScope(cell.x, cell.y)) continue;
+          chunkTouchesCityScope = true;
+          if (cell.spiritualState <= 0) return;
+        }
+        if (!chunkTouchesCityScope) continue;
+
+        final npcs =
+            chunkManager.npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
+        for (final npc in npcs) {
+          final npcCellX = (npc.homePosition.x / 32).floor();
+          final npcCellY = (npc.homePosition.y / 32).floor();
+          if (!_isCellWithinCityScope(npcCellX, npcCellY)) continue;
+          hasAnyNpc = true;
+          if (!npc.isChristian) return;
+        }
+      }
+    }
+
+    if (!hasAnyNpc) return;
+
+    _winTriggered = true;
+    sessionPlayTime = DateTime.now().difference(_sessionStartTime);
+    isWon.value = true;
+    _log.info(
+      'WIN CONDITION MET – all generated city NPCs are Christian and all city cells are positive',
+    );
+  }
+
+  bool _isCellWithinCityScope(int wx, int wy) {
+    final distSq = (wx * wx + wy * wy).toDouble();
+    return distSq <= _cityScopeRadiusCellsSquared;
+  }
+
+  /// Instantly triggers the win screen without checking the normal win
+  /// condition.  Only available in debug builds ([kDebugMode] must be true).
+  void debugForceWin() {
+    if (!kDebugMode) return;
+    if (_winTriggered) return;
+    if (!isWorldReady.value) return;
+    _winTriggered = true;
+    sessionPlayTime = DateTime.now().difference(_sessionStartTime);
+    isWon.value = true;
+    _log.info('DEBUG – win screen forced via F9 shortcut');
+  }
+
+  /// Returns an existing loaded chunk or a temporary generated chunk for
+  /// deterministic city-wide win checks.
+  CityChunk _chunkForGlobalWinCheck(int chunkX, int chunkY) {
+    final loaded = grid.getLoadedChunk(chunkX, chunkY);
+    if (loaded != null) return loaded;
+    final chunk = CityChunk(chunkX: chunkX, chunkY: chunkY);
+    generator.generateChunk(chunk);
+    return chunk;
   }
 
   void _checkAndApplyModifiers() {

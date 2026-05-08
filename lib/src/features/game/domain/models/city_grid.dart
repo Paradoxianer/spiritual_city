@@ -56,4 +56,7 @@ class CityGrid {
   }
 
   List<CityChunk> getLoadedChunks() => _chunks.values.toList();
+
+  /// Returns a loaded chunk at [chunkX],[chunkY], or null if not loaded yet.
+  CityChunk? getLoadedChunk(int chunkX, int chunkY) => _chunks['$chunkX,$chunkY'];
 }

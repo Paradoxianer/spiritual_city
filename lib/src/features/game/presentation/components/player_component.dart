@@ -240,6 +240,11 @@ class PlayerComponent extends PositionComponent
       // Directional hint could be handled here if needed
     }
 
+    // ── Debug: F9 forces the win screen immediately (debug builds only) ───────
+    if (event is KeyUpEvent && event.logicalKey == GameKeymap.debugForceWin) {
+      game.debugForceWin();
+    }
+
     return true;
   }
 
