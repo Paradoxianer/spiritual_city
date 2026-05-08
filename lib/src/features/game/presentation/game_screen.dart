@@ -721,10 +721,11 @@ class _DialogOverlayState extends State<DialogOverlay> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        const dialogOuterPadding = 16.0;
         final availableHeight = constraints.maxHeight.isFinite
             ? constraints.maxHeight
             : media.size.height;
-        final maxDialogHeight = (availableHeight - 16).clamp(220.0, availableHeight);
+        final maxDialogHeight = (availableHeight - dialogOuterPadding).clamp(220.0, availableHeight);
         final targetHeight = (availableHeight * (isLandscape ? 0.8 : 0.45))
             .clamp(260.0, maxDialogHeight);
 

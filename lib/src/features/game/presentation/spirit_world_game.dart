@@ -2026,6 +2026,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double _kJoystickMarginBottom = 40.0;
   static const double _kJoystickBgRadius     = 50.0;
   static const double _kJoystickKnobRadius   = 20.0;
+  static const double _kJoystickTapTolerance = 6.0;
 
   /// Game-level tap handler.  Detects double-taps within the joystick area
   /// for desktop / web sprint activation.  This is more reliable than
@@ -2040,7 +2041,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       );
       // Sprint double-tap must happen on the center joystick knob, not on the
       // outer joystick ring.
-      if ((event.canvasPosition - jCenter).length <= _kJoystickKnobRadius + 6) {
+      if ((event.canvasPosition - jCenter).length <= _kJoystickKnobRadius + _kJoystickTapTolerance) {
         _sprintJoystick.recordTapInteraction();
       }
     }
@@ -2191,6 +2192,7 @@ class _SprintJoystickComponent extends JoystickComponent {
 
   static const int _kDoubleTapMinMs = 120;
   static const int _kDoubleTapMaxMs = 260;
+  static const int _kNoPreviousInteractionElapsedMs = 99999;
 
   int _lastInteractionMs = 0;
   bool _sprinting = false;
@@ -2223,7 +2225,9 @@ class _SprintJoystickComponent extends JoystickComponent {
   /// Record an interaction start.  Returns true when sprint is activated.
   bool _recordInteraction() {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final elapsed = _lastInteractionMs > 0 ? now - _lastInteractionMs : 99999;
+    final elapsed = _lastInteractionMs > 0
+        ? now - _lastInteractionMs
+        : _kNoPreviousInteractionElapsedMs;
 
     if (!_sprinting &&
         elapsed >= _kDoubleTapMinMs &&
