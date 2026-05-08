@@ -716,12 +716,23 @@ class _DialogOverlayState extends State<DialogOverlay> {
     final dialog = widget.game.activeDialog;
     if (dialog == null) return const SizedBox.shrink();
     final model = dialog.npcModel;
+    final media = MediaQuery.of(context);
+    final isLandscape = media.orientation == Orientation.landscape;
 
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.45,
-        margin: const EdgeInsets.all(16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : media.size.height;
+        final maxDialogHeight = (availableHeight - 16).clamp(220.0, availableHeight);
+        final targetHeight = (availableHeight * (isLandscape ? 0.8 : 0.45))
+            .clamp(260.0, maxDialogHeight);
+
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            height: targetHeight,
+            margin: EdgeInsets.all(isLandscape ? 10 : 16),
         decoration: BoxDecoration(
           color: const Color(0xFF075E54).withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(20),
@@ -762,10 +773,14 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                      child: ListView.builder(
+                      child: Scrollbar(
                         controller: _scrollController,
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
+                        thumbVisibility: true,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
+                        ),
                       ),
                     ),
                   ),
@@ -781,7 +796,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
             // ── Action chips ──────────────────────────────────────────────────
             if (!_isSessionOver)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: isLandscape ? 6 : 10),
                 decoration: const BoxDecoration(
                   color: Colors.black26,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
@@ -819,9 +834,11 @@ class _DialogOverlayState extends State<DialogOverlay> {
                         // Fixed key indices: talk=1, counsel=2, pray=3,
                         // bible=4, help=5, convert=6. The numbers are stable
                         // even when optional chips (help/convert) are hidden.
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
                             _EmojiChip(
                               emoji: '💬',
                               hint: '→✝️',
@@ -871,13 +888,16 @@ class _DialogOverlayState extends State<DialogOverlay> {
                                 onTap: () =>
                                     _handleInteraction('convert', '✝️?'),
                               ),
-                          ],
+                            ],
+                          ),
                         );
                       }),
               ),
           ],
         ),
       ),
+    );
+      },
     );
   }
 }

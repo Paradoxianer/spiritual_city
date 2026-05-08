@@ -22,19 +22,29 @@ class PlayerComponent extends PositionComponent
 
   /// Additional hunger drained per second of active sprint movement.
   static const double kSprintHungerDrainRate = 1.0;
+  static const double kSprintJoystickThreshold = 0.8;
 
   /// True when the player is holding a direction key after a double-tap.
   bool _isSprintingKeyboard = false;
 
-  /// True when the joystick double-drag sprint is active (set by game).
+  /// True when joystick double-tap sprint is armed by the joystick component.
   bool _isSprintingJoystick = false;
 
   /// Whether the player is currently sprinting (real world only).
   bool get isSprinting =>
-      (_isSprintingKeyboard || _isSprintingJoystick) && !game.isSpiritualWorld;
+      (_isSprintingKeyboard ||
+          (_isSprintingJoystick && _isJoystickSprinting)) &&
+      !game.isSpiritualWorld;
+
+  static bool isJoystickSprintThresholdReached(double joystickMagnitude) =>
+      joystickMagnitude >= kSprintJoystickThreshold;
+
+  bool get _isJoystickSprinting =>
+      !joystick.delta.isZero() &&
+      isJoystickSprintThresholdReached(joystick.relativeDelta.length);
 
   void startSprintJoystick() => _isSprintingJoystick = true;
-  void stopSprintJoystick()  => _isSprintingJoystick = false;
+  void stopSprintJoystick() => _isSprintingJoystick = false;
 
   // Keyboard double-tap detection state.
   LogicalKeyboardKey? _lastDirKeyDown;
