@@ -48,30 +48,35 @@ class _MenuScreenState extends State<MenuScreen> {
             ),
             // Content
             LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: ConstrainedBox(
-                  constraints:
-                      BoxConstraints(minHeight: constraints.maxHeight - 24),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildHeader(),
-                        const SizedBox(height: 32),
-                        _buildMenuButtons(context),
-                        const SizedBox(height: 24),
-                        LanguageToggle(
-                          languageNotifier: widget.menuService.languageNotifier,
-                        ),
-                        const SizedBox(height: 8),
-                      ],
+              builder: (context, constraints) {
+                const contentPadding =
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 12);
+                final minContentHeight =
+                    constraints.maxHeight - contentPadding.vertical;
+                return SingleChildScrollView(
+                  padding: contentPadding,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: minContentHeight),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 32),
+                          _buildMenuButtons(context),
+                          const SizedBox(height: 24),
+                          LanguageToggle(
+                            languageNotifier:
+                                widget.menuService.languageNotifier,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ],
         ),
