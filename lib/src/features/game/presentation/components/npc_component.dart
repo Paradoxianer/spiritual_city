@@ -163,7 +163,7 @@ class NPCComponent extends PositionComponent
       final gain =
           (_faithCalc.calculateConversationGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
-      model.interactionCount++;
+      model.interactionCount += 4;
       model.lastNpcFaithDelta = gain.toDouble();
       game.recordConversation();
       return _talkEmoji();
