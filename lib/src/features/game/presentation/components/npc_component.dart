@@ -273,9 +273,9 @@ class NPCComponent extends PositionComponent
         model.lastPlayerFaithDelta += 25.0;
         game.gainFaith(25.0);
         game.recordConversion();
-        // Strong positive spiritual area effect on conversion (radius 5).
+        // Strong positive spiritual area effect on conversion.
         // Cells closer to the NPC are affected more strongly.
-        const conversionRadius = 5;
+        const conversionRadius = 6;
         for (int dx = -conversionRadius; dx <= conversionRadius; dx++) {
           for (int dy = -conversionRadius; dy <= conversionRadius; dy++) {
             final distSq = dx * dx + dy * dy;
@@ -285,7 +285,7 @@ class NPCComponent extends PositionComponent
                 final distanceFactor =
                     1.0 - distSq / (conversionRadius * conversionRadius);
                 c.spiritualState =
-                    (c.spiritualState + 0.35 * distanceFactor).clamp(-1.0, 1.0);
+                    (c.spiritualState + 0.45 * distanceFactor).clamp(-1.0, 1.0);
               }
             }
           }

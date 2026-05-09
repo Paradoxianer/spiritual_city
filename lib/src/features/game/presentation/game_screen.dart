@@ -3377,7 +3377,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('readBible')),
           _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen', keyIndex: nk(), onTap: () => _performAction('eat')),
           _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen', keyIndex: nk(), onTap: () => _performAction('sleep')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🕊️+15', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🕊️+22', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionen', keyIndex: nk(), onTap: () => _performAction('missions')),
         ];
 
@@ -3387,7 +3387,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '📖+0.5', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '⏱→', trailingEmoji: '📖+0.2', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian), onTap: () => _performAction('discipleshipGroup')),
         ];
 
       // ── Residential (Apartment) ───────────────────────────────────────
@@ -3396,7 +3396,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '−50🙏→', trailingEmoji: '📖+0.5', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian) || g.faith < 50, onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '⏱→', trailingEmoji: '📖+0.3', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian), onTap: () => _performAction('discipleshipGroup')),
           _ActionMenuRow(leadingEmoji: '🏢', arrowText: '−10🙏→', trailingEmoji: '+1✝️/Bew.', tooltip: 'Hausgemeinschaft segnen', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('blessHousehold')),
         ];
 
@@ -3470,7 +3470,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '💼', arrowText: '⏱→', trailingEmoji: '+3✝️', tooltip: 'Gespräch mit Chef', keyIndex: nk(), onTap: () => _performAction('talkBoss')),
           _ActionMenuRow(leadingEmoji: '🛒', arrowText: '−5💰→', trailingEmoji: '+20🍞❤️', tooltip: 'Einkaufen', keyIndex: nk(), isDisabled: g.materials < 5, onTap: () => _performAction('shopping')),
           _ActionMenuRow(leadingEmoji: '🕊️', arrowText: '−15🙏→', trailingEmoji: '+2✝️', tooltip: 'Segnen', keyIndex: nk(), isDisabled: g.faith < 15, onTap: () => _performAction('bless')),
-          _ActionMenuRow(leadingEmoji: '🤲', arrowText: '−10❤️🍞→', trailingEmoji: '💰?', tooltip: 'Um Spenden bitten', keyIndex: nk(), isDisabled: building.interactionCount <= 2 || g.health < 10 || g.hunger < 10, onTap: () => _performAction('requestDonation')),
+          _ActionMenuRow(leadingEmoji: '🤲', arrowText: '−10❤️🍞→', trailingEmoji: '💰🙏+', tooltip: 'Um Spenden bitten', keyIndex: nk(), isDisabled: building.interactionCount <= 3 || g.health < 10 || g.hunger < 10, onTap: () => _performAction('requestDonation')),
         ];
 
       // ── Everything else ───────────────────────────────────────────────

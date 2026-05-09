@@ -20,7 +20,8 @@ import 'cell_component.dart';
 /// - Very weakly-held cells decay slightly toward neutral
 ///
 /// Lastenheft §5.2 & §5.3
-class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorldGame> {
+class SpiritualDynamicsSystem extends Component
+    with HasGameReference<SpiritWorldGame> {
   static final _log = Logger('SpiritualDynamicsSystem');
 
   /// How often (in real seconds) the spiritual world updates.
@@ -69,20 +70,20 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
 
   // ── Daemon spawning ───────────────────────────────────────────────────────
 
-  static const int _maxDaemonsEasy   = 10;
+  static const int _maxDaemonsEasy = 10;
   static const int _maxDaemonsNormal = 15;
-  static const int _maxDaemonsHard   = 20;
+  static const int _maxDaemonsHard = 20;
 
   /// Spawn chance per tick per strongly-negative region – scales with difficulty.
-  static const double _daemonSpawnChanceEasy   = 0.08;
+  static const double _daemonSpawnChanceEasy = 0.08;
   static const double _daemonSpawnChanceNormal = 0.15;
-  static const double _daemonSpawnChanceHard   = 0.28;
+  static const double _daemonSpawnChanceHard = 0.28;
 
   /// Initial daemon energy by difficulty (negative; closer to 0 = weaker daemon).
   /// Tripled vs. original values so daemons persist long enough to feel threatening.
-  static const double _daemonEnergyEasy   = -180.0;
+  static const double _daemonEnergyEasy = -180.0;
   static const double _daemonEnergyNormal = -300.0;
-  static const double _daemonEnergyHard   = -420.0;
+  static const double _daemonEnergyHard = -420.0;
 
   int _daemonIdCounter = 0;
   final math.Random _rng = math.Random(77);
@@ -112,8 +113,8 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   }
 
   // Modifier support – injected by the ModifierManager
-  double modifierSpreadMultiplier = 1.0;  // Wachstum modifier
-  double modifierDecayReduction = 0.0;    // Bewahrung modifier
+  double modifierSpreadMultiplier = 1.0; // Wachstum modifier
+  double modifierDecayReduction = 0.0; // Bewahrung modifier
 
   @override
   void update(double dt) {
@@ -159,7 +160,8 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
           int neighborCount = 0;
           int strongDarkNeighborCount = 0;
           for (final dir in _dirs) {
-            final neighbor = game.grid.getCell(cell.x + dir[0], cell.y + dir[1]);
+            final neighbor =
+                game.grid.getCell(cell.x + dir[0], cell.y + dir[1]);
             if (neighbor != null) {
               neighborSum += neighbor.spiritualState;
               neighborCount++;
@@ -233,27 +235,32 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   }
 
   void _maybeSpawnDaemons(List<CityChunk> chunks) {
-    // Difficulty-scaled daemon cap
-    final maxDaemons = switch (game.difficulty) {
-      Difficulty.easy   => _maxDaemonsEasy,
+    // Difficulty-scaled daemon cap, then adapted to player progression.
+    final baseMaxDaemons = switch (game.difficulty) {
+      Difficulty.easy => _maxDaemonsEasy,
       Difficulty.normal => _maxDaemonsNormal,
-      Difficulty.hard   => _maxDaemonsHard,
+      Difficulty.hard => _maxDaemonsHard,
     };
+    final progressionScale = _daemonProgressionScale();
+    final maxDaemons =
+        ((baseMaxDaemons * progressionScale).round().clamp(4, 32)).toInt();
 
-    int existingDaemons = game.world.children.whereType<DaemonComponent>().length;
+    int existingDaemons =
+        game.world.children.whereType<DaemonComponent>().length;
     if (existingDaemons >= maxDaemons) return;
 
-    // Difficulty-scaled base spawn chance
+    // Difficulty-scaled base spawn chance.
     final baseChance = switch (game.difficulty) {
-      Difficulty.easy   => _daemonSpawnChanceEasy,
+      Difficulty.easy => _daemonSpawnChanceEasy,
       Difficulty.normal => _daemonSpawnChanceNormal,
-      Difficulty.hard   => _daemonSpawnChanceHard,
+      Difficulty.hard => _daemonSpawnChanceHard,
     };
+    final scaledBaseChance = (baseChance * progressionScale).clamp(0.04, 0.45);
 
     // Spawn chance boosted when the player has recently prayed (Issue #31)
     final spawnChance = isPrayerAttractionActive
-        ? baseChance * (1 + prayerAttractionSpawnBonus)
-        : baseChance;
+        ? scaledBaseChance * (1 + prayerAttractionSpawnBonus)
+        : scaledBaseChance;
 
     outer:
     for (final chunk in chunks) {
@@ -277,7 +284,8 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       cell.x * CellComponent.cellSize + CellComponent.cellSize / 2,
       cell.y * CellComponent.cellSize + CellComponent.cellSize / 2,
     );
-    final model = DaemonModel(id: id, position: spawnPos, energy: _initialEnergy());
+    final model =
+        DaemonModel(id: id, position: spawnPos, energy: _initialEnergy());
     final component = DaemonComponent(model);
     game.world.add(component);
     _log.fine('Spawned daemon $id at (${cell.x}, ${cell.y})');
@@ -289,11 +297,14 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   /// invisible world.  Dark cells (state < −0.3) are preferred so daemons
   /// tend to emerge from shadow rather than light.
   void _maybeContinuousSpawn() {
-    final maxDaemons = switch (game.difficulty) {
-      Difficulty.easy   => _maxDaemonsEasy,
+    final baseMaxDaemons = switch (game.difficulty) {
+      Difficulty.easy => _maxDaemonsEasy,
       Difficulty.normal => _maxDaemonsNormal,
-      Difficulty.hard   => _maxDaemonsHard,
+      Difficulty.hard => _maxDaemonsHard,
     };
+    final maxDaemons =
+        ((baseMaxDaemons * _daemonProgressionScale()).round().clamp(4, 32))
+            .toInt();
     if (game.world.children.whereType<DaemonComponent>().length >= maxDaemons) {
       return;
     }
@@ -339,10 +350,10 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
 
   /// Returns difficulty-scaled initial energy for a newly spawned daemon.
   double _initialEnergy() => switch (game.difficulty) {
-    Difficulty.easy   => _daemonEnergyEasy,
-    Difficulty.normal => _daemonEnergyNormal,
-    Difficulty.hard   => _daemonEnergyHard,
-  };
+        Difficulty.easy => _daemonEnergyEasy * _daemonProgressionScale(),
+        Difficulty.normal => _daemonEnergyNormal * _daemonProgressionScale(),
+        Difficulty.hard => _daemonEnergyHard * _daemonProgressionScale(),
+      };
 
   /// Spawns [count] daemons in a random ring (100–300 px) around the player.
   ///
@@ -354,10 +365,14 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     const double maxDist = 300.0;
     final energy = _initialEnergy();
 
-    for (int i = 0; i < count; i++) {
+    final effectiveCount =
+        ((count * _daemonProgressionScale()).round().clamp(1, 12)).toInt();
+
+    for (int i = 0; i < effectiveCount; i++) {
       // Spread daemons evenly around the player (+ small random jitter)
-      final baseAngle = (i / count) * math.pi * 2;
-      final angle = baseAngle + (_rng.nextDouble() - 0.5) * (math.pi / count);
+      final baseAngle = (i / effectiveCount) * math.pi * 2;
+      final angle =
+          baseAngle + (_rng.nextDouble() - 0.5) * (math.pi / effectiveCount);
       final dist = minDist + _rng.nextDouble() * (maxDist - minDist);
 
       final spawnPos = Vector2(
@@ -373,7 +388,26 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     }
   }
 
+  double _daemonProgressionScale() {
+    final entries = game.progress.spiritualWorldEntries.toDouble();
+    final entryPressure = (entries * 0.07).clamp(0.0, 1.2);
+    final profile = game.progress.combatProfile;
+    var totalUpgradeLevels = profile.shieldLevel + profile.helmLevel;
+    for (final set in profile.modes.values) {
+      totalUpgradeLevels += set.radiusLevel +
+          set.strengthLevel +
+          set.durationLevel +
+          set.speedLevel;
+    }
+    final upgradePower =
+        (totalUpgradeLevels.toDouble() * 0.025).clamp(0.0, 0.7);
+    return (1.0 + entryPressure - upgradePower).clamp(0.8, 2.0);
+  }
+
   static const List<List<int>> _dirs = [
-    [1, 0], [-1, 0], [0, 1], [0, -1],
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
   ];
 }

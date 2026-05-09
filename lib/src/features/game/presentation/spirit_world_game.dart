@@ -688,6 +688,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     
     if (!isSpiritualWorld) {
       spendFaith(worldToggleCost);
+      progress.recordSpiritualWorldEntry();
     }
     
     final wasInSpiritWorld = isSpiritualWorld;
@@ -1231,8 +1232,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         data.building.type == BuildingType.pastorHouse) {
       _brightenspiritualAreaAroundPosition(
         pastorhousePosition.value ?? player.position,
-        radius: 12,
-        amount: 0.12,
+        radius: 14,
+        amount: 0.16,
       );
     }
     // ── AoE influence with duration/decay (Issue #59) ─────────────────────
@@ -1819,6 +1820,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Record an NPC conversion
   void recordConversion() {
     progress.recordConversion();
+    progress.addInsight(0.2);
     conversionToastMessage.value = '+1 ✝';
     _checkAndApplyModifiers();
     _checkWinCondition();

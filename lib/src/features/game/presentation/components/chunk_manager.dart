@@ -124,7 +124,9 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     final Set<String> activeKeys = {};
 
     for (int x = centerX - renderDistance; x <= centerX + renderDistance; x++) {
-      for (int y = centerY - renderDistance; y <= centerY + renderDistance; y++) {
+      for (int y = centerY - renderDistance;
+          y <= centerY + renderDistance;
+          y++) {
         final key = '$x,$y';
         activeKeys.add(key);
         if (!_renderedChunks.containsKey(key)) {
@@ -168,9 +170,7 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       final Map<String, List<NPCModel>> npcsByBuilding = {};
       for (final npc in npcs) {
         if (npc.homeBuildingId != null) {
-          npcsByBuilding
-              .putIfAbsent(npc.homeBuildingId!, () => [])
-              .add(npc);
+          npcsByBuilding.putIfAbsent(npc.homeBuildingId!, () => []).add(npc);
         }
       }
 
@@ -230,7 +230,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
           // (e.g. pastorHouse).  Promote the type whenever a later cell reveals
           // a more specific classification so the BuildingModel is always
           // created with the correct type.
-          if (_isSpecialBuildingType(data.type) && !_isSpecialBuildingType(info.type)) {
+          if (_isSpecialBuildingType(data.type) &&
+              !_isSpecialBuildingType(info.type)) {
             info.type = data.type;
           }
           info.cells.add([x, y]);
@@ -256,8 +257,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         // Fallback: use the building cell closest to any chunk boundary, since
         // the road entrance is most likely in the adjacent chunk.  This keeps
         // the interaction point at the building wall rather than deep inside.
-        final edgeCell = bInfo.cells
-            .reduce((a, b) => _distToChunkEdge(a) <= _distToChunkEdge(b) ? a : b);
+        final edgeCell = bInfo.cells.reduce(
+            (a, b) => _distToChunkEdge(a) <= _distToChunkEdge(b) ? a : b);
         final wx = chunk.getWorldX(edgeCell[0]);
         final wy = chunk.getWorldY(edgeCell[1]);
         pos = Vector2(
@@ -275,13 +276,13 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
         residents: residents,
         isHomebase: bInfo.type == BuildingType.pastorHouse,
         // Pastor house starts fully sanctified so the faith bar is immediately visible.
-        // Churches and cathedrals start at 50% faith – they are already active
+        // Churches and cathedrals start above 50% faith – they are already active
         // congregations before the pastor arrives.
         faith: bInfo.type == BuildingType.pastorHouse
             ? 100.0
             : (bInfo.type == BuildingType.church ||
-                      bInfo.type == BuildingType.cathedral)
-                ? 50.0
+                    bInfo.type == BuildingType.cathedral)
+                ? 60.0
                 : 0.0,
       );
       game.applySavedBuildingState(model);
@@ -310,13 +311,19 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     List<List<int>> buildingCells,
   ) {
     const dirs = [
-      [0, 1], [0, -1], [1, 0], [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
     ];
     for (final cell in buildingCells) {
       for (final d in dirs) {
         final nx = cell[0] + d[0];
         final ny = cell[1] + d[1];
-        if (nx < 0 || ny < 0 || nx >= CityChunk.chunkSize || ny >= CityChunk.chunkSize) {
+        if (nx < 0 ||
+            ny < 0 ||
+            nx >= CityChunk.chunkSize ||
+            ny >= CityChunk.chunkSize) {
           continue;
         }
         final neighbour = chunk.cells['$nx,$ny'];

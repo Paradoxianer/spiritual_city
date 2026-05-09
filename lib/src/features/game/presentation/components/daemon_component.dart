@@ -20,12 +20,14 @@ import 'cell_component.dart';
 /// management is decoupled onto its own 2-second tick.
 ///
 /// Lastenheft Issue #31
-class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
+class DaemonComponent extends PositionComponent
+    with HasGameReference<SpiritWorldGame> {
   final DaemonModel model;
 
-  static const double _daemonSize = 18.0;
+  static const double _baseDaemonSize = 18.0;
 
   double _cellDrainMultiplier = 1.0;
+  double _strengthFactor = 1.0;
 
   // Active effect tracking (Issue #9)
   final Map<PrayerMode, double> _activeEffects = {};
@@ -36,18 +38,18 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Angular velocity (rad/s) – controls how fast the daemon circles the player.
   double _angularSpeed = 1.2;
 
-  static const double _angularSpeedEasy   = 0.8;  // ~7.9 s / full orbit
-  static const double _angularSpeedNormal = 1.2;  // ~5.2 s / full orbit
-  static const double _angularSpeedHard   = 1.8;  // ~3.5 s / full orbit
+  static const double _angularSpeedEasy = 0.8; // ~7.9 s / full orbit
+  static const double _angularSpeedNormal = 1.2; // ~5.2 s / full orbit
+  static const double _angularSpeedHard = 1.8; // ~3.5 s / full orbit
 
-  double _orbitAngle  = 0.0;
+  double _orbitAngle = 0.0;
   double _orbitRadius = 260.0;
 
   /// Orbit radius at which the daemon strikes the player on contact.
   static const double _orbitRadiusMin = 50.0;
 
   /// How fast the orbit shrinks per second (continuous inward spiral).
-  static const double _spiralSpeedNormal = 4.0;  // px/s
+  static const double _spiralSpeedNormal = 4.0; // px/s
   static const double _spiralSpeedPrayer = 22.0; // px/s – faster during prayer
 
   // ── Slime trail ───────────────────────────────────────────────────────────
@@ -76,18 +78,18 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     ..strokeWidth = 2.0;
 
   // Pre-computed static colours that don't change (allocated once).
-  static final Color _auraFlicker   = Colors.white.withValues(alpha: 0.8);
-  static final Color _coreFlicker   = Colors.white.withValues(alpha: 0.9);
-  static final Color _coreNormal    = Colors.red[800]!.withValues(alpha: 0.9);
-  static final Color _arcColor      = Colors.deepOrange.withValues(alpha: 0.7);
+  static final Color _auraFlicker = Colors.white.withValues(alpha: 0.8);
+  static final Color _coreFlicker = Colors.white.withValues(alpha: 0.9);
+  static final Color _coreNormal = Colors.red[800]!.withValues(alpha: 0.9);
+  static final Color _arcColor = Colors.deepOrange.withValues(alpha: 0.7);
   // Lerp endpoints pre-allocated so Color.lerp() doesn't box them each frame.
-  static final Color _auraLerpFrom  = Colors.red[900]!.withValues(alpha: 0.6);
-  static final Color _auraLerpTo    = Colors.black.withValues(alpha: 0.9);
+  static final Color _auraLerpFrom = Colors.red[900]!.withValues(alpha: 0.6);
+  static final Color _auraLerpTo = Colors.black.withValues(alpha: 0.9);
 
   DaemonComponent(this.model)
       : super(
           position: model.position.clone(),
-          size: Vector2.all(_daemonSize),
+          size: Vector2.all(_baseDaemonSize),
           anchor: Anchor.center,
           priority: 95,
         );
@@ -95,21 +97,24 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   @override
   Future<void> onLoad() async {
     _angularSpeed = switch (game.difficulty) {
-      Difficulty.easy   => _angularSpeedEasy,
+      Difficulty.easy => _angularSpeedEasy,
       Difficulty.normal => _angularSpeedNormal,
-      Difficulty.hard   => _angularSpeedHard,
+      Difficulty.hard => _angularSpeedHard,
     };
     _cellDrainMultiplier =
         1.0 / FaithCalculatorService.difficultyFactorFor(game.difficulty);
+    _strengthFactor = (model.initialEnergy.abs() / 260.0).clamp(0.8, 2.1);
+    size = Vector2.all(_baseDaemonSize * _strengthFactor);
 
     // Initialise paint that requires a const expression (can't be done in field).
-    _auraPaint = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    _auraPaint = Paint()
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
     // Arc color never changes.
     _arcPaint.color = _arcColor;
 
     // Give each daemon a unique starting angle and radius so they spread out.
     final rng = math.Random(model.id.hashCode);
-    _orbitAngle  = rng.nextDouble() * math.pi * 2;
+    _orbitAngle = rng.nextDouble() * math.pi * 2;
     _orbitRadius = 180.0 + rng.nextDouble() * 180.0; // 180–360 px
   }
 
@@ -132,7 +137,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // ── Advance orbit angle every frame ───────────────────────────────────────
     double effectiveAngularSpeed = _angularSpeed;
     if (_activeEffects.containsKey(PrayerMode.slow)) {
-      effectiveAngularSpeed *= 0.4; // Slow down movement
+      effectiveAngularSpeed *= 0.25; // Slow down movement
     }
     _orbitAngle += effectiveAngularSpeed * dt;
 
@@ -140,15 +145,15 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     double spiralSpeed = game.spiritualDynamics.isPrayerAttractionActive
         ? _spiralSpeedPrayer
         : _spiralSpeedNormal;
-    
+
     if (_activeEffects.containsKey(PrayerMode.slow)) {
-      spiralSpeed *= 0.5; // Shrink slower
+      spiralSpeed *= 0.30; // Shrink much slower
     }
 
     // Persistent Rebuke resistance (Option 2)
     if (_activeEffects.containsKey(PrayerMode.rebuke)) {
       // Base resistance + strength bonus. Higher faith/strength = stronger push
-      final resistance = 15.0 + (game.faith / 5.0);
+      final resistance = 24.0 + (game.faith / 4.0);
       spiralSpeed -= resistance; // Reduces or reverses the approach speed
     }
 
@@ -197,9 +202,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
     if (cell == null) return;
-    cell.spiritualState =
-        (cell.spiritualState - _slimeDrainRate * _cellDrainMultiplier * dt)
-            .clamp(-1.0, 1.0);
+    cell.spiritualState = (cell.spiritualState -
+            _slimeDrainRate * _cellDrainMultiplier * _strengthFactor * dt)
+        .clamp(-1.0, 1.0);
   }
 
   // ── Energy tick ────────────────────────────────────────────────────────────
@@ -231,7 +236,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   void takeDamage(double amount, {PrayerMode? mode, double duration = 0}) {
     if (model.dissolved) return;
     _hitFlickerTimer = _hitFlickerDuration;
-    
+
     // Apply effect if provided
     if (mode != null && duration > 0) {
       _activeEffects[mode] = duration;
@@ -239,18 +244,18 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         // Initial physical "push" velocity (The "Impact")
         // Scaled by weight (heavier daemons are harder to push)
         final weight = (model.initialEnergy.abs() / 50.0).clamp(1.0, 5.0);
-        final impulse = (120.0 + (game.faith / 2.0)) / weight;
+        final impulse = (180.0 + (game.faith * 0.8)) / weight;
         _knockbackVelocity = impulse;
       }
     }
 
     double finalDamage = amount;
-    
+
     // Drain effect makes the daemon take much more damage
     if (_activeEffects.containsKey(PrayerMode.drain)) {
-      finalDamage *= 1.8; 
+      finalDamage *= 2.5;
     }
-    
+
     // Liberation damage is standard, but specialized for cleansing
     if (mode == PrayerMode.liberation) {
       finalDamage *= 1.2;
@@ -296,8 +301,8 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Daemon killed by Drain: Pastor absorbs energy, no explosion.
   void _absorb() {
     model.dissolved = true;
-    // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
-    final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0);
+    // Energy transfer: Pastor gains only a small amount of Faith.
+    final faithGain = (model.initialEnergy.abs() / 70.0).clamp(2.0, 6.0);
     game.gainFaith(faithGain);
     removeFromParent();
   }
@@ -327,8 +332,8 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // Difficulty amplifier: hard daemons hit harder.
     final amp = _cellDrainMultiplier; // easy=0.67, normal=1.0, hard=2.0
 
-    final hpDamage     = (8.0 * strength * amp).clamp(1.0, 30.0);
-    final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0) *
+    final hpDamage = (8.0 * strength * amp).clamp(1.0, 30.0);
+    final faithDamage = (10.0 * strength * amp).clamp(1.0, 40.0) *
         (1.0 - game.progress.combatProfile.shieldDamageReduction);
     final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0) *
         (1.0 - game.progress.combatProfile.helmHungerReduction);
@@ -364,7 +369,8 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) return;
 
-    const center = Offset(_daemonSize / 2, _daemonSize / 2);
+    final daemonSize = size.x;
+    final center = Offset(daemonSize / 2, daemonSize / 2);
 
     // Simple color pulse driven by the orbit angle – no extra variable needed.
     final t = (math.sin(_orbitAngle * 2) + 1) / 2;
@@ -374,23 +380,23 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     _auraPaint.color = isFlickering
         ? _auraFlicker
         : Color.lerp(_auraLerpFrom, _auraLerpTo, t)!;
-    canvas.drawCircle(center, _daemonSize * 0.7, _auraPaint);
+    canvas.drawCircle(center, daemonSize * 0.7, _auraPaint);
 
     // Core – reuse pre-allocated paint.
     _corePaint.color = isFlickering ? _coreFlicker : _coreNormal;
-    canvas.drawCircle(center, _daemonSize * 0.35, _corePaint);
+    canvas.drawCircle(center, daemonSize * 0.35, _corePaint);
 
     // Active Effect Auras (Issue #9)
     if (_activeEffects.isNotEmpty) {
       final effectModes = _activeEffects.keys.toList();
       for (int i = 0; i < effectModes.length; i++) {
         final mode = effectModes[i];
-        final auraRadius = _daemonSize * (0.8 + (i * 0.25));
+        final auraRadius = daemonSize * (0.8 + (i * 0.25));
         final effectPaint = Paint()
           ..color = mode.color.withValues(alpha: 0.4)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.0;
-        
+
         // Pulsing ring
         final pulse = 1.0 + math.sin(_orbitAngle * 5 + i) * 0.1;
         canvas.drawCircle(center, auraRadius * pulse, effectPaint);
@@ -402,7 +408,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         (model.energy.abs() / model.initialEnergy.abs()).clamp(0.0, 1.0);
     // _arcPaint color is set once in onLoad() and never changes.
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: _daemonSize * 0.45),
+      Rect.fromCircle(center: center, radius: daemonSize * 0.45),
       -math.pi / 2,
       math.pi * 2 * energyFraction,
       false,
