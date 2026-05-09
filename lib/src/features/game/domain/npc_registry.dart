@@ -75,13 +75,12 @@ class NPCRegistry {
       }
     }
 
-    // ── Step 2: for each building spawn N NPCs at a walkable start position ──
+    // ── Step 2: for each building spawn N NPCs at a road start position ──
     for (final bInfo in buildings.values) {
       final count = _npcCountForType(bInfo.type, rng);
       if (count == 0) continue;
 
-      // Find a walkable spawn position: look for a road or open cell adjacent
-      // to any cell of this building.
+      // Find a road spawn position close to this building.
       final spawnCell = _findWalkableNeighbour(chunk, bInfo.cells);
       if (spawnCell == null) continue; // building is landlocked – skip
 
@@ -179,11 +178,11 @@ class NPCRegistry {
   }
 
   /// Searches the direct neighbours of every cell in [buildingCells] for a
-  /// walkable and sufficiently open spawn cell inside [chunk].
+  /// road and sufficiently open spawn cell inside [chunk].
   ///
   /// The chosen cell must be reachable for wandering NPC AI:
-  /// - non-building and non-water
-  /// - at least 2 walkable cardinal neighbours
+  /// - road tile
+  /// - at least 2 road cardinal neighbours
   /// - not tightly enclosed by buildings (minimum free Moore-neighbour space)
   ///
   /// Among all valid cells, the nearest to the building footprint is picked so
@@ -210,8 +209,7 @@ class NPCRegistry {
     if (cell == null) return false;
 
     final data = cell.data;
-    if (data is BuildingData) return false;
-    if (data is NatureData && data.type == NatureType.water) return false;
+    if (data is! RoadData) return false;
 
     const dirs = [
       [0, 1],
@@ -219,7 +217,7 @@ class NPCRegistry {
       [1, 0],
       [-1, 0],
     ];
-    var walkableNeighbours = 0;
+    var roadNeighbours = 0;
     for (final d in dirs) {
       final nx = x + d[0];
       final ny = y + d[1];
@@ -229,9 +227,9 @@ class NPCRegistry {
           ny >= CityChunk.chunkSize) {
         continue;
       }
-      if (_isWalkableChunkCell(chunk, nx, ny)) walkableNeighbours++;
+      if (_isRoadChunkCell(chunk, nx, ny)) roadNeighbours++;
     }
-    if (walkableNeighbours < 2) return false;
+    if (roadNeighbours < 2) return false;
 
     var openMooreNeighbours = 0;
     for (int dy = -1; dy <= 1; dy++) {
@@ -245,7 +243,7 @@ class NPCRegistry {
             ny >= CityChunk.chunkSize) {
           continue;
         }
-        if (_isWalkableChunkCell(chunk, nx, ny)) {
+        if (_isRoadChunkCell(chunk, nx, ny)) {
           openMooreNeighbours++;
         }
       }
@@ -253,14 +251,10 @@ class NPCRegistry {
     return openMooreNeighbours >= 4;
   }
 
-  bool _isWalkableChunkCell(CityChunk chunk, int x, int y) {
+  bool _isRoadChunkCell(CityChunk chunk, int x, int y) {
     final cell = chunk.cells['$x,$y'];
     if (cell == null) return false;
-    final data = cell.data;
-    if (data == null) return true;
-    if (data is BuildingData) return false;
-    if (data is NatureData && data.type == NatureType.water) return false;
-    return data is RoadData || data is NatureData;
+    return cell.data is RoadData;
   }
 
   int _distanceToNearestBuildingCell(

@@ -473,7 +473,7 @@ class NPCComponent extends PositionComponent
     for (final dir in directions) {
       final tx = gx + dir.x.toInt();
       final ty = gy + dir.y.toInt();
-      if (game.grid.isWalkable(tx, ty)) {
+      if (_isRoadLoadedCell(tx, ty)) {
         return Vector2(
           tx * CellComponent.cellSize + CellComponent.cellSize / 2,
           ty * CellComponent.cellSize + CellComponent.cellSize / 2,
@@ -524,60 +524,40 @@ class NPCComponent extends PositionComponent
         }
       }
     }
-
-    for (int r = 1; r <= _recoverySearchRadius; r++) {
-      for (int dy = -r; dy <= r; dy++) {
-        for (int dx = -r; dx <= r; dx++) {
-          if (dx.abs() != r && dy.abs() != r) continue; // ring only
-          final tx = originX + dx;
-          final ty = originY + dy;
-          if (!_isWalkableLoadedCell(tx, ty)) continue;
-          if (_countWalkableCardinalNeighbours(tx, ty) < 1) continue;
-          return Vector2(
-            tx * CellComponent.cellSize + CellComponent.cellSize / 2,
-            ty * CellComponent.cellSize + CellComponent.cellSize / 2,
-          );
-        }
-      }
-    }
-
     return null;
   }
 
   bool _isSafeStandingCell(int gx, int gy) {
-    if (!_isWalkableLoadedCell(gx, gy)) return false;
-    if (_countWalkableCardinalNeighbours(gx, gy) < 2) return false;
+    if (!_isRoadLoadedCell(gx, gy)) return false;
+    if (_countRoadCardinalNeighbours(gx, gy) < 2) return false;
 
     var openMooreNeighbours = 0;
     for (int dy = -1; dy <= 1; dy++) {
       for (int dx = -1; dx <= 1; dx++) {
         if (dx == 0 && dy == 0) continue;
-        if (_isWalkableLoadedCell(gx + dx, gy + dy)) openMooreNeighbours++;
+        if (_isRoadLoadedCell(gx + dx, gy + dy)) openMooreNeighbours++;
       }
     }
     return openMooreNeighbours >= 4;
   }
 
-  int _countWalkableCardinalNeighbours(int gx, int gy) {
-    var walkable = 0;
+  int _countRoadCardinalNeighbours(int gx, int gy) {
+    var road = 0;
     for (final d in const [
       [0, 1],
       [0, -1],
       [1, 0],
       [-1, 0],
     ]) {
-      if (_isWalkableLoadedCell(gx + d[0], gy + d[1])) walkable++;
+      if (_isRoadLoadedCell(gx + d[0], gy + d[1])) road++;
     }
-    return walkable;
+    return road;
   }
 
-  bool _isWalkableLoadedCell(int gx, int gy) {
+  bool _isRoadLoadedCell(int gx, int gy) {
     final cell = game.grid.getCell(gx, gy);
     if (cell == null) return false;
-    final data = cell.data;
-    if (data is BuildingData) return false;
-    if (data is NatureData && data.type == NatureType.water) return false;
-    return true;
+    return cell.data is RoadData;
   }
 
   @override

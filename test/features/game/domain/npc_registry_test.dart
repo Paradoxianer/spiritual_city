@@ -7,7 +7,7 @@ import 'package:spiritual_city/src/features/game/presentation/components/cell_co
 
 void main() {
   group('NPCRegistry safe spawn validation', () {
-    test('avoids narrow trapped gap between buildings', () {
+    test('spawns on roads and avoids narrow trapped gaps', () {
       final chunk = _filledChunkWithWater();
       _setBuilding(chunk, 5, 5, 'house_a');
       _setBuilding(chunk, 5, 4, 'block_north');
@@ -17,9 +17,9 @@ void main() {
       _setNature(chunk, 6, 5, NatureType.park); // narrow trapped gap
       _setNature(chunk, 6, 4, NatureType.park);
       _setNature(chunk, 6, 6, NatureType.park);
-      for (int y = 8; y <= 10; y++) {
-        for (int x = 8; x <= 10; x++) {
-          _setNature(chunk, x, y, NatureType.park);
+      for (int y = 8; y <= 12; y++) {
+        for (int x = 8; x <= 12; x++) {
+          _setRoad(chunk, x, y);
         }
       }
 
@@ -31,6 +31,8 @@ void main() {
       for (final npc in houseNpcs) {
         final cell = _worldPosToCell(npc.homePosition.x, npc.homePosition.y);
         expect(cell, isNot(equals((6, 5))));
+        final spawnedCellData = chunk.cells['${cell.$1},${cell.$2}']?.data;
+        expect(spawnedCellData, isA<RoadData>());
       }
     });
 
@@ -71,6 +73,11 @@ void _setBuilding(CityChunk chunk, int x, int y, String id) {
 
 void _setNature(CityChunk chunk, int x, int y, NatureType type) {
   chunk.cells['$x,$y'] = CityCell(x: x, y: y, data: NatureData(type: type));
+}
+
+void _setRoad(CityChunk chunk, int x, int y) {
+  chunk.cells['$x,$y'] =
+      CityCell(x: x, y: y, data: RoadData(type: RoadType.small));
 }
 
 (int, int) _worldPosToCell(double x, double y) {
