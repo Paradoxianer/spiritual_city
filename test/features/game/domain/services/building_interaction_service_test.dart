@@ -353,16 +353,30 @@ void main() {
         expect(result.success, isFalse);
       });
 
-      test('discipleshipGroup: succeeds with >20 interactions + converted resident, +0.5 insight, has duration', () {
+      test('discipleshipGroup (house): succeeds with >20 interactions + converted resident, +0.2 insight, has duration', () {
         final resident = NPCModel(id: 'n', name: 'X', type: NPCType.citizen,
             homePosition: Vector2.zero(), faith: 80.0, isConverted: true);
         final b = house(residents: [resident]);
         b.interactionCount = 21;
         final result = BuildingInteractionService().performAction('discipleshipGroup', b, 0.0);
         expect(result.success, isTrue);
-        expect(result.playerFaithDelta, -50.0);
-        expect(result.playerInsightDelta, 0.5);
+        expect(result.playerFaithDelta, 0.0);
+        expect(result.playerInsightDelta, 0.2);
         expect(result.actionDurationSeconds, greaterThan(0));
+      });
+
+      test('discipleshipGroup (apartment): gives +0.3 insight', () {
+        final resident = NPCModel(id: 'n', name: 'X', type: NPCType.citizen,
+            homePosition: Vector2.zero(), faith: 80.0, isConverted: true);
+        final b = BuildingModel(
+          buildingId: 'a',
+          type: BuildingType.apartment,
+          residents: [resident],
+        );
+        b.interactionCount = 21;
+        final result = BuildingInteractionService().performAction('discipleshipGroup', b, 0.0);
+        expect(result.success, isTrue);
+        expect(result.playerInsightDelta, 0.3);
       });
 
       test('blessHousehold: increments all resident interactionCounts', () {
@@ -404,9 +418,9 @@ void main() {
         expect(b.faith, greaterThan(0));
       });
 
-      test('requestDonation: blocked when interactionCount ≤ 2', () {
+      test('requestDonation: blocked when interactionCount ≤ 3', () {
         final b = shop();
-        b.interactionCount = 2;
+        b.interactionCount = 3;
         final result = BuildingInteractionService().performAction('requestDonation', b, 0.0);
         expect(result.success, isFalse);
       });
@@ -421,7 +435,7 @@ void main() {
           if (result.success) {
             successes++;
             expect(result.playerMaterialsDelta, greaterThan(0));
-            expect(result.playerFaithDelta, 5.0);
+            expect(result.playerFaithDelta, 8.0);
             expect(result.playerHealthDelta, -10.0);
             expect(result.playerHungerDelta, -10.0);
           }
@@ -455,6 +469,17 @@ void main() {
         final b = BuildingModel(buildingId: 'c', type: BuildingType.cathedral, residents: [priest]);
         BuildingInteractionService().performAction('worship', b, 0.0);
         expect(priest.faith, greaterThan(0.0));
+      });
+
+      test('pastorHouse pray: gives +22 faith and costs 5 health', () {
+        final b = BuildingModel(
+          buildingId: 'ph',
+          type: BuildingType.pastorHouse,
+          isHomebase: true,
+        );
+        final result = BuildingInteractionService().performAction('pray', b, 0.0);
+        expect(result.playerFaithDelta, 22.0);
+        expect(result.playerHealthDelta, -5.0);
       });
     });
 
@@ -641,9 +666,9 @@ void main() {
         expect(result.success, isTrue);
       });
 
-      test('pray: +15 faith, −5 health, has duration', () {
+      test('pray: +22 faith, −5 health, has duration', () {
         final result = BuildingInteractionService().performAction('pray', pastorHouse(), 0.0);
-        expect(result.playerFaithDelta, 15.0);
+        expect(result.playerFaithDelta, 22.0);
         expect(result.playerHealthDelta, -5.0);
         expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);

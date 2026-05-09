@@ -184,6 +184,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   set materials(double v) => materialsNotifier.value = v;
 
   static const double worldToggleCost = 10.0;
+  static const int pastorPrayerLiberationRadius = 14;
+  static const double pastorPrayerLiberationAmount = 0.16;
 
   /// Number of daemons spawned around the player on spiritual-world entry.
   /// Reduced so new players aren't overwhelmed immediately.
@@ -688,6 +690,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     
     if (!isSpiritualWorld) {
       spendFaith(worldToggleCost);
+      progress.recordSpiritualWorldEntry();
     }
     
     final wasInSpiritWorld = isSpiritualWorld;
@@ -1231,8 +1234,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         data.building.type == BuildingType.pastorHouse) {
       _brightenspiritualAreaAroundPosition(
         pastorhousePosition.value ?? player.position,
-        radius: 12,
-        amount: 0.12,
+        radius: pastorPrayerLiberationRadius,
+        amount: pastorPrayerLiberationAmount,
       );
     }
     // ── AoE influence with duration/decay (Issue #59) ─────────────────────
@@ -1819,6 +1822,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Record an NPC conversion
   void recordConversion() {
     progress.recordConversion();
+    progress.addInsight(0.2);
     conversionToastMessage.value = '+1 ✝';
     _checkAndApplyModifiers();
     _checkWinCondition();
