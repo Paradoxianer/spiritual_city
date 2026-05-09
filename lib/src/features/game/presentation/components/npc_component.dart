@@ -20,7 +20,9 @@ import 'cell_component.dart';
 /// * [low]    – static/invisible, no logic (>500 u)
 enum NPCDetailLevel { high, medium, low }
 
-class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGame> implements Interactable {
+class NPCComponent extends PositionComponent
+    with HasGameReference<SpiritWorldGame>
+    implements Interactable {
   NPCModel _model;
 
   /// Current active data model.  Updated by [assignModel] when the component
@@ -41,9 +43,17 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   Vector2? _targetPosition;
   double _aiUpdateTimer = 0;
   static const double _aiUpdateInterval = 2.0;
+  // If no wander target can be found for this long, we treat the NPC as
+  // trapped and relocate it to a nearby valid tile.
+  double _stuckTimer = 0.0;
+  static const double _stuckRecoveryDelay = 4.0;
+  // Search radius for trapped-NPC recovery. If no safe tile is found, the NPC
+  // keeps its current position and retries on the next recovery cycle.
+  static const int _recoverySearchRadius = 6;
 
   // Timer for daily NPC spiritual influence on cells (Lastenheft §6.3)
   double _spiritualInfluenceTimer = 0.0;
+
   /// One in-game day = [GameTime.gameDaySeconds] real seconds.
   static const double _spiritualInfluenceInterval = GameTime.gameDaySeconds;
 
@@ -89,6 +99,7 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     _spiritualInfluenceTimer = 0.0;
     _targetPosition = null;
     _aiUpdateTimer = 0;
+    _stuckTimer = 0.0;
     detailLevel = NPCDetailLevel.high;
   }
 
@@ -97,13 +108,14 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   /// future [assignModel] call gets a clean slate.
   void deactivateForPool() {
     _spiritualInfluenceTimer = 0.0;
+    _stuckTimer = 0.0;
     detailLevel = NPCDetailLevel.high;
     removeFromParent();
   }
 
   @override
   String get interactionLabel => model.name;
-  
+
   @override
   String get interactionEmoji => _getNPCEmoji();
 
@@ -148,7 +160,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     model.lastPlayerHealthDelta = 0.0;
 
     if (type == 'talk') {
-      final gain = (_faithCalc.calculateConversationGain() * spiritualBonus).round();
+      final gain =
+          (_faithCalc.calculateConversationGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
       model.interactionCount++;
       model.lastNpcFaithDelta = gain.toDouble();
@@ -164,7 +177,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       }
       game.gainHealth(-hpCost.toDouble());
       model.lastPlayerHealthDelta = -hpCost.toDouble();
-      final gain = (_faithCalc.calculateCounselingGain() * spiritualBonus).round();
+      final gain =
+          (_faithCalc.calculateCounselingGain() * spiritualBonus).round();
       model.applyInfluence(gain.toDouble());
       // Counseling counts as 6 interactions so the session-dot bonus grows
       // appropriately: 4× counsel → interactionCount 24 ≥ threshold 21 → 5 dots.
@@ -183,15 +197,18 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       }
       game.gainFaith(-faithCost.toDouble());
       model.lastPlayerFaithDelta -= faithCost.toDouble();
-      final prayerGain = (_faithCalc.calculatePrayerGain() * spiritualBonus).round();
+      final prayerGain =
+          (_faithCalc.calculatePrayerGain() * spiritualBonus).round();
       // Base 20% acceptance probability that scales with the NPC's own faith
       // (0-100). A deeply believing NPC is far more likely to accept prayer
       // (100% at full faith), while a faithless NPC barely reacts (20% floor).
       // Additional bonus up to +25% based on total interactions with this NPC:
       // the more the player has invested in the relationship, the more the NPC
       // opens up to prayer even if they still have low faith.
-      final interactionBonus = (model.interactionCount * 0.015).clamp(0.0, 0.25);
-      final acceptanceChance = (model.faith / 100.0 * 0.6 + 0.2 + interactionBonus).clamp(0.0, 1.0);
+      final interactionBonus =
+          (model.interactionCount * 0.015).clamp(0.0, 0.25);
+      final acceptanceChance =
+          (model.faith / 100.0 * 0.6 + 0.2 + interactionBonus).clamp(0.0, 1.0);
       if (_random.nextDouble() < acceptanceChance) {
         // Interaction multiplier: the more the player has invested in the
         // relationship, the stronger the positive prayer effect.
@@ -206,7 +223,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         // Nudge the spiritual state of the cell toward the light.
         final cellDelta = _faithCalc.calculatePrayerCellDelta();
         if (cell != null) {
-          cell.spiritualState = (cell.spiritualState + cellDelta).clamp(-1.0, 1.0);
+          cell.spiritualState =
+              (cell.spiritualState + cellDelta).clamp(-1.0, 1.0);
         }
         return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
       } else {
@@ -227,7 +245,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
 
     if (type == 'help') {
-      final giftGain = (_faithCalc.calculateGiftGain() * spiritualBonus).round();
+      final giftGain =
+          (_faithCalc.calculateGiftGain() * spiritualBonus).round();
       model.interactionCount++;
       model.hadGiftThisSession = true;
       model.wantsGift = false;
@@ -263,8 +282,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
             if (distSq <= conversionRadius * conversionRadius) {
               final c = game.grid.getCell(gx + dx, gy + dy);
               if (c != null) {
-                final distanceFactor = 1.0 - distSq / (conversionRadius * conversionRadius);
-                c.spiritualState = (c.spiritualState + 0.35 * distanceFactor).clamp(-1.0, 1.0);
+                final distanceFactor =
+                    1.0 - distSq / (conversionRadius * conversionRadius);
+                c.spiritualState =
+                    (c.spiritualState + 0.35 * distanceFactor).clamp(-1.0, 1.0);
               }
             }
           }
@@ -289,14 +310,15 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
   String _talkEmoji() {
     if (model.faith > 50) return ['😊✝️', '🙌💬', '😄🕊️'][_random.nextInt(3)];
     if (model.faith > 20) return ['😊💬', '🙌😊', '💬😄'][_random.nextInt(3)];
-    if (model.faith > 0)  return ['🤔💬', '💭😊', '👀💬'][_random.nextInt(3)];
+    if (model.faith > 0) return ['🤔💬', '💭😊', '👀💬'][_random.nextInt(3)];
     if (model.faith > -30) return ['😐💬', '💭🤔', '😒💬'][_random.nextInt(3)];
     return ['😠💬', '😤🙅', '😡💭'][_random.nextInt(3)];
   }
 
   @override
   Future<void> onLoad() async {
-    _faithCalc = FaithCalculatorService(difficulty: game.difficulty, rng: _random);
+    _faithCalc =
+        FaithCalculatorService(difficulty: game.difficulty, rng: _random);
     add(CircleHitbox());
   }
 
@@ -351,17 +373,24 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       // the centre-cell delta is easy=0.7 / normal=0.5 / hard=0.3 and
       // the adjacent-cell delta is easy=0.3 / normal=0.25 / hard=0.2.
       final (centreK, adjacentK) = switch (game.difficulty) {
-        Difficulty.easy   => (0.0150, 0.0075),
+        Difficulty.easy => (0.0150, 0.0075),
         Difficulty.normal => (0.0100, 0.0050),
-        Difficulty.hard   => (0.0050, 0.0025),
+        Difficulty.hard => (0.0050, 0.0025),
       };
-      cell.spiritualState = (cell.spiritualState + model.faith * centreK).clamp(-1.0, 1.0);
+      cell.spiritualState =
+          (cell.spiritualState + model.faith * centreK).clamp(-1.0, 1.0);
       // Adjacent cells receive a slightly weaker push.
-      for (final offset in const [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      for (final offset in const [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1]
+      ]) {
         final neighbour = game.grid.getCell(gx + offset[0], gy + offset[1]);
         if (neighbour != null) {
           neighbour.spiritualState =
-              (neighbour.spiritualState + model.faith * adjacentK).clamp(-1.0, 1.0);
+              (neighbour.spiritualState + model.faith * adjacentK)
+                  .clamp(-1.0, 1.0);
         }
       }
       // Small faith decay: without ongoing care their fervour slowly cools.
@@ -385,7 +414,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
       cell.spiritualState = (cell.spiritualState + 0.05).clamp(-1.0, 1.0);
     } else if (model.faith < -50) {
       // Very hostile NPCs reinforce darkness
-      cell.spiritualState = (cell.spiritualState - model.faith.abs() * 0.002).clamp(-1.0, 1.0);
+      cell.spiritualState =
+          (cell.spiritualState - model.faith.abs() * 0.002).clamp(-1.0, 1.0);
     }
   }
 
@@ -404,18 +434,33 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
           ? 15.0
           : 35.0 + (model.faith / 10.0).clamp(-10.0, 20.0);
 
-      if (_targetPosition == null || position.distanceTo(_targetPosition!) < 4) {
+      if (_targetPosition == null ||
+          position.distanceTo(_targetPosition!) < 4) {
         _targetPosition = _findNextWanderTarget(gx, gy);
       }
     }
 
     if (_targetPosition != null) {
+      _stuckTimer = 0.0;
       _moveTowardsTarget(dt);
+    } else {
+      _stuckTimer += dt;
+      if (_stuckTimer >= _stuckRecoveryDelay) {
+        _stuckTimer = 0.0;
+        final gx = (position.x / CellComponent.cellSize).floor();
+        final gy = (position.y / CellComponent.cellSize).floor();
+        _recoverFromTrap(gx, gy);
+      }
     }
   }
 
   Vector2? _findNextWanderTarget(int gx, int gy) {
-    final directions = [Vector2(0, 1), Vector2(0, -1), Vector2(1, 0), Vector2(-1, 0)];
+    final directions = [
+      Vector2(0, 1),
+      Vector2(0, -1),
+      Vector2(1, 0),
+      Vector2(-1, 0)
+    ];
     directions.shuffle(_random);
     // Prefer road cells so NPCs walk along streets, not through buildings
     directions.sort((a, b) {
@@ -449,13 +494,100 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     }
   }
 
+  void _recoverFromTrap(int gx, int gy) {
+    final recoveryPos = _findNearestRecoveryTarget(gx, gy);
+    if (recoveryPos == null) return;
+    position.setFrom(recoveryPos);
+    _targetPosition = null;
+    _aiUpdateTimer = 0.0;
+  }
+
+  Vector2? _findNearestRecoveryTarget(int originX, int originY) {
+    if (_isSafeStandingCell(originX, originY)) {
+      return Vector2(
+        originX * CellComponent.cellSize + CellComponent.cellSize / 2,
+        originY * CellComponent.cellSize + CellComponent.cellSize / 2,
+      );
+    }
+
+    for (int r = 1; r <= _recoverySearchRadius; r++) {
+      for (int dy = -r; dy <= r; dy++) {
+        for (int dx = -r; dx <= r; dx++) {
+          if (dx.abs() != r && dy.abs() != r) continue; // ring only
+          final tx = originX + dx;
+          final ty = originY + dy;
+          if (!_isSafeStandingCell(tx, ty)) continue;
+          return Vector2(
+            tx * CellComponent.cellSize + CellComponent.cellSize / 2,
+            ty * CellComponent.cellSize + CellComponent.cellSize / 2,
+          );
+        }
+      }
+    }
+
+    for (int r = 1; r <= _recoverySearchRadius; r++) {
+      for (int dy = -r; dy <= r; dy++) {
+        for (int dx = -r; dx <= r; dx++) {
+          if (dx.abs() != r && dy.abs() != r) continue; // ring only
+          final tx = originX + dx;
+          final ty = originY + dy;
+          if (!_isWalkableLoadedCell(tx, ty)) continue;
+          if (_countWalkableCardinalNeighbours(tx, ty) < 1) continue;
+          return Vector2(
+            tx * CellComponent.cellSize + CellComponent.cellSize / 2,
+            ty * CellComponent.cellSize + CellComponent.cellSize / 2,
+          );
+        }
+      }
+    }
+
+    return null;
+  }
+
+  bool _isSafeStandingCell(int gx, int gy) {
+    if (!_isWalkableLoadedCell(gx, gy)) return false;
+    if (_countWalkableCardinalNeighbours(gx, gy) < 2) return false;
+
+    var openMooreNeighbours = 0;
+    for (int dy = -1; dy <= 1; dy++) {
+      for (int dx = -1; dx <= 1; dx++) {
+        if (dx == 0 && dy == 0) continue;
+        if (_isWalkableLoadedCell(gx + dx, gy + dy)) openMooreNeighbours++;
+      }
+    }
+    return openMooreNeighbours >= 4;
+  }
+
+  int _countWalkableCardinalNeighbours(int gx, int gy) {
+    var walkable = 0;
+    for (final d in const [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+    ]) {
+      if (_isWalkableLoadedCell(gx + d[0], gy + d[1])) walkable++;
+    }
+    return walkable;
+  }
+
+  bool _isWalkableLoadedCell(int gx, int gy) {
+    final cell = game.grid.getCell(gx, gy);
+    if (cell == null) return false;
+    final data = cell.data;
+    if (data is BuildingData) return false;
+    if (data is NatureData && data.type == NatureType.water) return false;
+    return true;
+  }
+
   @override
   void render(Canvas canvas) {
     Color bodyColor;
     if (model.isChristian) {
       bodyColor = Colors.white;
     } else if (model.faith < 0) {
-      bodyColor = Color.lerp(Colors.red[900]!, Colors.grey, (model.faith + 100) / 100)!;
+      bodyColor =
+          Color.lerp(Colors.red[900]!, Colors.grey, (model.faith + 100) / 100)!;
     } else {
       bodyColor = Color.lerp(Colors.grey, Colors.blue[100]!, model.faith / 50)!;
     }
@@ -466,8 +598,10 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
     if (model.isChristian) {
       _crossPaint.color = Colors.amber;
       final center = (size / 2).toOffset();
-      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4), _crossPaint);
-      canvas.drawLine(center + const Offset(-3, -1), center + const Offset(3, -1), _crossPaint);
+      canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4),
+          _crossPaint);
+      canvas.drawLine(center + const Offset(-3, -1),
+          center + const Offset(3, -1), _crossPaint);
     }
 
     if (game.isSpiritualWorld) _renderSpiritualAura(canvas);
@@ -485,7 +619,8 @@ class NPCComponent extends PositionComponent with HasGameReference<SpiritWorldGa
         ..strokeWidth = 1.5
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(Offset(cx, cy - 2.5), Offset(cx, cy + 0.5), linePaint);
-      canvas.drawCircle(Offset(cx, cy + 2.5), 0.8, Paint()..color = const Color(0xFF5A3A00));
+      canvas.drawCircle(
+          Offset(cx, cy + 2.5), 0.8, Paint()..color = const Color(0xFF5A3A00));
     }
   }
 
