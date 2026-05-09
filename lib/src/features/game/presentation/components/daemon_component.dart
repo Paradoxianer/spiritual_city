@@ -25,9 +25,13 @@ class DaemonComponent extends PositionComponent
   final DaemonModel model;
 
   static const double _baseDaemonSize = 18.0;
+  static const double _energyBaselineMidpoint = 260.0;
+  static const double _drainFaithDivisor = 70.0;
+  static const double _drainFaithMin = 2.0;
+  static const double _drainFaithMax = 6.0;
 
   double _cellDrainMultiplier = 1.0;
-  double _strengthFactor = 1.0;
+  double _scaleFactor = 1.0;
 
   // Active effect tracking (Issue #9)
   final Map<PrayerMode, double> _activeEffects = {};
@@ -103,8 +107,12 @@ class DaemonComponent extends PositionComponent
     };
     _cellDrainMultiplier =
         1.0 / FaithCalculatorService.difficultyFactorFor(game.difficulty);
-    _strengthFactor = (model.initialEnergy.abs() / 260.0).clamp(0.8, 2.1);
-    size = Vector2.all(_baseDaemonSize * _strengthFactor);
+    // 260 is near the midpoint of base spawn energies (easy -180, normal -300,
+    // hard -420) so normal daemons render close to baseline size while stronger
+    // variants visibly scale up.
+    _scaleFactor =
+        (model.initialEnergy.abs() / _energyBaselineMidpoint).clamp(0.8, 2.1);
+    size = Vector2.all(_baseDaemonSize * _scaleFactor);
 
     // Initialise paint that requires a const expression (can't be done in field).
     _auraPaint = Paint()
@@ -203,7 +211,7 @@ class DaemonComponent extends PositionComponent
     final cell = game.grid.getCell(gx, gy);
     if (cell == null) return;
     cell.spiritualState = (cell.spiritualState -
-            _slimeDrainRate * _cellDrainMultiplier * _strengthFactor * dt)
+            _slimeDrainRate * _cellDrainMultiplier * _scaleFactor * dt)
         .clamp(-1.0, 1.0);
   }
 
@@ -301,8 +309,10 @@ class DaemonComponent extends PositionComponent
   /// Daemon killed by Drain: Pastor absorbs energy, no explosion.
   void _absorb() {
     model.dissolved = true;
-    // Energy transfer: Pastor gains only a small amount of Faith.
-    final faithGain = (model.initialEnergy.abs() / 70.0).clamp(2.0, 6.0);
+    // Reduced faith return prevents drain-kills from becoming the dominant
+    // "faith farming" strategy in longer combat sessions.
+    final faithGain = (model.initialEnergy.abs() / _drainFaithDivisor)
+        .clamp(_drainFaithMin, _drainFaithMax);
     game.gainFaith(faithGain);
     removeFromParent();
   }

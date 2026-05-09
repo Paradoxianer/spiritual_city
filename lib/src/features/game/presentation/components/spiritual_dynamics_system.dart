@@ -85,6 +85,16 @@ class SpiritualDynamicsSystem extends Component
   static const double _daemonEnergyNormal = -300.0;
   static const double _daemonEnergyHard = -420.0;
 
+  // ── Progression scaling knobs ─────────────────────────────────────────────
+  static const double _entryPressurePerEntry = 0.07;
+  static const double _maxEntryPressure = 1.2;
+  static const double _upgradePowerPerLevel = 0.025;
+  static const double _maxUpgradePower = 0.7;
+  static const double _minProgressionScale = 0.8;
+  static const double _maxProgressionScale = 2.0;
+  static const int _absoluteMinDaemons = 4;
+  static const int _absoluteMaxDaemons = 32;
+
   int _daemonIdCounter = 0;
   final math.Random _rng = math.Random(77);
 
@@ -242,8 +252,10 @@ class SpiritualDynamicsSystem extends Component
       Difficulty.hard => _maxDaemonsHard,
     };
     final progressionScale = _daemonProgressionScale();
-    final maxDaemons =
-        ((baseMaxDaemons * progressionScale).round().clamp(4, 32)).toInt();
+    final maxDaemons = ((baseMaxDaemons * progressionScale)
+            .round()
+            .clamp(_absoluteMinDaemons, _absoluteMaxDaemons))
+        .toInt();
 
     int existingDaemons =
         game.world.children.whereType<DaemonComponent>().length;
@@ -302,9 +314,10 @@ class SpiritualDynamicsSystem extends Component
       Difficulty.normal => _maxDaemonsNormal,
       Difficulty.hard => _maxDaemonsHard,
     };
-    final maxDaemons =
-        ((baseMaxDaemons * _daemonProgressionScale()).round().clamp(4, 32))
-            .toInt();
+    final maxDaemons = ((baseMaxDaemons * _daemonProgressionScale())
+            .round()
+            .clamp(_absoluteMinDaemons, _absoluteMaxDaemons))
+        .toInt();
     if (game.world.children.whereType<DaemonComponent>().length >= maxDaemons) {
       return;
     }
@@ -388,20 +401,29 @@ class SpiritualDynamicsSystem extends Component
     }
   }
 
+  /// Scales daemon pressure by long-term spiritual-world progression.
+  ///
+  /// More invisible-world entries increase pressure over time, while invested
+  /// combat/defense upgrades partially offset it so new upgrades create a
+  /// noticeable short-term relief before pressure ramps up again.
   double _daemonProgressionScale() {
-    final entries = game.progress.spiritualWorldEntries.toDouble();
-    final entryPressure = (entries * 0.07).clamp(0.0, 1.2);
+    final spiritualWorldEntryCount =
+        game.progress.spiritualWorldEntries.toDouble();
+    final entryPressure =
+        (spiritualWorldEntryCount * _entryPressurePerEntry)
+            .clamp(0.0, _maxEntryPressure);
     final profile = game.progress.combatProfile;
     var totalUpgradeLevels = profile.shieldLevel + profile.helmLevel;
-    for (final set in profile.modes.values) {
-      totalUpgradeLevels += set.radiusLevel +
-          set.strengthLevel +
-          set.durationLevel +
-          set.speedLevel;
+    for (final modeStats in profile.modes.values) {
+      totalUpgradeLevels += modeStats.radiusLevel +
+          modeStats.strengthLevel +
+          modeStats.durationLevel +
+          modeStats.speedLevel;
     }
-    final upgradePower =
-        (totalUpgradeLevels.toDouble() * 0.025).clamp(0.0, 0.7);
-    return (1.0 + entryPressure - upgradePower).clamp(0.8, 2.0);
+    final upgradePower = (totalUpgradeLevels.toDouble() * _upgradePowerPerLevel)
+        .clamp(0.0, _maxUpgradePower);
+    return (1.0 + entryPressure - upgradePower)
+        .clamp(_minProgressionScale, _maxProgressionScale);
   }
 
   static const List<List<int>> _dirs = [

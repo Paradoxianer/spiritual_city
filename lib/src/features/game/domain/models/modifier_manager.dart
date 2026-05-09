@@ -26,6 +26,7 @@ class Modifier {
 /// Lastenheft §5.4
 class ModifierManager {
   static final _log = Logger('ModifierManager');
+  static const double _maxHoldingTimeForScaling = 8.0;
 
   final PlayerProgress progress;
 
@@ -144,12 +145,10 @@ class ModifierManager {
   ) {
     final base = progress.combatProfile.getFor(mode);
     final faithFactor = (currentFaith / 100.0).clamp(0.1, 2.0);
-    final levelStep = switch (mode) {
-      PrayerMode.liberation => 0.08,
-      PrayerMode.rebuke => 0.14,
-      PrayerMode.slow => 0.16,
-      PrayerMode.drain => 0.15,
-    };
+    // Cap hold scaling so very long holds cannot inflate combat power endlessly.
+    final clampedHoldingTime =
+        holdingTime.clamp(0.0, _maxHoldingTimeForScaling);
+    final levelStep = _perModeUpgradeStep(mode);
 
     final radiusLevels = 1.0 + base.radiusLevel * levelStep;
     final strengthLevels = 1.0 + base.strengthLevel * levelStep;
@@ -158,10 +157,10 @@ class ModifierManager {
 
     // Holding-time bonus scales slightly stronger for utility modes.
     final holdingStrengthFactor = switch (mode) {
-      PrayerMode.liberation => 1.0 + (holdingTime * 0.14),
-      PrayerMode.rebuke => 1.0 + (holdingTime * 0.20),
-      PrayerMode.slow => 1.0 + (holdingTime * 0.22),
-      PrayerMode.drain => 1.0 + (holdingTime * 0.20),
+      PrayerMode.liberation => 1.0 + (clampedHoldingTime * 0.14),
+      PrayerMode.rebuke => 1.0 + (clampedHoldingTime * 0.20),
+      PrayerMode.slow => 1.0 + (clampedHoldingTime * 0.22),
+      PrayerMode.drain => 1.0 + (clampedHoldingTime * 0.20),
     };
 
     // Apply global passives
@@ -201,11 +200,21 @@ class ModifierManager {
           holdingStrengthFactor *
           modeStrengthBase,
       duration:
-          durationLevels * modeDurationBase * (1.0 + (holdingTime * 0.10)),
+          durationLevels * modeDurationBase * (1.0 + (clampedHoldingTime * 0.10)),
       speed: speedLevels * modeSpeedBase,
       color: mode.color,
     );
   }
+
+  /// Liberation upgrades intentionally scale less per level because its base
+  /// cleansing impact is already strong. Utility/control modes scale faster so
+  /// Slow/Rebuke/Drain stay relevant in longer sessions.
+  double _perModeUpgradeStep(PrayerMode mode) => switch (mode) {
+        PrayerMode.liberation => 0.08,
+        PrayerMode.rebuke => 0.14,
+        PrayerMode.slow => 0.16,
+        PrayerMode.drain => 0.15,
+      };
 }
 
 /// Result of combat calculations.

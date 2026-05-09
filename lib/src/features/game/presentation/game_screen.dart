@@ -3387,7 +3387,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '⏱→', trailingEmoji: '📖+0.2', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian), onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '⏱→', trailingEmoji: '📖+${BuildingInteractionService.discipleshipInsightHouse}', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian), onTap: () => _performAction('discipleshipGroup')),
         ];
 
       // ── Residential (Apartment) ───────────────────────────────────────
@@ -3396,7 +3396,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
           _ActionMenuRow(leadingEmoji: '🛠️', arrowText: '−10💰→', trailingEmoji: '+5✝️', tooltip: 'Praktische Hilfe', keyIndex: nk(), isDisabled: g.materials < 10, onTap: () => _performAction('practicalHelp')),
           _ActionMenuRow(leadingEmoji: '🙏', arrowText: '−10🙏→', trailingEmoji: '🕊️?', tooltip: 'Gebet', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '☕', arrowText: '⏱→', trailingEmoji: '❤️🍞', tooltip: 'Hausbesuch', keyIndex: nk(), isDisabled: building.interactionCount <= 5, onTap: () => _performAction('houseVisit')),
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '⏱→', trailingEmoji: '📖+0.3', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian), onTap: () => _performAction('discipleshipGroup')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '⏱→', trailingEmoji: '📖+${BuildingInteractionService.discipleshipInsightApartment}', tooltip: 'Jüngerschaftsgruppe', keyIndex: nk(), isDisabled: building.interactionCount <= 20 || !building.residents.any((n) => n.isChristian), onTap: () => _performAction('discipleshipGroup')),
           _ActionMenuRow(leadingEmoji: '🏢', arrowText: '−10🙏→', trailingEmoji: '+1✝️/Bew.', tooltip: 'Hausgemeinschaft segnen', keyIndex: nk(), isDisabled: g.faith < 10, onTap: () => _performAction('blessHousehold')),
         ];
 

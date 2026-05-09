@@ -269,7 +269,9 @@ class BuildingInteractionService {
         building.interactionCount++;
         building.applyInfluence(70.0);
         building.influenceResidents(30.0);
-        final insightGain = building.type == BuildingType.apartment ? 0.3 : 0.2;
+        final insightGain = building.type == BuildingType.apartment
+            ? discipleshipInsightApartment
+            : discipleshipInsightHouse;
         return BuildingInteractionResult(
           playerInsightDelta: insightGain,
           reactionEmoji: '📖👥🔥',
@@ -377,6 +379,8 @@ class BuildingInteractionService {
   // Base durations for time-based church actions.
   static const int sundayServiceSeconds = 20;
   static const int worshipSeconds = 7;
+  static const double discipleshipInsightHouse = 0.2;
+  static const double discipleshipInsightApartment = 0.3;
 
   BuildingInteractionResult _churchAction(
     String actionType,
