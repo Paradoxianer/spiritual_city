@@ -8,6 +8,7 @@ import 'models/cell_object.dart';
 
 class NPCRegistry {
   static final _log = Logger('NPCRegistry');
+  static const int _maxDistanceSentinel = 1 << 30;
 
   final Map<String, List<NPCModel>> _chunkNPCs = {};
 
@@ -190,7 +191,7 @@ class NPCRegistry {
   List<int>? _findWalkableNeighbour(
       CityChunk chunk, List<List<int>> buildingCells) {
     List<int>? bestCell;
-    var bestDistance = 1 << 30;
+    var bestDistance = _maxDistanceSentinel;
     for (int y = 0; y < CityChunk.chunkSize; y++) {
       for (int x = 0; x < CityChunk.chunkSize; x++) {
         if (!_isSafeSpawnCell(chunk, x, y)) continue;
@@ -264,7 +265,7 @@ class NPCRegistry {
 
   int _distanceToNearestBuildingCell(
       int x, int y, List<List<int>> buildingCells) {
-    var minDistance = 1 << 30;
+    var minDistance = _maxDistanceSentinel;
     for (final c in buildingCells) {
       final dist = (x - c[0]).abs() + (y - c[1]).abs();
       if (dist < minDistance) minDistance = dist;

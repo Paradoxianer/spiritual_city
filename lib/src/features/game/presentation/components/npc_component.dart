@@ -43,8 +43,12 @@ class NPCComponent extends PositionComponent
   Vector2? _targetPosition;
   double _aiUpdateTimer = 0;
   static const double _aiUpdateInterval = 2.0;
+  // If no wander target can be found for this long, we treat the NPC as
+  // trapped and relocate it to a nearby valid tile.
   double _stuckTimer = 0.0;
   static const double _stuckRecoveryDelay = 4.0;
+  // Search radius for trapped-NPC recovery. If no safe tile is found, the NPC
+  // keeps its current position and retries on the next recovery cycle.
   static const int _recoverySearchRadius = 6;
 
   // Timer for daily NPC spiritual influence on cells (Lastenheft §6.3)
