@@ -1,5 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
+import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'daemon_component.dart';
 import 'cell_component.dart';
@@ -76,7 +77,11 @@ class ShockwaveComponent extends PositionComponent
 
             // Mode-specific cell impact (Issue #9)
             final modeMultiplier = switch (mode) {
-              PrayerMode.liberation => 0.82,
+              PrayerMode.liberation => switch (game.difficulty) {
+                  Difficulty.easy => 0.90,
+                  Difficulty.normal => 0.82,
+                  Difficulty.hard => 0.82,
+                },
               PrayerMode.rebuke => 0.24,
               PrayerMode.slow => 0.20,
               PrayerMode.drain => 0.32,
@@ -99,7 +104,11 @@ class ShockwaveComponent extends PositionComponent
       final dist = center.distanceTo(daemon.position);
       if (dist <= _currentRadius && dist > _currentRadius - 25) {
         final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
-        daemon.takeDamage(strength * 5.0 * falloff,
+        final liberationEasyMultiplier =
+            mode == PrayerMode.liberation && game.difficulty == Difficulty.easy
+                ? 1.08
+                : 1.0;
+        daemon.takeDamage(strength * 5.0 * falloff * liberationEasyMultiplier,
             mode: mode, duration: duration);
         _hitIds.add(daemon.model.id);
       }
