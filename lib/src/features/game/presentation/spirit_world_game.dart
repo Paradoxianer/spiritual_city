@@ -2025,6 +2025,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double _kJoystickMarginLeft   = 40.0;
   static const double _kJoystickMarginBottom = 40.0;
   static const double _kJoystickBgRadius     = 50.0;
+  static const double _kJoystickKnobRadius   = 20.0;
+  static const double _kJoystickTapTolerance = 6.0;
 
   /// Game-level tap handler.  Detects double-taps within the joystick area
   /// for desktop / web sprint activation.  This is more reliable than
@@ -2037,7 +2039,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         _kJoystickMarginLeft + _kJoystickBgRadius,
         camera.viewport.size.y - _kJoystickMarginBottom - _kJoystickBgRadius,
       );
-      if ((event.canvasPosition - jCenter).length <= _kJoystickBgRadius + 15) {
+      // Sprint double-tap must happen on the center joystick knob, not on the
+      // outer joystick ring.
+      if ((event.canvasPosition - jCenter).length <= _kJoystickKnobRadius + _kJoystickTapTolerance) {
         _sprintJoystick.recordTapInteraction();
       }
     }
@@ -2176,20 +2180,19 @@ class HudButton extends PositionComponent with TapCallbacks {
 }
 
 /// A [JoystickComponent] that detects a "double-drag" gesture (two successive
-/// drag starts within [_kDoubleTapWindowMs] ms) and fires [onSprintStart].
+/// taps within a strict timing window and fires [onSprintStart].
 /// Sprint ends automatically when the drag is released.
 ///
 /// On desktop/web a second source of interactions comes from
 /// [SpiritWorldGame.onTapDown], which calls [recordTapInteraction] when the
-/// user double-clicks inside the joystick area.  A 100 ms dedup guard
-/// prevents [onDragStart] and the game-level tap from counting the same
-/// physical pointer-down twice.
+/// user double-clicks directly on the center joystick knob.
 class _SprintJoystickComponent extends JoystickComponent {
   final VoidCallback onSprintStart;
   final VoidCallback onSprintEnd;
 
-  static const int _kDoubleTapWindowMs  = 400;
-  static const int _kSameEventDedupeMs  = 100;
+  static const int _kDoubleTapMinMs = 120;
+  static const int _kDoubleTapMaxMs = 260;
+  static const int _kNoPreviousInteractionElapsedMs = 99999;
 
   int _lastInteractionMs = 0;
   bool _sprinting = false;
@@ -2206,36 +2209,43 @@ class _SprintJoystickComponent extends JoystickComponent {
   /// area.  Tracks double-taps for sprint activation on desktop / web.
   void recordTapInteraction() => _recordInteraction();
 
+  void _setSprintVisual(bool isActive) {
+    if (knob is CircleComponent) {
+      (knob as CircleComponent).paint.color = isActive
+          ? Colors.orangeAccent.withValues(alpha: 0.85)
+          : Colors.white.withValues(alpha: 0.5);
+    }
+    if (background is CircleComponent) {
+      (background as CircleComponent).paint.color = isActive
+          ? Colors.orange.withValues(alpha: 0.35)
+          : Colors.white.withValues(alpha: 0.2);
+    }
+  }
+
   /// Record an interaction start.  Returns true when sprint is activated.
   bool _recordInteraction() {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final elapsed = _lastInteractionMs > 0 ? now - _lastInteractionMs : 99999;
+    final elapsed = _lastInteractionMs > 0
+        ? now - _lastInteractionMs
+        : _kNoPreviousInteractionElapsedMs;
 
     if (!_sprinting &&
-        elapsed > _kSameEventDedupeMs &&
-        elapsed < _kDoubleTapWindowMs) {
+        elapsed >= _kDoubleTapMinMs &&
+        elapsed <= _kDoubleTapMaxMs) {
       _sprinting = true;
+      _setSprintVisual(true);
       onSprintStart();
       return true;
     }
-    if (elapsed > _kSameEventDedupeMs) {
-      _lastInteractionMs = now;
-    }
+    _lastInteractionMs = now;
     return false;
-  }
-
-  // ── Mobile / mouse drag: two rapid drag starts ────────────────────────────
-  @override
-  bool onDragStart(DragStartEvent event) {
-    _recordInteraction();
-    return super.onDragStart(event);
   }
 
   @override
   bool onDragEnd(DragEndEvent event) {
-    _lastInteractionMs = DateTime.now().millisecondsSinceEpoch;
     if (_sprinting) {
       _sprinting = false;
+      _setSprintVisual(false);
       onSprintEnd();
     }
     return super.onDragEnd(event);
@@ -2243,9 +2253,9 @@ class _SprintJoystickComponent extends JoystickComponent {
 
   @override
   bool onDragCancel(DragCancelEvent event) {
-    _lastInteractionMs = DateTime.now().millisecondsSinceEpoch;
     if (_sprinting) {
       _sprinting = false;
+      _setSprintVisual(false);
       onSprintEnd();
     }
     return super.onDragCancel(event);
