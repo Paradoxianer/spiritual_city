@@ -8,6 +8,7 @@ import 'models/cell_object.dart';
 
 class NPCRegistry {
   static final _log = Logger('NPCRegistry');
+  static const int _maxDistanceSentinel = 1 << 30;
 
   final Map<String, List<NPCModel>> _chunkNPCs = {};
 
@@ -63,10 +64,13 @@ class NPCRegistry {
         if (cell == null) continue;
         final data = cell.data;
         if (data is BuildingData) {
-          buildings.putIfAbsent(
-            data.buildingId,
-            () => _BuildingInfo(data.type, data.buildingId),
-          ).cells.add([x, y]);
+          buildings
+              .putIfAbsent(
+                data.buildingId,
+                () => _BuildingInfo(data.type, data.buildingId),
+              )
+              .cells
+              .add([x, y]);
         }
       }
     }
@@ -98,7 +102,7 @@ class NPCRegistry {
         final preConvertedChance = isChurchWorker ? 0.25 : 0.03;
         final isConverted = rng.nextDouble() < preConvertedChance;
         final faith = isConverted
-            ? 65.0 + rng.nextDouble() * 35.0   // 65–100 for Christians
+            ? 65.0 + rng.nextDouble() * 35.0 // 65–100 for Christians
             : -60.0 + rng.nextDouble() * 80.0; // –60 to +20 otherwise
         if (isConverted) {
           _log.fine(
@@ -126,30 +130,30 @@ class NPCRegistry {
   /// Total = min + random.nextInt(extra), so (1, 2) yields 1 or 2 NPCs.
   /// extra = 0 means exactly min NPCs.
   static const Map<BuildingType, (int, int)> _buildingNPCDensity = {
-    BuildingType.house:        (1, 2), // 1–2
-    BuildingType.apartment:    (2, 3), // 2–4
-    BuildingType.church:       (1, 2), // 1–2
-    BuildingType.cathedral:    (1, 2), // 1–2
-    BuildingType.shop:         (1, 1), // 1
-    BuildingType.supermarket:  (1, 2), // 1–2
-    BuildingType.mall:         (2, 3), // 2–4
-    BuildingType.office:       (1, 2), // 1–2
-    BuildingType.skyscraper:   (1, 2), // 1–2
-    BuildingType.school:       (1, 2), // 1–2
-    BuildingType.university:   (2, 2), // 2–3
-    BuildingType.hospital:     (1, 2), // 1–2
-    BuildingType.policeStation:(1, 1), // 1
-    BuildingType.fireStation:  (1, 1), // 1
-    BuildingType.postOffice:   (1, 1), // 1
+    BuildingType.house: (1, 2), // 1–2
+    BuildingType.apartment: (2, 3), // 2–4
+    BuildingType.church: (1, 2), // 1–2
+    BuildingType.cathedral: (1, 2), // 1–2
+    BuildingType.shop: (1, 1), // 1
+    BuildingType.supermarket: (1, 2), // 1–2
+    BuildingType.mall: (2, 3), // 2–4
+    BuildingType.office: (1, 2), // 1–2
+    BuildingType.skyscraper: (1, 2), // 1–2
+    BuildingType.school: (1, 2), // 1–2
+    BuildingType.university: (2, 2), // 2–3
+    BuildingType.hospital: (1, 2), // 1–2
+    BuildingType.policeStation: (1, 1), // 1
+    BuildingType.fireStation: (1, 1), // 1
+    BuildingType.postOffice: (1, 1), // 1
     BuildingType.trainStation: (1, 2), // 1–2
-    BuildingType.cityHall:     (1, 2), // 1–2
-    BuildingType.library:      (1, 1), // 1
-    BuildingType.museum:       (1, 1), // 1
-    BuildingType.stadium:      (2, 3), // 2–4
-    BuildingType.factory:      (1, 1), // 1
-    BuildingType.warehouse:    (1, 1), // 1
-    BuildingType.powerPlant:   (1, 1), // 1
-    BuildingType.cemetery:     (0, 0), // 0
+    BuildingType.cityHall: (1, 2), // 1–2
+    BuildingType.library: (1, 1), // 1
+    BuildingType.museum: (1, 1), // 1
+    BuildingType.stadium: (2, 3), // 2–4
+    BuildingType.factory: (1, 1), // 1
+    BuildingType.warehouse: (1, 1), // 1
+    BuildingType.powerPlant: (1, 1), // 1
+    BuildingType.cemetery: (0, 0), // 0
   };
 
   /// How many NPCs live/work in a building of [type].
@@ -175,32 +179,125 @@ class NPCRegistry {
   }
 
   /// Searches the direct neighbours of every cell in [buildingCells] for a
-  /// walkable (non-building) cell inside [chunk].  Returns its [x, y] local
-  /// coordinates, or null if none is found.
-  List<int>? _findWalkableNeighbour(CityChunk chunk, List<List<int>> buildingCells) {
-    const dirs = [
-      [0, 1], [0, -1], [1, 0], [-1, 0],
-    ];
-    for (final cell in buildingCells) {
-      for (final d in dirs) {
-        final nx = cell[0] + d[0];
-        final ny = cell[1] + d[1];
-        if (nx < 0 || ny < 0 || nx >= CityChunk.chunkSize || ny >= CityChunk.chunkSize) {
-          continue;
+  /// walkable and sufficiently open spawn cell inside [chunk].
+  ///
+  /// The chosen cell must be reachable for wandering NPC AI:
+  /// - non-building and non-water
+  /// - at least 2 walkable cardinal neighbours
+  /// - not tightly enclosed by buildings (minimum free Moore-neighbour space)
+  ///
+  /// Among all valid cells, the nearest to the building footprint is picked so
+  /// NPCs still spawn close to their home/work place.
+  List<int>? _findWalkableNeighbour(
+      CityChunk chunk, List<List<int>> buildingCells) {
+    List<int>? bestCell;
+    var bestDistance = _maxDistanceSentinel;
+    for (int y = 0; y < CityChunk.chunkSize; y++) {
+      for (int x = 0; x < CityChunk.chunkSize; x++) {
+        if (!_isSafeSpawnCell(chunk, x, y)) continue;
+        final distance = _distanceToNearestBuildingCell(x, y, buildingCells);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestCell = [x, y];
         }
-        final neighbour = chunk.cells['$nx,$ny'];
-        if (neighbour == null) continue;
-        // Accept road cells or empty (null-data) cells; reject other buildings
-        final data = neighbour.data;
-        if (data is RoadData || data is NatureData) return [nx, ny];
       }
     }
-    return null;
+    return bestCell;
+  }
+
+  bool _isSafeSpawnCell(CityChunk chunk, int x, int y) {
+    final cell = chunk.cells['$x,$y'];
+    if (cell == null) return false;
+
+    final data = cell.data;
+    if (data is BuildingData) return false;
+    if (data is NatureData && data.type == NatureType.water) return false;
+
+    const dirs = [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+    ];
+    var walkableNeighbours = 0;
+    for (final d in dirs) {
+      final nx = x + d[0];
+      final ny = y + d[1];
+      if (nx < 0 ||
+          ny < 0 ||
+          nx >= CityChunk.chunkSize ||
+          ny >= CityChunk.chunkSize) {
+        continue;
+      }
+      if (_isWalkableChunkCell(chunk, nx, ny)) walkableNeighbours++;
+    }
+    if (walkableNeighbours < 2) return false;
+
+    var openMooreNeighbours = 0;
+    for (int dy = -1; dy <= 1; dy++) {
+      for (int dx = -1; dx <= 1; dx++) {
+        if (dx == 0 && dy == 0) continue;
+        final nx = x + dx;
+        final ny = y + dy;
+        if (nx < 0 ||
+            ny < 0 ||
+            nx >= CityChunk.chunkSize ||
+            ny >= CityChunk.chunkSize) {
+          continue;
+        }
+        if (_isWalkableChunkCell(chunk, nx, ny)) {
+          openMooreNeighbours++;
+        }
+      }
+    }
+    return openMooreNeighbours >= 4;
+  }
+
+  bool _isWalkableChunkCell(CityChunk chunk, int x, int y) {
+    final cell = chunk.cells['$x,$y'];
+    if (cell == null) return false;
+    final data = cell.data;
+    if (data == null) return true;
+    if (data is BuildingData) return false;
+    if (data is NatureData && data.type == NatureType.water) return false;
+    return data is RoadData || data is NatureData;
+  }
+
+  int _distanceToNearestBuildingCell(
+      int x, int y, List<List<int>> buildingCells) {
+    var minDistance = _maxDistanceSentinel;
+    for (final c in buildingCells) {
+      final dist = (x - c[0]).abs() + (y - c[1]).abs();
+      if (dist < minDistance) minDistance = dist;
+    }
+    return minDistance;
   }
 
   String _getRandomName(Random rng) {
-    final firstNames = ['Lukas', 'Maria', 'Johannes', 'Sarah', 'Peter', 'Anna', 'Thomas', 'Elisabeth', 'Matthias', 'Martha'];
-    final lastNames = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann'];
+    final firstNames = [
+      'Lukas',
+      'Maria',
+      'Johannes',
+      'Sarah',
+      'Peter',
+      'Anna',
+      'Thomas',
+      'Elisabeth',
+      'Matthias',
+      'Martha'
+    ];
+    final lastNames = [
+      'Müller',
+      'Schmidt',
+      'Schneider',
+      'Fischer',
+      'Weber',
+      'Meyer',
+      'Wagner',
+      'Becker',
+      'Schulz',
+      'Hoffmann'
+    ];
     return '${firstNames[rng.nextInt(firstNames.length)]} ${lastNames[rng.nextInt(lastNames.length)]}';
   }
 
@@ -215,4 +312,3 @@ class _BuildingInfo {
   final List<List<int>> cells = [];
   _BuildingInfo(this.type, this.buildingId);
 }
-
