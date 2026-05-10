@@ -30,7 +30,8 @@ class BuildingInteractionResult {
 
   /// How much Geistliche Erkenntnis (spiritual insight) the player gains.
   ///
-  /// Insight accumulates in 0.5-point steps from special building actions.
+  /// Insight accumulates in fractional steps (e.g. 0.2 / 0.3 / 0.5)
+  /// from special building actions.
   /// Only whole points are "cashed out" as usable insight.
   final double playerInsightDelta;
 
@@ -174,7 +175,7 @@ class BuildingInteractionService {
         // Faith gain + massive area spiritual influence (handled in game layer).
         building.applyInfluence(10.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: 15.0,
+          playerFaithDelta: 22.0,
           playerHealthDelta: -5.0,
           reactionEmoji: '🙏🕊️',
           actionDurationSeconds: pastorHousePraySeconds,
@@ -209,6 +210,7 @@ class BuildingInteractionService {
       // ── Gebet: -10 Faith → Zufallserfolg → +2 Interaktionen, Zelle grüner
       case 'pray':
         building.interactionCount++;
+        building.applyInfluence(2.0);
         final success = _rng.nextDouble() < 0.5;
         if (success) {
           building.interactionCount += 2;
@@ -256,7 +258,8 @@ class BuildingInteractionService {
 
       // ── Jüngerschaftsgruppe: >20 Interaktionen + 1 Bekehrter, -50 Faith
       case 'discipleshipGroup':
-        final hasChristianResident = building.residents.any((n) => n.isChristian);
+        final hasChristianResident =
+            building.residents.any((n) => n.isChristian);
         if (building.interactionCount <= 20 || !hasChristianResident) {
           return const BuildingInteractionResult(
             reactionEmoji: '🚫📖',
@@ -264,11 +267,13 @@ class BuildingInteractionService {
           );
         }
         building.interactionCount++;
-        building.applyInfluence(50.0);
-        building.influenceResidents(20.0);
-        return const BuildingInteractionResult(
-          playerFaithDelta: -50.0,
-          playerInsightDelta: 0.5,
+        building.applyInfluence(70.0);
+        building.influenceResidents(30.0);
+        final insightGain = building.type == BuildingType.apartment
+            ? discipleshipInsightApartment
+            : discipleshipInsightHouse;
+        return BuildingInteractionResult(
+          playerInsightDelta: insightGain,
           reactionEmoji: '📖👥🔥',
           actionDurationSeconds: 2,
         );
@@ -333,7 +338,7 @@ class BuildingInteractionService {
 
       // ── Um Spenden bitten: >2 Interaktionen, -10 Health/Hunger
       case 'requestDonation':
-        if (building.interactionCount <= 2) {
+        if (building.interactionCount <= 3) {
           return const BuildingInteractionResult(
             reactionEmoji: '🚫🤲',
             success: false,
@@ -350,7 +355,7 @@ class BuildingInteractionService {
             playerHealthDelta: -10.0,
             playerHungerDelta: -10.0,
             playerMaterialsDelta: materials,
-            playerFaithDelta: 5.0,
+            playerFaithDelta: 8.0,
             reactionEmoji: '🤲💰',
           );
         }
@@ -374,6 +379,8 @@ class BuildingInteractionService {
   // Base durations for time-based church actions.
   static const int sundayServiceSeconds = 20;
   static const int worshipSeconds = 7;
+  static const double discipleshipInsightHouse = 0.2;
+  static const double discipleshipInsightApartment = 0.3;
 
   BuildingInteractionResult _churchAction(
     String actionType,

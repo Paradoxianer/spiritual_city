@@ -43,8 +43,8 @@ abstract final class BuildingInfluenceConstants {
   /// Residential practical help: 1-cell radius.
   static const double radiusPracticalHelp = 1.0;
 
-  /// Discipleship group: 3-cell radius.
-  static const double radiusDiscipleshipGroup = 3.0;
+  /// Discipleship group: 4-cell radius.
+  static const double radiusDiscipleshipGroup = 4.0;
 
   /// Worship service: 10-cell radius (spec: 8–15).
   static const double radiusWorship = 10.0;
@@ -75,7 +75,7 @@ abstract final class BuildingInfluenceConstants {
   static const double deltaPracticalHelp = 0.05;
 
   /// Spiritual-state delta for a discipleship group meeting.
-  static const double deltaDiscipleshipGroup = 0.3;
+  static const double deltaDiscipleshipGroup = 0.45;
 
   /// Spiritual-state delta for a worship service.
   static const double deltaWorship = 0.5;
