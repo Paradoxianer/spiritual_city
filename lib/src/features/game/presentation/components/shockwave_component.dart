@@ -76,15 +76,16 @@ class ShockwaveComponent extends PositionComponent
             final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
 
             // Mode-specific cell impact (Issue #9)
+            // Pushback/Drain should not actively "liberate" territory.
             final modeMultiplier = switch (mode) {
               PrayerMode.liberation => switch (game.difficulty) {
                   Difficulty.easy => 0.90,
                   Difficulty.normal => 0.82,
                   Difficulty.hard => 0.82,
                 },
-              PrayerMode.rebuke => 0.24,
+              PrayerMode.rebuke => 0.02,
               PrayerMode.slow => 0.20,
-              PrayerMode.drain => 0.32,
+              PrayerMode.drain => 0.01,
             };
 
             final impact = (strength / 100.0) * falloff * modeMultiplier;

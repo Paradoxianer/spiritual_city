@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiritual_city/src/features/game/domain/models/modifier_manager.dart';
 import 'package:spiritual_city/src/features/game/domain/models/player_progress.dart';
 import 'package:spiritual_city/src/features/game/domain/models/prayer_combat.dart';
 
@@ -245,6 +246,39 @@ void main() {
       restored.loadFromJson(json);
 
       expect(restored.spiritualWorldEntries, 2);
+    });
+  });
+
+  group('Combat mode upgrades stay independent', () {
+    test('liberation radius level does not change rebuke radius', () {
+      final progress = PlayerProgress();
+      final manager = ModifierManager(progress: progress);
+
+      progress.combatProfile.getFor(PrayerMode.liberation).radiusLevel = 8;
+
+      final rebukeStats = manager.getEffectiveCombatStats(
+        PrayerMode.rebuke,
+        0.0,
+        100.0,
+      );
+
+      expect(rebukeStats.radius, closeTo(145.0, 0.0001));
+    });
+
+    test('rebuke radius changes only with rebuke radius level', () {
+      final progress = PlayerProgress();
+      final manager = ModifierManager(progress: progress);
+
+      progress.combatProfile.getFor(PrayerMode.rebuke).radiusLevel = 3;
+
+      final rebukeStats = manager.getEffectiveCombatStats(
+        PrayerMode.rebuke,
+        0.0,
+        100.0,
+      );
+
+      // rebuke level step is 0.14 per level in ModifierManager.
+      expect(rebukeStats.radius, closeTo(145.0 * (1.0 + 3 * 0.14), 0.0001));
     });
   });
 }

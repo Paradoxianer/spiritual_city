@@ -276,10 +276,12 @@ class DaemonComponent extends PositionComponent
 
     model.energy += finalDamage;
     if (model.energy >= 0) {
-      if (mode == PrayerMode.drain) {
+      if (mode == PrayerMode.liberation) {
+        _explode();
+      } else if (mode == PrayerMode.drain) {
         _absorb();
       } else {
-        _explode();
+        _banishWithoutCleansing();
       }
     }
   }
@@ -314,6 +316,12 @@ class DaemonComponent extends PositionComponent
     final faithGain = (model.initialEnergy.abs() / _drainFaithDivisor)
         .clamp(_drainFaithMin, _drainFaithMax);
     game.gainFaith(faithGain);
+    removeFromParent();
+  }
+
+  /// Daemon killed by utility modes (Rebuke/Slow): no area cleansing.
+  void _banishWithoutCleansing() {
+    model.dissolved = true;
     removeFromParent();
   }
 
