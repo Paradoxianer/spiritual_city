@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiritual_city/src/features/game/domain/models/modifier_manager.dart';
 import 'package:spiritual_city/src/features/game/domain/models/player_progress.dart';
 import 'package:spiritual_city/src/features/game/domain/models/prayer_combat.dart';
 
@@ -42,7 +43,8 @@ void main() {
       for (int level = 1; level <= 10; level++) {
         final cost = upgradeInsightCost(level);
         expect(cost, greaterThanOrEqualTo(prev),
-            reason: 'cost at level $level must be ≥ cost at level ${level - 1}');
+            reason:
+                'cost at level $level must be ≥ cost at level ${level - 1}');
         prev = cost;
       }
     });
@@ -109,7 +111,8 @@ void main() {
       expect(profile.helmHungerReduction, 0.0);
     });
 
-    test('shieldDamageReduction is kShieldDamageReductionPerLevel per level', () {
+    test('shieldDamageReduction is kShieldDamageReductionPerLevel per level',
+        () {
       final profile = CombatProfile(shieldLevel: 3);
       expect(profile.shieldDamageReduction,
           closeTo(3 * kShieldDamageReductionPerLevel, 0.0001));
@@ -168,7 +171,9 @@ void main() {
       expect(progress.insight, 0);
     });
 
-    test('spending more than available returns false and does not change insight', () {
+    test(
+        'spending more than available returns false and does not change insight',
+        () {
       final ok = progress.spendInsight(10);
       expect(ok, isFalse);
       expect(progress.insight, 5);
@@ -184,7 +189,8 @@ void main() {
   // ── PlayerProgress save / load (CombatProfile levels) ─────────────────────
 
   group('PlayerProgress save/load CombatProfile', () {
-    test('combat profile levels survive a toJson → loadFromJson round-trip', () {
+    test('combat profile levels survive a toJson → loadFromJson round-trip',
+        () {
       final progress = PlayerProgress();
       progress.addInsight(10.0);
 
@@ -215,7 +221,12 @@ void main() {
       progress.loadFromJson({
         'insight': 3,
         'combatProfile': {
-          'liberation': {'radius': 1.2, 'strength': 1.0, 'duration': 1.0, 'speed': 1.0},
+          'liberation': {
+            'radius': 1.2,
+            'strength': 1.0,
+            'duration': 1.0,
+            'speed': 1.0
+          },
         },
       });
       // Should not crash; levels default to 0
@@ -223,6 +234,51 @@ void main() {
       expect(lib.radiusLevel, 0);
       expect(lib.strengthLevel, 0);
       expect(progress.insight, 3);
+    });
+
+    test('spiritualWorldEntries persists across save/load', () {
+      final progress = PlayerProgress();
+      progress.recordSpiritualWorldEntry();
+      progress.recordSpiritualWorldEntry();
+
+      final json = progress.toJson();
+      final restored = PlayerProgress();
+      restored.loadFromJson(json);
+
+      expect(restored.spiritualWorldEntries, 2);
+    });
+  });
+
+  group('Combat mode upgrades stay independent', () {
+    test('liberation radius level does not change rebuke radius', () {
+      final progress = PlayerProgress();
+      final manager = ModifierManager(progress: progress);
+
+      progress.combatProfile.getFor(PrayerMode.liberation).radiusLevel = 8;
+
+      final rebukeStats = manager.getEffectiveCombatStats(
+        PrayerMode.rebuke,
+        0.0,
+        100.0,
+      );
+
+      expect(rebukeStats.radius, closeTo(145.0, 0.0001));
+    });
+
+    test('rebuke radius changes only with rebuke radius level', () {
+      final progress = PlayerProgress();
+      final manager = ModifierManager(progress: progress);
+
+      progress.combatProfile.getFor(PrayerMode.rebuke).radiusLevel = 3;
+
+      final rebukeStats = manager.getEffectiveCombatStats(
+        PrayerMode.rebuke,
+        0.0,
+        100.0,
+      );
+
+      // rebuke level step is 0.14 per level in ModifierManager.
+      expect(rebukeStats.radius, closeTo(145.0 * (1.0 + 3 * 0.14), 0.0001));
     });
   });
 }

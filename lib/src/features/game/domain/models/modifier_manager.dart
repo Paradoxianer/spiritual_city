@@ -26,6 +26,7 @@ class Modifier {
 /// Lastenheft §5.4
 class ModifierManager {
   static final _log = Logger('ModifierManager');
+  static const double _maxHoldingTimeForScaling = 8.0;
 
   final PlayerProgress progress;
 
@@ -55,13 +56,32 @@ class ModifierManager {
   late final Modifier wachstum;
 
   ModifierManager({required this.progress}) {
-    inbrunst      = Modifier(id: 'inbrunst',      name: 'Inbrunst',      description: 'Timing-Fenster +5% breiter');
-    ausdauer      = Modifier(id: 'ausdauer',      name: 'Ausdauer',      description: 'Gebets-Zone wächst 20% schneller');
-    konzentration = Modifier(id: 'konzentration', name: 'Konzentration', description: 'Faith-Pulse 15% langsamer');
-    kraft         = Modifier(id: 'kraft',         name: 'Kraft',         description: 'Impact-Power +20%');
-    weisheit      = Modifier(id: 'weisheit',      name: 'Weisheit',      description: 'Faith-Kosten pro Combat -10%');
-    bewahrung     = Modifier(id: 'bewahrung',     name: 'Bewahrung',     description: 'Rückfall-Rate -15% für grüne Zellen');
-    wachstum      = Modifier(id: 'wachstum',      name: 'Wachstum',      description: 'Grüne Zellen beeinflussen Nachbarn +10%');
+    inbrunst = Modifier(
+        id: 'inbrunst',
+        name: 'Inbrunst',
+        description: 'Timing-Fenster +5% breiter');
+    ausdauer = Modifier(
+        id: 'ausdauer',
+        name: 'Ausdauer',
+        description: 'Gebets-Zone wächst 20% schneller');
+    konzentration = Modifier(
+        id: 'konzentration',
+        name: 'Konzentration',
+        description: 'Faith-Pulse 15% langsamer');
+    kraft =
+        Modifier(id: 'kraft', name: 'Kraft', description: 'Impact-Power +20%');
+    weisheit = Modifier(
+        id: 'weisheit',
+        name: 'Weisheit',
+        description: 'Faith-Kosten pro Combat -10%');
+    bewahrung = Modifier(
+        id: 'bewahrung',
+        name: 'Bewahrung',
+        description: 'Rückfall-Rate -15% für grüne Zellen');
+    wachstum = Modifier(
+        id: 'wachstum',
+        name: 'Wachstum',
+        description: 'Grüne Zellen beeinflussen Nachbarn +10%');
   }
 
   /// Check all unlock conditions and unlock modifiers as appropriate.
@@ -77,13 +97,13 @@ class ModifierManager {
       }
     }
 
-    tryUnlock(inbrunst,      progress.prayerCombatsCompleted >= 10);
-    tryUnlock(ausdauer,      progress.territoriesPartiallyTaken >= 5);
+    tryUnlock(inbrunst, progress.prayerCombatsCompleted >= 10);
+    tryUnlock(ausdauer, progress.territoriesPartiallyTaken >= 5);
     tryUnlock(konzentration, progress.bibleReadingsCompleted >= 10);
-    tryUnlock(kraft,         progress.npcsConverted >= 3);
-    tryUnlock(weisheit,      progress.conversationsHeld >= 20);
-    tryUnlock(bewahrung,     progress.territoriesFullyTaken >= 1);
-    tryUnlock(wachstum,      progress.conversationsHeld >= 30);
+    tryUnlock(kraft, progress.npcsConverted >= 3);
+    tryUnlock(weisheit, progress.conversationsHeld >= 20);
+    tryUnlock(bewahrung, progress.territoriesFullyTaken >= 1);
+    tryUnlock(wachstum, progress.conversationsHeld >= 30);
 
     return newlyUnlocked;
   }
@@ -125,22 +145,76 @@ class ModifierManager {
   ) {
     final base = progress.combatProfile.getFor(mode);
     final faithFactor = (currentFaith / 100.0).clamp(0.1, 2.0);
-    
-    // Holding time bonus: 20% strength increase per second held
-    final strengthHoldingBonus = 1.0 + (holdingTime * 0.2);
+    // Cap hold scaling so very long holds cannot inflate combat power endlessly.
+    final clampedHoldingTime =
+        holdingTime.clamp(0.0, _maxHoldingTimeForScaling);
+    final levelStep = _perModeUpgradeStep(mode);
+
+    final radiusLevels = 1.0 + base.radiusLevel * levelStep;
+    final strengthLevels = 1.0 + base.strengthLevel * levelStep;
+    final durationLevels = 1.0 + base.durationLevel * levelStep;
+    final speedLevels = 1.0 + base.speedLevel * levelStep;
+
+    // Holding-time bonus scales slightly stronger for utility modes.
+    final holdingStrengthFactor = switch (mode) {
+      PrayerMode.liberation => 1.0 + (clampedHoldingTime * 0.14),
+      PrayerMode.rebuke => 1.0 + (clampedHoldingTime * 0.20),
+      PrayerMode.slow => 1.0 + (clampedHoldingTime * 0.22),
+      PrayerMode.drain => 1.0 + (clampedHoldingTime * 0.20),
+    };
 
     // Apply global passives
     final radiusMultiplier = zoneSizeSpeedMultiplier; // Ausdauer
     final strengthMultiplier = impactPowerMultiplier; // Kraft
 
+    final modeRadiusBase = switch (mode) {
+      PrayerMode.liberation => 125.0,
+      PrayerMode.rebuke => 145.0,
+      PrayerMode.slow => 145.0,
+      PrayerMode.drain => 150.0,
+    };
+    final modeStrengthBase = switch (mode) {
+      PrayerMode.liberation => 20.0,
+      PrayerMode.rebuke => 17.0,
+      PrayerMode.slow => 16.0,
+      PrayerMode.drain => 24.0,
+    };
+    final modeDurationBase = switch (mode) {
+      PrayerMode.liberation => 0.95,
+      PrayerMode.rebuke => 1.30,
+      PrayerMode.slow => 1.40,
+      PrayerMode.drain => 1.30,
+    };
+    final modeSpeedBase = switch (mode) {
+      PrayerMode.liberation => 85.0,
+      PrayerMode.rebuke => 95.0,
+      PrayerMode.slow => 90.0,
+      PrayerMode.drain => 92.0,
+    };
+
     return EffectiveCombatStats(
-      radius: base.radius * radiusMultiplier * 140.0, // Reduced max radius
-      strength: base.strength * strengthMultiplier * faithFactor * strengthHoldingBonus * 25.0,
-      duration: base.duration * (1.0 + (holdingTime * 0.05)),
-      speed: base.speed * 90.0, // Slower expansion
+      radius: radiusLevels * radiusMultiplier * modeRadiusBase,
+      strength: strengthLevels *
+          strengthMultiplier *
+          faithFactor *
+          holdingStrengthFactor *
+          modeStrengthBase,
+      duration:
+          durationLevels * modeDurationBase * (1.0 + (clampedHoldingTime * 0.10)),
+      speed: speedLevels * modeSpeedBase,
       color: mode.color,
     );
   }
+
+  /// Liberation upgrades intentionally scale less per level because its base
+  /// cleansing impact is already strong. Utility/control modes scale faster so
+  /// Slow/Rebuke/Drain stay relevant in longer sessions.
+  double _perModeUpgradeStep(PrayerMode mode) => switch (mode) {
+        PrayerMode.liberation => 0.08,
+        PrayerMode.rebuke => 0.14,
+        PrayerMode.slow => 0.16,
+        PrayerMode.drain => 0.15,
+      };
 }
 
 /// Result of combat calculations.

@@ -28,7 +28,9 @@ class ResourceStage {
     return 3500; // Simplified
   }
 
-  double get progress => ((totalAccumulated - currentThreshold) / (nextThreshold - currentThreshold)).clamp(0.0, 1.0);
+  double get progress => ((totalAccumulated - currentThreshold) /
+          (nextThreshold - currentThreshold))
+      .clamp(0.0, 1.0);
 
   bool add(double amount) {
     totalAccumulated += amount.abs();
@@ -40,9 +42,9 @@ class ResourceStage {
   }
 
   Map<String, dynamic> toJson() => {
-    'stage': stage,
-    'total': totalAccumulated,
-  };
+        'stage': stage,
+        'total': totalAccumulated,
+      };
 
   void fromJson(Map<String, dynamic> json) {
     stage = (json['stage'] ?? 1) as int;
@@ -62,6 +64,7 @@ class PlayerProgress extends ChangeNotifier {
   int conversationsHeld = 0;
   int territoriesPartiallyTaken = 0;
   int territoriesFullyTaken = 0;
+  int spiritualWorldEntries = 0;
 
   // --- Geistliche Erkenntnis (Spiritual Insight) – Issue #124 ─────────────
   /// Accumulated fractional insight from building actions.
@@ -115,6 +118,7 @@ class PlayerProgress extends ChangeNotifier {
     npcsConverted++;
     notifyListeners();
   }
+
   void recordConversation() => conversationsHeld++;
   void recordTerritoryTaken({bool full = false}) {
     territoriesPartiallyTaken++;
@@ -122,39 +126,48 @@ class PlayerProgress extends ChangeNotifier {
     notifyListeners();
   }
 
+  void recordSpiritualWorldEntry() {
+    spiritualWorldEntries++;
+    notifyListeners();
+  }
+
   /// Explicitly notify listeners that the max values or stages have changed.
   void notifyLevelUp() => notifyListeners();
 
   Map<String, dynamic> toJson() => {
-    'prayerCombats': prayerCombatsCompleted,
-    'bibleReadings': bibleReadingsCompleted,
-    'npcsConverted': npcsConverted,
-    'conversations': conversationsHeld,
-    'territoriesPartially': territoriesPartiallyTaken,
-    'territoriesFully': territoriesFullyTaken,
-    'maxChristians': maxChristiansInOneCell,
-    'insight': insight,
-    'pendingInsight': pendingInsight,
-    'combatProfile': combatProfile.toJson(),
-    'stages': {
-      'faith': faithStage.toJson(),
-      'materials': materialsStage.toJson(),
-      'health': healthStage.toJson(),
-      'hunger': hungerStage.toJson(),
-    },
-  };
+        'prayerCombats': prayerCombatsCompleted,
+        'bibleReadings': bibleReadingsCompleted,
+        'npcsConverted': npcsConverted,
+        'conversations': conversationsHeld,
+        'territoriesPartially': territoriesPartiallyTaken,
+        'territoriesFully': territoriesFullyTaken,
+        'spiritualWorldEntries': spiritualWorldEntries,
+        'maxChristians': maxChristiansInOneCell,
+        'insight': insight,
+        'pendingInsight': pendingInsight,
+        'combatProfile': combatProfile.toJson(),
+        'stages': {
+          'faith': faithStage.toJson(),
+          'materials': materialsStage.toJson(),
+          'health': healthStage.toJson(),
+          'hunger': hungerStage.toJson(),
+        },
+      };
 
   void loadFromJson(Map<String, dynamic> json) {
     prayerCombatsCompleted = (json['prayerCombats'] as num?)?.toInt() ?? 0;
     bibleReadingsCompleted = (json['bibleReadings'] as num?)?.toInt() ?? 0;
     npcsConverted = (json['npcsConverted'] as num?)?.toInt() ?? 0;
     conversationsHeld = (json['conversations'] as num?)?.toInt() ?? 0;
-    territoriesPartiallyTaken = (json['territoriesPartially'] as num?)?.toInt() ?? 0;
+    territoriesPartiallyTaken =
+        (json['territoriesPartially'] as num?)?.toInt() ?? 0;
     territoriesFullyTaken = (json['territoriesFully'] as num?)?.toInt() ?? 0;
+    spiritualWorldEntries =
+        (json['spiritualWorldEntries'] as num?)?.toInt() ?? 0;
     maxChristiansInOneCell = (json['maxChristians'] as num?)?.toInt() ?? 0;
     insight = (json['insight'] as num?)?.toInt() ?? 0;
     pendingInsight = (json['pendingInsight'] as num?)?.toDouble() ?? 0.0;
-    
+
     if (json.containsKey('stages')) {
       final stagesRaw = json['stages'];
       if (stagesRaw is Map) {
@@ -163,7 +176,8 @@ class PlayerProgress extends ChangeNotifier {
           faithStage.fromJson((s['faith'] as Map).cast<String, dynamic>());
         }
         if (s.containsKey('materials') && s['materials'] is Map) {
-          materialsStage.fromJson((s['materials'] as Map).cast<String, dynamic>());
+          materialsStage
+              .fromJson((s['materials'] as Map).cast<String, dynamic>());
         }
         if (s.containsKey('health') && s['health'] is Map) {
           healthStage.fromJson((s['health'] as Map).cast<String, dynamic>());
@@ -181,14 +195,14 @@ class PlayerProgress extends ChangeNotifier {
         final loadedProfile = CombatProfile.fromJson(profileJson);
         // Copy loaded level values into the existing instance.
         combatProfile.shieldLevel = loadedProfile.shieldLevel;
-        combatProfile.helmLevel   = loadedProfile.helmLevel;
+        combatProfile.helmLevel = loadedProfile.helmLevel;
         for (var mode in PrayerMode.values) {
-          final loadedStats  = loadedProfile.getFor(mode);
+          final loadedStats = loadedProfile.getFor(mode);
           final currentStats = combatProfile.getFor(mode);
-          currentStats.radiusLevel   = loadedStats.radiusLevel;
+          currentStats.radiusLevel = loadedStats.radiusLevel;
           currentStats.strengthLevel = loadedStats.strengthLevel;
           currentStats.durationLevel = loadedStats.durationLevel;
-          currentStats.speedLevel    = loadedStats.speedLevel;
+          currentStats.speedLevel = loadedStats.speedLevel;
         }
       }
     }
