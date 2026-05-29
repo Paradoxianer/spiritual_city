@@ -247,7 +247,7 @@ class NPCComponent extends PositionComponent
     if (type == 'help') {
       final giftGain =
           (_faithCalc.calculateGiftGain() * spiritualBonus).round();
-      model.interactionCount++;
+      model.interactionCount += 4;
       model.hadGiftThisSession = true;
       model.wantsGift = false;
       model.applyInfluence(giftGain.toDouble());
