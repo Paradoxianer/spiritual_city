@@ -2520,9 +2520,10 @@ class _ConversionCounterState extends State<_ConversionCounter>
 
   @override
   Widget build(BuildContext context) {
-    final converted = widget.gameRef.chunkManager.allNPCModels
-        .where((m) => m.isConverted)
-        .length;
+    // Issue #170: use the game's merged live+saved count so the number does
+    // not visibly drop after loading a save, before the player has walked
+    // back through every previously-visited chunk this session.
+    final converted = widget.gameRef.knownChristianCount;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -5293,9 +5294,11 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay>
     if (!_visible) return const SizedBox.shrink();
 
     final game = widget.game;
-    final allNpcs = game.chunkManager.allNPCModels;
-    final convertedCount = allNpcs.where((n) => n.isChristian).length;
-    final totalNpcs = allNpcs.length;
+    // Issue #170: merged live+saved counts so the ratio is consistent
+    // (converted never exceeds total) and doesn't regress after a load.
+    final npcCounts = game.knownNpcCounts;
+    final convertedCount = npcCounts.converted;
+    final totalNpcs = npcCounts.total;
 
     int totalCells = 0;
     int positiveCells = 0;

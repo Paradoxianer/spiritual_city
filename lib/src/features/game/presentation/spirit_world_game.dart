@@ -635,6 +635,47 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
   }
 
+  // ── Known Christian count (Issue #170) ─────────────────────────────────────
+
+  /// Number of converted NPCs the game currently *knows about*: every
+  /// currently-active NPC (its chunk has been loaded this session) plus
+  /// every converted NPC recorded in the save for a chunk that has **not**
+  /// been loaded this session yet.
+  ///
+  /// Before this fix, the HUD and win-screen counted only
+  /// `chunkManager.allNPCModels` – NPCs are created lazily the first time
+  /// their chunk is loaded (see [ChunkManager._loadChunk]), so right after
+  /// loading a save the count only reflected the handful of chunks around
+  /// the player's spawn point, not the Christians made in previous sessions
+  /// elsewhere in the city.  This is still not the *true* city-wide count
+  /// (that would require generating every chunk – the expensive path
+  /// `_checkWinCondition` only takes once the game is nearly won, see
+  /// #176); it is the best count obtainable without that cost.
+  int get knownChristianCount => knownNpcCounts.converted;
+
+  /// Merged live+saved (converted, total) NPC counts – see
+  /// [knownChristianCount].  Returned together so UI that shows "X / Y"
+  /// (e.g. the win screen) never shows a converted count exceeding the
+  /// total, which independently recomputing each half could risk.
+  ({int converted, int total}) get knownNpcCounts {
+    final activeIds = <String>{};
+    int converted = 0;
+    for (final npc in chunkManager.allNPCModels) {
+      activeIds.add(npc.id);
+      if (npc.isConverted) converted++;
+    }
+    int total = activeIds.length;
+    final saved = _savedNPCStates;
+    if (saved != null) {
+      for (final entry in saved.entries) {
+        if (activeIds.contains(entry.key)) continue; // already counted live
+        total++;
+        if (entry.value['converted'] == true) converted++;
+      }
+    }
+    return (converted: converted, total: total);
+  }
+
   // ── State capture (called when the player saves and quits) ────────────────
 
   /// Serialises the full game state into a [Map] suitable for storing in
