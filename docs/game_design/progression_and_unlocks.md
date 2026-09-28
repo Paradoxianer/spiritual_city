@@ -61,6 +61,11 @@ Bekehrte NPCs (`isConverted`) werden **Gemeindemitglieder** mit optionaler Rolle
 
 Tier 1 (Kleinaufgaben), Tier 2 (Ketten), Tier 3 (Stadtteil-Projekte, **qualitative** Belohnung, z. B. Predigen); Belohnung Zahlen `base × (1 + Stufe × 0.5)` — siehe #173 und #172. Die Etappen aus `core_loop_and_retention.md` §3 sind die Tier-3-Ziele.
 
-## 6. Interaktions-Varianz & Bedürfnisse (Verweis)
+## 6. Interaktions-Varianz & Bedürfnisse — umgesetzt (#171)
 
-Abnehmende Erträge je Session-Wiederholung (1.0/0.6/0.35), Varianz-Bonus 1.2×, Bedürfnis-Multiplikator 2.0×/0.75× — siehe #171.
+Abnehmende Erträge je Session-Wiederholung (1.0×/0.6×/0.35×), Varianz-Bonus 1.2× beim Aktionswechsel, Bedürfnis-Multiplikator 2.0×/0.75× — implementiert in `InteractionVarianceService` (`lib/src/features/game/domain/services/`) und in `NPCComponent.handleInteraction` für talk/counsel/bible/pray/help verdrahtet.
+
+- **Bedürfnis (`NpcNeed`):** lonely→talk, doubting→counsel, seeking→bible, needy→pray/help. Deterministisch aus einem stabilen Hash der NPC-`id` (nicht `String.hashCode`, das ist über SDK-Versionen nicht garantiert stabil) — wird **nicht** persistiert, sondern bei jeder Regeneration neu abgeleitet. Alte Saves sind damit automatisch kompatibel (kein Migrations-Feld nötig).
+- **Session-Tracking** (`sessionCountFor`, `lastActionType`) liegt direkt auf `NPCModel` und wird über `resetSession()` bei jedem neuen Gespräch zurückgesetzt.
+- **Noch offen (UI):** die im Issue geforderte progressive Sichtbarkeit des Bedürfnisses (vage ab 3, klar ab 6 Interaktionen — kann direkt `BaseInteractableEntity.isFaithVague`/`isFaithRevealed` wiederverwenden, die Schwellen sind identisch) und ein UI-Hinweis auf den wirkenden Multiplikator sind noch nicht in `game_screen.dart`/`DialogOverlay` verdrahtet.
+- Getestet in `test/features/game/domain/models/npc_model_needs_test.dart` und `test/features/game/domain/services/interaction_variance_service_test.dart`, inkl. des Abnahmekriteriums "5× Bibellesen ist messbar schlechter als eine gemischte Rotation".

@@ -9,6 +9,26 @@ enum NPCType {
   officer,
 }
 
+/// A hidden, per-NPC need that makes one interaction type especially
+/// effective on this NPC and the rest comparatively weaker (Issue #171).
+///
+/// Deterministic and derived from the NPC's [NPCModel.id] – never persisted,
+/// so old saves automatically get a need without any migration, and it
+/// survives regenerating the same NPC from the same seed.
+enum NpcNeed {
+  /// Einsam – craves conversation.
+  lonely,
+
+  /// Zweifelnd – craves counseling (Seelsorge).
+  doubting,
+
+  /// Suchend – craves Bible study.
+  seeking,
+
+  /// Bedürftig/krank – craves prayer or practical help.
+  needy,
+}
+
 /// NPC Data Model based on Lastenheft Section 6.2
 class NPCModel extends BaseInteractableEntity {
   @override
@@ -55,6 +75,39 @@ class NPCModel extends BaseInteractableEntity {
   /// position and then left in place.  Null for freshly-generated NPCs.
   Vector2? savedPosition;
 
+  // ── Interaction variance & needs (Issue #171) ──────────────────────────────
+
+  /// This NPC's hidden need, deterministic from [id] (see [NpcNeed]).
+  late final NpcNeed need = NpcNeed.values[_stableStringHash(id) % NpcNeed.values.length];
+
+  /// Whether [actionType] ('talk' / 'counsel' / 'bible' / 'pray' / 'help') is
+  /// this NPC's strong need – see the table on [NpcNeed].
+  bool needMatchesAction(String actionType) => switch (need) {
+        NpcNeed.lonely => actionType == 'talk',
+        NpcNeed.doubting => actionType == 'counsel',
+        NpcNeed.seeking => actionType == 'bible',
+        NpcNeed.needy => actionType == 'pray' || actionType == 'help',
+      };
+
+  /// How many times each action type has been used on this NPC in the
+  /// current session (diminishing returns – reset by [resetSession]).
+  final Map<String, int> _sessionActionCounts = {};
+
+  /// The action type of the most recent interaction this session, or null at
+  /// session start (used for the variance bonus).
+  String? lastActionType;
+
+  /// Prior uses of [actionType] *before* the interaction currently being
+  /// resolved – i.e. call this before [recordAction] for the same call.
+  int sessionCountFor(String actionType) => _sessionActionCounts[actionType] ?? 0;
+
+  /// Records that [actionType] was just performed, for next time's repeat
+  /// and variance calculations.
+  void recordAction(String actionType) {
+    _sessionActionCounts[actionType] = sessionCountFor(actionType) + 1;
+    lastActionType = actionType;
+  }
+
   NPCModel({
     required this.id,
     required this.name,
@@ -82,5 +135,21 @@ class NPCModel extends BaseInteractableEntity {
     lastPlayerHealthDelta = 0.0;
     // 35% chance to request material help when faith is low
     wantsGift = faith < 30 && Random().nextDouble() < 0.35;
+    // Issue #171: repeat-decay and variance-bonus tracking only spans a
+    // single visit/session, like currentSessionInteractions above.
+    _sessionActionCounts.clear();
+    lastActionType = null;
   }
+}
+
+/// Stable string hash (DJB2 variant), independent of Dart's built-in
+/// [String.hashCode] – which the language spec does not guarantee to be
+/// identical across SDK versions/runs.  Used to derive [NpcNeed] from an
+/// NPC's [NPCModel.id] deterministically, forever, for the same id.
+int _stableStringHash(String s) {
+  int hash = 5381;
+  for (final unit in s.codeUnits) {
+    hash = ((hash << 5) + hash + unit) & 0x7fffffff; // hash*33 + c, unsigned
+  }
+  return hash;
 }
