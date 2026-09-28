@@ -295,6 +295,8 @@ cell_influence = (
 ---
 
 ### 5.5 DAEMON NPC SYSTEM – WANDERNDE BÖSE MÄCHTE (Issue #31)
+> **Erweiterung (Issue #178):** Dämonen-Typen mit Schwächen, Modus-Kombos, Tier/sichtbare Stärke und Skalierung mit dem Spielerstand: siehe [`docs/game_design/daemons_and_combat.md`](docs/game_design/daemons_and_combat.md). Die Mechanik unten beschreibt den Grundtyp.
+
 **Konzept:** Dämonen/böse Mächte als wandernde, negativ beeinflussende NPCs in der unsichtbaren Welt. Sie entstehen in dunkelroten Bereichen, wandern durch die Welt und hinterlassen überall dort Dunkelheit, wo sie durchziehen – bis ihre Kraft erschöpft ist.
 **Biblische Basis:**
 - Mt 12,43–45: *„Wenn der unreine Geist vom Menschen ausgefahren ist, durchwandert er wasserlose Stätten"* → Daemon-Bewegung als „ruhelos Wandern"
@@ -430,6 +432,8 @@ class NPCProfile {
 ---
 
 ### 6.3 NPC-Einfluss auf Territorium
+> **Status:** Teilweise umgesetzt (`NPCComponent._updateSpiritualInfluence`: Christen färben Zelle und Nachbarn grün, Faith < −50 dunkelt). Sichtbare Aura, Besessenheit, Stützung befreiter Zellen und Gemeinde-Rollen (Issues #180, #181): siehe [`docs/game_design/npc_influence.md`](docs/game_design/npc_influence.md).
+
 
 **Täglich (um 12:00 Uhr):**
 (muss noch überarbeitet werden siehe Berechnung 5.2)
@@ -563,6 +567,7 @@ incidents = [
 ---
 
 ## 9. HUD & UI
+> **Touch-first-Regeln, Pause-Menü/Zurück-Taste und Kampf-HUD-Layout (Issues #174, #162):** siehe [`docs/game_design/mobile_ui.md`](docs/game_design/mobile_ui.md). Sie haben Vorrang vor den Layout-Skizzen unten, wo sie sich widersprechen.
 
 ### 9.1 Haupt-HUD (Reale Welt)
 
@@ -608,6 +613,7 @@ incidents = [
 ## 10. PROGRESSION & BALANCE
 
 ### 10.1 Keine klassischen "Level"
+> **Fortschreibung (Issues #179, #181):** Freischaltbare Fähigkeiten je Kampfmodus statt reiner Multiplikatoren, Investitions-Aktionen (Fasten, Fürbitte) und die Gemeinde mit Rollen: siehe [`docs/game_design/progression_and_unlocks.md`](docs/game_design/progression_and_unlocks.md).
 
 Stattdessen: Graduelle Modifier-Freischaltung basierend auf Spielfortschritt (siehe Kap. 5.4)
 
@@ -666,6 +672,7 @@ Nach 3 Konversionen:
 ---
 
 ## 12. CORE LOOP (ZUSAMMENFASSUNG)
+> **Überarbeitung (Epic #183):** Playtest-Befund, Design-Säulen, Stadtteil-Etappen statt reinem Gesamtstadt-Sieg und Ziel-Rhythmus einer Session: siehe [`docs/game_design/core_loop_and_retention.md`](docs/game_design/core_loop_and_retention.md). Der Ablauf unten bleibt als Grundschema gültig.
 
 ```
 1. START im Pastorat

@@ -23,6 +23,24 @@ Dieses Dokument definiert die Aktionen, Kosten und Auswirkungen für die verschi
 
 > **Hinweis:** AoE-Radius und Power beziehen sich auf Gebäude- und NPC-Einfluss in der unsichtbaren Welt, **nicht** auf den Pastor-Kampf-Radius (der wird über das Upgrade-System in #4 gesteuert).
 
+### Gebäude-Glaube und Bewohner (Issue #168)
+
+**Soll:**
+- Der **Gesamt-Glaube eines Hauses** setzt sich aus dem Glauben des Gebäudes **und** dem Glauben seiner registrierten Bewohner zusammen. Bekehrt oder stärkt der Pastor einen Bewohner, steigt der Haus-Glaube spürbar; ein Haus mit Christen ist "heller".
+- **Jede erfolgreiche Aktion** in jedem Gebäudetyp erhöht den Interaktionszähler des Gebäudes (mindestens +1; Aktionen mit größerem Aufwand mehr).
+- **Jeder Gebäudetyp** hat mindestens eine Aktion, die den Glauben des Gebäudes bzw. der Bewohner erhöht (Prüfung der Tabellen unten, Lücken gehören in die Issue #168).
+
+**Ist-Stand (Code):**
+- `BuildingModel.combinedFaith` (Gebäude + Summe der Bewohner) existiert, wird aber **nirgends benutzt**: Der Glaube der Bewohner wirkt derzeit **nicht** auf den Haus-Glauben.
+- Wohngebäude (`_residentialAction`): Alle Aktionen erhöhen den Zähler, ggf. mit Bedingungen; die übrigen Typen sind noch zu prüfen.
+- Kirchen starten mit 50 % Glauben, das Pastorenhaus mit 100 %; Kirchen/Kathedralen-NPCs sind zu 25 % vorbekehrt, alle anderen zu 3 %.
+
+### Offene Anpassungen (Issues #144, #129)
+
+- **Kirche (#144):** Die Aktions-Emoji-Folge im Spiel folgt nicht dieser Tabelle; der AoE-Effekt ist derzeit eher negativ; *Anbetung* soll den Glauben von Pastor **und** Kirche massiv stärken (bisher gibt es keine Möglichkeit, den Kirchen-Glauben zu stärken). Kirchen sollen von Haus aus über 50 % Glauben haben.
+- **Balancing (#129):** Gebet im Pastorenhaus mehr Glauben/Befreiungs-AoE (+20 bis +25); Spende auf Aufforderung (NPC-Gespräch) mehr Glauben und mindestens 4 Interaktionen; Gebet im Wohngebäude erhöht auch den Gebäude-Glauben; Bibellesen in Gebäuden je nach Größe 0,2–0,3 Erkenntnis statt 0,5; *Jüngerschaftsgruppe* dauert 1–2 s und wirkt nur positiv, deutlich stärker auf die unsichtbare Welt; jede Bekehrung 0,2 Erkenntnis.
+- **Erkunden (#182):** Innenräume können diese Aktionen kontextuell anbieten (siehe `exploration.md`).
+
 ---
 
 ## 1. Wohngebäude (Residential) 🏘️
