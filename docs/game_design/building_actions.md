@@ -37,7 +37,11 @@ Dieses Dokument definiert die Aktionen, Kosten und Auswirkungen für die verschi
 
 ### Offene Anpassungen (Issues #144, #129)
 
-- **Kirche (#144):** Die Aktions-Emoji-Folge im Spiel folgt nicht dieser Tabelle; der AoE-Effekt ist derzeit eher negativ; *Anbetung* soll den Glauben von Pastor **und** Kirche massiv stärken (bisher gibt es keine Möglichkeit, den Kirchen-Glauben zu stärken). Kirchen sollen von Haus aus über 50 % Glauben haben.
+- **Kirche (#144) — teilweise behoben:** Die Emoji-Folgen im Spiel (`⛪🎹🔥🙌🕊️` für Gottesdienst, `🤲🙏🕊️🙌` für Anbetung) entsprachen bereits dieser Tabelle; das war beim Anlegen des Issues wohl schon anders. Zwei echte Abweichungen behoben:
+  - `SpiritWorldGame._buildingMultiplier` behandelte `church` wie ein normales Gebäude (1,5×) statt wie in dieser Tabelle als "Spiritual" (5×, wie Cathedral) — die AoE-Wirkung von Gottesdienst/Anbetung auf die umliegenden Zellen war dadurch 3,3× schwächer als vorgesehen.
+  - *Anbetung* stärkte die Kirche selbst nur um +20 (Bewohner +15) — bei einem Startwert von 50 kaum spürbar. Jetzt +60 / +45 ("massiv mehr", wie im Issue gefordert).
+  - Die Pastor-Regeneration (+3/Sek) entsprach schon der Spezifikation und wurde nicht verändert.
+  - **Nicht geklärt:** ob "AoE-Effekt ist eher negativ" noch etwas anderes meinte als die schwächere Wirkung durch den falschen Multiplikator — dafür bräuchte es einen konkreten Repro-Fall.
 - **Balancing (#129):** Gebet im Pastorenhaus mehr Glauben/Befreiungs-AoE (+20 bis +25); Spende auf Aufforderung (NPC-Gespräch) mehr Glauben und mindestens 4 Interaktionen; Gebet im Wohngebäude erhöht auch den Gebäude-Glauben; Bibellesen in Gebäuden je nach Größe 0,2–0,3 Erkenntnis statt 0,5; *Jüngerschaftsgruppe* dauert 1–2 s und wirkt nur positiv, deutlich stärker auf die unsichtbare Welt; jede Bekehrung 0,2 Erkenntnis.
 - **Erkunden (#182):** Innenräume können diese Aktionen kontextuell anbieten (siehe `exploration.md`).
 

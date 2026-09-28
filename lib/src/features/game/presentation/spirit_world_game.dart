@@ -1507,6 +1507,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Reads from [BuildingInfluenceConstants] so no magic numbers are used here.
   double _buildingMultiplier(BuildingType type) {
     switch (type) {
+      // Issue #144: `church` was grouped with hospital/school/shop below
+      // (multiplierMedium, 1.5×) instead of with cathedral (multiplierSpiritual,
+      // 5×) – contradicting building_actions.md's own table, which places
+      // "Church, Cathedral" together in the "Spiritual" tier.  Church's AoE
+      // worship/service influence on the surrounding cells was 3.3× weaker
+      // than intended.
+      case BuildingType.church:
       case BuildingType.cathedral:
       case BuildingType.pastorHouse:
         return BuildingInfluenceConstants.multiplierSpiritual;
@@ -1514,7 +1521,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       case BuildingType.skyscraper:
       case BuildingType.cityHall:
         return BuildingInfluenceConstants.multiplierLarge;
-      case BuildingType.church:
       case BuildingType.hospital:
       case BuildingType.school:
       case BuildingType.university:

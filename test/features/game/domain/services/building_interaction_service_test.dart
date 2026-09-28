@@ -456,6 +456,24 @@ void main() {
         BuildingInteractionService().performAction('worship', b, 0.0);
         expect(priest.faith, greaterThan(0.0));
       });
+
+      // Issue #144: "Anbetung sollte massiv mehr die faith ... der Kirche
+      // staerken" – worship used to add only +20 building / +15 resident
+      // faith, barely moving a church that starts at 50.
+      test('worship: strengthens the church itself by +60 faith', () {
+        final b = BuildingModel(buildingId: 'c', type: BuildingType.church, faith: 0.0);
+        BuildingInteractionService().performAction('worship', b, 0.0);
+        expect(b.faith, 60.0);
+      });
+
+      test('worship: strengthens residents by +45 faith each', () {
+        final priest = NPCModel(id: 'p', name: 'Pfarrer', type: NPCType.priest,
+            homePosition: Vector2.zero(), faith: 0.0);
+        final b = BuildingModel(
+            buildingId: 'c', type: BuildingType.church, residents: [priest]);
+        BuildingInteractionService().performAction('worship', b, 0.0);
+        expect(priest.faith, 45.0);
+      });
     });
 
     group('performAction – hospital', () {

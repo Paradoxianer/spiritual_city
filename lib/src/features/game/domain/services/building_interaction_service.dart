@@ -393,10 +393,17 @@ class BuildingInteractionService {
         );
 
       // ── Anbetung/Gebet: Zeit → Faith regeneriert (+3/Sek beim Pastor), Kirche gestärkt
+      //
+      // Issue #144: the pastor's regen already matched building_actions.md's
+      // spec exactly (+3/sec), but the church's own faith gain (20) was weak
+      // relative to a church's 50-faith starting value – worship barely
+      // moved it.  Tripled (20 → 60, 15 → 45 for residents) so a couple of
+      // worship sessions can visibly sanctify a church, matching "Anbetung
+      // sollte massiv mehr die faith ... der Kirche stärken" from the issue.
       case 'worship':
         building.interactionCount++;
-        building.applyInfluence(20.0);
-        building.influenceResidents(15.0);
+        building.applyInfluence(60.0);
+        building.influenceResidents(45.0);
         return const BuildingInteractionResult(
           playerFaithDelta: worshipSeconds * 3.0,
           reactionEmoji: '🤲🙏🕊️🙌',
