@@ -269,7 +269,21 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   Future<void> onLoad() async {
     try {
       _log.info('--- INITIALIZING GAME ---');
-      seedManager = SeedManager(42);
+      // ── Restore save state ──────────────────────────────────────────────────
+      final rawState = gameSave?.gameState;
+      // Run migration so the rest of onLoad always sees the current schema.
+      final savedState = rawState != null && rawState.isNotEmpty
+          ? _migrateGameState(Map<String, dynamic>.from(rawState))
+          : null;
+      final hasSavedState = savedState != null && savedState.isNotEmpty;
+
+      final worldSeed = SeedManager.resolveWorldSeed(
+        savedWorldSeed: (savedState?['worldSeed'] as num?)?.toInt(),
+        hasSavedProgress: hasSavedState,
+        saveSeed: gameSave?.seed,
+      );
+      _log.info('World seed: $worldSeed');
+      seedManager = SeedManager(worldSeed);
       generator = CityGenerator(seedManager);
       grid = CityGrid();
 
@@ -287,13 +301,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       // Initialize dynamics system early so modifiers can be applied during state restoration.
       spiritualDynamics = SpiritualDynamicsSystem();
 
-      // ── Restore save state ──────────────────────────────────────────────────
-      final rawState = gameSave?.gameState;
-      // Run migration so the rest of onLoad always sees the current schema.
-      final savedState = rawState != null && rawState.isNotEmpty
-          ? _migrateGameState(Map<String, dynamic>.from(rawState))
-          : null;
-      final hasSavedState = savedState != null && savedState.isNotEmpty;
       if (hasSavedState) {
         _applyPlayerState(savedState);
         _savedCellStates     = _parseSavedCellStates(savedState);
@@ -318,7 +325,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           : Vector2(7040, 7168);
       await world.add(player);
 
-      chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
+      chunkManager = ChunkManager(
+        grid: grid,
+        generator: generator,
+        target: player,
+        seed: seedManager.seed,
+      );
       await world.add(chunkManager);
 
       // System already initialized, now add to world
@@ -664,6 +676,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     return {
       'schemaVersion':      kSaveDataVersion,
+      'worldSeed':          seedManager.seed,
       'faith':              faith,
       'health':             health,
       'hunger':             hunger,
