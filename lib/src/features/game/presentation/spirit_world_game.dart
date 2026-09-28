@@ -579,6 +579,19 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       npc.activeMission = MissionModel.fromJson(
         (saved['mission'] as Map).cast<String, dynamic>(),
       );
+      // Issue #163: a save written before this fix may still carry a
+      // gospel-share mission on an NPC that is (now) already converted –
+      // impossible to complete, since NPCComponent short-circuits 'convert'
+      // to a no-op for Christians.  Drop it; assignStartMissions() will hand
+      // the NPC a fresh, reachable mission.
+      if (npc.isConverted &&
+          npc.activeMission?.actionType == ActionType.npcGospelShare) {
+        _log.info(
+          'applySavedNPCState: dropping stale gospel-share mission on '
+          'already-converted ${npc.id}',
+        );
+        npc.activeMission = null;
+      }
     }
     _log.fine(
       'applySavedNPCState: restored ${npc.id} '
