@@ -40,6 +40,10 @@ Noch offen: Einstellungen-Eintrag im Pause-Menü (aktuell nicht enthalten, da `s
 - Der Welt-Wechsel liegt nicht neben dem Halten-Button.
 - **Dämonentyp und -stärke** (`daemons_and_combat.md`) sind ohne Lesen erkennbar.
 
+> **Teil-Status (#174):** Der Überlapp-Bug ist behoben. `SpiritWorldGame._modeRowMargin` wird jetzt aus der tatsächlichen Button-Geometrie hergeleitet (Halten-/Welt-Wechsel-Button-Radius + 8 dp Mindestabstand + Radius eines *ausgewählten* Modus-Buttons), statt eines festen `90`, der nur für die unselektierte Größe reichte. Da Liberation der Start-Modus ist, saß Modus-Button 0 im Normalfall (Abstand nicht an min/max geklemmt) mit seiner ausgewählten Kante direkt im Halten-Button – exakt das gemeldete "falscher Knopf beim Kämpfen". Geprüft für Breiten ≥ 360 dp (mobile_ui.md-Minimum): bei genau 360 dp bleibt noch ein 8 dp Abstand zum Halten-Button.
+>
+> **Noch offen:** Bei Breiten < 360 dp (außerhalb der offiziellen Mindestgröße) und bei eng gedrängten Modus-Buttons untereinander bleibt es beim reinen Reihen-Layout; das eigentliche "Leiste/Rad am Rand"-Redesign aus Punkt 2 oben ist nicht Teil dieser Änderung.
+
 ## 5. Overlays
 
 Dialog, Gebäude-Menü, Look, Missionsliste, Keymap: einheitliche Basis (gleiche Ränder, Schließen-Geste, Sicherheitsabstände/SafeArea, Scroll bei kleinen Höhen). Jedes Overlay ist ein eigenes Widget in eigener Datei (Modularisierung #83).

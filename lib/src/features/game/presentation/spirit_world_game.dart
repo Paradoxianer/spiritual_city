@@ -46,7 +46,25 @@ bool _shouldShowKeyHints() {
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
 
-  // ── Spiritual-world button dock constants ────────────────────────────────
+  // ── Spiritual-world button dock constants (Issue #174) ────────────────────
+
+  /// Distance of the action/world-toggle button centers from the left/right
+  /// screen edge; both buttons use the default [HudButton] size below.
+  static const double _sideButtonCenterOffset = 42.0;
+
+  /// Size (both dimensions) of the action and world-toggle buttons.
+  static const double _sideButtonSize = 75.0;
+
+  /// Mode-button size while not selected / while actively selected. The
+  /// selected size is what must be kept clear of the side buttons, since any
+  /// mode button can become the selected (larger) one at any time.
+  static const double _modeButtonSizeUnselected = 45.0;
+  static const double _modeButtonSizeSelected = 60.0;
+
+  /// Minimum gap kept between the edges of two touch targets (see
+  /// `docs/game_design/mobile_ui.md` §2).
+  static const double _touchTargetGap = 8.0;
+
   /// Minimum pixel gap between adjacent mode-button centers on very small
   /// screens.  25 px keeps buttons selectable even when spacing is compressed.
   static const double _minModeButtonSpacing = 25.0;
@@ -54,6 +72,27 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Maximum pixel gap between adjacent mode-button centers on large screens.
   /// 65 px matches the legacy fixed 60 px spacing with a small visual margin.
   static const double _maxModeButtonSpacing = 65.0;
+
+  /// Horizontal margin reserved for the action/world-toggle buttons before
+  /// the mode-button row may start.
+  ///
+  /// Derived from actual button geometry so a selected mode button (the
+  /// largest state, and the one that sits closest to the edge) never reaches
+  /// the action/world-toggle button, with [_touchTargetGap] to spare:
+  /// `sideButtonCenterOffset + sideButtonHalfWidth + gap + selectedModeButtonHalfWidth`.
+  ///
+  /// Was a bare `90`, which only worked out for the *unselected* (45 px)
+  /// mode-button size.  Whenever the row's natural spacing landed between
+  /// the min/max clamp below – the common case on mid-size screens, since
+  /// the row is centred so its edge sits exactly at the margin in that case –
+  /// mode button 0 (Liberation, the *default* starting mode – see
+  /// `PlayerComponent._currentMode`) sat with its edge inside the action
+  /// button the moment the spiritual world opened, matching the reported
+  /// "hit the wrong button while fighting" symptom.
+  static const double _modeRowMargin = _sideButtonCenterOffset +
+      _sideButtonSize / 2 +
+      _touchTargetGap +
+      _modeButtonSizeSelected / 2;
 
   // ── Save-data schema versioning ───────────────────────────────────────────
   /// Increment this constant whenever the structure of [captureGameState]
@@ -368,7 +407,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           onDown: () => player.setMode(mode),
           isActive: () => player.currentMode == mode,
           plain: true,
-          size: Vector2.all(55),
+          // Placeholder size/position – _updateHudVisibility() (called once
+          // the world is ready) immediately lays out the real dock row.
+          size: Vector2.all(_modeButtonSizeUnselected),
           position: Vector2(size.x - 170, size.y - 150 - (i * 65)),
         );
         btn.opacity = 0; // Hidden by default
@@ -830,26 +871,31 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (isSpiritualWorld) {
       if (joystick.parent != null) joystick.removeFromParent();
 
-      // ── Spiritual-world dock layout ────────────────────────────────────────
+      // ── Spiritual-world dock layout (Issue #174) ────────────────────────────
       // Lay all bottom buttons in a single non-overlapping row:
       //   [combat btn]  [── mode buttons ──]  [return btn]
       //
-      // The two side buttons (size 75) are anchored at x = 42 (left) and
-      // x = size.x - 42 (right), so their bounds are roughly [5, 79] and
-      // [size.x - 79, size.x - 5].  Mode buttons (size 50/60 selected) are
-      // distributed evenly in the gap between x = 90 and x = size.x - 90.
+      // The two side buttons (size _sideButtonSize) are anchored at
+      // x = _sideButtonCenterOffset (left) and x = size.x - _sideButtonCenterOffset
+      // (right).  Mode buttons are distributed evenly in the gap between
+      // x = _modeRowMargin and x = size.x - _modeRowMargin – sized so even a
+      // *selected* mode button can never reach the side buttons (see the
+      // constant's doc comment for why the old fixed 90 px wasn't enough).
 
-      actionButton.position = Vector2(42, size.y - 80);
+      actionButton.position = Vector2(_sideButtonCenterOffset, size.y - 80);
       actionButton.keyLabel = 'Space';
 
-      worldToggleButton.position = Vector2(size.x - 42, size.y - 80);
+      worldToggleButton.position =
+          Vector2(size.x - _sideButtonCenterOffset, size.y - 80);
 
       final n = modeButtons.length;
       if (n > 0) {
-        // Available width between the fixed side-button inner edges (≈ 90 px
-        // on each side).  Clamp individual spacing so buttons never overlap
-        // each other even on very small screens.
-        final available = size.x - 180.0;
+        // Available width between the mode-row margins.  Clamp individual
+        // spacing so buttons never overlap each other even on very small
+        // screens; on screens narrower than the row genuinely needs, spacing
+        // bottoms out at _minModeButtonSpacing and the row may symmetrically
+        // spill past the margin rather than overlap on one side only.
+        final available = size.x - _modeRowMargin * 2;
         final spacing = n > 1 ? (available / (n - 1)).clamp(_minModeButtonSpacing, _maxModeButtonSpacing) : 0.0;
         final totalModeWidth = (n - 1) * spacing;
         final modeStartX = (size.x - totalModeWidth) / 2;
@@ -858,7 +904,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           final btn = modeButtons[i];
           btn.opacity = 1.0;
           final isSelected = player.currentMode == PrayerMode.values[i];
-          btn.size = Vector2.all(isSelected ? 60.0 : 45.0);
+          btn.size = Vector2.all(
+              isSelected ? _modeButtonSizeSelected : _modeButtonSizeUnselected);
           btn.position = Vector2(
             modeStartX + i * spacing,
             isSelected ? size.y - 88.0 : size.y - 80.0,
