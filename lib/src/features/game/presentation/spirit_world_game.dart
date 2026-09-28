@@ -209,7 +209,22 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double _cityScopeRadiusCells = 690.0;
   static const double _cityScopeRadiusCellsSquared =
       _cityScopeRadiusCells * _cityScopeRadiusCells;
-  static const int _cityScopeChunkRadius = 22; // ceil(690 / 32)
+  // Issue #176: was `22`, computed as `ceil(690 / 32)` – but CityChunk.chunkSize
+  // is 16, not 32, so the scan only ever covered a ±352-cell box while the
+  // scope check itself (`_isCellWithinCityScope`) tested against the full
+  // 690-cell radius.  Chunks between ±352 and ±690 were never visited by the
+  // global scan, so cells/NPCs out there could never block (or complete) the
+  // win condition.
+  static const int _cityScopeChunkRadius = 44; // ceil(690 / CityChunk.chunkSize)
+
+  /// Chunks generated purely for the global win-check scan (Issue #176), kept
+  /// so repeated scans (the check re-runs on every conversion once the
+  /// player is close to winning) don't regenerate the same never-visited
+  /// chunk's terrain from scratch each time.  Entries become stale once a
+  /// chunk is actually loaded through normal play, but `_chunkForGlobalWinCheck`
+  /// always prefers the live chunk from [grid] first, so a stale entry here is
+  /// simply never read again for that key.
+  final Map<String, CityChunk> _winCheckChunkCache = {};
 
   // Hunger mechanics thresholds (as fractions of maxHunger)
   static const double hungerWarnThreshold     = 0.30; // < 30%: slower movement
@@ -1921,8 +1936,21 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         }
         if (!chunkTouchesCityScope) continue;
 
+        // Whether this call is the very first time this chunk's NPCs are
+        // generated (Issue #176).  NPCRegistry caches per chunk internally,
+        // so on every later scan `alreadyGenerated` is true and the NPCs
+        // returned below are the SAME live, possibly session-mutated model
+        // instances the player has been interacting with – applying the
+        // save on top of those would wipe out real progress.  Only truly
+        // fresh (never-visited-this-session) NPCs get the save applied.
+        final alreadyGenerated = chunkManager.npcRegistry.hasGeneratedChunk(cx, cy);
         final npcs =
             chunkManager.npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
+        if (!alreadyGenerated) {
+          for (final npc in npcs) {
+            applySavedNPCState(npc);
+          }
+        }
         for (final npc in npcs) {
           final npcCellX = (npc.homePosition.x / 32).floor();
           final npcCellY = (npc.homePosition.y / 32).floor();
@@ -1962,11 +1990,24 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Returns an existing loaded chunk or a temporary generated chunk for
   /// deterministic city-wide win checks.
+  ///
+  /// Issue #176: a chunk the player never visited previously had no saved
+  /// cell state applied, so a loaded save could never satisfy the win
+  /// condition until every chunk in scope had been walked through at least
+  /// once.  The temporary chunk now goes through the same
+  /// [applySavedCellStatesToChunk] step [ChunkManager] uses for real loads.
+  /// Already-loaded chunks are returned as-is (never re-patched from the
+  /// save – their live, possibly session-mutated state is authoritative).
   CityChunk _chunkForGlobalWinCheck(int chunkX, int chunkY) {
     final loaded = grid.getLoadedChunk(chunkX, chunkY);
     if (loaded != null) return loaded;
+    final key = '$chunkX,$chunkY';
+    final cached = _winCheckChunkCache[key];
+    if (cached != null) return cached;
     final chunk = CityChunk(chunkX: chunkX, chunkY: chunkY);
     generator.generateChunk(chunk);
+    applySavedCellStatesToChunk(chunk);
+    _winCheckChunkCache[key] = chunk;
     return chunk;
   }
 

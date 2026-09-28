@@ -51,6 +51,43 @@ void main() {
       expect(landlockedNpcs, isEmpty);
     });
   });
+
+  group('NPCRegistry.hasGeneratedChunk (Issue #176)', () {
+    test('is false before a chunk has been requested', () {
+      final registry = NPCRegistry(seed: 11);
+      expect(registry.hasGeneratedChunk(3, 4), isFalse);
+    });
+
+    test('becomes true once getNPCsInChunk has generated that chunk', () {
+      final registry = NPCRegistry(seed: 11);
+      final chunk = _filledChunkWithWater();
+      registry.getNPCsInChunk(3, 4, chunk: chunk);
+
+      expect(registry.hasGeneratedChunk(3, 4), isTrue);
+      // A different, never-requested chunk must remain unaffected.
+      expect(registry.hasGeneratedChunk(3, 5), isFalse);
+    });
+
+    test('a second call for the same chunk does not regenerate it (cached)',
+        () {
+      final registry = NPCRegistry(seed: 11);
+      final chunk = _filledChunkWithWater();
+      _setBuilding(chunk, 5, 5, 'house_a');
+      for (int y = 4; y <= 6; y++) {
+        for (int x = 4; x <= 6; x++) {
+          if (!(x == 5 && y == 5)) _setRoad(chunk, x, y);
+        }
+      }
+
+      final first = registry.getNPCsInChunk(3, 4, chunk: chunk);
+      final second = registry.getNPCsInChunk(3, 4, chunk: chunk);
+
+      // Same cached list instance, not a freshly regenerated one – this is
+      // the property Issue #176's win-check relies on to avoid overwriting
+      // live NPC state with saved state on repeat scans.
+      expect(identical(first, second), isTrue);
+    });
+  });
 }
 
 CityChunk _filledChunkWithWater() {

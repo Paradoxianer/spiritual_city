@@ -22,6 +22,14 @@ class NPCRegistry {
 
   NPCRegistry({int? seed}) : _seed = seed ?? 42;
 
+  /// Whether NPCs for chunk (cx, cy) have already been generated and cached.
+  ///
+  /// Used by callers (Issue #176: the global win-check scan) that must tell
+  /// a genuinely-fresh chunk apart from one whose NPCs are already live,
+  /// in-session game objects – calling [getNPCsInChunk] alone can't
+  /// distinguish the two, since it returns the cached list either way.
+  bool hasGeneratedChunk(int cx, int cy) => _chunkNPCs.containsKey('$cx,$cy');
+
   List<NPCModel> getNPCsInChunk(int cx, int cy, {CityChunk? chunk}) {
     final key = '$cx,$cy';
     if (_chunkNPCs.containsKey(key)) {
