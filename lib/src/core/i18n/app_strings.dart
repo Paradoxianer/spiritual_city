@@ -45,6 +45,20 @@ class AppStrings {
       'game.saveQuit': 'Speichern & Beenden',
       'game.saveName.prefix': 'Spiel',
 
+      // Pause menu (Issue #162 / #174)
+      'game.pause.button': 'Pause',
+      'game.pause.title': 'Pause',
+      'game.pause.resume': 'Fortsetzen',
+      'game.pause.help': 'Tastenbelegung',
+      'game.pause.save': 'Speichern',
+      'game.pause.saved': 'Gespeichert ✓',
+      'game.pause.quit': 'Speichern & Beenden',
+      'game.pause.quitConfirm.title': 'Speichern & Beenden?',
+      'game.pause.quitConfirm.body':
+          'Dein Fortschritt wird gespeichert und du kehrst ins Hauptmenü zurück.',
+      'game.pause.quitConfirm.confirm': 'Beenden',
+      'game.pause.quitConfirm.cancel': 'Abbrechen',
+
       // Settings
       'settings.title': 'Einstellungen',
       'settings.placeholder': 'Einstellungen kommen in Phase 2',
@@ -193,6 +207,20 @@ class AppStrings {
       // In-game
       'game.saveQuit': 'Save & Quit',
       'game.saveName.prefix': 'Game',
+
+      // Pause menu (Issue #162 / #174)
+      'game.pause.button': 'Pause',
+      'game.pause.title': 'Paused',
+      'game.pause.resume': 'Resume',
+      'game.pause.help': 'Controls',
+      'game.pause.save': 'Save',
+      'game.pause.saved': 'Saved ✓',
+      'game.pause.quit': 'Save & Quit',
+      'game.pause.quitConfirm.title': 'Save & Quit?',
+      'game.pause.quitConfirm.body':
+          'Your progress will be saved and you\'ll return to the main menu.',
+      'game.pause.quitConfirm.confirm': 'Quit',
+      'game.pause.quitConfirm.cancel': 'Cancel',
 
       // Settings
       'settings.title': 'Settings',

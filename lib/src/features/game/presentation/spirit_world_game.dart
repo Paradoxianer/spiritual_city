@@ -1487,16 +1487,51 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
   }
 
+  // ── Pause menu (Issue #162) ───────────────────────────────────────────────
+  //
+  // The pause menu is the only way to reach Help, Save and Save & Quit –
+  // there are no standalone buttons for them in the corners of the screen
+  // anymore (Issue #174).  Opening it pauses the Flame engine so nothing
+  // moves behind the menu; the Android/desktop back gesture opens it instead
+  // of closing the app (see GameScreen's PopScope).
+
+  bool _pauseMenuOpen = false;
+  bool get isPauseMenuOpen => _pauseMenuOpen;
+
+  void openPauseMenu() {
+    if (_pauseMenuOpen) return;
+    _pauseMenuOpen = true;
+    overlays.add('PauseMenuOverlay');
+    pauseEngine();
+  }
+
+  void closePauseMenu() {
+    if (!_pauseMenuOpen) return;
+    _pauseMenuOpen = false;
+    overlays.remove('PauseMenuOverlay');
+    resumeEngine();
+  }
+
   // ── Escape / close helper ─────────────────────────────────────────────────
 
   /// Closes whichever overlay or menu is currently open, in priority order.
-  void handleEscape() {
-    if (_keymapOpen)          { closeKeymapOverlay();    return; }
-    if (activeDialog != null) { closeDialog();            return; }
-    if (activeBuildingData != null) { closeBuildingInterior(); return; }
-    if (activeLookData != null)     { closeLookOverlay();      return; }
-    if (activeMissionBoardData != null) { closeMissionBoard(); return; }
-    if (_currentMenu != null) { closeMenu();              return; }
+  /// If nothing was open, opens the pause menu instead (so Escape / the
+  /// Android back gesture always has somewhere safe to go – see #162).
+  ///
+  /// Returns `true` if it closed something or opened the pause menu (i.e. the
+  /// caller should treat the back/escape action as handled), `false` only in
+  /// the case that nothing exists to act on yet (world not loaded).
+  bool handleEscape() {
+    if (_pauseMenuOpen)              { closePauseMenu();         return true; }
+    if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
+    if (activeDialog != null)        { closeDialog();            return true; }
+    if (activeBuildingData != null)  { closeBuildingInterior();  return true; }
+    if (activeLookData != null)      { closeLookOverlay();       return true; }
+    if (activeMissionBoardData != null) { closeMissionBoard();   return true; }
+    if (_currentMenu != null)        { closeMenu();              return true; }
+    if (!isWorldReady.value) return false;
+    openPauseMenu();
+    return true;
   }
 
   // ── Radial-menu keyboard selection ────────────────────────────────────────

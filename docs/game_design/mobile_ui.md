@@ -6,27 +6,32 @@ Regeln für HUD, Overlays und Navigation. Umsetzung: #174 (HUD/Layering), #162 (
 
 ## 1. Problem (Playtest)
 
-- Das Hilfe-`?` (Flutter-Widget bei `bottom: 12, right: 12`) überlappt Aktions-/Welt-Wechsel-Button; ein Tap öffnet die Hilfe statt der Aktion.
-- Das "Speichern & Beenden"-X sitzt oben rechts ohne Rückfrage.
-- Die Zurück-Taste beendet das Spiel ohne Speichern (kein `PopScope`; `/game` per `context.go` geöffnet).
+- Das Hilfe-`?` (Flutter-Widget bei `bottom: 12, right: 12`) überlappte Aktions-/Welt-Wechsel-Button; ein Tap öffnete die Hilfe statt der Aktion.
+- Das "Speichern & Beenden"-X saß oben rechts ohne Rückfrage.
+- Die Zurück-Taste beendete das Spiel ohne Speichern (kein `PopScope`; `/game` per `context.go` geöffnet).
 - Im Kampf liegen Halten, vier Modi und Welt-Wechsel in einer Reihe.
+
+> **Status (#162):** Behoben. `PopScope` in `GameScreen` leitet Zurück/Escape in `SpiritWorldGame.handleEscape()` um (schließt zuerst offene Overlays, öffnet sonst das Pause-Menü, pausiert dabei die Engine). Die beiden Ecken-Buttons sind einem einzigen Pause-Button (`⏸️`, oben rechts) gewichen; Hilfe, Speichern und Speichern & Beenden (mit Rückfrage) liegen im `PauseMenuOverlay`. Offen bleibt das Kampf-HUD-Layout (§4, Teil von #174).
 
 ## 2. Layout-Regeln
 
 1. **Daumenzonen:** Links unten Bewegung (Joystick), rechts unten Hauptaktion. Nichts anderes in diesen Zonen.
 2. **Touch-Ziele:** ≥ 48 dp, Abstand ≥ 8 dp zwischen Zielen; kein Ziel überlappt ein anderes (Hoch-/Querformat, ab ~360×640 dp).
-3. **Keine Widgets in den Ecken über dem Spielfeld.** Hilfe, Speichern, Einstellungen, Beenden liegen im **Pause-Menü**.
+3. **Keine Widgets in den Ecken über dem Spielfeld, mit einer Ausnahme:** ein einzelner Pause-Button (oben rechts) als Einstieg ins Pause-Menü. Hilfe, Speichern, Einstellungen, Beenden liegen **im Pause-Menü**, nicht als eigene Ecken-Buttons.
 4. **Destruktive Aktionen** (Beenden) nie mit einem Tap, sondern im Pause-Menü mit Rückfrage.
 5. **Ein Layout-/Layering-Mechanismus:** Eine zentrale Stelle entscheidet, welches Overlay Eingaben blockiert und wer bei "Zurück" zuerst schließt.
 6. Alle Texte über `AppStrings` (de/en).
 
-## 3. Zurück-Taste / Pause-Menü (#162)
+## 3. Zurück-Taste / Pause-Menü (#162) — umgesetzt
 
-`PopScope` im `GameScreen`, Reihenfolge:
+`PopScope(canPop: false)` im `GameScreen` leitet Zurück/Escape an `SpiritWorldGame.handleEscape()` weiter, Reihenfolge:
 
-1. Offenes Overlay/Menü schließen (Logik von `SpiritWorldGame.handleEscape`).
-2. Sonst **Pause-Menü**: Fortsetzen, Speichern, Hilfe/Tastenbelegung, Einstellungen, "Speichern & Beenden" (mit Rückfrage).
-3. Ein Beenden ohne Speichern gibt es nur bewusst über das Pause-Menü.
+1. Offenes Overlay/Menü schließen (Pause-Menü, Keymap, Dialog, Gebäude-Innenraum, Look, Missionsliste, Radial-Menü — in dieser Priorität).
+2. Ist nichts davon offen, öffnet sich das **Pause-Menü** (`PauseMenuOverlay`): Fortsetzen, Speichern, Hilfe/Tastenbelegung, "Speichern & Beenden" (mit Rückfrage-Dialog).
+3. Ein Beenden ohne Speichern gibt es nur bewusst über den Bestätigungs-Dialog im Pause-Menü.
+4. Das Öffnen des Pause-Menüs pausiert die Flame-Engine (`pauseEngine()`); nichts bewegt sich mehr im Hintergrund.
+
+Noch offen: Einstellungen-Eintrag im Pause-Menü (aktuell nicht enthalten, da `settings.title`/`settings.placeholder` im Spiel noch nicht existiert).
 
 ## 4. Kampf-HUD
 
