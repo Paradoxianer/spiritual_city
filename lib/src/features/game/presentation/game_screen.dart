@@ -559,6 +559,66 @@ class _DialogOverlayState extends State<DialogOverlay> {
     _scrollToBottom();
   }
 
+  // ── NPC backstory: "Ansprechen" (working through the selected challenge) ──
+  //
+  // The tabs above (_NpcBackstoryPanel) only *select* a challenge; the actual
+  // action lives here as a normal bottom action chip, alongside talk/pray/
+  // bible/help/convert – "ein Problem nach dem anderen ansprechen", per user
+  // feedback, rather than a small icon buried inside each chip.
+
+  OccurredEvent? _selectedBackstoryEvent;
+
+  static const double _backstoryWorkHealthCost = 6.0;
+
+  /// Costs a little Faith too, not just Health – working through someone
+  /// else's story draws on the pastor's own spiritual reserves.
+  static const double _backstoryWorkFaithCost = 4.0;
+
+  /// Insight reward for fully working through one backstory event – same
+  /// order of magnitude the #129 balancing note set for a conversion (0.2).
+  static const double _backstoryInsightOnCompletion = 0.2;
+
+  /// Extra Insight when completion also grew the "Als Christ" chapter –
+  /// visible spiritual fruit, rewarded like a medium building action.
+  static const double _backstoryInsightOnChristGrowth = 0.3;
+
+  /// Extra Insight when completion clears the *last* outstanding challenge
+  /// in this NPC's whole backstory – a bigger, rarer milestone.
+  static const double _backstoryInsightOnFullyResolved = 0.5;
+
+  bool get _canWorkOnSelectedBackstoryEvent {
+    final occurred = _selectedBackstoryEvent;
+    if (occurred == null || !occurred.isWorkable) return false;
+    return widget.game.health > _backstoryWorkHealthCost &&
+        widget.game.faith >= _backstoryWorkFaithCost;
+  }
+
+  void _workOnSelectedBackstoryEvent() {
+    final occurred = _selectedBackstoryEvent;
+    final model = widget.game.activeDialog?.npcModel;
+    if (occurred == null || model == null || !_canWorkOnSelectedBackstoryEvent) {
+      return;
+    }
+
+    widget.game.spendHealth(_backstoryWorkHealthCost);
+    widget.game.spendFaith(_backstoryWorkFaithCost);
+    final result = model.workOnBackstoryEvent(occurred);
+
+    _addMessage('🗣️', true);
+    if (result.completed) {
+      final fullyResolved = !model.backstory.events.any((o) => o.isWorkable);
+      widget.game.progress.addInsight(
+        _backstoryInsightOnCompletion +
+            (result.christGrowth ? _backstoryInsightOnChristGrowth : 0.0) +
+            (fullyResolved ? _backstoryInsightOnFullyResolved : 0.0),
+      );
+      _addMessage(occurred.displayGlyph, false);
+    }
+    setState(() {
+      if (result.completed) _selectedBackstoryEvent = null;
+    });
+  }
+
   void _handleInteraction(String type, String emoji) {
     if (_isWaiting || _isSessionOver || _isReadingBible) return;
 
@@ -791,7 +851,13 @@ class _DialogOverlayState extends State<DialogOverlay> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _NpcBackstoryPanel(game: widget.game, model: model),
+                          _NpcBackstoryPanel(
+                            game: widget.game,
+                            model: model,
+                            selectedEvent: _selectedBackstoryEvent,
+                            onSelectEvent: (occurred) =>
+                                setState(() => _selectedBackstoryEvent = occurred),
+                          ),
                           Expanded(
                             child: Scrollbar(
                               controller: _scrollController,
@@ -910,6 +976,18 @@ class _DialogOverlayState extends State<DialogOverlay> {
                                 isSpecial: true,
                                 onTap: () =>
                                     _handleInteraction('convert', '✝️?'),
+                              ),
+                            // "Ansprechen" – works through the backstory
+                            // challenge currently selected in the tabs
+                            // above. Only shown once there's at least one
+                            // workable challenge anywhere in this NPC's
+                            // story, so it doesn't clutter early on.
+                            if (model.backstory.events.any((o) => o.isWorkable))
+                              _EmojiChip(
+                                emoji: '🗣️',
+                                hint: '−❤️−🙏→🌱',
+                                isDisabled: !_canWorkOnSelectedBackstoryEvent,
+                                onTap: _workOnSelectedBackstoryEvent,
                               ),
                             ],
                           ),
@@ -4274,26 +4352,29 @@ class _SessionDotsRow extends StatelessWidget {
 /// Shows the NPC's generated life history above the chat messages, as tabs
 /// per life phase (docs/game_design/npc_backstory.md §7/§10) – unlocked one
 /// at a time as the relationship deepens, an "Als Christ" tab appearing once
-/// converted. Tapping an unprocessed negative event's 🗣️ works through it a
-/// little (costs the pastor some health, like counseling) – the more it's
-/// worked through, the more resilient the NPC becomes
-/// ([NpcBackstory.resilience]).
+/// converted. Tapping an unprocessed negative event *selects* it; the actual
+/// "Ansprechen" action lives as a normal chip in the bottom action row
+/// (alongside talk/pray/bible/…), so working through backstory challenges
+/// feels like one more thing to address in the conversation, one at a time,
+/// rather than a small icon buried in each chip.
 class _NpcBackstoryPanel extends StatefulWidget {
   final SpiritWorldGame game;
   final NPCModel model;
+  final OccurredEvent? selectedEvent;
+  final void Function(OccurredEvent?) onSelectEvent;
 
-  const _NpcBackstoryPanel({required this.game, required this.model});
+  const _NpcBackstoryPanel({
+    required this.game,
+    required this.model,
+    required this.selectedEvent,
+    required this.onSelectEvent,
+  });
 
   @override
   State<_NpcBackstoryPanel> createState() => _NpcBackstoryPanelState();
 }
 
 class _NpcBackstoryPanelState extends State<_NpcBackstoryPanel> {
-  /// Health cost of working through one unit of a backstory event – the
-  /// same order of magnitude as Seelsorge's HP cost, since it's the same
-  /// kind of emotional labour.
-  static const double _workHealthCost = 6.0;
-
   LifePhase? _selectedPhase;
 
   /// Interaction-count threshold at which each chronological phase's tab
@@ -4325,30 +4406,8 @@ class _NpcBackstoryPanelState extends State<_NpcBackstoryPanel> {
         LifePhase.christ => 'Als Christ',
       };
 
-  /// Insight reward for fully working through one backstory event – same
-  /// order of magnitude as a conversion (0.2, per the #129 balancing note).
-  static const double _insightRewardOnCompletion = 0.2;
-
-  /// Extra Insight when completion also grew the "Als Christ" chapter –
-  /// visible spiritual fruit, rewarded like a medium building action
-  /// (discipleship group, prayer circle: 0.5 total).
-  static const double _insightRewardOnChristGrowth = 0.3;
-
-  void _workOn(OccurredEvent occurred) {
-    if (widget.game.health <= _workHealthCost) return;
-    widget.game.spendHealth(_workHealthCost);
-    // NPCModel.workOnBackstoryEvent (not occurred.advanceWork() directly):
-    // also grows the "Als Christ" chapter by one entry when this completes
-    // processing and the NPC is already converted.
-    setState(() {
-      final result = widget.model.workOnBackstoryEvent(occurred);
-      if (result.completed) {
-        widget.game.progress.addInsight(
-          _insightRewardOnCompletion +
-              (result.christGrowth ? _insightRewardOnChristGrowth : 0.0),
-        );
-      }
-    });
+  void _selectOrDeselect(OccurredEvent occurred) {
+    widget.onSelectEvent(widget.selectedEvent == occurred ? null : occurred);
   }
 
   @override
@@ -4388,7 +4447,8 @@ class _NpcBackstoryPanelState extends State<_NpcBackstoryPanel> {
                   events: widget.model.backstory.events
                       .where((o) => o.phase == selected)
                       .toList(),
-                  onWorkOn: _workOn,
+                  selectedEvent: widget.selectedEvent,
+                  onSelect: _selectOrDeselect,
                 )
               : Text(
                   '💭 …da ist etwas, das sie/er noch nicht erzählen will.',
@@ -4452,9 +4512,14 @@ class _BackstoryTabButton extends StatelessWidget {
 
 class _PhaseEvents extends StatelessWidget {
   final List<OccurredEvent> events;
-  final void Function(OccurredEvent) onWorkOn;
+  final OccurredEvent? selectedEvent;
+  final void Function(OccurredEvent) onSelect;
 
-  const _PhaseEvents({required this.events, required this.onWorkOn});
+  const _PhaseEvents({
+    required this.events,
+    required this.selectedEvent,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -4469,7 +4534,11 @@ class _PhaseEvents extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (final occurred in events)
-          _BackstoryEventChip(occurred: occurred, onWorkOn: onWorkOn),
+          _BackstoryEventChip(
+            occurred: occurred,
+            isSelected: occurred == selectedEvent,
+            onTap: occurred.isWorkable ? () => onSelect(occurred) : null,
+          ),
       ],
     );
   }
@@ -4477,17 +4546,23 @@ class _PhaseEvents extends StatelessWidget {
 
 class _BackstoryEventChip extends StatelessWidget {
   final OccurredEvent occurred;
-  final void Function(OccurredEvent) onWorkOn;
+  final bool isSelected;
+  final VoidCallback? onTap;
 
-  const _BackstoryEventChip({required this.occurred, required this.onWorkOn});
+  const _BackstoryEventChip({
+    required this.occurred,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.black26,
+        color: isSelected ? Colors.amber.withValues(alpha: 0.25) : Colors.black26,
         borderRadius: BorderRadius.circular(10),
+        border: isSelected ? Border.all(color: Colors.amber, width: 1) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4499,20 +4574,21 @@ class _BackstoryEventChip extends StatelessWidget {
             style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10),
           ),
           if (occurred.isWorkable) ...[
-            const SizedBox(width: 4),
-            GestureDetector(
-              onTap: () => onWorkOn(occurred),
-              child: Tooltip(
-                message: 'Darüber sprechen (−${_NpcBackstoryPanelState._workHealthCost.toInt()} ❤️) '
-                    '· ${occurred.workProgress}/${OccurredEvent.workRequired}'
-                    ' · +${_NpcBackstoryPanelState._insightRewardOnCompletion.toStringAsFixed(1)} 📖 '
-                    'bei Abschluss',
-                child: const Text('🗣️', style: TextStyle(fontSize: 12)),
-              ),
+            const SizedBox(width: 3),
+            Text(
+              '${occurred.workProgress}/${OccurredEvent.workRequired}',
+              style: TextStyle(color: Colors.amber.withValues(alpha: 0.8), fontSize: 9),
             ),
           ],
         ],
       ),
+    );
+    if (onTap == null) return chip;
+    return Tooltip(
+      message: isSelected
+          ? 'Ausgewählt – jetzt unten 🗣️ ansprechen'
+          : 'Antippen, um dieses Thema auszuwählen',
+      child: GestureDetector(onTap: onTap, child: chip),
     );
   }
 }

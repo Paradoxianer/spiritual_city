@@ -31,6 +31,13 @@ class NPCComponent extends PositionComponent
   NPCModel get model => _model;
 
   static const double npcSize = 20.0;
+
+  /// Insight awarded to the pastor on a successful conversion. Noted as a
+  /// target in the #129 balancing issue (0.2) but never actually wired up;
+  /// raised a bit further on user feedback – conversion is a bigger, rarer
+  /// milestone than a single worked-through backstory event (0.2, see
+  /// `npc_backstory.md`), so it should read as clearly more rewarding.
+  static const double _conversionInsightReward = 0.5;
   final Random _random = Random();
 
   late final FaithCalculatorService _faithCalc;
@@ -310,6 +317,7 @@ class NPCComponent extends PositionComponent
         model.lastNpcFaithDelta = 100.0;
         model.lastPlayerFaithDelta += 25.0;
         game.gainFaith(25.0);
+        game.progress.addInsight(_conversionInsightReward);
         game.recordConversion();
         // Strong positive spiritual area effect on conversion (radius 5).
         // Cells closer to the NPC are affected more strongly.
