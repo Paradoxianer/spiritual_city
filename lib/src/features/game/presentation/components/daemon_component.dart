@@ -25,6 +25,14 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   static const double _daemonSize = 18.0;
 
+  /// Insight awarded for actually defeating a daemon (Liberation explode or
+  /// Drain absorb – not for a daemon that merely decays naturally, and not
+  /// for one that strikes the player). Scaled by the daemon's starting
+  /// energy, like the Drain faith gain below, so stronger daemons are worth
+  /// a little more; kept small since kills are frequent and repeatable.
+  double get _killInsightReward =>
+      (model.initialEnergy.abs() / 300.0).clamp(0.05, 0.3);
+
   double _cellDrainMultiplier = 1.0;
 
   // Active effect tracking (Issue #9)
@@ -274,6 +282,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Daemon killed by Liberation: cleanses a 3-cell radius around the death point.
   void _explode() {
     model.dissolved = true;
+    game.progress.addInsight(_killInsightReward);
     const int radius = 3;
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
@@ -299,6 +308,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
     final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0);
     game.gainFaith(faithGain);
+    game.progress.addInsight(_killInsightReward);
     removeFromParent();
   }
 

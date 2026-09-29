@@ -12,6 +12,7 @@ import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
+import '../domain/models/npc_backstory.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/models/prayer_combat.dart';
@@ -69,7 +70,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// Captures the current game state, persists it to Hive and returns to the
-  /// main menu.
+  /// main menu.  Used by the pause menu's "Save & Quit".
   Future<void> _saveAndQuit() async {
     final save = _game.gameSave;
     if (save == null) {
@@ -88,10 +89,35 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  /// Captures and persists the current game state without leaving the game.
+  /// Used by the pause menu's "Save" button.
+  Future<void> _saveOnly() async {
+    final save = _game.gameSave;
+    if (save == null) return;
+    setState(() => _isSaving = true);
+    try {
+      final state = _game.captureGameState();
+      await getIt<MenuService>().updateSaveState(save.id, state);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
+    return PopScope(
+      // There is nothing to pop – /game replaces the router stack – so the
+      // Android/desktop back gesture must never be allowed to fall through
+      // to the OS (which would silently kill the app with unsaved progress,
+      // Issue #162).  It is routed into the game's own escape handling
+      // instead, which closes overlays first and opens the pause menu.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _game.handleEscape();
+      },
+      child: Scaffold(
+        body: Stack(
         children: [
           GameWidget(
             game: _game,
@@ -104,6 +130,12 @@ class _GameScreenState extends State<GameScreen> {
                   MissionBoardOverlay(game: _game),
               'KeymapOverlay': (context, game) =>
                   KeymapOverlay(game: _game),
+              'PauseMenuOverlay': (context, game) => PauseMenuOverlay(
+                    game: _game,
+                    isSaving: _isSaving,
+                    onSave: _saveOnly,
+                    onSaveAndQuit: _saveAndQuit,
+                  ),
             },
           ),
           // Loading overlay – shown until the world is ready
@@ -114,7 +146,10 @@ class _GameScreenState extends State<GameScreen> {
               return const _LoadingOverlay();
             },
           ),
-          // Close (save & quit) button – only shown when the world is ready.
+          // Pause button – the single entry point for Help, Save and
+          // Save & Quit (Issue #162 / #174).  Replaces the former separate
+          // "X" (save & quit) and "?" (help) buttons, which overlapped the
+          // combat HUD buttons in the same corner.
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
@@ -124,8 +159,8 @@ class _GameScreenState extends State<GameScreen> {
                 right: 12,
                 child: SafeArea(
                   child: IconButton(
-                    onPressed: _isSaving ? null : _saveAndQuit,
-                    tooltip: AppStrings.get('game.saveQuit'),
+                    onPressed: _isSaving ? null : _game.openPauseMenu,
+                    tooltip: AppStrings.get('game.pause.button'),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.black54,
                       foregroundColor: Colors.white70,
@@ -133,32 +168,7 @@ class _GameScreenState extends State<GameScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: const Icon(Icons.close),
-                  ),
-                ),
-              );
-            },
-          ),
-          // Keymap help button – small "?" icon, bottom-right, only when world is ready.
-          ValueListenableBuilder<bool>(
-            valueListenable: _game.isWorldReady,
-            builder: (context, isReady, _) {
-              if (!isReady) return const SizedBox.shrink();
-              return Positioned(
-                bottom: 12,
-                right: 12,
-                child: SafeArea(
-                  child: IconButton(
-                    onPressed: _game.toggleKeymapOverlay,
-                    tooltip: 'Tastenbelegung (F1 / ?)',
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black54,
-                      foregroundColor: Colors.white70,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.help_outline),
+                    icon: const Icon(Icons.pause),
                   ),
                 ),
               );
@@ -274,6 +284,7 @@ class _GameScreenState extends State<GameScreen> {
             },
           ),
         ],
+        ),
       ),
     );
   }
@@ -548,6 +559,66 @@ class _DialogOverlayState extends State<DialogOverlay> {
     _scrollToBottom();
   }
 
+  // ── NPC backstory: "Ansprechen" (working through the selected challenge) ──
+  //
+  // The tabs above (_NpcBackstoryPanel) only *select* a challenge; the actual
+  // action lives here as a normal bottom action chip, alongside talk/pray/
+  // bible/help/convert – "ein Problem nach dem anderen ansprechen", per user
+  // feedback, rather than a small icon buried inside each chip.
+
+  OccurredEvent? _selectedBackstoryEvent;
+
+  static const double _backstoryWorkHealthCost = 6.0;
+
+  /// Costs a little Faith too, not just Health – working through someone
+  /// else's story draws on the pastor's own spiritual reserves.
+  static const double _backstoryWorkFaithCost = 4.0;
+
+  /// Insight reward for fully working through one backstory event – same
+  /// order of magnitude the #129 balancing note set for a conversion (0.2).
+  static const double _backstoryInsightOnCompletion = 0.2;
+
+  /// Extra Insight when completion also grew the "Als Christ" chapter –
+  /// visible spiritual fruit, rewarded like a medium building action.
+  static const double _backstoryInsightOnChristGrowth = 0.3;
+
+  /// Extra Insight when completion clears the *last* outstanding challenge
+  /// in this NPC's whole backstory – a bigger, rarer milestone.
+  static const double _backstoryInsightOnFullyResolved = 0.5;
+
+  bool get _canWorkOnSelectedBackstoryEvent {
+    final occurred = _selectedBackstoryEvent;
+    if (occurred == null || !occurred.isWorkable) return false;
+    return widget.game.health > _backstoryWorkHealthCost &&
+        widget.game.faith >= _backstoryWorkFaithCost;
+  }
+
+  void _workOnSelectedBackstoryEvent() {
+    final occurred = _selectedBackstoryEvent;
+    final model = widget.game.activeDialog?.npcModel;
+    if (occurred == null || model == null || !_canWorkOnSelectedBackstoryEvent) {
+      return;
+    }
+
+    widget.game.spendHealth(_backstoryWorkHealthCost);
+    widget.game.spendFaith(_backstoryWorkFaithCost);
+    final result = model.workOnBackstoryEvent(occurred);
+
+    _addMessage('🗣️', true);
+    if (result.completed) {
+      final fullyResolved = !model.backstory.events.any((o) => o.isWorkable);
+      widget.game.progress.addInsight(
+        _backstoryInsightOnCompletion +
+            (result.christGrowth ? _backstoryInsightOnChristGrowth : 0.0) +
+            (fullyResolved ? _backstoryInsightOnFullyResolved : 0.0),
+      );
+      _addMessage(occurred.displayGlyph, false);
+    }
+    setState(() {
+      if (result.completed) _selectedBackstoryEvent = null;
+    });
+  }
+
   void _handleInteraction(String type, String emoji) {
     if (_isWaiting || _isSessionOver || _isReadingBible) return;
 
@@ -777,14 +848,28 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                      child: Scrollbar(
-                        controller: _scrollController,
-                        thumbVisibility: true,
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _NpcBackstoryPanel(
+                            game: widget.game,
+                            model: model,
+                            selectedEvent: _selectedBackstoryEvent,
+                            onSelectEvent: (occurred) =>
+                                setState(() => _selectedBackstoryEvent = occurred),
+                          ),
+                          Expanded(
+                            child: Scrollbar(
+                              controller: _scrollController,
+                              thumbVisibility: true,
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                itemCount: _messages.length,
+                                itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -891,6 +976,18 @@ class _DialogOverlayState extends State<DialogOverlay> {
                                 isSpecial: true,
                                 onTap: () =>
                                     _handleInteraction('convert', '✝️?'),
+                              ),
+                            // "Ansprechen" – works through the backstory
+                            // challenge currently selected in the tabs
+                            // above. Only shown once there's at least one
+                            // workable challenge anywhere in this NPC's
+                            // story, so it doesn't clutter early on.
+                            if (model.backstory.events.any((o) => o.isWorkable))
+                              _EmojiChip(
+                                emoji: '🗣️',
+                                hint: '−❤️−🙏→🌱',
+                                isDisabled: !_canWorkOnSelectedBackstoryEvent,
+                                onTap: _workOnSelectedBackstoryEvent,
                               ),
                             ],
                           ),
@@ -1962,6 +2059,152 @@ class _MissionProgressBar extends StatelessWidget {
   }
 }
 
+// ── Pause Menu Overlay (Issue #162 / #174) ──────────────────────────────────
+
+/// Full-screen pause menu – the single place to reach Help, Save and
+/// Save & Quit.  Opened via the pause button (top-right), the Escape key or
+/// the Android/desktop back gesture (see [GameScreen]'s `PopScope`).
+class PauseMenuOverlay extends StatelessWidget {
+  final SpiritWorldGame game;
+  final bool isSaving;
+  final Future<void> Function() onSave;
+  final Future<void> Function() onSaveAndQuit;
+
+  const PauseMenuOverlay({
+    super.key,
+    required this.game,
+    required this.isSaving,
+    required this.onSave,
+    required this.onSaveAndQuit,
+  });
+
+  Future<void> _confirmSaveAndQuit(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppStrings.get('game.pause.quitConfirm.title')),
+        content: Text(AppStrings.get('game.pause.quitConfirm.body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(AppStrings.get('game.pause.quitConfirm.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(AppStrings.get('game.pause.quitConfirm.confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await onSaveAndQuit();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Material(
+        type: MaterialType.transparency,
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.88),
+          child: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('⏸️', style: TextStyle(fontSize: 40)),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppStrings.get('game.pause.title'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _PauseMenuButton(
+                        icon: Icons.play_arrow,
+                        label: AppStrings.get('game.pause.resume'),
+                        onPressed: game.closePauseMenu,
+                        filled: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _PauseMenuButton(
+                        icon: Icons.save_outlined,
+                        label: AppStrings.get('game.pause.save'),
+                        onPressed: isSaving ? null : onSave,
+                      ),
+                      const SizedBox(height: 12),
+                      _PauseMenuButton(
+                        icon: Icons.help_outline,
+                        label: AppStrings.get('game.pause.help'),
+                        onPressed: () {
+                          game.closePauseMenu();
+                          game.openKeymapOverlay();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _PauseMenuButton(
+                        icon: Icons.logout,
+                        label: AppStrings.get('game.pause.quit'),
+                        onPressed:
+                            isSaving ? null : () => _confirmSaveAndQuit(context),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single full-width row in the [PauseMenuOverlay], sized generously for
+/// touch (Issue #174: touch targets ≥ 48 dp).
+class _PauseMenuButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final FutureOr<void> Function()? onPressed;
+  final bool filled;
+
+  const _PauseMenuButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = (filled ? FilledButton.styleFrom : OutlinedButton.styleFrom)(
+      minimumSize: const Size.fromHeight(52),
+      foregroundColor: filled ? null : Colors.white,
+      side: filled ? null : const BorderSide(color: Colors.white38),
+    );
+    final child = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: 10),
+        Text(label, style: const TextStyle(fontSize: 16)),
+      ],
+    );
+    return SizedBox(
+      width: double.infinity,
+      child: filled
+          ? FilledButton(onPressed: onPressed, style: style, child: child)
+          : OutlinedButton(onPressed: onPressed, style: style, child: child),
+    );
+  }
+}
+
 // ── Keymap Overlay ─────────────────────────────────────────────────────────────
 
 /// Full-screen overlay that displays all keyboard shortcuts grouped by
@@ -2364,9 +2607,10 @@ class _ConversionCounterState extends State<_ConversionCounter>
 
   @override
   Widget build(BuildContext context) {
-    final converted = widget.gameRef.chunkManager.allNPCModels
-        .where((m) => m.isConverted)
-        .length;
+    // Issue #170: use the game's merged live+saved count so the number does
+    // not visibly drop after loading a save, before the player has walked
+    // back through every previously-visited chunk this session.
+    final converted = widget.gameRef.knownChristianCount;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -4105,6 +4349,250 @@ class _SessionDotsRow extends StatelessWidget {
   }
 }
 
+/// Shows the NPC's generated life history above the chat messages, as tabs
+/// per life phase (docs/game_design/npc_backstory.md §7/§10) – unlocked one
+/// at a time as the relationship deepens, an "Als Christ" tab appearing once
+/// converted. Tapping an unprocessed negative event *selects* it; the actual
+/// "Ansprechen" action lives as a normal chip in the bottom action row
+/// (alongside talk/pray/bible/…), so working through backstory challenges
+/// feels like one more thing to address in the conversation, one at a time,
+/// rather than a small icon buried in each chip.
+class _NpcBackstoryPanel extends StatefulWidget {
+  final SpiritWorldGame game;
+  final NPCModel model;
+  final OccurredEvent? selectedEvent;
+  final void Function(OccurredEvent?) onSelectEvent;
+
+  const _NpcBackstoryPanel({
+    required this.game,
+    required this.model,
+    required this.selectedEvent,
+    required this.onSelectEvent,
+  });
+
+  @override
+  State<_NpcBackstoryPanel> createState() => _NpcBackstoryPanelState();
+}
+
+class _NpcBackstoryPanelState extends State<_NpcBackstoryPanel> {
+  LifePhase? _selectedPhase;
+
+  /// Interaction-count threshold at which each chronological phase's tab
+  /// unlocks – Kindheit/Jugend/Jetzt at growing trust, in that order.  The
+  /// "Als Christ" tab has no interaction threshold of its own: conversion
+  /// itself is the milestone that unlocks it.
+  static const Map<LifePhase, int> _unlockThresholds = {
+    LifePhase.childhood: 3,
+    LifePhase.youth: 6,
+    LifePhase.now: 9,
+  };
+
+  bool _isUnlocked(LifePhase phase) {
+    if (phase == LifePhase.christ) return widget.model.isConverted;
+    return widget.model.interactionCount >= (_unlockThresholds[phase] ?? 0);
+  }
+
+  List<LifePhase> get _availableTabs => [
+        LifePhase.childhood,
+        LifePhase.youth,
+        LifePhase.now,
+        if (widget.model.isConverted) LifePhase.christ,
+      ];
+
+  static String _tabLabel(LifePhase phase) => switch (phase) {
+        LifePhase.childhood => 'Kindheit',
+        LifePhase.youth => 'Jugend',
+        LifePhase.now => 'Jetzt',
+        LifePhase.christ => 'Als Christ',
+      };
+
+  void _selectOrDeselect(OccurredEvent occurred) {
+    widget.onSelectEvent(widget.selectedEvent == occurred ? null : occurred);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isUnlocked(LifePhase.childhood) && !widget.model.isConverted) {
+      // Not even the first tab is reachable yet – nothing to show at all.
+      return const SizedBox.shrink();
+    }
+
+    final tabs = _availableTabs;
+    _selectedPhase ??= tabs.firstWhere(_isUnlocked, orElse: () => tabs.first);
+    final selected = _selectedPhase!;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              for (final phase in tabs) ...[
+                _BackstoryTabButton(
+                  label: _tabLabel(phase),
+                  selected: phase == selected,
+                  unlocked: _isUnlocked(phase),
+                  onTap: _isUnlocked(phase)
+                      ? () => setState(() => _selectedPhase = phase)
+                      : null,
+                ),
+                const SizedBox(width: 4),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          _isUnlocked(selected)
+              ? _PhaseEvents(
+                  events: widget.model.backstory.events
+                      .where((o) => o.phase == selected)
+                      .toList(),
+                  selectedEvent: widget.selectedEvent,
+                  onSelect: _selectOrDeselect,
+                )
+              : Text(
+                  '💭 …da ist etwas, das sie/er noch nicht erzählen will.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.55),
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackstoryTabButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool unlocked;
+  final VoidCallback? onTap;
+
+  const _BackstoryTabButton({
+    required this.label,
+    required this.selected,
+    required this.unlocked,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white24 : Colors.black26,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!unlocked)
+              const Padding(
+                padding: EdgeInsets.only(right: 3),
+                child: Text('🔒', style: TextStyle(fontSize: 9)),
+              ),
+            Text(
+              label,
+              style: TextStyle(
+                color: unlocked ? Colors.white : Colors.white38,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhaseEvents extends StatelessWidget {
+  final List<OccurredEvent> events;
+  final OccurredEvent? selectedEvent;
+  final void Function(OccurredEvent) onSelect;
+
+  const _PhaseEvents({
+    required this.events,
+    required this.selectedEvent,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return Text(
+        '– nichts Besonderes –',
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+      );
+    }
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        for (final occurred in events)
+          _BackstoryEventChip(
+            occurred: occurred,
+            isSelected: occurred == selectedEvent,
+            onTap: occurred.isWorkable ? () => onSelect(occurred) : null,
+          ),
+      ],
+    );
+  }
+}
+
+class _BackstoryEventChip extends StatelessWidget {
+  final OccurredEvent occurred;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  const _BackstoryEventChip({
+    required this.occurred,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.amber.withValues(alpha: 0.25) : Colors.black26,
+        borderRadius: BorderRadius.circular(10),
+        border: isSelected ? Border.all(color: Colors.amber, width: 1) : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(occurred.displayGlyph, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(
+            occurred.caption,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10),
+          ),
+          if (occurred.isWorkable) ...[
+            const SizedBox(width: 3),
+            Text(
+              '${occurred.workProgress}/${OccurredEvent.workRequired}',
+              style: TextStyle(color: Colors.amber.withValues(alpha: 0.8), fontSize: 9),
+            ),
+          ],
+        ],
+      ),
+    );
+    if (onTap == null) return chip;
+    return Tooltip(
+      message: isSelected
+          ? 'Ausgewählt – jetzt unten 🗣️ ansprechen'
+          : 'Antippen, um dieses Thema auszuwählen',
+      child: GestureDetector(onTap: onTap, child: chip),
+    );
+  }
+}
+
 /// Vertical faith-level bar shown on the right edge of an NPC dialog or
 /// building interior overlay.
 ///
@@ -5137,9 +5625,11 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay>
     if (!_visible) return const SizedBox.shrink();
 
     final game = widget.game;
-    final allNpcs = game.chunkManager.allNPCModels;
-    final convertedCount = allNpcs.where((n) => n.isChristian).length;
-    final totalNpcs = allNpcs.length;
+    // Issue #170: merged live+saved counts so the ratio is consistent
+    // (converted never exceeds total) and doesn't regress after a load.
+    final npcCounts = game.knownNpcCounts;
+    final convertedCount = npcCounts.converted;
+    final totalNpcs = npcCounts.total;
 
     int totalCells = 0;
     int positiveCells = 0;

@@ -46,7 +46,25 @@ bool _shouldShowKeyHints() {
 class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
   final _log = Logger('SpiritWorldGame');
 
-  // ── Spiritual-world button dock constants ────────────────────────────────
+  // ── Spiritual-world button dock constants (Issue #174) ────────────────────
+
+  /// Distance of the action/world-toggle button centers from the left/right
+  /// screen edge; both buttons use the default [HudButton] size below.
+  static const double _sideButtonCenterOffset = 42.0;
+
+  /// Size (both dimensions) of the action and world-toggle buttons.
+  static const double _sideButtonSize = 75.0;
+
+  /// Mode-button size while not selected / while actively selected. The
+  /// selected size is what must be kept clear of the side buttons, since any
+  /// mode button can become the selected (larger) one at any time.
+  static const double _modeButtonSizeUnselected = 45.0;
+  static const double _modeButtonSizeSelected = 60.0;
+
+  /// Minimum gap kept between the edges of two touch targets (see
+  /// `docs/game_design/mobile_ui.md` §2).
+  static const double _touchTargetGap = 8.0;
+
   /// Minimum pixel gap between adjacent mode-button centers on very small
   /// screens.  25 px keeps buttons selectable even when spacing is compressed.
   static const double _minModeButtonSpacing = 25.0;
@@ -54,6 +72,27 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Maximum pixel gap between adjacent mode-button centers on large screens.
   /// 65 px matches the legacy fixed 60 px spacing with a small visual margin.
   static const double _maxModeButtonSpacing = 65.0;
+
+  /// Horizontal margin reserved for the action/world-toggle buttons before
+  /// the mode-button row may start.
+  ///
+  /// Derived from actual button geometry so a selected mode button (the
+  /// largest state, and the one that sits closest to the edge) never reaches
+  /// the action/world-toggle button, with [_touchTargetGap] to spare:
+  /// `sideButtonCenterOffset + sideButtonHalfWidth + gap + selectedModeButtonHalfWidth`.
+  ///
+  /// Was a bare `90`, which only worked out for the *unselected* (45 px)
+  /// mode-button size.  Whenever the row's natural spacing landed between
+  /// the min/max clamp below – the common case on mid-size screens, since
+  /// the row is centred so its edge sits exactly at the margin in that case –
+  /// mode button 0 (Liberation, the *default* starting mode – see
+  /// `PlayerComponent._currentMode`) sat with its edge inside the action
+  /// button the moment the spiritual world opened, matching the reported
+  /// "hit the wrong button while fighting" symptom.
+  static const double _modeRowMargin = _sideButtonCenterOffset +
+      _sideButtonSize / 2 +
+      _touchTargetGap +
+      _modeButtonSizeSelected / 2;
 
   // ── Save-data schema versioning ───────────────────────────────────────────
   /// Increment this constant whenever the structure of [captureGameState]
@@ -209,7 +248,22 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   static const double _cityScopeRadiusCells = 690.0;
   static const double _cityScopeRadiusCellsSquared =
       _cityScopeRadiusCells * _cityScopeRadiusCells;
-  static const int _cityScopeChunkRadius = 22; // ceil(690 / 32)
+  // Issue #176: was `22`, computed as `ceil(690 / 32)` – but CityChunk.chunkSize
+  // is 16, not 32, so the scan only ever covered a ±352-cell box while the
+  // scope check itself (`_isCellWithinCityScope`) tested against the full
+  // 690-cell radius.  Chunks between ±352 and ±690 were never visited by the
+  // global scan, so cells/NPCs out there could never block (or complete) the
+  // win condition.
+  static const int _cityScopeChunkRadius = 44; // ceil(690 / CityChunk.chunkSize)
+
+  /// Chunks generated purely for the global win-check scan (Issue #176), kept
+  /// so repeated scans (the check re-runs on every conversion once the
+  /// player is close to winning) don't regenerate the same never-visited
+  /// chunk's terrain from scratch each time.  Entries become stale once a
+  /// chunk is actually loaded through normal play, but `_chunkForGlobalWinCheck`
+  /// always prefers the live chunk from [grid] first, so a stale entry here is
+  /// simply never read again for that key.
+  final Map<String, CityChunk> _winCheckChunkCache = {};
 
   // Hunger mechanics thresholds (as fractions of maxHunger)
   static const double hungerWarnThreshold     = 0.30; // < 30%: slower movement
@@ -269,7 +323,21 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   Future<void> onLoad() async {
     try {
       _log.info('--- INITIALIZING GAME ---');
-      seedManager = SeedManager(42);
+      // ── Restore save state ──────────────────────────────────────────────────
+      final rawState = gameSave?.gameState;
+      // Run migration so the rest of onLoad always sees the current schema.
+      final savedState = rawState != null && rawState.isNotEmpty
+          ? _migrateGameState(Map<String, dynamic>.from(rawState))
+          : null;
+      final hasSavedState = savedState != null && savedState.isNotEmpty;
+
+      final worldSeed = SeedManager.resolveWorldSeed(
+        savedWorldSeed: (savedState?['worldSeed'] as num?)?.toInt(),
+        hasSavedProgress: hasSavedState,
+        saveSeed: gameSave?.seed,
+      );
+      _log.info('World seed: $worldSeed');
+      seedManager = SeedManager(worldSeed);
       generator = CityGenerator(seedManager);
       grid = CityGrid();
 
@@ -287,13 +355,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       // Initialize dynamics system early so modifiers can be applied during state restoration.
       spiritualDynamics = SpiritualDynamicsSystem();
 
-      // ── Restore save state ──────────────────────────────────────────────────
-      final rawState = gameSave?.gameState;
-      // Run migration so the rest of onLoad always sees the current schema.
-      final savedState = rawState != null && rawState.isNotEmpty
-          ? _migrateGameState(Map<String, dynamic>.from(rawState))
-          : null;
-      final hasSavedState = savedState != null && savedState.isNotEmpty;
       if (hasSavedState) {
         _applyPlayerState(savedState);
         _savedCellStates     = _parseSavedCellStates(savedState);
@@ -318,7 +379,12 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           : Vector2(7040, 7168);
       await world.add(player);
 
-      chunkManager = ChunkManager(grid: grid, generator: generator, target: player);
+      chunkManager = ChunkManager(
+        grid: grid,
+        generator: generator,
+        target: player,
+        seed: seedManager.seed,
+      );
       await world.add(chunkManager);
 
       // System already initialized, now add to world
@@ -341,7 +407,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           onDown: () => player.setMode(mode),
           isActive: () => player.currentMode == mode,
           plain: true,
-          size: Vector2.all(55),
+          // Placeholder size/position – _updateHudVisibility() (called once
+          // the world is ready) immediately lays out the real dock row.
+          size: Vector2.all(_modeButtonSizeUnselected),
           position: Vector2(size.x - 170, size.y - 150 - (i * 65)),
         );
         btn.opacity = 0; // Hidden by default
@@ -557,6 +625,15 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     npc.faith             = ((saved['faith']   as num?)?.toDouble() ?? npc.faith).clamp(-100.0, 100.0);
     npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
+    // NPC backstory (docs/game_design/npc_backstory.md): re-trigger in case
+    // the save says converted but the fresh spawn roll didn't (idempotent –
+    // a no-op if NPCRegistry already unlocked it for a pre-converted spawn).
+    npc.unlockChristPhaseIfConverted();
+    if (saved['backstoryProgress'] is Map) {
+      npc.restoreBackstoryProgress(
+        (saved['backstoryProgress'] as Map).cast<String, dynamic>(),
+      );
+    }
     final posX = (saved['posX'] as num?)?.toDouble();
     final posY = (saved['posY'] as num?)?.toDouble();
     if (posX != null && posY != null) {
@@ -567,6 +644,19 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       npc.activeMission = MissionModel.fromJson(
         (saved['mission'] as Map).cast<String, dynamic>(),
       );
+      // Issue #163: a save written before this fix may still carry a
+      // gospel-share mission on an NPC that is (now) already converted –
+      // impossible to complete, since NPCComponent short-circuits 'convert'
+      // to a no-op for Christians.  Drop it; assignStartMissions() will hand
+      // the NPC a fresh, reachable mission.
+      if (npc.isConverted &&
+          npc.activeMission?.actionType == ActionType.npcGospelShare) {
+        _log.info(
+          'applySavedNPCState: dropping stale gospel-share mission on '
+          'already-converted ${npc.id}',
+        );
+        npc.activeMission = null;
+      }
     }
     _log.fine(
       'applySavedNPCState: restored ${npc.id} '
@@ -593,6 +683,47 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         (saved['mission'] as Map).cast<String, dynamic>(),
       );
     }
+  }
+
+  // ── Known Christian count (Issue #170) ─────────────────────────────────────
+
+  /// Number of converted NPCs the game currently *knows about*: every
+  /// currently-active NPC (its chunk has been loaded this session) plus
+  /// every converted NPC recorded in the save for a chunk that has **not**
+  /// been loaded this session yet.
+  ///
+  /// Before this fix, the HUD and win-screen counted only
+  /// `chunkManager.allNPCModels` – NPCs are created lazily the first time
+  /// their chunk is loaded (see [ChunkManager._loadChunk]), so right after
+  /// loading a save the count only reflected the handful of chunks around
+  /// the player's spawn point, not the Christians made in previous sessions
+  /// elsewhere in the city.  This is still not the *true* city-wide count
+  /// (that would require generating every chunk – the expensive path
+  /// `_checkWinCondition` only takes once the game is nearly won, see
+  /// #176); it is the best count obtainable without that cost.
+  int get knownChristianCount => knownNpcCounts.converted;
+
+  /// Merged live+saved (converted, total) NPC counts – see
+  /// [knownChristianCount].  Returned together so UI that shows "X / Y"
+  /// (e.g. the win screen) never shows a converted count exceeding the
+  /// total, which independently recomputing each half could risk.
+  ({int converted, int total}) get knownNpcCounts {
+    final activeIds = <String>{};
+    int converted = 0;
+    for (final npc in chunkManager.allNPCModels) {
+      activeIds.add(npc.id);
+      if (npc.isConverted) converted++;
+    }
+    int total = activeIds.length;
+    final saved = _savedNPCStates;
+    if (saved != null) {
+      for (final entry in saved.entries) {
+        if (activeIds.contains(entry.key)) continue; // already counted live
+        total++;
+        if (entry.value['converted'] == true) converted++;
+      }
+    }
+    return (converted: converted, total: total);
   }
 
   // ── State capture (called when the player saves and quits) ────────────────
@@ -625,6 +756,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       if (npc.faith != 0.0 ||
           npc.interactionCount != 0 ||
           npc.isConverted) {
+        final backstoryProgress = npc.captureBackstoryProgress();
         npcStates[npc.id] = {
           'faith': npc.faith.clamp(-100.0, 100.0),
           if (npc.interactionCount != 0) 'conv': npc.interactionCount,
@@ -632,6 +764,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           'posX': npcComp.position.x,
           'posY': npcComp.position.y,
           if (npc.activeMission != null) 'mission': npc.activeMission!.toJson(),
+          // NPC backstory (docs/game_design/npc_backstory.md): only the
+          // player's processing progress on individual events, sparse –
+          // everything else about the backstory is re-derived from the id.
+          if (backstoryProgress.isNotEmpty) 'backstoryProgress': backstoryProgress,
         };
       }
     }
@@ -664,6 +800,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
     return {
       'schemaVersion':      kSaveDataVersion,
+      'worldSeed':          seedManager.seed,
       'faith':              faith,
       'health':             health,
       'hunger':             hunger,
@@ -748,26 +885,31 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     if (isSpiritualWorld) {
       if (joystick.parent != null) joystick.removeFromParent();
 
-      // ── Spiritual-world dock layout ────────────────────────────────────────
+      // ── Spiritual-world dock layout (Issue #174) ────────────────────────────
       // Lay all bottom buttons in a single non-overlapping row:
       //   [combat btn]  [── mode buttons ──]  [return btn]
       //
-      // The two side buttons (size 75) are anchored at x = 42 (left) and
-      // x = size.x - 42 (right), so their bounds are roughly [5, 79] and
-      // [size.x - 79, size.x - 5].  Mode buttons (size 50/60 selected) are
-      // distributed evenly in the gap between x = 90 and x = size.x - 90.
+      // The two side buttons (size _sideButtonSize) are anchored at
+      // x = _sideButtonCenterOffset (left) and x = size.x - _sideButtonCenterOffset
+      // (right).  Mode buttons are distributed evenly in the gap between
+      // x = _modeRowMargin and x = size.x - _modeRowMargin – sized so even a
+      // *selected* mode button can never reach the side buttons (see the
+      // constant's doc comment for why the old fixed 90 px wasn't enough).
 
-      actionButton.position = Vector2(42, size.y - 80);
+      actionButton.position = Vector2(_sideButtonCenterOffset, size.y - 80);
       actionButton.keyLabel = 'Space';
 
-      worldToggleButton.position = Vector2(size.x - 42, size.y - 80);
+      worldToggleButton.position =
+          Vector2(size.x - _sideButtonCenterOffset, size.y - 80);
 
       final n = modeButtons.length;
       if (n > 0) {
-        // Available width between the fixed side-button inner edges (≈ 90 px
-        // on each side).  Clamp individual spacing so buttons never overlap
-        // each other even on very small screens.
-        final available = size.x - 180.0;
+        // Available width between the mode-row margins.  Clamp individual
+        // spacing so buttons never overlap each other even on very small
+        // screens; on screens narrower than the row genuinely needs, spacing
+        // bottoms out at _minModeButtonSpacing and the row may symmetrically
+        // spill past the margin rather than overlap on one side only.
+        final available = size.x - _modeRowMargin * 2;
         final spacing = n > 1 ? (available / (n - 1)).clamp(_minModeButtonSpacing, _maxModeButtonSpacing) : 0.0;
         final totalModeWidth = (n - 1) * spacing;
         final modeStartX = (size.x - totalModeWidth) / 2;
@@ -776,7 +918,8 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           final btn = modeButtons[i];
           btn.opacity = 1.0;
           final isSelected = player.currentMode == PrayerMode.values[i];
-          btn.size = Vector2.all(isSelected ? 60.0 : 45.0);
+          btn.size = Vector2.all(
+              isSelected ? _modeButtonSizeSelected : _modeButtonSizeUnselected);
           btn.position = Vector2(
             modeStartX + i * spacing,
             isSelected ? size.y - 88.0 : size.y - 80.0,
@@ -1378,6 +1521,13 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   /// Reads from [BuildingInfluenceConstants] so no magic numbers are used here.
   double _buildingMultiplier(BuildingType type) {
     switch (type) {
+      // Issue #144: `church` was grouped with hospital/school/shop below
+      // (multiplierMedium, 1.5×) instead of with cathedral (multiplierSpiritual,
+      // 5×) – contradicting building_actions.md's own table, which places
+      // "Church, Cathedral" together in the "Spiritual" tier.  Church's AoE
+      // worship/service influence on the surrounding cells was 3.3× weaker
+      // than intended.
+      case BuildingType.church:
       case BuildingType.cathedral:
       case BuildingType.pastorHouse:
         return BuildingInfluenceConstants.multiplierSpiritual;
@@ -1385,7 +1535,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       case BuildingType.skyscraper:
       case BuildingType.cityHall:
         return BuildingInfluenceConstants.multiplierLarge;
-      case BuildingType.church:
       case BuildingType.hospital:
       case BuildingType.school:
       case BuildingType.university:
@@ -1474,16 +1623,51 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
   }
 
+  // ── Pause menu (Issue #162) ───────────────────────────────────────────────
+  //
+  // The pause menu is the only way to reach Help, Save and Save & Quit –
+  // there are no standalone buttons for them in the corners of the screen
+  // anymore (Issue #174).  Opening it pauses the Flame engine so nothing
+  // moves behind the menu; the Android/desktop back gesture opens it instead
+  // of closing the app (see GameScreen's PopScope).
+
+  bool _pauseMenuOpen = false;
+  bool get isPauseMenuOpen => _pauseMenuOpen;
+
+  void openPauseMenu() {
+    if (_pauseMenuOpen) return;
+    _pauseMenuOpen = true;
+    overlays.add('PauseMenuOverlay');
+    pauseEngine();
+  }
+
+  void closePauseMenu() {
+    if (!_pauseMenuOpen) return;
+    _pauseMenuOpen = false;
+    overlays.remove('PauseMenuOverlay');
+    resumeEngine();
+  }
+
   // ── Escape / close helper ─────────────────────────────────────────────────
 
   /// Closes whichever overlay or menu is currently open, in priority order.
-  void handleEscape() {
-    if (_keymapOpen)          { closeKeymapOverlay();    return; }
-    if (activeDialog != null) { closeDialog();            return; }
-    if (activeBuildingData != null) { closeBuildingInterior(); return; }
-    if (activeLookData != null)     { closeLookOverlay();      return; }
-    if (activeMissionBoardData != null) { closeMissionBoard(); return; }
-    if (_currentMenu != null) { closeMenu();              return; }
+  /// If nothing was open, opens the pause menu instead (so Escape / the
+  /// Android back gesture always has somewhere safe to go – see #162).
+  ///
+  /// Returns `true` if it closed something or opened the pause menu (i.e. the
+  /// caller should treat the back/escape action as handled), `false` only in
+  /// the case that nothing exists to act on yet (world not loaded).
+  bool handleEscape() {
+    if (_pauseMenuOpen)              { closePauseMenu();         return true; }
+    if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
+    if (activeDialog != null)        { closeDialog();            return true; }
+    if (activeBuildingData != null)  { closeBuildingInterior();  return true; }
+    if (activeLookData != null)      { closeLookOverlay();       return true; }
+    if (activeMissionBoardData != null) { closeMissionBoard();   return true; }
+    if (_currentMenu != null)        { closeMenu();              return true; }
+    if (!isWorldReady.value) return false;
+    openPauseMenu();
+    return true;
   }
 
   // ── Radial-menu keyboard selection ────────────────────────────────────────
@@ -1860,8 +2044,21 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
         }
         if (!chunkTouchesCityScope) continue;
 
+        // Whether this call is the very first time this chunk's NPCs are
+        // generated (Issue #176).  NPCRegistry caches per chunk internally,
+        // so on every later scan `alreadyGenerated` is true and the NPCs
+        // returned below are the SAME live, possibly session-mutated model
+        // instances the player has been interacting with – applying the
+        // save on top of those would wipe out real progress.  Only truly
+        // fresh (never-visited-this-session) NPCs get the save applied.
+        final alreadyGenerated = chunkManager.npcRegistry.hasGeneratedChunk(cx, cy);
         final npcs =
             chunkManager.npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
+        if (!alreadyGenerated) {
+          for (final npc in npcs) {
+            applySavedNPCState(npc);
+          }
+        }
         for (final npc in npcs) {
           final npcCellX = (npc.homePosition.x / 32).floor();
           final npcCellY = (npc.homePosition.y / 32).floor();
@@ -1901,11 +2098,24 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   /// Returns an existing loaded chunk or a temporary generated chunk for
   /// deterministic city-wide win checks.
+  ///
+  /// Issue #176: a chunk the player never visited previously had no saved
+  /// cell state applied, so a loaded save could never satisfy the win
+  /// condition until every chunk in scope had been walked through at least
+  /// once.  The temporary chunk now goes through the same
+  /// [applySavedCellStatesToChunk] step [ChunkManager] uses for real loads.
+  /// Already-loaded chunks are returned as-is (never re-patched from the
+  /// save – their live, possibly session-mutated state is authoritative).
   CityChunk _chunkForGlobalWinCheck(int chunkX, int chunkY) {
     final loaded = grid.getLoadedChunk(chunkX, chunkY);
     if (loaded != null) return loaded;
+    final key = '$chunkX,$chunkY';
+    final cached = _winCheckChunkCache[key];
+    if (cached != null) return cached;
     final chunk = CityChunk(chunkX: chunkX, chunkY: chunkY);
     generator.generateChunk(chunk);
+    applySavedCellStatesToChunk(chunk);
+    _winCheckChunkCache[key] = chunk;
     return chunk;
   }
 

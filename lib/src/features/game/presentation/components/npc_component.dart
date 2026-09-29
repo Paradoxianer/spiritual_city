@@ -9,6 +9,7 @@ import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
 import '../../domain/services/faith_calculator_service.dart';
 import '../../domain/services/influence_service.dart';
+import '../../domain/services/interaction_variance_service.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
@@ -30,6 +31,13 @@ class NPCComponent extends PositionComponent
   NPCModel get model => _model;
 
   static const double npcSize = 20.0;
+
+  /// Insight awarded to the pastor on a successful conversion. Noted as a
+  /// target in the #129 balancing issue (0.2) but never actually wired up;
+  /// raised a bit further on user feedback – conversion is a bigger, rarer
+  /// milestone than a single worked-through backstory event (0.2, see
+  /// `npc_backstory.md`), so it should read as clearly more rewarding.
+  static const double _conversionInsightReward = 0.5;
   final Random _random = Random();
 
   late final FaithCalculatorService _faithCalc;
@@ -160,9 +168,16 @@ class NPCComponent extends PositionComponent
     model.lastPlayerHealthDelta = 0.0;
 
     if (type == 'talk') {
-      final gain =
-          (_faithCalc.calculateConversationGain() * spiritualBonus).round();
+      // Issue #171: repeat-decay + variance + need multiplier, so "always
+      // talk" is no longer strictly optimal – see InteractionVarianceService.
+      final varianceMult =
+          InteractionVarianceService.multiplierFor(model, 'talk');
+      final gain = (_faithCalc.calculateConversationGain() *
+              spiritualBonus *
+              varianceMult)
+          .round();
       model.applyInfluence(gain.toDouble());
+      model.recordAction('talk');
       model.interactionCount++;
       model.lastNpcFaithDelta = gain.toDouble();
       game.recordConversation();
@@ -177,9 +192,14 @@ class NPCComponent extends PositionComponent
       }
       game.gainHealth(-hpCost.toDouble());
       model.lastPlayerHealthDelta = -hpCost.toDouble();
-      final gain =
-          (_faithCalc.calculateCounselingGain() * spiritualBonus).round();
+      final varianceMult =
+          InteractionVarianceService.multiplierFor(model, 'counsel');
+      final gain = (_faithCalc.calculateCounselingGain() *
+              spiritualBonus *
+              varianceMult)
+          .round();
       model.applyInfluence(gain.toDouble());
+      model.recordAction('counsel');
       // Counseling counts as 6 interactions so the session-dot bonus grows
       // appropriately: 4× counsel → interactionCount 24 ≥ threshold 21 → 5 dots.
       model.interactionCount += 6;
@@ -197,8 +217,14 @@ class NPCComponent extends PositionComponent
       }
       game.gainFaith(-faithCost.toDouble());
       model.lastPlayerFaithDelta -= faithCost.toDouble();
+      // Recorded once the cost is actually paid – i.e. the action genuinely
+      // happened – regardless of whether the NPC ends up accepting below.
+      final varianceMult =
+          InteractionVarianceService.multiplierFor(model, 'pray');
+      model.recordAction('pray');
       final prayerGain =
-          (_faithCalc.calculatePrayerGain() * spiritualBonus).round();
+          (_faithCalc.calculatePrayerGain() * spiritualBonus * varianceMult)
+              .round();
       // Base 20% acceptance probability that scales with the NPC's own faith
       // (0-100). A deeply believing NPC is far more likely to accept prayer
       // (100% at full faith), while a faithless NPC barely reacts (20% floor).
@@ -228,15 +254,27 @@ class NPCComponent extends PositionComponent
         }
         return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
       } else {
-        model.applyInfluence(-8.0);
-        model.lastNpcFaithDelta = -8.0;
+        // NPC backstory (docs/game_design/npc_backstory.md): a life shaped by
+        // processed hardship reacts a little steadier to a new rejection,
+        // regardless of what that hardship was about.
+        final rejectionPenalty = -8.0 * (1.0 - model.backstory.resilienceDamping);
+        model.applyInfluence(rejectionPenalty);
+        model.lastNpcFaithDelta = rejectionPenalty;
         return interactionScore < -20 ? '💀😬' : '😠💭';
       }
     }
 
     if (type == 'bible') {
-      final gain = (_faithCalc.calculateBibleGain() * spiritualBonus).round();
+      // Issue #171: Bible reading used to be strictly optimal (no cost, no
+      // failure chance, highest base gain) – the repeat-decay now makes
+      // spamming it alone measurably worse than a mixed rotation.
+      final varianceMult =
+          InteractionVarianceService.multiplierFor(model, 'bible');
+      final gain =
+          (_faithCalc.calculateBibleGain() * spiritualBonus * varianceMult)
+              .round();
       model.applyInfluence(gain.toDouble());
+      model.recordAction('bible');
       model.interactionCount++;
       model.lastNpcFaithDelta = gain.toDouble();
       model.lastPlayerFaithDelta += 2.0;
@@ -245,12 +283,16 @@ class NPCComponent extends PositionComponent
     }
 
     if (type == 'help') {
+      final varianceMult =
+          InteractionVarianceService.multiplierFor(model, 'help');
       final giftGain =
-          (_faithCalc.calculateGiftGain() * spiritualBonus).round();
+          (_faithCalc.calculateGiftGain() * spiritualBonus * varianceMult)
+              .round();
       model.interactionCount++;
       model.hadGiftThisSession = true;
       model.wantsGift = false;
       model.applyInfluence(giftGain.toDouble());
+      model.recordAction('help');
       model.lastNpcFaithDelta = giftGain.toDouble();
       model.lastPlayerFaithDelta += 5.0;
       model.lastMaterialsDelta = -8.0;
@@ -268,10 +310,14 @@ class NPCComponent extends PositionComponent
       // makes conversion easier even if the NPC's faith hasn't quite reached 50.
       if (interactionScore > 50) {
         model.isConverted = true;
+        // NPC backstory (docs/game_design/npc_backstory.md): a new "Als
+        // Christ" chapter begins now.
+        model.unlockChristPhaseIfConverted();
         model.applyInfluence(100);
         model.lastNpcFaithDelta = 100.0;
         model.lastPlayerFaithDelta += 25.0;
         game.gainFaith(25.0);
+        game.progress.addInsight(_conversionInsightReward);
         game.recordConversion();
         // Strong positive spiritual area effect on conversion (radius 5).
         // Cells closer to the NPC are affected more strongly.

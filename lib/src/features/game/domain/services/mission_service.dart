@@ -21,6 +21,9 @@ class _MissionTemplate {
   final List<BuildingType>? buildingTypes;
   /// If true, assign only to NPCs; if false, only to buildings.
   final bool? npcOnly;
+  /// Extra eligibility check for NPC targets (e.g. "not already converted").
+  /// Null means every NPC is eligible.  Not consulted for building targets.
+  final bool Function(NPCModel npc)? npcEligible;
 
   const _MissionTemplate({
     required this.description,
@@ -32,6 +35,7 @@ class _MissionTemplate {
     this.difficulty = MissionDifficulty.small,
     this.buildingTypes,
     this.npcOnly,
+    this.npcEligible,
   });
 }
 
@@ -63,9 +67,11 @@ class MissionService {
   ///
   /// Template [buildingTypes] restricts which buildings a template is assigned
   /// to.  [npcOnly] = true means it can only go to an NPC target.
-  static const List<_MissionTemplate> _templates = [
+  // Not `const`: the gospel-share template's `npcEligible` field holds a
+  // closure, which cannot be a compile-time constant.
+  static final List<_MissionTemplate> _templates = [
     // ── Small: single-action ──────────────────────────────────────────────
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '🙏 Bete für die Gegend (3×)',
       actionType: ActionType.residentialPrayer,
       targetCount: 3,
@@ -74,7 +80,7 @@ class MissionService {
       difficulty: MissionDifficulty.small,
       buildingTypes: [BuildingType.house, BuildingType.apartment],
     ),
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '🤲 Anbetung in der Kirche',
       actionType: ActionType.churchWorshipPrayer,
       targetCount: 1,
@@ -83,7 +89,7 @@ class MissionService {
       difficulty: MissionDifficulty.small,
       buildingTypes: [BuildingType.church, BuildingType.cathedral],
     ),
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '🏠 Segne ein Haus',
       actionType: ActionType.residentialApartmentBless,
       targetCount: 1,
@@ -92,7 +98,7 @@ class MissionService {
       difficulty: MissionDifficulty.small,
       buildingTypes: [BuildingType.apartment],
     ),
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '👮 Segne die Polizei',
       actionType: ActionType.policeBless,
       targetCount: 1,
@@ -102,7 +108,7 @@ class MissionService {
       buildingTypes: [BuildingType.policeStation],
     ),
     // ── Medium: multi-step ────────────────────────────────────────────────
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '📦 Bring Hilfsmittel (5×)',
       actionType: ActionType.residentialPracticalHelp,
       targetCount: 5,
@@ -112,7 +118,7 @@ class MissionService {
       difficulty: MissionDifficulty.medium,
       buildingTypes: [BuildingType.house, BuildingType.apartment],
     ),
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '💬 Sprich mit jemandem (3×)',
       actionType: ActionType.npcConversation,
       targetCount: 3,
@@ -121,7 +127,7 @@ class MissionService {
       difficulty: MissionDifficulty.medium,
       npcOnly: true,
     ),
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '💡 Bring Licht ins Haus (Gottesdienst)',
       actionType: ActionType.churchService,
       targetCount: 1,
@@ -131,7 +137,7 @@ class MissionService {
       difficulty: MissionDifficulty.medium,
       buildingTypes: [BuildingType.church, BuildingType.cathedral],
     ),
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '🏫 Brief an die Schulleitung (2×)',
       actionType: ActionType.schoolLetterToManagement,
       targetCount: 2,
@@ -149,8 +155,13 @@ class MissionService {
       rewardFaith: 25.0,
       difficulty: MissionDifficulty.large,
       npcOnly: true,
+      // Issue #163: an already-converted NPC can never trigger a 'convert'
+      // action again (NPCComponent short-circuits to '✝️🙏'), so this
+      // mission would be permanently stuck. ~3% of NPCs (25% for church
+      // staff) spawn pre-converted (NPCRegistry), so this is reachable.
+      npcEligible: (npc) => !npc.isConverted,
     ),
-    _MissionTemplate(
+    const _MissionTemplate(
       description: '🙏 Bete für die Politiker (2×)',
       actionType: ActionType.cityHallPrayForPoliticians,
       targetCount: 2,
@@ -171,24 +182,40 @@ class MissionService {
 
   // ── Startup ───────────────────────────────────────────────────────────────
 
-  /// Assigns [_startMissionCount] missions to random NPCs and buildings.
-  /// Call once after the spawn chunk is loaded.
+  /// Tops up the number of active missions to [_startMissionCount], assigning
+  /// new missions only to idle NPCs/buildings (no [activeMission] yet).
+  ///
+  /// Called once after the spawn chunk is loaded, and again after every load
+  /// (Issue #175: this used to add up to 4 *more* missions on every call,
+  /// regardless of how many were already active/restored from a save – with
+  /// each load overwriting existing missions' progress and inflating the
+  /// active count).  It is now idempotent: already-active missions (e.g.
+  /// restored from a save) count towards the target, and no target that
+  /// already has a mission is ever touched.
   void assignStartMissions(
     List<NPCModel> npcs,
     List<BuildingModel> buildings,
   ) {
+    final alreadyActive = npcs.where((n) => n.activeMission != null).length +
+        buildings.where((b) => b.activeMission != null).length;
+    final toAssign = _startMissionCount - alreadyActive;
+    if (toAssign <= 0) {
+      _log.fine('Start missions: $alreadyActive already active, none needed');
+      return;
+    }
+
     final targets = <_Target>[
-      for (final n in npcs) _Target.npc(n),
-      for (final b in buildings) _Target.building(b),
+      for (final n in npcs) if (n.activeMission == null) _Target.npc(n),
+      for (final b in buildings) if (b.activeMission == null) _Target.building(b),
     ];
     if (targets.isEmpty) return;
     targets.shuffle(_rng);
     int assigned = 0;
     for (final t in targets) {
-      if (assigned >= _startMissionCount) break;
+      if (assigned >= toAssign) break;
       if (_tryAssignTemplate(t, npcs, buildings)) assigned++;
     }
-    _log.fine('Start missions assigned: $assigned');
+    _log.fine('Start missions assigned: $assigned (already active: $alreadyActive)');
   }
 
   // ── Action-based mission advancement (Issue #131) ─────────────────────────
@@ -282,8 +309,10 @@ class MissionService {
     final candidates = _templates.where((tmpl) {
       if (t.npc != null) {
         // NPC target: only templates that allow NPC or have no building restriction.
-        return tmpl.npcOnly == true ||
+        final typeMatches = tmpl.npcOnly == true ||
             (tmpl.npcOnly == null && tmpl.buildingTypes == null);
+        if (!typeMatches) return false;
+        return tmpl.npcEligible?.call(t.npc!) ?? true;
       } else {
         // Building target.
         final building = t.building!;
