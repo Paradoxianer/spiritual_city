@@ -3,67 +3,122 @@ import 'package:spiritual_city/src/features/game/domain/models/npc_backstory.dar
 
 void main() {
   group('kLifeEventCatalog consistency', () {
-    test('every event has a unique id', () {
-      final ids = kLifeEventCatalog.map((e) => e.id).toSet();
-      expect(ids.length, kLifeEventCatalog.length);
+    test('every event has a unique id (across both catalogs)', () {
+      final ids = [...kLifeEventCatalog, ...kChristPhaseCatalog].map((e) => e.id).toList();
+      expect(ids.toSet().length, ids.length);
     });
 
     test('isNegative matches the sign of severity', () {
-      for (final e in kLifeEventCatalog) {
+      for (final e in [...kLifeEventCatalog, ...kChristPhaseCatalog]) {
         expect(e.isNegative, e.severity < 0, reason: e.id);
       }
     });
 
     test('every event applies to at least one phase', () {
-      for (final e in kLifeEventCatalog) {
+      for (final e in [...kLifeEventCatalog, ...kChristPhaseCatalog]) {
         expect(e.phases, isNotEmpty, reason: e.id);
       }
     });
 
-    test('every category has at least one negative and one positive event, '
-        'except loss (negative-only by design)', () {
+    test('kLifeEventCatalog never targets the christ phase (that catalog is '
+        'separate)', () {
+      for (final e in kLifeEventCatalog) {
+        expect(e.phases.contains(LifePhase.christ), isFalse, reason: e.id);
+      }
+    });
+
+    test('kChristPhaseCatalog only targets the christ phase', () {
+      for (final e in kChristPhaseCatalog) {
+        expect(e.phases, {LifePhase.christ}, reason: e.id);
+      }
+    });
+
+    test('every non-loss category has at least one negative and one '
+        'positive event', () {
       for (final category in LifeCategory.values) {
         final pool = kLifeEventCatalog.where((e) => e.category == category);
-        final hasNegative = pool.any((e) => e.isNegative);
-        final hasPositive = pool.any((e) => !e.isNegative);
-        expect(hasNegative, isTrue, reason: '$category has no negative event');
+        expect(pool.any((e) => e.isNegative), isTrue, reason: '$category negative');
         if (category != LifeCategory.loss) {
-          expect(hasPositive, isTrue, reason: '$category has no positive event');
+          expect(pool.any((e) => !e.isNegative), isTrue, reason: '$category positive');
+        }
+      }
+    });
+
+    test('ordinary (mundane) events clearly outweigh dramatic ones by base '
+        'weight, so a revealed backstory reads as mostly ordinary', () {
+      final dramatic = kLifeEventCatalog.where((e) => e.severity <= -6);
+      final ordinary = kLifeEventCatalog.where((e) => e.severity.abs() <= 2);
+      expect(ordinary, isNotEmpty);
+      expect(dramatic, isNotEmpty);
+      for (final d in dramatic) {
+        for (final o in ordinary.where((o) => o.category == d.category)) {
+          expect(o.baseWeight, greaterThan(d.baseWeight),
+              reason: '${o.id} should outweigh ${d.id}');
         }
       }
     });
   });
 
   group('NpcBackstoryService.generate determinism', () {
-    test('the same id always yields the same backstory', () {
+    test('the same id always yields the same event sequence', () {
       final a = NpcBackstoryService.generate('npc_house_1_0');
       final b = NpcBackstoryService.generate('npc_house_1_0');
-      expect(a.vulnerability, b.vulnerability);
-      expect(a.resilience, b.resilience);
       expect(a.events.map((o) => o.event.id).toList(),
           b.events.map((o) => o.event.id).toList());
       expect(a.events.map((o) => o.phase).toList(),
           b.events.map((o) => o.phase).toList());
-      expect(a.events.map((o) => o.processed).toList(),
-          b.events.map((o) => o.processed).toList());
     });
 
     test('different ids can yield different backstories (sanity)', () {
-      final results = {
+      final counts = {
         for (int i = 0; i < 100; i++)
-          i: NpcBackstoryService.generate('npc_building_$i'),
+          i: NpcBackstoryService.generate('npc_building_$i').events.length,
       };
-      final distinctEventCounts =
-          results.values.map((b) => b.events.length).toSet();
-      expect(distinctEventCounts.length, greaterThan(1),
-          reason: '100 different ids all produced the same event count – '
-              'the generator is not varying at all');
+      expect(counts.values.toSet().length, greaterThan(1));
+    });
+  });
+
+  group('Acceptance: every phase tells a story (Issue: normal filler + '
+      'guaranteed content)', () {
+    test('childhood, youth and now each have at least one event for every '
+        'generated NPC across a large sample', () {
+      for (int i = 0; i < 500; i++) {
+        final backstory = NpcBackstoryService.generate('npc_fill_test_$i');
+        for (final phase in [LifePhase.childhood, LifePhase.youth, LifePhase.now]) {
+          expect(
+            backstory.events.any((o) => o.phase == phase),
+            isTrue,
+            reason: 'npc_fill_test_$i has no event in $phase',
+          );
+        }
+      }
+    });
+
+    test('across a large sample, most generated events are ordinary '
+        '(|severity| <= 2), not dramatic', () {
+      final all = <OccurredEvent>[];
+      for (int i = 0; i < 500; i++) {
+        all.addAll(NpcBackstoryService.generate('npc_tone_test_$i').events);
+      }
+      final ordinary = all.where((o) => o.event.severity.abs() <= 2).length;
+      expect(ordinary / all.length, greaterThan(0.4));
+    });
+
+    test('dramatic events (drugs, imprisonment, violent loss, alcohol '
+        'abuse) stay rare across a large sample', () {
+      const dramaticIds = {'drugs', 'imprisonment', 'violent_loss', 'alcohol_abuse'};
+      int dramaticCount = 0;
+      int total = 0;
+      for (int i = 0; i < 1000; i++) {
+        final events = NpcBackstoryService.generate('npc_rare_test_$i').events;
+        total += events.length;
+        dramaticCount += events.where((o) => dramaticIds.contains(o.event.id)).length;
+      }
+      expect(dramaticCount / total, lessThan(0.05));
     });
   });
 
   group('Acceptance: unprocessed childhood hardship cascades forward', () {
-    // Sensitive to vulnerability: alcohol_abuse, drugs, imprisonment,
-    // failed_relationship, unemployment, debt.
     bool hasVulnerabilitySensitiveLaterEvent(NpcBackstory b) => b.events.any(
           (o) =>
               o.phase != LifePhase.childhood &&
@@ -71,112 +126,252 @@ void main() {
               o.event.vulnerabilityFactor > 0,
         );
 
-    bool hadSevereUnprocessedChildhoodEvent(NpcBackstory b) => b.events.any(
-          (o) =>
-              o.phase == LifePhase.childhood &&
-              o.event.severity <= -5 &&
-              o.processed == false,
+    bool hadHardChildhood(NpcBackstory b) => b.events.any(
+          (o) => o.phase == LifePhase.childhood && o.event.severity <= -4,
         );
 
     bool hadNoChildhoodHardship(NpcBackstory b) => !b.events.any(
           (o) => o.phase == LifePhase.childhood && o.event.isNegative,
         );
 
-    test('NPCs with severe, unprocessed childhood hardship have a measurably '
-        'higher rate of vulnerability-sensitive negative events later in '
-        'life than NPCs with a calm childhood', () {
+    test('NPCs with hard childhoods have a measurably higher rate of '
+        'vulnerability-sensitive negative events later in life than NPCs '
+        'with a calm childhood', () {
       final burdened = <NpcBackstory>[];
       final calm = <NpcBackstory>[];
 
-      for (int i = 0; i < 4000; i++) {
+      for (int i = 0; i < 6000; i++) {
         final backstory = NpcBackstoryService.generate('npc_cascade_test_$i');
-        if (hadSevereUnprocessedChildhoodEvent(backstory)) {
+        if (hadHardChildhood(backstory)) {
           burdened.add(backstory);
         } else if (hadNoChildhoodHardship(backstory)) {
           calm.add(backstory);
         }
       }
 
-      // Sanity: both buckets are large enough for the comparison to mean
-      // something (fails loudly if the catalog/probabilities change enough
-      // to make either bucket vanish).
       expect(burdened.length, greaterThan(50));
       expect(calm.length, greaterThan(50));
 
-      final burdenedRate = burdened
-              .where(hasVulnerabilitySensitiveLaterEvent)
-              .length /
-          burdened.length;
+      final burdenedRate =
+          burdened.where(hasVulnerabilitySensitiveLaterEvent).length / burdened.length;
       final calmRate =
           calm.where(hasVulnerabilitySensitiveLaterEvent).length / calm.length;
 
       expect(burdenedRate, greaterThan(calmRate),
-          reason: 'burdened=$burdenedRate calm=$calmRate – unprocessed '
-              'childhood hardship should raise the vulnerability-sensitive '
-              'event rate later in life');
+          reason: 'burdened=$burdenedRate calm=$calmRate');
+    });
+  });
+
+  group('OccurredEvent.advanceWork – player-driven processing', () {
+    LifeEvent negativeEvent() => kLifeEventCatalog.firstWhere((e) => e.id == 'drugs');
+    LifeEvent positiveEvent() => kLifeEventCatalog.firstWhere((e) => e.id == 'first_love');
+
+    test('starts unprocessed with zero progress', () {
+      final occurred = OccurredEvent(event: negativeEvent(), phase: LifePhase.youth);
+      expect(occurred.processed, isFalse);
+      expect(occurred.workProgress, 0);
+      expect(occurred.isWorkable, isTrue);
     });
 
-    test('vulnerability accumulates far more from an unprocessed event than '
-        'a processed one of the same severity (reason the cascade above '
-        'works at all)', () {
-      // -8 severity: processed vs. unprocessed vulnerability contribution.
-      const severity = 8;
-      const processedGain =
-          severity * NpcBackstoryService.processedVulnerabilityGain;
-      const unprocessedGain =
-          severity * NpcBackstoryService.unprocessedVulnerabilityGain;
-      expect(unprocessedGain, greaterThan(processedGain * 2));
+    test('positive events are never workable', () {
+      final occurred = OccurredEvent(event: positiveEvent(), phase: LifePhase.youth);
+      expect(occurred.isWorkable, isFalse);
+      expect(occurred.advanceWork(), isFalse);
+      expect(occurred.workProgress, 0);
     });
 
-    test('processed events grant resilience far more than vulnerability '
-        '("post-traumatic growth")', () {
-      const severity = 8;
-      const vulnerabilityGain =
-          severity * NpcBackstoryService.processedVulnerabilityGain;
-      const resilienceGain =
-          severity * NpcBackstoryService.processedResilienceGain;
-      expect(resilienceGain, greaterThan(vulnerabilityGain));
+    test('needs OccurredEvent.workRequired calls to become processed', () {
+      final occurred = OccurredEvent(event: negativeEvent(), phase: LifePhase.youth);
+      for (int i = 1; i < OccurredEvent.workRequired; i++) {
+        expect(occurred.advanceWork(), isFalse, reason: 'call #$i');
+        expect(occurred.processed, isFalse);
+      }
+      expect(occurred.advanceWork(), isTrue, reason: 'final call');
+      expect(occurred.processed, isTrue);
+      expect(occurred.isWorkable, isFalse);
+    });
+
+    test('already-processed events cannot be worked further', () {
+      final occurred = OccurredEvent(
+        event: negativeEvent(),
+        phase: LifePhase.youth,
+        processed: true,
+        workProgress: OccurredEvent.workRequired,
+      );
+      expect(occurred.advanceWork(), isFalse);
+      expect(occurred.workProgress, OccurredEvent.workRequired);
+    });
+  });
+
+  group('NpcBackstory.vulnerability / resilience are live, not frozen', () {
+    test('resilience grows and vulnerability shrinks as an event is worked '
+        'through', () {
+      final event = kLifeEventCatalog.firstWhere((e) => e.id == 'drugs'); // severity -8
+      final occurred = OccurredEvent(event: event, phase: LifePhase.youth);
+      final backstory = NpcBackstory(events: [occurred]);
+
+      final vulnerabilityBefore = backstory.vulnerability;
+      final resilienceBefore = backstory.resilience;
+      expect(resilienceBefore, 0.0);
+      expect(vulnerabilityBefore, greaterThan(0));
+
+      while (occurred.advanceWork() == false) {}
+
+      expect(backstory.resilience, greaterThan(resilienceBefore));
+      expect(backstory.vulnerability, lessThan(vulnerabilityBefore));
+    });
+
+    test('resilienceDamping rises as more events are processed', () {
+      final events = List.generate(
+        5,
+        (i) => OccurredEvent(
+          event: kLifeEventCatalog.firstWhere((e) => e.id == 'church_disappointment'),
+          phase: LifePhase.now,
+        ),
+      );
+      final backstory = NpcBackstory(events: events);
+      expect(backstory.resilienceDamping, 0.0);
+
+      for (final o in events) {
+        while (!o.processed) {
+          o.advanceWork();
+        }
+      }
+      expect(backstory.resilienceDamping, greaterThan(0.0));
+    });
+  });
+
+  group('NpcBackstory progress persistence (captureProgress/restoreProgress)', () {
+    test('captureProgress is empty for a fresh backstory', () {
+      final backstory = NpcBackstoryService.generate('npc_progress_test_1');
+      expect(backstory.captureProgress(), isEmpty);
+    });
+
+    test('captureProgress only includes events with non-zero progress', () {
+      final event = kLifeEventCatalog.firstWhere((e) => e.id == 'drugs');
+      final occurred = OccurredEvent(event: event, phase: LifePhase.youth);
+      final untouched = OccurredEvent(
+        event: kLifeEventCatalog.firstWhere((e) => e.id == 'imprisonment'),
+        phase: LifePhase.youth,
+      );
+      final backstory = NpcBackstory(events: [occurred, untouched]);
+      occurred.advanceWork();
+
+      final progress = backstory.captureProgress();
+      expect(progress, {'drugs': 1});
+    });
+
+    test('restoreProgress round-trips through capture on a freshly '
+        'regenerated backstory', () {
+      final original = NpcBackstoryService.generate('npc_progress_test_2');
+      // Work through every workable event by one step.
+      for (final o in original.events) {
+        if (o.isWorkable) o.advanceWork();
+      }
+      final captured = original.captureProgress();
+      expect(captured, isNotEmpty);
+
+      // Simulate a save/load cycle: regenerate (deterministic) and restore.
+      final regenerated = NpcBackstoryService.generate('npc_progress_test_2');
+      regenerated.restoreProgress(captured);
+
+      expect(regenerated.captureProgress(), captured);
+    });
+
+    test('restoreProgress ignores unknown event ids without throwing '
+        '(forward compatibility with catalog changes)', () {
+      final backstory = NpcBackstoryService.generate('npc_progress_test_3');
+      expect(
+        () => backstory.restoreProgress({'some_removed_event_id': 2}),
+        returnsNormally,
+      );
+    });
+  });
+
+  group('NpcBackstory.ensureChristPhaseFor', () {
+    test('adds nothing when the NPC is not converted', () {
+      final backstory = NpcBackstoryService.generate('npc_christ_test_1');
+      final before = backstory.events.length;
+      backstory.ensureChristPhaseFor('npc_christ_test_1', isConverted: false);
+      expect(backstory.events.length, before);
+    });
+
+    test('adds christ-phase events once the NPC is converted', () {
+      final backstory = NpcBackstoryService.generate('npc_christ_test_2');
+      final before = backstory.events.length;
+      backstory.ensureChristPhaseFor('npc_christ_test_2', isConverted: true);
+      expect(backstory.events.length, greaterThan(before));
+      expect(backstory.events.any((o) => o.phase == LifePhase.christ), isTrue);
+    });
+
+    test('is idempotent – calling it again does not add more events', () {
+      final backstory = NpcBackstoryService.generate('npc_christ_test_3');
+      backstory.ensureChristPhaseFor('npc_christ_test_3', isConverted: true);
+      final afterFirst = backstory.events.length;
+      backstory.ensureChristPhaseFor('npc_christ_test_3', isConverted: true);
+      expect(backstory.events.length, afterFirst);
+    });
+
+    test('is deterministic for the same id', () {
+      final a = NpcBackstoryService.generateChristPhase('npc_christ_test_4');
+      final b = NpcBackstoryService.generateChristPhase('npc_christ_test_4');
+      expect(a.map((o) => o.event.id).toList(), b.map((o) => o.event.id).toList());
     });
   });
 
   group('NpcBackstory derived effects', () {
     test('faithOffset is 0 when there are no faith-category events', () {
-      const backstory = NpcBackstory(events: [], vulnerability: 0, resilience: 0);
+      final backstory = NpcBackstory(events: []);
       expect(backstory.faithOffset, 0.0);
     });
 
     test('faithOffset sums faith-category severities, scaled', () {
       final positive = kLifeEventCatalog.firstWhere((e) => e.id == 'conversion_experience');
       final negative = kLifeEventCatalog.firstWhere((e) => e.id == 'church_disappointment');
-      final backstory = NpcBackstory(
-        events: [
-          OccurredEvent(event: positive, phase: LifePhase.now),
-          OccurredEvent(event: negative, phase: LifePhase.now, processed: false),
-        ],
-        vulnerability: 0,
-        resilience: 0,
-      );
+      final backstory = NpcBackstory(events: [
+        OccurredEvent(event: positive, phase: LifePhase.now),
+        OccurredEvent(event: negative, phase: LifePhase.now),
+      ]);
       expect(backstory.faithOffset, (positive.severity + negative.severity) * 1.5);
     });
 
+    test('faithOffset does not change when an event gets processed (fixed, '
+        'not live like vulnerability/resilience)', () {
+      final negative = kLifeEventCatalog.firstWhere((e) => e.id == 'church_disappointment');
+      final occurred = OccurredEvent(event: negative, phase: LifePhase.now);
+      final backstory = NpcBackstory(events: [occurred]);
+      final before = backstory.faithOffset;
+      while (!occurred.processed) {
+        occurred.advanceWork();
+      }
+      expect(backstory.faithOffset, before);
+    });
+
     test('wealthModifier ignores non-money events', () {
-      final relationshipEvent =
-          kLifeEventCatalog.firstWhere((e) => e.id == 'first_love');
+      final relationshipEvent = kLifeEventCatalog.firstWhere((e) => e.id == 'first_love');
       final backstory = NpcBackstory(
         events: [OccurredEvent(event: relationshipEvent, phase: LifePhase.youth)],
-        vulnerability: 0,
-        resilience: 0,
       );
       expect(backstory.wealthModifier, 0.0);
     });
 
-    test('resilienceDamping is capped at 0.5 even for very high resilience', () {
-      const backstory = NpcBackstory(events: [], vulnerability: 0, resilience: 1000);
+    test('resilienceDamping is capped at 0.5 even for many processed events',
+        () {
+      final events = List.generate(
+        20,
+        (i) => OccurredEvent(
+          event: kLifeEventCatalog.firstWhere((e) => e.id == 'drugs'),
+          phase: LifePhase.youth,
+          processed: true,
+          workProgress: OccurredEvent.workRequired,
+        ),
+      );
+      final backstory = NpcBackstory(events: events);
       expect(backstory.resilienceDamping, 0.5);
     });
 
-    test('resilienceDamping is 0 for a fresh NPC with no resilience', () {
-      const backstory = NpcBackstory(events: [], vulnerability: 0, resilience: 0);
+    test('resilienceDamping is 0 for a fresh backstory with no events', () {
+      final backstory = NpcBackstory(events: []);
       expect(backstory.resilienceDamping, 0.0);
     });
   });
@@ -184,21 +379,30 @@ void main() {
   group('OccurredEvent presentation', () {
     test('caption combines phase and category labels', () {
       final event = kLifeEventCatalog.firstWhere((e) => e.id == 'neglect');
-      final occurred = OccurredEvent(event: event, phase: LifePhase.childhood, processed: false);
+      final occurred = OccurredEvent(event: event, phase: LifePhase.childhood);
       expect(occurred.caption, 'Kindheit · Beziehung');
     });
 
-    test('displayGlyph appends the unprocessed glyph for an unprocessed '
-        'negative event', () {
+    test('christ-phase caption uses its own phase label', () {
+      final event = kChristPhaseCatalog.firstWhere((e) => e.id == 'baptism');
+      final occurred = OccurredEvent(event: event, phase: LifePhase.christ);
+      expect(occurred.caption, 'Als Christ · Glaube');
+    });
+
+    test('displayGlyph shows the unprocessed coping glyph before work is '
+        'done', () {
       final event = kLifeEventCatalog.firstWhere((e) => e.id == 'drugs');
-      final occurred = OccurredEvent(event: event, phase: LifePhase.youth, processed: false);
+      final occurred = OccurredEvent(event: event, phase: LifePhase.youth);
       expect(occurred.displayGlyph, '${event.glyph}🌫️');
     });
 
-    test('displayGlyph appends the processed glyph for a processed negative '
-        'event', () {
+    test('displayGlyph shows the processed coping glyph once fully worked '
+        'through', () {
       final event = kLifeEventCatalog.firstWhere((e) => e.id == 'drugs');
-      final occurred = OccurredEvent(event: event, phase: LifePhase.youth, processed: true);
+      final occurred = OccurredEvent(event: event, phase: LifePhase.youth);
+      while (!occurred.processed) {
+        occurred.advanceWork();
+      }
       expect(occurred.displayGlyph, '${event.glyph}🌱');
     });
 
