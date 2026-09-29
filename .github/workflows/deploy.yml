@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - staging
+      - feat/npc-backstory
+  workflow_dispatch:
 
 jobs:
   build:
