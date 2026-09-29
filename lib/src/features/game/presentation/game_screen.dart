@@ -12,6 +12,7 @@ import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
+import '../domain/models/npc_backstory.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/models/prayer_combat.dart';
@@ -787,14 +788,22 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                      child: Scrollbar(
-                        controller: _scrollController,
-                        thumbVisibility: true,
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _NpcBackstoryRow(model: model),
+                          Expanded(
+                            child: Scrollbar(
+                              controller: _scrollController,
+                              thumbVisibility: true,
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                itemCount: _messages.length,
+                                itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -4258,6 +4267,83 @@ class _SessionDotsRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Shows the NPC's generated life history above the chat messages
+/// (docs/game_design/npc_backstory.md §7), reusing the same
+/// [BaseInteractableEntity.isFaithVague]/[isFaithRevealed] thresholds as
+/// [_FaithBarWidget] – Seelsorge already weighs 6× a Gespräch toward those
+/// thresholds ([NPCComponent.handleInteraction]), so no separate reveal
+/// tracking is needed.
+///
+/// * Not vague yet (< 3 interactions): nothing shown.
+/// * Vague (3–5): a single generic hint, no card-specific detail.
+/// * Revealed (6+): every generated event as glyph + short caption.
+class _NpcBackstoryRow extends StatelessWidget {
+  final NPCModel model;
+
+  const _NpcBackstoryRow({required this.model});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!model.isFaithVague) return const SizedBox.shrink();
+
+    if (!model.isFaithRevealed) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          '💭 …da ist etwas, das sie/er noch nicht erzählen will.',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.55),
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    final events = model.backstory.events;
+    if (events.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final occurred in events) _BackstoryEventChip(occurred: occurred),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackstoryEventChip extends StatelessWidget {
+  final OccurredEvent occurred;
+
+  const _BackstoryEventChip({required this.occurred});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(occurred.displayGlyph, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(
+            occurred.caption,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10),
+          ),
+        ],
+      ),
     );
   }
 }

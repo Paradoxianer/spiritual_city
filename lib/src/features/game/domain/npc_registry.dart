@@ -117,7 +117,7 @@ class NPCRegistry {
             '(faith=${faith.toStringAsFixed(1)})',
           );
         }
-        npcs.add(NPCModel(
+        final npc = NPCModel(
           id: id,
           name: _getRandomName(rng),
           type: _getNPCTypeForBuilding(bInfo.type, rng),
@@ -125,7 +125,15 @@ class NPCRegistry {
           homeBuildingId: bInfo.buildingId,
           faith: faith,
           isConverted: isConverted,
-        ));
+        );
+        // NPC backstory simulation (docs/game_design/npc_backstory.md): layer
+        // the generated life history's faith-category effect on top of the
+        // spawn faith above.  `npc.backstory` is derived purely from `id` via
+        // a private hash-seeded Random, so reading it here has no effect on
+        // `rng` (the chunk's shared generator) and no impact on the
+        // determinism of everything generated from it after this point.
+        npc.faith = (npc.faith + npc.backstory.faithOffset).clamp(-100.0, 100.0);
+        npcs.add(npc);
       }
     }
 

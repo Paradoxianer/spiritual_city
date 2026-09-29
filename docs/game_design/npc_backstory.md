@@ -1,6 +1,8 @@
 # NPC-Vergangenheit: Lebensphasen-Simulation
 
-**Status: Entwurf v3, wartet auf Rückmeldung.** Noch kein Code, keine Issue-Nummer. Baut auf #171 (Interaktions-Varianz & NPC-Bedürfnisse) auf, ersetzt es nicht. Änderungsverlauf siehe §8.
+**Status: v3 umgesetzt.** Katalog, sequenzielle Generierung mit Kaskade, Glaube-Offset, Wohlstands-Modifier, Resilienz-Dämpfung und die Dialog-Anzeige (💭-Hinweis / aufgedeckte Ereignisse) sind implementiert und getestet. Baut auf #171 (Interaktions-Varianz & NPC-Bedürfnisse) auf, ersetzt es nicht. Änderungsverlauf siehe §8.
+
+**Code:** `lib/src/features/game/domain/models/npc_backstory.dart` (Katalog, Generator, `NpcBackstory`), `lib/src/core/utils/stable_hash.dart` (gemeinsam mit `NpcNeed` genutzt), Verdrahtung in `npc_registry.dart` (Glaube-Offset), `building_interaction_service.dart` (Wohlstands-Modifier), `npc_component.dart` (Resilienz-Dämpfung), Anzeige in `game_screen.dart` (`_NpcBackstoryRow`). Tests: `test/features/game/domain/models/npc_backstory_test.dart` (Katalog, Determinismus, Kaskaden-Nachweis), plus Ergänzungen in `npc_registry_test.dart` und `building_interaction_service_test.dart`.
 
 ## 1. Idee
 

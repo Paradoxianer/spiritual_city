@@ -55,6 +55,17 @@ class BuildingInteractionService {
 
   BuildingInteractionService({Random? rng}) : _rng = rng ?? Random();
 
+  /// Average NPC-backstory wealth modifier across [building]'s residents
+  /// (docs/game_design/npc_backstory.md §6) – nudges an existing donation
+  /// chance up or down, without any persistent NPC materials balance.
+  /// `0.0` for a building with no residents.
+  double _wealthModifier(BuildingModel building) {
+    if (building.residents.isEmpty) return 0.0;
+    final total = building.residents
+        .fold(0.0, (sum, npc) => sum + npc.backstory.wealthModifier);
+    return total / building.residents.length;
+  }
+
   // ── Access control ────────────────────────────────────────────────────────
 
   /// Returns `true` when the player is allowed to enter [building].
@@ -233,7 +244,8 @@ class BuildingInteractionService {
           );
         }
         building.interactionCount++;
-        final hasDonation = _rng.nextDouble() < 0.45;
+        final donationChance = (0.45 + _wealthModifier(building)).clamp(0.05, 0.9);
+        final hasDonation = _rng.nextDouble() < donationChance;
         if (hasDonation) {
           building.interactionCount += 4;
           final materials = (building.interactionCount * 0.5).clamp(3.0, 20.0);
@@ -341,7 +353,8 @@ class BuildingInteractionService {
         }
         building.interactionCount++;
         final faithScore = building.faith + building.interactionCount;
-        final successChance = (faithScore / 200.0 + 0.2).clamp(0.0, 0.9);
+        final successChance = (faithScore / 200.0 + 0.2 + _wealthModifier(building))
+            .clamp(0.0, 0.9);
         if (_rng.nextDouble() < successChance) {
           building.interactionCount += 4;
           final materials = 15.0 + _rng.nextDouble() * 25.0;

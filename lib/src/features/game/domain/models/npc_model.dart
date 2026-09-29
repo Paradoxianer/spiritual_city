@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flame/components.dart';
+import '../../../../core/utils/stable_hash.dart';
 import 'base_interactable_entity.dart';
+import 'npc_backstory.dart';
 
 enum NPCType {
   citizen,
@@ -78,7 +80,11 @@ class NPCModel extends BaseInteractableEntity {
   // ── Interaction variance & needs (Issue #171) ──────────────────────────────
 
   /// This NPC's hidden need, deterministic from [id] (see [NpcNeed]).
-  late final NpcNeed need = NpcNeed.values[_stableStringHash(id) % NpcNeed.values.length];
+  late final NpcNeed need = NpcNeed.values[stableStringHash(id) % NpcNeed.values.length];
+
+  /// This NPC's generated life history – see `docs/game_design/npc_backstory.md`.
+  /// Deterministic from [id], computed once, never persisted.
+  late final NpcBackstory backstory = NpcBackstoryService.generate(id);
 
   /// Whether [actionType] ('talk' / 'counsel' / 'bible' / 'pray' / 'help') is
   /// this NPC's strong need – see the table on [NpcNeed].
@@ -140,16 +146,4 @@ class NPCModel extends BaseInteractableEntity {
     _sessionActionCounts.clear();
     lastActionType = null;
   }
-}
-
-/// Stable string hash (DJB2 variant), independent of Dart's built-in
-/// [String.hashCode] – which the language spec does not guarantee to be
-/// identical across SDK versions/runs.  Used to derive [NpcNeed] from an
-/// NPC's [NPCModel.id] deterministically, forever, for the same id.
-int _stableStringHash(String s) {
-  int hash = 5381;
-  for (final unit in s.codeUnits) {
-    hash = ((hash << 5) + hash + unit) & 0x7fffffff; // hash*33 + c, unsigned
-  }
-  return hash;
 }

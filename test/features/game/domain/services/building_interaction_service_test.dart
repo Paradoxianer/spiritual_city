@@ -6,6 +6,22 @@ import 'package:spiritual_city/src/features/game/domain/models/cell_object.dart'
 import 'package:spiritual_city/src/features/game/domain/models/npc_model.dart';
 import 'package:spiritual_city/src/features/game/domain/services/building_interaction_service.dart';
 
+/// Finds an NPC whose generated backstory (docs/game_design/npc_backstory.md)
+/// has a wealth modifier clearly on the requested side of zero.
+NPCModel _npcWithWealthModifier({required bool positive}) {
+  for (int i = 0; i < 3000; i++) {
+    final npc = NPCModel(
+      id: 'npc_wealth_test_$i',
+      name: 'n',
+      type: NPCType.citizen,
+      homePosition: Vector2.zero(),
+    );
+    final w = npc.backstory.wealthModifier;
+    if (positive ? w > 0.05 : w < -0.05) return npc;
+  }
+  fail('No NPC with the desired wealth modifier found in the scanned range');
+}
+
 void main() {
   // ── BuildingModel tests ──────────────────────────────────────────────────
 
@@ -335,6 +351,34 @@ void main() {
         expect(result.playerHealthDelta, greaterThan(0));
         expect(result.playerHungerDelta, greaterThan(0));
         expect(result.actionDurationSeconds, greaterThan(0));
+      });
+
+      // Issue: NPC backstory (docs/game_design/npc_backstory.md §6) – the
+      // resident's generated money-category life events nudge the existing
+      // donation chance instead of needing a new NPC materials balance.
+      test('houseVisit: a resident with a wealthy backstory donates more '
+          'often on average than one with a struggling backstory', () {
+        double donationRateOver(NPCModel resident, {int trials = 500}) {
+          final b = BuildingModel(
+            buildingId: 'h',
+            type: BuildingType.house,
+            residents: [resident],
+          )..interactionCount = 6;
+          final service = BuildingInteractionService(rng: Random(1));
+          int donations = 0;
+          for (int i = 0; i < trials; i++) {
+            final result = service.performAction('houseVisit', b, 0.0);
+            if (result.playerMaterialsDelta > 0) donations++;
+          }
+          return donations / trials;
+        }
+
+        final wealthyRate =
+            donationRateOver(_npcWithWealthModifier(positive: true));
+        final strugglingRate =
+            donationRateOver(_npcWithWealthModifier(positive: false));
+
+        expect(wealthyRate, greaterThan(strugglingRate));
       });
 
       test('discipleshipGroup: blocked without converted resident', () {

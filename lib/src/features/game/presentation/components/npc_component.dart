@@ -247,8 +247,12 @@ class NPCComponent extends PositionComponent
         }
         return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
       } else {
-        model.applyInfluence(-8.0);
-        model.lastNpcFaithDelta = -8.0;
+        // NPC backstory (docs/game_design/npc_backstory.md): a life shaped by
+        // processed hardship reacts a little steadier to a new rejection,
+        // regardless of what that hardship was about.
+        final rejectionPenalty = -8.0 * (1.0 - model.backstory.resilienceDamping);
+        model.applyInfluence(rejectionPenalty);
+        model.lastNpcFaithDelta = rejectionPenalty;
         return interactionScore < -20 ? '💀😬' : '😠💭';
       }
     }

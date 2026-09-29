@@ -88,6 +88,73 @@ void main() {
       expect(identical(first, second), isTrue);
     });
   });
+
+  group('NPCRegistry applies the backstory faith offset (npc_backstory)', () {
+    // Building id is parameterised so different calls produce NPCs with
+    // different ids – and therefore different backstories – rather than
+    // repeatedly re-sampling the same one or two fixed ids against a merely
+    // varying random base faith.
+    CityChunk chunkWithOneHouse([String buildingId = 'house_a']) {
+      final chunk = _filledChunkWithWater();
+      _setBuilding(chunk, 5, 5, buildingId);
+      for (int y = 4; y <= 6; y++) {
+        for (int x = 4; x <= 6; x++) {
+          if (!(x == 5 && y == 5)) _setRoad(chunk, x, y);
+        }
+      }
+      return chunk;
+    }
+
+    test('generated NPC faith always stays within [-100, 100] even after '
+        'the backstory offset is added', () {
+      final registry = NPCRegistry(seed: 21);
+      final npcs = registry.getNPCsInChunk(0, 0, chunk: chunkWithOneHouse());
+      for (final npc in npcs) {
+        expect(npc.faith, inInclusiveRange(-100.0, 100.0), reason: npc.id);
+      }
+    });
+
+    test('regenerating with the same seed yields identical faith values '
+        '(the backstory offset does not break chunk-generation determinism)',
+        () {
+      final a = NPCRegistry(seed: 21)
+          .getNPCsInChunk(0, 0, chunk: chunkWithOneHouse());
+      final b = NPCRegistry(seed: 21)
+          .getNPCsInChunk(0, 0, chunk: chunkWithOneHouse());
+      expect(a.map((n) => n.faith).toList(), b.map((n) => n.faith).toList());
+    });
+
+    test('the offset actually moves at least one NPC\'s faith outside its '
+        'pre-backstory spawn range across a range of chunks', () {
+      // Pre-backstory spawn faith (npc_registry.dart): 65..100 if converted,
+      // -60..20 otherwise. If NPCRegistry never applied backstory.faithOffset
+      // at all, every NPC's final faith would always land inside one of
+      // these two ranges. Finding at least one NPC outside its range is
+      // direct evidence the offset is actually wired in (not just computed
+      // and ignored).
+      bool sawOffsetEffect = false;
+      for (int cx = 0; cx < 200 && !sawOffsetEffect; cx++) {
+        final registry = NPCRegistry(seed: 99);
+        final npcs = registry.getNPCsInChunk(
+          cx,
+          0,
+          chunk: chunkWithOneHouse('house_$cx'),
+        );
+        for (final npc in npcs) {
+          final inBaseRange = npc.isConverted
+              ? npc.faith >= 65.0 && npc.faith <= 100.0
+              : npc.faith >= -60.0 && npc.faith <= 20.0;
+          if (!inBaseRange) {
+            sawOffsetEffect = true;
+            break;
+          }
+        }
+      }
+      expect(sawOffsetEffect, isTrue,
+          reason: 'no NPC across 200 chunks landed outside its pre-backstory '
+              'spawn range – the faithOffset does not appear to be applied');
+    });
+  });
 }
 
 CityChunk _filledChunkWithWater() {
