@@ -1,93 +1,101 @@
-# NPC-Vergangenheit: "Lebenskarten"
+# NPC-Vergangenheit: Lebensphasen
 
-**Status: Entwurf, wartet auf Rückmeldung.** Noch kein Code, keine Issue-Nummer. Baut direkt auf #171 (Interaktions-Varianz & NPC-Bedürfnisse) auf und ersetzt es nicht.
+**Status: Entwurf v2, wartet auf Rückmeldung.** Noch kein Code, keine Issue-Nummer. Überarbeitet nach Rückmeldung zu v1 (siehe §7 „Was sich gegenüber v1 geändert hat"). Baut auf #171 (Interaktions-Varianz & NPC-Bedürfnisse) auf, ersetzt es nicht.
 
 ## 1. Idee
 
-Jede NPC bekommt eine kleine, echte Vergangenheit statt nur eines versteckten Zahlenwerts: ein bis zwei "Vorkommnisse", die erklären, *warum* sie reagiert wie sie reagiert – und die der Spieler erst nach und nach freilegt, getrennt über **Gespräch** (💬, Sprechblase) und **Seelsorge** (👂, Ohr). Das macht jede NPC über die Zeit unterscheidbar, statt dass sich (wie im ursprünglichen Playtest-Feedback) alles gleich anfühlt.
+Statt eines flachen Pools einzelner "Karten" bekommt jede NPC eine kleine, generierte **Lebensgeschichte** entlang fester Phasen (Kindheit, Jugend, Jetzt). Für jede Phase wird gewürfelt, was passiert ist – und bei negativen Ereignissen zusätzlich, ob die NPC das **durchgearbeitet** hat oder nicht. Durchgearbeitete negative Ereignisse machen die NPC mental stärker (gedämpfte negative Reaktionen), unverarbeitete bleiben eine offene Wunde. Dargestellt wird jedes Ereignis als **Emoji-Satz** (Sequenz, nicht ausgeschriebener Text) – genau der visuelle Stil, den das Spiel überall sonst schon nutzt (z. B. die Reaktions-Emoji-Ketten in `npc_component.dart`, die Aktions-Emoji in `building_actions.md`).
 
-Ausdrücklich **nicht** angestrebt: eine volle Dwarf-Fortress-Historiensimulation mit Ereignissen zwischen NPCs, die sich über Spielzeit weiterentwickeln. Das wäre ein eigenes, monatelanges Projekt. Diese Version ist bewusst kleiner: ein fester Kartenpool, deterministisch zugewiesen, rein narrativ.
+## 2. Lebensphasen & Kategorien
 
-## 2. Verhältnis zu #171
+**Phasen (fest, für jede NPC gleich – siehe §7 zur Vereinfachung):** Kindheit → Jugend → Jetzt.
 
-| | #171 (Bedürfnis) | Diese Version (Lebenskarten) |
+**Kategorien pro Phase** (fünf, klein gehalten):
+
+| Kategorie | Glyphe | Mechanisch wirksam? |
 | :--- | :--- | :--- |
-| Datenmenge pro NPC | 1 `NpcNeed`-Wert | 1–2 Karten aus einem Pool |
-| Wirkung | mechanisch (Ertrags-Multiplikator) | narrativ (Text), **kein** zusätzlicher Multiplikator in v1 |
-| Sichtbarkeit | noch nicht verdrahtet | progressiv, pro Kanal getrennt |
-| Zweck | löst "immer dieselbe Aktion" | löst "fühlt sich immer gleich an" |
+| Glaube | ✝️ | Ja – direkter `faith`-Offset |
+| Geld / Beruf | 💼 | Ja – beeinflusst Spenden-/Großzügigkeits-Chance (`houseVisit`, `requestDonation`) |
+| Beziehung | 💞 | Nein (v1) – nur Varianz/Textur |
+| Verlust | ⚰️ | Nein (v1) – nur Varianz/Textur |
+| Gesundheit | 🩹 | Nein (v1) – nur Varianz/Textur |
 
-Die Karten geben dem Bedürfnis eine Begründung ("zweifelnd, *weil* …"), ersetzen es aber nicht. Zwei getrennte, additive Systeme statt eines großen Umbaus – geringeres Risiko für das gerade erst gebaute und getestete #171.
+Nur zwei Kategorien bekommen in v1 eine echte Spielauswirkung, weil das genau die zwei sind, die der Pastor selbst als Ressource hat (Glaube, Material) – wie gewünscht "dieselben Werte, die der Pastor hat". Die anderen drei sorgen trotzdem für Abwechslung (das eigentliche Ziel), ohne dass jede Kategorie sofort einen neuen Spielmechanismus braucht. Können später mechanisch angebunden werden (z. B. Verlust → Trauer-Dialogvariante).
 
-## 3. Warum keine Emoji für den Inhalt
+## 3. Generierung (deterministisch, wie `NpcNeed`)
 
-Ursprünglich stand in #171 "vage Andeutung (Emoji-Hint)". Das funktioniert für ein Bedürfnis wie "einsam" (🥺), aber nicht für Themen wie Sucht, Scheidung oder einen gewaltsamen Verlust – dafür gibt es kein würdevolles Emoji, ohne entweder zu explizit oder zu albern zu wirken.
+Pro Phase × Kategorie wird gewürfelt (Hash aus NPC-`id` + Phase + Kategorie, wie beim bestehenden `need`-Mechanismus – **kein Verbrauch der Chunk-RNG**, also keine Nebenwirkung auf die Weltgenerierung):
 
-**Lösung:** Die vage Stufe nutzt ein **einziges, immer gleiches** Symbol (💭) plus einen kartenunabhängigen Satz ("…da ist etwas, das sie noch nicht erzählen will."). Das Symbol verrät nichts über den Inhalt. Die volle Stufe zeigt den eigentlichen Satz als **reinen Text** in der Dialogblase – genau wie die bereits vorhandenen Tutorial-Texte, keine Emoji-Pflicht. Emoji bleiben dort, wo sie schon funktionieren: als sofortiges Reaktions-Feedback auf eine Aktion (❤️🕊️ bei Gebet usw.), nicht zur Kodierung eines Lebensschicksals.
+1. **Passiert etwas?** (Basis-Wahrscheinlichkeit je Kategorie, grob 30–45 %.)
+2. **Positiv oder negativ?** (grob 50/50, je Kategorie leicht verschoben – z. B. "Glaube" häufiger positiv, "Verlust" fast immer negativ.)
+3. **Nur bei negativ: durchgearbeitet?** Wahrscheinlichkeit steigt mit Abstand der Phase: Kindheit ~65 % (viel Zeit gehabt), Jugend ~45 %, Jetzt ~25 % (frisch, noch offen).
 
-## 4. Datenmodell (Vorschlag)
+Alles rein deterministisch aus der ID abgeleitet, **nicht persistiert** – wie das Bedürfnis aus #171 bei jeder Regeneration neu berechnet. Keine Schema-Änderung am Save nötig.
 
-```dart
-enum LebenskartenKanal { talk, counsel, either }
+## 4. Mechanische Wirkung
 
-class BackstoryCard {
-  final String id;
-  final String category;        // z.B. 'grief', 'doubt', 'addiction'
-  final bool isPositive;        // Polung – beeinflusst nur den Ton, nicht die Mechanik (v1)
-  final LebenskartenKanal channel;
-  final String fullText;        // einmalig gezeigt, sobald voll aufgedeckt
-}
-```
+- **Glaube-Ereignis:** verschiebt den `faith`-Basiswert der NPC bei Generierung (Größenordnung ±5 bis ±15, je nach Phase).
+- **Geld-Ereignis:** verschiebt eine bei Bedarf berechnete "Großzügigkeit" (nicht gespeichert, aus den Ereignissen abgeleitet), die in die bestehende Spendenchance bei `houseVisit`/`requestDonation` einfließt.
+- **Durchgearbeitet (jede Kategorie mit negativem Ereignis):** der eigene negative Effekt wird gedämpft (≈30 % der vollen Wirkung statt 100 %) **und** erhöht eine kleine, gemeinsame `resilience`-Größe der NPC. Diese dämpft allgemein negative Interaktions-Ausschläge etwas ab (z. B. die −8 Faith bei abgelehntem Gebet) – eine NPC, die ihre Vergangenheit verarbeitet hat, ist spürbar stabiler, unabhängig davon, worum es dabei ging.
+- **Nicht durchgearbeitet:** volle negative Wirkung, keine Dämpfung – eine offene Wunde bleibt eine offene Wunde.
+- Positive Ereignisse brauchen keinen Verarbeitungs-Wurf, sie wirken direkt.
 
-- **Zuweisung:** 1–2 Karten pro NPC, deterministisch aus einem Hash der NPC-`id` (gleiches Prinzip wie `NpcNeed._stableStringHash`, aber mit anderem Salt, damit Bedürfnis und Karten nicht miteinander korrelieren). Nicht persistiert, wie das Bedürfnis auch – immer neu ableitbar, alte Saves brauchen keine Migration für die Zuweisung selbst.
-- **Fortschritt (muss persistiert werden, anders als das Bedürfnis):** Zwei neue, **kumulative** (nicht Session-, sondern Lebenszeit-) Zähler auf `NPCModel`: `talkCount`, `counselCount`. Erhöht bei jeder `talk`- bzw. `counsel`-Interaktion, unabhängig von Session-Grenzen – "jemanden kennenlernen" ist ein Verlauf über viele Besuche, nicht pro Sitzung zurückgesetzt (anders als die Abnutzungs-Zähler aus #171, die bewusst pro Sitzung zurückgesetzt werden). Muss in `captureGameState`/`applySavedNPCState` mitgespeichert werden → Schema-Version-Bump wie bei früheren Änderungen.
-- **Schwellen:** vage ab 3, voll ab 6 – dieselben Zahlen wie das bestehende `isFaithVague`/`isFaithRevealed`, aber ein **eigener** Zähler pro Kanal, nicht wiederverwendet (der Glaubens-Reveal bleibt an `interactionCount` gekoppelt, das ist ein anderes Konzept).
+## 5. Aufdeckung: **ein** gemeinsamer Fortschritt, keine getrennten Kanäle
 
-## 5. Beispiel-Kartenpool (Entwurf, ~15 Karten)
+Kein neuer Zähler. Wiederverwendung des bereits vorhandenen `interactionCount` + `isFaithVague`/`isFaithRevealed` (Schwellen 3 / 6, `base_interactable_entity.dart`). Das passt schon heute genau zu "Seelsorge bringt mehr, kostet aber mehr": Seelsorge erhöht `interactionCount` bereits um **6** pro Nutzung (`npc_component.dart`), ein Gespräch nur um **1** – Seelsorge kostet zusätzlich Gesundheit, Gespräch nichts. Diese Gewichtung ist bereits genau richtig, ich muss nichts Neues einführen.
 
-Ton: angedeutet, nicht ausgeschmückt – passend zu "Erwachsener, aber nicht graphisch". Platzhalter, zur Abstimmung, noch nicht im Code.
+- **Vage (`isFaithVague`, ab 3):** ein einziges, immer gleiches Symbol (💭) – verrät nichts Kategorie-Spezifisches.
+- **Voll (`isFaithRevealed`, ab 6):** alle generierten Lebensphasen-Ereignisse als Emoji-Sätze, mit kurzer Beschriftung im Stil der bestehenden Tooltips (`tooltip: 'Anbetung'` usw.) – **kein** ausgeschriebener Satz, nur 2–3 Wörter Bildunterschrift, z. B. "Jugend · Verlust".
 
-| Kategorie | Kanal | Polung | Beispieltext (Entwurf) |
-| :--- | :--- | :--- | :--- |
-| Trauer | Seelsorge | negativ | "Ihre Mutter ist letzten Winter gestorben. Sie hat noch nicht wirklich darüber gesprochen." |
-| Einsamkeit | Gespräch | negativ | "Seit die Kinder ausgezogen sind, ruft kaum noch jemand an." |
-| Zweifel | Seelsorge | negativ | "Er hat einmal inbrünstig gebetet, und nichts geschah. Seitdem betet er nicht mehr." |
-| Geldsorgen | Gespräch | negativ | "Seit der Kündigung reicht es kaum bis zum Monatsende." |
-| Entfremdung | Seelsorge | negativ | "Mit ihrem Bruder hat sie seit Jahren kein Wort gewechselt." |
-| Sucht (angedeutet) | Seelsorge | negativ | "Er hat jahrelang gegen die Flasche gekämpft. Manche Tage sind noch schwer." |
-| Scheidung | Gespräch | negativ | "Ihre Ehe zerbrach, als die Kinder noch klein waren." |
-| Verlust durch Gewalt (angedeutet) | Seelsorge | negativ | "Ihr Bruder kam bei einem Überfall ums Leben. Sie spricht selten darüber." |
-| Schuld | Seelsorge | negativ | "Er hat einem alten Freund nie verziehen bekommen, was zwischen ihnen geschah." |
-| Verrat | Gespräch | negativ | "In ihrer letzten Gemeinde wurde ihr Vertrauen missbraucht. Seitdem ist sie vorsichtig." |
-| Krankheit | Seelsorge | negativ | "Die Diagnose vor zwei Jahren hat vieles verändert, wie er über sein Leben denkt." |
-| Erhörtes Gebet | Gespräch | positiv | "Als ihr Sohn schwer krank war, betete die ganze Straße mit ihr. Er wurde gesund." |
-| Neuanfang | Gespräch | positiv | "Nach Jahren in der Großstadt ist er hierher gezogen, um noch einmal von vorn zu beginnen." |
-| Wunder erlebt | Seelsorge | positiv | "Sie erzählt selten davon, aber sie glaubt, einmal Gottes Eingreifen ganz direkt erlebt zu haben." |
-| Handwerk & Stolz | Gespräch | positiv | "Er hat den Laden von seinem Vater übernommen und ist sichtlich stolz darauf." |
+## 6. Emoji-Komposition (kein Pool aus 15 Einzelfällen – zusammengesetzt)
 
-**Vage Hinweis-Texte** (immer dieselben zwei, unabhängig von der konkreten Karte):
-- negativ: "💭 …da ist etwas, das sie/er noch nicht erzählen will."
-- positiv: "💭 …da steckt eine Geschichte dahinter, die sie/er noch nicht ganz erzählt hat."
+Statt jede mögliche Kombination von Hand zu texten, wird die Sequenz aus drei Bausteinen zusammengesetzt: **Kategorie-Glyphe** + **Valenz-Glyphe** + (bei negativ) **Bewältigungs-Glyphe**.
 
-## 6. Offene Fragen für später (nicht Teil von v1)
+| Baustein | Glyphen |
+| :--- | :--- |
+| Valenz positiv | ✨ |
+| Valenz negativ | 💔 |
+| Durchgearbeitet | 🌱 |
+| Nicht durchgearbeitet | 🌫️ |
 
-- Content-Filter/Einstellung, um die "erwachseneren" Karten (Sucht, Gewalt-Verlust) optional auszublenden, sobald die Altersfreigabe (#95) und der Eltern-Hinweis (#153) geklärt sind.
-- Ob eine voll aufgedeckte Karte später einen kleinen mechanischen Bonus geben soll (z. B. einmalig Insight für "jemanden wirklich kennengelernt zu haben") – v1 bleibt bewusst rein narrativ, um nicht zwei Mechaniken (#171 + Karten) gleichzeitig zu balancieren.
-- Verknüpfung mit Missionen: eine Tier-2-Kette (#173) könnte an eine voll aufgedeckte Karte anknüpfen ("hilf ihr, sich mit ihrem Bruder zu versöhnen").
+**Beispiele:**
+- Jugend, Beziehung, positiv → `💞✨` · Bildunterschrift "Jugend · Beziehung"
+- Kindheit, Verlust, negativ, nicht durchgearbeitet → `⚰️💔🌫️` · "Kindheit · Verlust"
+- Jetzt, Glaube, negativ, durchgearbeitet → `✝️💔🌱` · "Jetzt · Glaube"
+- Jugend, Geld, negativ, nicht durchgearbeitet → `💼💔🌫️` · "Jugend · Geld"
 
-## 7. Umsetzungsschritte (nach Freigabe)
+Das deckt automatisch auch "erwachsenere" Themen ab (Sucht, Scheidung, Verlust durch Gewalt fallen alle unter Verlust/Beziehung/Gesundheit negativ), ohne dass ich dafür explizite, möglicherweise geschmacklose Einzel-Emoji suchen muss – die Abstraktion (Kategorie + Valenz + Bewältigung) bleibt bewusst unspezifisch genug, um würdevoll zu bleiben, und ist beliebig erweiterbar, ohne dass die Sequenz-Bausteine wachsen müssen.
 
-1. `BackstoryCard`-Modell + fester Kartenpool (Dart-Konstanten, wie `_MissionTemplate` in `mission_service.dart`).
-2. Deterministische Zuweisung auf `NPCModel` (1–2 Karten, eigener Hash-Salt).
-3. `talkCount`/`counselCount` auf `NPCModel`, Persistenz in Save/Load (Schema-Bump).
-4. Reveal-Logik (vage/voll) + Verdrahtung in den Dialog (Anzeige des Hinweises bzw. Volltexts).
-5. Tests: Zuweisung deterministisch, Reveal-Schwellen, Save/Load-Round-Trip der Zähler.
+## 7. Was sich gegenüber v1 geändert hat
 
-## 8. Akzeptanzkriterien (Entwurf)
+- ~~Ausgeschriebener Volltext bei voller Aufdeckung~~ → Emoji-Satz + Kurz-Label, passend zum Rest des Spiels.
+- ~~Getrennte `talkCount`/`counselCount`-Zähler, neuer Save-Schema-Bump~~ → Wiederverwendung von `interactionCount`/`isFaithVague`/`isFaithRevealed`, **keine** Save-Änderung nötig.
+- ~~Flacher Pool aus 15 von Hand getexteten Karten~~ → Lebensphasen × Kategorien, Ereignisse und ihre Emoji-Sätze werden zusammengesetzt statt einzeln autorisiert.
+- **Neu:** die "durchgearbeitet"-Mechanik (Resilienz) – war in v1 nicht enthalten.
 
-- [ ] Jede NPC hat 1–2 Karten, deterministisch aus der ID
-- [ ] Gespräch und Seelsorge zählen getrennt, kumulativ über Sitzungen hinweg
-- [ ] Vage Stufe ab 3, voll ab 6 – Anzeige ohne kartenspezifisches Emoji
-- [ ] Voller Text erscheint genau einmal prominent, danach weiter abrufbar
-- [ ] Alte Saves laden ohne Fehler (fehlende Zähler → 0)
-- [ ] Unit-Tests für Zuweisung, Schwellen, Persistenz
+**Bewusste Vereinfachung, zur Rückmeldung:** Alle NPCs bekommen dieselben drei Phasen (Kindheit/Jugend/Jetzt), nicht abhängig vom tatsächlichen Alter – das Spiel führt aktuell kein Alter pro NPC. Eine altersabhängige Phasenzahl wäre möglich (z. B. junge NPCs ohne "Jetzt"-Volljährigkeits-Ereignisse), würde aber ein neues Alters-Konzept nur für dieses Feature einführen. Ich würde das als spätere Verfeinerung offenlassen, wenn das für dich in Ordnung ist.
+
+## 8. Umsetzungsschritte (nach Freigabe)
+
+1. `LifePhase`-Enum (childhood/youth/now), `LifeCategory`-Enum (5 Werte) im Domain-Modell.
+2. Deterministische Ereignis-Generierung pro NPC (Hash wie `NpcNeed`), `late final` Getter auf `NPCModel` – kein neuer Save-Zustand.
+3. Emoji-Komposition + Kurz-Label als reine, testbare Funktion.
+4. Verdrahtung: `faith`-Offset bei Generierung, Spendenchance-Modifier, Resilienz-Dämpfung in den bestehenden negativen Interaktionspfaden.
+5. UI: 💭-Hinweis ab `isFaithVague`, Emoji-Sätze ab `isFaithRevealed` im Dialog.
+6. Tests: Generierung deterministisch, Komposition korrekt, Resilienz-Dämpfung, Spendenchance-Modifier.
+
+## 9. Akzeptanzkriterien (Entwurf)
+
+- [ ] Jede NPC hat für jede Phase×Kategorie ein deterministisches Ergebnis (passiert/nicht, Valenz, Bewältigung bei negativ)
+- [ ] Emoji-Satz wird aus Bausteinen zusammengesetzt, kein ausgeschriebener Text
+- [ ] Aufdeckung nutzt ausschließlich `interactionCount`/`isFaithVague`/`isFaithRevealed`, keine neuen Zähler
+- [ ] Durchgearbeitete negative Ereignisse dämpfen sowohl ihren eigenen Effekt als auch allgemein negative Interaktions-Ausschläge
+- [ ] Glaube- und Geld-Kategorie sind mechanisch wirksam, die übrigen drei sind reine Varianz
+- [ ] Keine Änderung am Save-Schema nötig
+- [ ] Unit-Tests für Generierung, Komposition, Resilienz-Dämpfung
+
+## 10. Offene Fragen für später (nicht Teil von v1)
+
+- Altersabhängige Phasenzahl (siehe §7).
+- Content-Filter für Store-Freigabe, sobald #95/#153 entschieden sind.
+- Verknüpfung mit Missionen (#173): eine Tier-2-Kette könnte an ein unverarbeitetes Ereignis anknüpfen.
