@@ -133,6 +133,9 @@ class NPCRegistry {
         // `rng` (the chunk's shared generator) and no impact on the
         // determinism of everything generated from it after this point.
         npc.faith = (npc.faith + npc.backstory.faithOffset).clamp(-100.0, 100.0);
+        // Pre-converted spawns (see isConverted above) already qualify for
+        // the "Als Christ" backstory chapter from the very start.
+        npc.unlockChristPhaseIfConverted();
         npcs.add(npc);
       }
     }

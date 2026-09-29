@@ -303,6 +303,9 @@ class NPCComponent extends PositionComponent
       // makes conversion easier even if the NPC's faith hasn't quite reached 50.
       if (interactionScore > 50) {
         model.isConverted = true;
+        // NPC backstory (docs/game_design/npc_backstory.md): a new "Als
+        // Christ" chapter begins now.
+        model.unlockChristPhaseIfConverted();
         model.applyInfluence(100);
         model.lastNpcFaithDelta = 100.0;
         model.lastPlayerFaithDelta += 25.0;

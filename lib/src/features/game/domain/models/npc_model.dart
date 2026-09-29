@@ -83,8 +83,26 @@ class NPCModel extends BaseInteractableEntity {
   late final NpcNeed need = NpcNeed.values[stableStringHash(id) % NpcNeed.values.length];
 
   /// This NPC's generated life history – see `docs/game_design/npc_backstory.md`.
-  /// Deterministic from [id], computed once, never persisted.
+  /// Deterministic from [id], computed once. Not persisted itself, but the
+  /// player's processing *progress* on individual events is – see
+  /// [captureBackstoryProgress]/[restoreBackstoryProgress].
   late final NpcBackstory backstory = NpcBackstoryService.generate(id);
+
+  /// Generates this NPC's "Als Christ" chapter once [isConverted] is true.
+  /// Safe to call unconditionally, as often as needed (idempotent, no-op
+  /// before conversion) – called after every place [isConverted] can become
+  /// true: initial spawn, a live conversion, and restoring a save.
+  void unlockChristPhaseIfConverted() {
+    backstory.ensureChristPhaseFor(id, isConverted: isConverted);
+  }
+
+  /// Sparse `{ eventId: workProgress }` map for saving – see
+  /// [NpcBackstory.captureProgress].
+  Map<String, int> captureBackstoryProgress() => backstory.captureProgress();
+
+  /// Restores processing progress captured by [captureBackstoryProgress].
+  void restoreBackstoryProgress(Map<String, dynamic> saved) =>
+      backstory.restoreProgress(saved);
 
   /// Whether [actionType] ('talk' / 'counsel' / 'bible' / 'pray' / 'help') is
   /// this NPC's strong need – see the table on [NpcNeed].

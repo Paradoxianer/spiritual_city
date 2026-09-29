@@ -625,6 +625,15 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     npc.faith             = ((saved['faith']   as num?)?.toDouble() ?? npc.faith).clamp(-100.0, 100.0);
     npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
+    // NPC backstory (docs/game_design/npc_backstory.md): re-trigger in case
+    // the save says converted but the fresh spawn roll didn't (idempotent –
+    // a no-op if NPCRegistry already unlocked it for a pre-converted spawn).
+    npc.unlockChristPhaseIfConverted();
+    if (saved['backstoryProgress'] is Map) {
+      npc.restoreBackstoryProgress(
+        (saved['backstoryProgress'] as Map).cast<String, dynamic>(),
+      );
+    }
     final posX = (saved['posX'] as num?)?.toDouble();
     final posY = (saved['posY'] as num?)?.toDouble();
     if (posX != null && posY != null) {
@@ -747,6 +756,7 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       if (npc.faith != 0.0 ||
           npc.interactionCount != 0 ||
           npc.isConverted) {
+        final backstoryProgress = npc.captureBackstoryProgress();
         npcStates[npc.id] = {
           'faith': npc.faith.clamp(-100.0, 100.0),
           if (npc.interactionCount != 0) 'conv': npc.interactionCount,
@@ -754,6 +764,10 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
           'posX': npcComp.position.x,
           'posY': npcComp.position.y,
           if (npc.activeMission != null) 'mission': npc.activeMission!.toJson(),
+          // NPC backstory (docs/game_design/npc_backstory.md): only the
+          // player's processing progress on individual events, sparse –
+          // everything else about the backstory is re-derived from the id.
+          if (backstoryProgress.isNotEmpty) 'backstoryProgress': backstoryProgress,
         };
       }
     }

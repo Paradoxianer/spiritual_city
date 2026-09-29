@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spiritual_city/src/features/game/domain/models/cell_object.dart';
+import 'package:spiritual_city/src/features/game/domain/models/npc_backstory.dart';
 import 'package:spiritual_city/src/features/game/domain/models/city_cell.dart';
 import 'package:spiritual_city/src/features/game/domain/models/city_chunk.dart';
 import 'package:spiritual_city/src/features/game/domain/npc_registry.dart';
@@ -153,6 +154,58 @@ void main() {
       expect(sawOffsetEffect, isTrue,
           reason: 'no NPC across 200 chunks landed outside its pre-backstory '
               'spawn range – the faithOffset does not appear to be applied');
+    });
+  });
+
+  group('NPCRegistry unlocks the Christ backstory phase for pre-converted '
+      'spawns (npc_backstory)', () {
+    CityChunk chunkWithOneChurch([String buildingId = 'church_a']) {
+      final chunk = _filledChunkWithWater();
+      chunk.cells['5,5'] = CityCell(
+        x: 5,
+        y: 5,
+        data: BuildingData(type: BuildingType.church, buildingId: buildingId),
+      );
+      for (int y = 4; y <= 6; y++) {
+        for (int x = 4; x <= 6; x++) {
+          if (!(x == 5 && y == 5)) _setRoad(chunk, x, y);
+        }
+      }
+      return chunk;
+    }
+
+    test('a pre-converted NPC already has Christ-phase events right after '
+        'generation, without any save/load or in-game conversion', () {
+      // Church residents are pre-converted 25% of the time (NPCRegistry) –
+      // scan enough chunks to reliably find one.
+      bool sawPreConverted = false;
+      for (int cx = 0; cx < 60 && !sawPreConverted; cx++) {
+        final registry = NPCRegistry(seed: 5);
+        final npcs = registry.getNPCsInChunk(
+          cx,
+          0,
+          chunk: chunkWithOneChurch('church_$cx'),
+        );
+        for (final npc in npcs) {
+          if (!npc.isConverted) continue;
+          sawPreConverted = true;
+          expect(
+            npc.backstory.events.any((o) => o.phase == LifePhase.christ),
+            isTrue,
+            reason: '${npc.id} is pre-converted but has no Christ-phase events',
+          );
+        }
+      }
+      expect(sawPreConverted, isTrue,
+          reason: 'no pre-converted church NPC found in 60 chunks');
+    });
+
+    test('a non-converted NPC has no Christ-phase events', () {
+      final registry = NPCRegistry(seed: 5);
+      final npcs = registry.getNPCsInChunk(0, 0, chunk: chunkWithOneChurch());
+      for (final npc in npcs.where((n) => !n.isConverted)) {
+        expect(npc.backstory.events.any((o) => o.phase == LifePhase.christ), isFalse);
+      }
     });
   });
 }
