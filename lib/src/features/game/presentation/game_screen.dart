@@ -4328,7 +4328,10 @@ class _NpcBackstoryPanelState extends State<_NpcBackstoryPanel> {
   void _workOn(OccurredEvent occurred) {
     if (widget.game.health <= _workHealthCost) return;
     widget.game.spendHealth(_workHealthCost);
-    setState(() => occurred.advanceWork());
+    // NPCModel.workOnBackstoryEvent (not occurred.advanceWork() directly):
+    // also grows the "Als Christ" chapter by one entry when this completes
+    // processing and the NPC is already converted.
+    setState(() => widget.model.workOnBackstoryEvent(occurred));
   }
 
   @override

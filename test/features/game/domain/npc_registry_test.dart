@@ -174,8 +174,9 @@ void main() {
       return chunk;
     }
 
-    test('a pre-converted NPC already has Christ-phase events right after '
-        'generation, without any save/load or in-game conversion', () {
+    test('a pre-converted NPC has the Christ chapter unlocked right after '
+        'generation (but still empty – it only fills as challenges get '
+        'worked through, see npc_backstory_test.dart)', () {
       // Church residents are pre-converted 25% of the time (NPCRegistry) –
       // scan enough chunks to reliably find one.
       bool sawPreConverted = false;
@@ -189,10 +190,12 @@ void main() {
         for (final npc in npcs) {
           if (!npc.isConverted) continue;
           sawPreConverted = true;
+          expect(npc.backstory.christPhaseUnlocked, isTrue, reason: npc.id);
           expect(
             npc.backstory.events.any((o) => o.phase == LifePhase.christ),
-            isTrue,
-            reason: '${npc.id} is pre-converted but has no Christ-phase events',
+            isFalse,
+            reason: '${npc.id} is freshly generated, so no challenge has '
+                'been worked through yet – the chapter must still be empty',
           );
         }
       }
@@ -200,10 +203,12 @@ void main() {
           reason: 'no pre-converted church NPC found in 60 chunks');
     });
 
-    test('a non-converted NPC has no Christ-phase events', () {
+    test('a non-converted NPC has the Christ chapter neither unlocked nor '
+        'populated', () {
       final registry = NPCRegistry(seed: 5);
       final npcs = registry.getNPCsInChunk(0, 0, chunk: chunkWithOneChurch());
       for (final npc in npcs.where((n) => !n.isConverted)) {
+        expect(npc.backstory.christPhaseUnlocked, isFalse);
         expect(npc.backstory.events.any((o) => o.phase == LifePhase.christ), isFalse);
       }
     });

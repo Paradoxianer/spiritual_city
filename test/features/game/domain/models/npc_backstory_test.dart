@@ -258,7 +258,7 @@ void main() {
       occurred.advanceWork();
 
       final progress = backstory.captureProgress();
-      expect(progress, {'drugs': 1});
+      expect(progress, {'work': {'drugs': 1}});
     });
 
     test('restoreProgress round-trips through capture on a freshly '
@@ -288,7 +288,8 @@ void main() {
     });
   });
 
-  group('NpcBackstory.ensureChristPhaseFor', () {
+  group('NpcBackstory.ensureChristPhaseFor (Issue: fills slowly, not '
+      'upfront)', () {
     test('adds nothing when the NPC is not converted', () {
       final backstory = NpcBackstoryService.generate('npc_christ_test_1');
       final before = backstory.events.length;
@@ -296,26 +297,97 @@ void main() {
       expect(backstory.events.length, before);
     });
 
-    test('adds christ-phase events once the NPC is converted', () {
+    test('adds nothing even once the NPC is converted – the chapter starts '
+        'empty and only grows via workOn', () {
       final backstory = NpcBackstoryService.generate('npc_christ_test_2');
       final before = backstory.events.length;
       backstory.ensureChristPhaseFor('npc_christ_test_2', isConverted: true);
-      expect(backstory.events.length, greaterThan(before));
-      expect(backstory.events.any((o) => o.phase == LifePhase.christ), isTrue);
+      expect(backstory.events.length, before);
+      expect(backstory.events.any((o) => o.phase == LifePhase.christ), isFalse);
+    });
+  });
+
+  group('NpcBackstory.workOn – "Als Christ" grows from worked-through '
+      'challenges', () {
+    // Scans for an id whose generated backstory has at least one workable
+    // (negative, unprocessed) event – generation doesn't guarantee one on
+    // every single id (only that *some* event occurs per phase), so a fixed
+    // id could occasionally have none.
+    (String, NpcBackstory) findWithWorkableEvent(String prefix) {
+      for (int i = 0; i < 30; i++) {
+        final id = '${prefix}_$i';
+        final backstory = NpcBackstoryService.generate(id);
+        if (backstory.events.any((o) => o.isWorkable)) return (id, backstory);
+      }
+      fail('No NPC with a workable event found for prefix $prefix');
+    }
+
+    test('processing a challenge before conversion does not grow the Christ '
+        'chapter', () {
+      final (id, backstory) = findWithWorkableEvent('npc_growth_test_1');
+      final occurred = backstory.events.firstWhere((o) => o.isWorkable);
+      while (!backstory.workOn(occurred, id, isConverted: false)) {}
+      expect(backstory.events.any((o) => o.phase == LifePhase.christ), isFalse);
     });
 
-    test('is idempotent – calling it again does not add more events', () {
-      final backstory = NpcBackstoryService.generate('npc_christ_test_3');
-      backstory.ensureChristPhaseFor('npc_christ_test_3', isConverted: true);
-      final afterFirst = backstory.events.length;
-      backstory.ensureChristPhaseFor('npc_christ_test_3', isConverted: true);
-      expect(backstory.events.length, afterFirst);
+    test('completing a challenge while converted adds exactly one Christ '
+        'chapter entry', () {
+      final (id, backstory) = findWithWorkableEvent('npc_growth_test_2');
+      backstory.ensureChristPhaseFor(id, isConverted: true);
+      final occurred = backstory.events.firstWhere((o) => o.isWorkable);
+      final before = backstory.events.where((o) => o.phase == LifePhase.christ).length;
+
+      bool completed = false;
+      while (!completed) {
+        completed = backstory.workOn(occurred, id, isConverted: true);
+      }
+
+      final after = backstory.events.where((o) => o.phase == LifePhase.christ).length;
+      expect(after, before + 1);
     });
 
-    test('is deterministic for the same id', () {
-      final a = NpcBackstoryService.generateChristPhase('npc_christ_test_4');
-      final b = NpcBackstoryService.generateChristPhase('npc_christ_test_4');
-      expect(a.map((o) => o.event.id).toList(), b.map((o) => o.event.id).toList());
+    test('partial progress (not yet completed) does not grow the Christ '
+        'chapter', () {
+      final (id, backstory) = findWithWorkableEvent('npc_growth_test_3');
+      backstory.ensureChristPhaseFor(id, isConverted: true);
+      final occurred = backstory.events.firstWhere((o) => o.isWorkable);
+      // One unit short of completing (workRequired defaults to 3).
+      for (int i = 0; i < OccurredEvent.workRequired - 1; i++) {
+        backstory.workOn(occurred, id, isConverted: true);
+      }
+      expect(backstory.events.any((o) => o.phase == LifePhase.christ), isFalse);
+    });
+
+    test('is deterministic: the same NPC working through the same '
+        'challenge always yields the same growth entry', () {
+      final (id, _) = findWithWorkableEvent('npc_growth_test_4');
+
+      List<String> run() {
+        final backstory = NpcBackstoryService.generate(id);
+        backstory.ensureChristPhaseFor(id, isConverted: true);
+        final occurred = backstory.events.firstWhere((o) => o.isWorkable);
+        while (!backstory.workOn(occurred, id, isConverted: true)) {}
+        return backstory.events
+            .where((o) => o.phase == LifePhase.christ)
+            .map((o) => o.event.id)
+            .toList();
+      }
+
+      expect(run(), run());
+    });
+
+    test('never adds the same Christ-phase entry twice, even across many '
+        'processed challenges', () {
+      final (id, backstory) = findWithWorkableEvent('npc_growth_test_5');
+      backstory.ensureChristPhaseFor(id, isConverted: true);
+
+      for (final occurred in backstory.events.where((o) => o.isWorkable).toList()) {
+        while (!backstory.workOn(occurred, id, isConverted: true)) {}
+      }
+
+      final christIds =
+          backstory.events.where((o) => o.phase == LifePhase.christ).map((o) => o.event.id);
+      expect(christIds.length, christIds.toSet().length);
     });
   });
 

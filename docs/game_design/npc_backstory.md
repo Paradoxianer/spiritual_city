@@ -136,3 +136,12 @@ Nach dem ersten Deploy (Web-Build, testbar ohne am Rechner zu sein) kam konkrete
 5. **UI: Tabs statt flacher Liste.** `_NpcBackstoryPanel` (`game_screen.dart`) zeigt Kindheit/Jugend/Jetzt/(Als Christ) als Tabs, die schrittweise anhand von `interactionCount`-Schwellen freigeschaltet werden (3/6/9; "Als Christ" ohne Schwelle, sobald bekehrt). Gesperrte Tabs zeigen ein 🔒. Innerhalb eines Tabs: Emoji-Chip je Ereignis, unverarbeitete negative Ereignisse haben ein 🗣️ zum Bearbeiten.
 
 **Bewusst nicht mit umgesetzt:** eine dedizierte "bearbeiten"-Interaktion außerhalb des Dialogs (z. B. eigener Seelsorge-Modus, der gezielt ein Ereignis adressiert) – aktuell ist es ein einfacher Tap auf den Chip, unabhängig vom sonstigen Gesprächsverlauf. Reicht für v4, kann später verfeinert werden.
+
+### v4.1 — Nachbesserung: "Als Christ" füllt sich langsam, durch Verarbeitung
+
+Weitere Rückmeldung nach v4: Der "Als Christ"-Tab füllte sich sofort bei der Bekehrung mit bis zu drei Ereignissen aus `kChristPhaseCatalog` – sollte aber langsam wachsen, "vielleicht gerade durch aufgearbeitete Herausforderung".
+
+- `NpcBackstory.ensureChristPhaseFor` markiert die Phase jetzt nur noch als **freigeschaltet** (`christPhaseUnlocked`), fügt aber **keine** Ereignisse mehr hinzu. Der Tab ist ab der Bekehrung sichtbar, aber leer ("– nichts Besonderes –").
+- Neue Methode `NpcBackstory.workOn(occurred, npcId, isConverted:)`: schließt die Bearbeitung eines Ereignisses ab (`advanceWork`) und wächst bei Abschluss — **nur wenn die NPC bereits bekehrt ist** — die "Als Christ"-Phase um genau einen deterministischen Eintrag aus `kChristPhaseCatalog`, gewählt anhand von NPC-id + der gerade bearbeiteten Herausforderung (gleiche Herausforderung → gleicher Wachstums-Eintrag) und gewichtet nach der aktuellen `vulnerability` (eine noch unsichere NPC neigt zu den zweifel-lastigen Einträgen des Katalogs, eine gefestigtere zu den Gemeinschafts-/Wachstums-Einträgen).
+- `NPCModel.workOnBackstoryEvent` ist jetzt der einzige Weg, wie die UI ein Ereignis bearbeitet – ruft `backstory.workOn` auf, nicht mehr `occurred.advanceWork()` direkt.
+- Persistenz erweitert: `captureProgress()`/`restoreProgress()` sichern jetzt zusätzlich, welche "Als Christ"-Einträge bereits gewachsen sind (`christEvents`-Liste neben der bestehenden `work`-Fortschrittskarte), da diese Einträge – anders als alles sonst an der Backstory – nicht mehr rein aus der id ableitbar sind, sondern vom tatsächlichen Spielverlauf abhängen.

@@ -88,17 +88,24 @@ class NPCModel extends BaseInteractableEntity {
   /// [captureBackstoryProgress]/[restoreBackstoryProgress].
   late final NpcBackstory backstory = NpcBackstoryService.generate(id);
 
-  /// Generates this NPC's "Als Christ" chapter once [isConverted] is true.
-  /// Safe to call unconditionally, as often as needed (idempotent, no-op
-  /// before conversion) – called after every place [isConverted] can become
-  /// true: initial spawn, a live conversion, and restoring a save.
+  /// Unlocks (but does not fill) this NPC's "Als Christ" chapter once
+  /// [isConverted] is true. Safe to call unconditionally, as often as
+  /// needed (idempotent, no-op before conversion) – called after every
+  /// place [isConverted] can become true: initial spawn, a live conversion,
+  /// and restoring a save. The chapter fills only via
+  /// [workOnBackstoryEvent], one entry per worked-through challenge.
   void unlockChristPhaseIfConverted() {
     backstory.ensureChristPhaseFor(id, isConverted: isConverted);
   }
 
-  /// Sparse `{ eventId: workProgress }` map for saving – see
-  /// [NpcBackstory.captureProgress].
-  Map<String, int> captureBackstoryProgress() => backstory.captureProgress();
+  /// Works through [occurred] by one unit (see [NpcBackstory.workOn]) –
+  /// costs the player a little health in the UI, same as counseling.
+  /// Returns `true` if this call completed the processing.
+  bool workOnBackstoryEvent(OccurredEvent occurred) =>
+      backstory.workOn(occurred, id, isConverted: isConverted);
+
+  /// Sparse map for saving – see [NpcBackstory.captureProgress].
+  Map<String, dynamic> captureBackstoryProgress() => backstory.captureProgress();
 
   /// Restores processing progress captured by [captureBackstoryProgress].
   void restoreBackstoryProgress(Map<String, dynamic> saved) =>

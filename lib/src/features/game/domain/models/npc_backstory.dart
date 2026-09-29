@@ -161,6 +161,11 @@ class NpcBackstory {
 
   bool _christPhaseGenerated = false;
 
+  /// Whether the "Als Christ" chapter has started (i.e. the NPC is
+  /// converted) – the chapter can be unlocked yet still have zero events,
+  /// since it only fills via [workOn].
+  bool get christPhaseUnlocked => _christPhaseGenerated;
+
   NpcBackstory({required this.events});
 
   /// Accumulated from currently-*unprocessed* negative events (full weight)
@@ -215,35 +220,93 @@ class NpcBackstory {
   /// softened. Capped so resilience never makes an NPC fully immune.
   double get resilienceDamping => (resilience / 20.0).clamp(0.0, 0.5);
 
-  /// Generates and appends this NPC's "Als Christ" chapter, once, the first
-  /// time it's called after conversion. Safe to call unconditionally on
-  /// every load/interaction – idempotent, and a no-op before conversion.
+  /// Marks the "Als Christ" chapter as started, once, the first time it's
+  /// called after conversion. Safe to call unconditionally on every
+  /// load/interaction – idempotent, and a no-op before conversion.
+  ///
+  /// Deliberately adds **no** events on its own: the chapter starts empty
+  /// and fills slowly, one entry at a time, specifically as the player
+  /// works through this NPC's challenges (see [workOn]/[_growChristPhase]) –
+  /// growth as a Christian, built from processed wounds rather than handed
+  /// out at conversion.
   void ensureChristPhaseFor(String npcId, {required bool isConverted}) {
     if (!isConverted || _christPhaseGenerated) return;
     _christPhaseGenerated = true;
-    events.addAll(NpcBackstoryService.generateChristPhase(npcId));
+  }
+
+  /// Advances [occurred]'s processing by one unit (see
+  /// [OccurredEvent.advanceWork]). If that completes it and this NPC is
+  /// already converted, also grows the "Als Christ" chapter by one
+  /// deterministic new event drawn *from that specific processed
+  /// challenge*. Returns `true` if [occurred] became processed by this call.
+  bool workOn(OccurredEvent occurred, String npcId, {required bool isConverted}) {
+    final completed = occurred.advanceWork();
+    if (completed && isConverted) {
+      _growChristPhase(npcId, occurred);
+    }
+    return completed;
+  }
+
+  /// Picks one not-yet-used entry from [kChristPhaseCatalog], deterministic
+  /// from `npcId` + which challenge was just processed (so the same NPC
+  /// working through the same challenge always yields the same growth
+  /// story), weighted by the NPC's *current* vulnerability – a still-shaky
+  /// NPC leans toward the catalog's doubt-flavoured entries, a steadier one
+  /// toward its community/growth entries. A no-op once the small catalog is
+  /// exhausted.
+  void _growChristPhase(String npcId, OccurredEvent processedEvent) {
+    final alreadyPresent =
+        events.where((o) => o.phase == LifePhase.christ).map((o) => o.event.id).toSet();
+    final pool =
+        kChristPhaseCatalog.where((e) => !alreadyPresent.contains(e.id)).toList();
+    if (pool.isEmpty) return;
+    final rng = Random(stableStringHash('$npcId#christgrowth#${processedEvent.event.id}'));
+    final chosen = NpcBackstoryService._pickWeighted(rng, pool, vulnerability);
+    events.add(OccurredEvent(event: chosen, phase: LifePhase.christ));
   }
 
   // ── Persistence of player-driven processing progress ─────────────────────
   //
   // Everything else about the backstory is derived from the NPC id and
-  // therefore never persisted. Only *processing progress* is real, mutable
-  // game state (Issue: interactive "bearbeiten"), saved sparsely – only
-  // events with any progress at all are written.
+  // therefore never persisted. Only *processing progress*, and which
+  // "Als Christ" entries have grown in so far, are real, mutable game state
+  // (Issue: interactive "bearbeiten"), saved sparsely.
 
-  /// `{ eventId: workProgress }` for every event with non-zero progress.
-  Map<String, int> captureProgress() => {
-        for (final o in events)
-          if (o.workProgress > 0) o.event.id: o.workProgress,
-      };
+  /// `{ 'work': {eventId: workProgress, ...}, 'christEvents': [eventId, ...] }`
+  /// – only non-empty parts are included.
+  Map<String, dynamic> captureProgress() {
+    final work = {
+      for (final o in events)
+        if (o.workProgress > 0) o.event.id: o.workProgress,
+    };
+    final christEventIds =
+        events.where((o) => o.phase == LifePhase.christ).map((o) => o.event.id).toList();
+    return {
+      if (work.isNotEmpty) 'work': work,
+      if (christEventIds.isNotEmpty) 'christEvents': christEventIds,
+    };
+  }
 
   /// Restores progress captured by [captureProgress] onto the (freshly
   /// regenerated, deterministic) event list. Matches by the catalog event
   /// id, not list position, so it stays robust if the catalog is retuned
   /// later. Unmatched ids (e.g. from a since-removed event) are ignored.
+  ///
+  /// Also accepts the flat `{eventId: workProgress}` shape written before
+  /// "Als Christ" grew via [workOn] instead of being generated upfront, for
+  /// saves written in that short window.
   void restoreProgress(Map<String, dynamic> saved) {
+    final christEventIds = (saved['christEvents'] as List?)?.cast<dynamic>() ?? const [];
+    for (final id in christEventIds) {
+      if (events.any((o) => o.event.id == id)) continue;
+      final matches = kChristPhaseCatalog.where((e) => e.id == id);
+      if (matches.isEmpty) continue;
+      events.add(OccurredEvent(event: matches.first, phase: LifePhase.christ));
+    }
+
+    final work = (saved['work'] as Map?)?.cast<String, dynamic>() ?? saved;
     for (final o in events) {
-      final p = (saved[o.event.id] as num?)?.toInt();
+      final p = (work[o.event.id] as num?)?.toInt();
       if (p == null) continue;
       o.workProgress = p.clamp(0, OccurredEvent.workRequired);
       o.processed = o.workProgress >= OccurredEvent.workRequired;
@@ -372,8 +435,9 @@ abstract final class NpcBackstoryService {
   ];
 
   /// Generates the childhood/youth/now backstory for the NPC with the given
-  /// [npcId]. The "Christ" phase is deliberately not included here – see
-  /// [generateChristPhase].
+  /// [npcId]. The "Christ" phase is deliberately not generated here – it
+  /// starts empty and grows one entry at a time as the player works through
+  /// this NPC's challenges (see [NpcBackstory.workOn]).
   ///
   /// Uses a [Random] seeded purely from a hash of [npcId] – deterministic
   /// forever for the same id, and does not touch any shared/chunk RNG
@@ -411,21 +475,6 @@ abstract final class NpcBackstoryService {
     }
 
     return NpcBackstory(events: events);
-  }
-
-  /// Generates the (small, mostly positive) "Als Christ" chapter for
-  /// [npcId] – a separate deterministic sequence so it doesn't consume any
-  /// of the childhood/youth/now generation's randomness.
-  static List<OccurredEvent> generateChristPhase(String npcId) {
-    final rng = Random(stableStringHash('$npcId#backstory#christ'));
-    double vulnerability = 0.0;
-    final events = <OccurredEvent>[];
-    for (int i = 0; i < 3; i++) {
-      if (rng.nextDouble() >= categoryEventChance && events.isNotEmpty) continue;
-      final chosen = _pickWeighted(rng, kChristPhaseCatalog, vulnerability);
-      vulnerability = _apply(events, chosen, LifePhase.christ, vulnerability);
-    }
-    return events;
   }
 
   /// Picks a valence (negative vs. positive) weighted by [vulnerability],
