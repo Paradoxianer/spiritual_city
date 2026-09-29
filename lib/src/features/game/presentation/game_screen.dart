@@ -791,7 +791,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _NpcBackstoryRow(model: model),
+                          _NpcBackstoryPanel(game: widget.game, model: model),
                           Expanded(
                             child: Scrollbar(
                               controller: _scrollController,
@@ -4271,59 +4271,195 @@ class _SessionDotsRow extends StatelessWidget {
   }
 }
 
-/// Shows the NPC's generated life history above the chat messages
-/// (docs/game_design/npc_backstory.md §7), reusing the same
-/// [BaseInteractableEntity.isFaithVague]/[isFaithRevealed] thresholds as
-/// [_FaithBarWidget] – Seelsorge already weighs 6× a Gespräch toward those
-/// thresholds ([NPCComponent.handleInteraction]), so no separate reveal
-/// tracking is needed.
-///
-/// * Not vague yet (< 3 interactions): nothing shown.
-/// * Vague (3–5): a single generic hint, no card-specific detail.
-/// * Revealed (6+): every generated event as glyph + short caption.
-class _NpcBackstoryRow extends StatelessWidget {
+/// Shows the NPC's generated life history above the chat messages, as tabs
+/// per life phase (docs/game_design/npc_backstory.md §7/§10) – unlocked one
+/// at a time as the relationship deepens, an "Als Christ" tab appearing once
+/// converted. Tapping an unprocessed negative event's 🗣️ works through it a
+/// little (costs the pastor some health, like counseling) – the more it's
+/// worked through, the more resilient the NPC becomes
+/// ([NpcBackstory.resilience]).
+class _NpcBackstoryPanel extends StatefulWidget {
+  final SpiritWorldGame game;
   final NPCModel model;
 
-  const _NpcBackstoryRow({required this.model});
+  const _NpcBackstoryPanel({required this.game, required this.model});
+
+  @override
+  State<_NpcBackstoryPanel> createState() => _NpcBackstoryPanelState();
+}
+
+class _NpcBackstoryPanelState extends State<_NpcBackstoryPanel> {
+  /// Health cost of working through one unit of a backstory event – the
+  /// same order of magnitude as Seelsorge's HP cost, since it's the same
+  /// kind of emotional labour.
+  static const double _workHealthCost = 6.0;
+
+  LifePhase? _selectedPhase;
+
+  /// Interaction-count threshold at which each chronological phase's tab
+  /// unlocks – Kindheit/Jugend/Jetzt at growing trust, in that order.  The
+  /// "Als Christ" tab has no interaction threshold of its own: conversion
+  /// itself is the milestone that unlocks it.
+  static const Map<LifePhase, int> _unlockThresholds = {
+    LifePhase.childhood: 3,
+    LifePhase.youth: 6,
+    LifePhase.now: 9,
+  };
+
+  bool _isUnlocked(LifePhase phase) {
+    if (phase == LifePhase.christ) return widget.model.isConverted;
+    return widget.model.interactionCount >= (_unlockThresholds[phase] ?? 0);
+  }
+
+  List<LifePhase> get _availableTabs => [
+        LifePhase.childhood,
+        LifePhase.youth,
+        LifePhase.now,
+        if (widget.model.isConverted) LifePhase.christ,
+      ];
+
+  static String _tabLabel(LifePhase phase) => switch (phase) {
+        LifePhase.childhood => 'Kindheit',
+        LifePhase.youth => 'Jugend',
+        LifePhase.now => 'Jetzt',
+        LifePhase.christ => 'Als Christ',
+      };
+
+  void _workOn(OccurredEvent occurred) {
+    if (widget.game.health <= _workHealthCost) return;
+    widget.game.spendHealth(_workHealthCost);
+    setState(() => occurred.advanceWork());
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (!model.isFaithVague) return const SizedBox.shrink();
-
-    if (!model.isFaithRevealed) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          '💭 …da ist etwas, das sie/er noch nicht erzählen will.',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.55),
-            fontSize: 12,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      );
+    if (!_isUnlocked(LifePhase.childhood) && !widget.model.isConverted) {
+      // Not even the first tab is reachable yet – nothing to show at all.
+      return const SizedBox.shrink();
     }
 
-    final events = model.backstory.events;
-    if (events.isEmpty) return const SizedBox.shrink();
+    final tabs = _availableTabs;
+    _selectedPhase ??= tabs.firstWhere(_isUnlocked, orElse: () => tabs.first);
+    final selected = _selectedPhase!;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final occurred in events) _BackstoryEventChip(occurred: occurred),
+          Row(
+            children: [
+              for (final phase in tabs) ...[
+                _BackstoryTabButton(
+                  label: _tabLabel(phase),
+                  selected: phase == selected,
+                  unlocked: _isUnlocked(phase),
+                  onTap: _isUnlocked(phase)
+                      ? () => setState(() => _selectedPhase = phase)
+                      : null,
+                ),
+                const SizedBox(width: 4),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          _isUnlocked(selected)
+              ? _PhaseEvents(
+                  events: widget.model.backstory.events
+                      .where((o) => o.phase == selected)
+                      .toList(),
+                  onWorkOn: _workOn,
+                )
+              : Text(
+                  '💭 …da ist etwas, das sie/er noch nicht erzählen will.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.55),
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
         ],
       ),
     );
   }
 }
 
+class _BackstoryTabButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool unlocked;
+  final VoidCallback? onTap;
+
+  const _BackstoryTabButton({
+    required this.label,
+    required this.selected,
+    required this.unlocked,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white24 : Colors.black26,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!unlocked)
+              const Padding(
+                padding: EdgeInsets.only(right: 3),
+                child: Text('🔒', style: TextStyle(fontSize: 9)),
+              ),
+            Text(
+              label,
+              style: TextStyle(
+                color: unlocked ? Colors.white : Colors.white38,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhaseEvents extends StatelessWidget {
+  final List<OccurredEvent> events;
+  final void Function(OccurredEvent) onWorkOn;
+
+  const _PhaseEvents({required this.events, required this.onWorkOn});
+
+  @override
+  Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return Text(
+        '– nichts Besonderes –',
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+      );
+    }
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        for (final occurred in events)
+          _BackstoryEventChip(occurred: occurred, onWorkOn: onWorkOn),
+      ],
+    );
+  }
+}
+
 class _BackstoryEventChip extends StatelessWidget {
   final OccurredEvent occurred;
+  final void Function(OccurredEvent) onWorkOn;
 
-  const _BackstoryEventChip({required this.occurred});
+  const _BackstoryEventChip({required this.occurred, required this.onWorkOn});
 
   @override
   Widget build(BuildContext context) {
@@ -4342,6 +4478,17 @@ class _BackstoryEventChip extends StatelessWidget {
             occurred.caption,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10),
           ),
+          if (occurred.isWorkable) ...[
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () => onWorkOn(occurred),
+              child: Tooltip(
+                message: 'Darüber sprechen (−${_NpcBackstoryPanelState._workHealthCost.toInt()} ❤️) '
+                    '· ${occurred.workProgress}/${OccurredEvent.workRequired}',
+                child: const Text('🗣️', style: TextStyle(fontSize: 12)),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -1,8 +1,8 @@
 # NPC-Vergangenheit: Lebensphasen-Simulation
 
-**Status: v3 umgesetzt.** Katalog, sequenzielle Generierung mit Kaskade, Glaube-Offset, Wohlstands-Modifier, Resilienz-Dämpfung und die Dialog-Anzeige (💭-Hinweis / aufgedeckte Ereignisse) sind implementiert und getestet. Baut auf #171 (Interaktions-Varianz & NPC-Bedürfnisse) auf, ersetzt es nicht. Änderungsverlauf siehe §8.
+**Status: v4 umgesetzt.** Siehe §12 für die Änderungen gegenüber v3 (basierend auf dem ersten Live-Test): viel mehr gewöhnliche Füll-Ereignisse, "Verarbeiten" ist jetzt eine echte, spielergesteuerte Aktion statt eines Würfelwurfs bei der Erzeugung, Tab-UI pro Lebensphase, neue "Als Christ"-Phase. §3–§7 unten beschreiben teils noch den v3-Stand (Katalog-Tabelle, Reveal-Mechanik) – §12 fasst zusammen, was sich geändert hat; der Code in `npc_backstory.dart` ist die verbindliche Quelle.
 
-**Code:** `lib/src/features/game/domain/models/npc_backstory.dart` (Katalog, Generator, `NpcBackstory`), `lib/src/core/utils/stable_hash.dart` (gemeinsam mit `NpcNeed` genutzt), Verdrahtung in `npc_registry.dart` (Glaube-Offset), `building_interaction_service.dart` (Wohlstands-Modifier), `npc_component.dart` (Resilienz-Dämpfung), Anzeige in `game_screen.dart` (`_NpcBackstoryRow`). Tests: `test/features/game/domain/models/npc_backstory_test.dart` (Katalog, Determinismus, Kaskaden-Nachweis), plus Ergänzungen in `npc_registry_test.dart` und `building_interaction_service_test.dart`.
+**Code:** `lib/src/features/game/domain/models/npc_backstory.dart` (Katalog, Generator, `NpcBackstory`, `OccurredEvent.advanceWork`), `lib/src/core/utils/stable_hash.dart` (gemeinsam mit `NpcNeed` genutzt), Verdrahtung in `npc_registry.dart`/`npc_component.dart`/`spirit_world_game.dart` (Glaube-Offset, Christ-Phase-Trigger, Persistenz des Bearbeitungs-Fortschritts), `building_interaction_service.dart` (Wohlstands-Modifier), Tab-UI in `game_screen.dart` (`_NpcBackstoryPanel`). Tests: `test/features/game/domain/models/npc_backstory_test.dart`, plus Ergänzungen in `npc_registry_test.dart` und `building_interaction_service_test.dart`.
 
 ## 1. Idee
 
@@ -124,3 +124,15 @@ Ein gemeinsamer Fortschritt, keine getrennten Kanäle: Wiederverwendung von `int
 - `vulnerability` als zusätzlicher Live-Hebel (§6, letzter Punkt) – bewusst optional gehalten, um v1 nicht zu überladen.
 - Altersabhängige Phasenzahl (siehe v2 §7).
 - Content-Filter für Store-Freigabe, sobald #95/#153 entschieden sind.
+
+## 12. v4 — Rückmeldung aus dem ersten Live-Test
+
+Nach dem ersten Deploy (Web-Build, testbar ohne am Rechner zu sein) kam konkretes Feedback, das v3 an mehreren Stellen korrigiert:
+
+1. **Zu wenig "normale" Füll-Ereignisse.** v3s Katalog wirkte gefühlt, als wäre "jeder ein Drogenabhängiger" – es fehlten Alltags-Ereignisse (Spielplatz, Schule, Sportverein, normaler Job, Kindergottesdienst …). Katalog fast verdoppelt (§3 der Tabelle im Dokument ist damit veraltet, siehe Code), neues `LifeEvent.baseWeight` macht dramatische Ereignisse (Sucht, Straffälligkeit, gewaltsamer Verlust) explizit selten (<5 % aller Ereignisse, statistisch getestet), unabhängig von der `vulnerability`-Gewichtung.
+2. **Jede Lebensphase sollte etwas erzählen.** `categoryEventChance` erhöht plus eine Mindest-Ereignis-Garantie pro Phase – kein Tab bleibt mehr leer (getestet über 500 NPCs).
+3. **"Verarbeiten" ist eine Spieler-Aktion, kein Würfelwurf.** Größte Änderung: `OccurredEvent.processed`/`workProgress` sind jetzt **mutable und persistiert** (nicht mehr nur `NpcBackstory` selbst deterministisch aus der id). Ein negatives Ereignis startet immer unverarbeitet; der Spieler "bearbeitet" es aktiv (🗣️-Tipp im Dialog, kostet Gesundheit wie Seelsorge), braucht mehrere Einheiten (`OccurredEvent.workRequired`), bis es als verarbeitet gilt. `vulnerability`/`resilience` sind dadurch **live berechnete Getter** auf `NpcBackstory`, keine bei der Generierung eingefrorenen Werte mehr – Resilienz wächst tatsächlich mit jedem bearbeiteten Ereignis. Das bricht mit v1–v3s Versprechen "keine Save-Änderung nötig": der Bearbeitungs-Fortschritt wird jetzt sparse persistiert (`{eventId: workProgress}`, nur für Ereignisse mit Fortschritt), alles andere bleibt weiterhin aus der id ableitbar.
+4. **Neue "Als Christ"-Phase.** Ein vierter Tab, der erst erscheint, sobald die NPC bekehrt ist (`NpcBackstory.ensureChristPhaseFor`, an allen drei Stellen verdrahtet, an denen `isConverted` wahr werden kann: Spawn, Live-Bekehrung, Save-Restore). Eigener kleiner Katalog (`kChristPhaseCatalog`), überwiegend positiv.
+5. **UI: Tabs statt flacher Liste.** `_NpcBackstoryPanel` (`game_screen.dart`) zeigt Kindheit/Jugend/Jetzt/(Als Christ) als Tabs, die schrittweise anhand von `interactionCount`-Schwellen freigeschaltet werden (3/6/9; "Als Christ" ohne Schwelle, sobald bekehrt). Gesperrte Tabs zeigen ein 🔒. Innerhalb eines Tabs: Emoji-Chip je Ereignis, unverarbeitete negative Ereignisse haben ein 🗣️ zum Bearbeiten.
+
+**Bewusst nicht mit umgesetzt:** eine dedizierte "bearbeiten"-Interaktion außerhalb des Dialogs (z. B. eigener Seelsorge-Modus, der gezielt ein Ereignis adressiert) – aktuell ist es ein einfacher Tap auf den Chip, unabhängig vom sonstigen Gesprächsverlauf. Reicht für v4, kann später verfeinert werden.
