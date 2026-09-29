@@ -4325,13 +4325,30 @@ class _NpcBackstoryPanelState extends State<_NpcBackstoryPanel> {
         LifePhase.christ => 'Als Christ',
       };
 
+  /// Insight reward for fully working through one backstory event – same
+  /// order of magnitude as a conversion (0.2, per the #129 balancing note).
+  static const double _insightRewardOnCompletion = 0.2;
+
+  /// Extra Insight when completion also grew the "Als Christ" chapter –
+  /// visible spiritual fruit, rewarded like a medium building action
+  /// (discipleship group, prayer circle: 0.5 total).
+  static const double _insightRewardOnChristGrowth = 0.3;
+
   void _workOn(OccurredEvent occurred) {
     if (widget.game.health <= _workHealthCost) return;
     widget.game.spendHealth(_workHealthCost);
     // NPCModel.workOnBackstoryEvent (not occurred.advanceWork() directly):
     // also grows the "Als Christ" chapter by one entry when this completes
     // processing and the NPC is already converted.
-    setState(() => widget.model.workOnBackstoryEvent(occurred));
+    setState(() {
+      final result = widget.model.workOnBackstoryEvent(occurred);
+      if (result.completed) {
+        widget.game.progress.addInsight(
+          _insightRewardOnCompletion +
+              (result.christGrowth ? _insightRewardOnChristGrowth : 0.0),
+        );
+      }
+    });
   }
 
   @override
@@ -4487,7 +4504,9 @@ class _BackstoryEventChip extends StatelessWidget {
               onTap: () => onWorkOn(occurred),
               child: Tooltip(
                 message: 'Darüber sprechen (−${_NpcBackstoryPanelState._workHealthCost.toInt()} ❤️) '
-                    '· ${occurred.workProgress}/${OccurredEvent.workRequired}',
+                    '· ${occurred.workProgress}/${OccurredEvent.workRequired}'
+                    ' · +${_NpcBackstoryPanelState._insightRewardOnCompletion.toStringAsFixed(1)} 📖 '
+                    'bei Abschluss',
                 child: const Text('🗣️', style: TextStyle(fontSize: 12)),
               ),
             ),

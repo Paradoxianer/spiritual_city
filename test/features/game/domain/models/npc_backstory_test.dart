@@ -326,7 +326,7 @@ void main() {
         'chapter', () {
       final (id, backstory) = findWithWorkableEvent('npc_growth_test_1');
       final occurred = backstory.events.firstWhere((o) => o.isWorkable);
-      while (!backstory.workOn(occurred, id, isConverted: false)) {}
+      while (!backstory.workOn(occurred, id, isConverted: false).completed) {}
       expect(backstory.events.any((o) => o.phase == LifePhase.christ), isFalse);
     });
 
@@ -339,11 +339,34 @@ void main() {
 
       bool completed = false;
       while (!completed) {
-        completed = backstory.workOn(occurred, id, isConverted: true);
+        completed = backstory.workOn(occurred, id, isConverted: true).completed;
       }
 
       final after = backstory.events.where((o) => o.phase == LifePhase.christ).length;
       expect(after, before + 1);
+    });
+
+    test('workOn\'s return record reports christGrowth accurately (the UI '
+        'uses this to decide the Insight reward)', () {
+      final (id, backstory) = findWithWorkableEvent('npc_growth_test_2b');
+      final occurred = backstory.events.firstWhere((o) => o.isWorkable);
+
+      // Not converted: completes, but never reports christGrowth.
+      ({bool completed, bool christGrowth}) result;
+      do {
+        result = backstory.workOn(occurred, id, isConverted: false);
+      } while (!result.completed);
+      expect(result, (completed: true, christGrowth: false));
+
+      // A second, converted NPC: the completing call reports christGrowth.
+      final (id2, backstory2) = findWithWorkableEvent('npc_growth_test_2c');
+      backstory2.ensureChristPhaseFor(id2, isConverted: true);
+      final occurred2 = backstory2.events.firstWhere((o) => o.isWorkable);
+      ({bool completed, bool christGrowth}) result2;
+      do {
+        result2 = backstory2.workOn(occurred2, id2, isConverted: true);
+      } while (!result2.completed);
+      expect(result2, (completed: true, christGrowth: true));
     });
 
     test('partial progress (not yet completed) does not grow the Christ '
@@ -366,7 +389,7 @@ void main() {
         final backstory = NpcBackstoryService.generate(id);
         backstory.ensureChristPhaseFor(id, isConverted: true);
         final occurred = backstory.events.firstWhere((o) => o.isWorkable);
-        while (!backstory.workOn(occurred, id, isConverted: true)) {}
+        while (!backstory.workOn(occurred, id, isConverted: true).completed) {}
         return backstory.events
             .where((o) => o.phase == LifePhase.christ)
             .map((o) => o.event.id)
@@ -382,7 +405,7 @@ void main() {
       backstory.ensureChristPhaseFor(id, isConverted: true);
 
       for (final occurred in backstory.events.where((o) => o.isWorkable).toList()) {
-        while (!backstory.workOn(occurred, id, isConverted: true)) {}
+        while (!backstory.workOn(occurred, id, isConverted: true).completed) {}
       }
 
       final christIds =

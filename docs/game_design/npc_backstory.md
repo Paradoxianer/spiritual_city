@@ -145,3 +145,11 @@ Weitere Rückmeldung nach v4: Der "Als Christ"-Tab füllte sich sofort bei der B
 - Neue Methode `NpcBackstory.workOn(occurred, npcId, isConverted:)`: schließt die Bearbeitung eines Ereignisses ab (`advanceWork`) und wächst bei Abschluss — **nur wenn die NPC bereits bekehrt ist** — die "Als Christ"-Phase um genau einen deterministischen Eintrag aus `kChristPhaseCatalog`, gewählt anhand von NPC-id + der gerade bearbeiteten Herausforderung (gleiche Herausforderung → gleicher Wachstums-Eintrag) und gewichtet nach der aktuellen `vulnerability` (eine noch unsichere NPC neigt zu den zweifel-lastigen Einträgen des Katalogs, eine gefestigtere zu den Gemeinschafts-/Wachstums-Einträgen).
 - `NPCModel.workOnBackstoryEvent` ist jetzt der einzige Weg, wie die UI ein Ereignis bearbeitet – ruft `backstory.workOn` auf, nicht mehr `occurred.advanceWork()` direkt.
 - Persistenz erweitert: `captureProgress()`/`restoreProgress()` sichern jetzt zusätzlich, welche "Als Christ"-Einträge bereits gewachsen sind (`christEvents`-Liste neben der bestehenden `work`-Fortschrittskarte), da diese Einträge – anders als alles sonst an der Backstory – nicht mehr rein aus der id ableitbar sind, sondern vom tatsächlichen Spielverlauf abhängen.
+
+### v4.2 — Nachbesserung: Erkenntnis-Belohnung fürs Bearbeiten
+
+Frage nach v4.1: "Gibt das dann Erkenntnispunkte?" – bis dahin kostete "Bearbeiten" nur Gesundheit und gab außer dem Story-Fortschritt nichts zurück.
+
+- `NpcBackstory.workOn` gibt jetzt einen Record `({bool completed, bool christGrowth})` zurück statt nur `bool`, damit der Aufrufer (die UI) weiß, *wie* die Bearbeitung abgeschlossen wurde.
+- `_NpcBackstoryPanelState._workOn` vergibt bei Abschluss (`completed == true`) **+0,2 Erkenntnis** (derselbe Wert, den der Nutzer im #129-Balancing für eine Bekehrung festgelegt hat) – **+0,5 insgesamt**, wenn der Abschluss zusätzlich die Als-Christ-Phase wachsen ließ (`christGrowth == true`, passend zur "mittleren" Belohnungsstufe wie Jüngerschaftsgruppe/Gebetskreis). Kein Teil-Fortschritt gibt etwas – nur der vollständige Abschluss eines Ereignisses.
+- Tooltip am 🗣️-Chip zeigt die Erkenntnis-Belohnung jetzt mit an.

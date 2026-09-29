@@ -238,13 +238,26 @@ class NpcBackstory {
   /// [OccurredEvent.advanceWork]). If that completes it and this NPC is
   /// already converted, also grows the "Als Christ" chapter by one
   /// deterministic new event drawn *from that specific processed
-  /// challenge*. Returns `true` if [occurred] became processed by this call.
-  bool workOn(OccurredEvent occurred, String npcId, {required bool isConverted}) {
+  /// challenge*.
+  ///
+  /// `completed` is `true` if [occurred] became processed by this call.
+  /// `christGrowth` is `true` if that completion also added a new "Als
+  /// Christ" entry – the caller (the UI) uses this to decide the Insight
+  /// reward: a plain completed challenge vs. one that visibly bore
+  /// spiritual fruit.
+  ({bool completed, bool christGrowth}) workOn(
+    OccurredEvent occurred,
+    String npcId, {
+    required bool isConverted,
+  }) {
     final completed = occurred.advanceWork();
+    bool christGrowth = false;
     if (completed && isConverted) {
+      final before = events.length;
       _growChristPhase(npcId, occurred);
+      christGrowth = events.length > before;
     }
-    return completed;
+    return (completed: completed, christGrowth: christGrowth);
   }
 
   /// Picks one not-yet-used entry from [kChristPhaseCatalog], deterministic

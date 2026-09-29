@@ -100,8 +100,7 @@ class NPCModel extends BaseInteractableEntity {
 
   /// Works through [occurred] by one unit (see [NpcBackstory.workOn]) –
   /// costs the player a little health in the UI, same as counseling.
-  /// Returns `true` if this call completed the processing.
-  bool workOnBackstoryEvent(OccurredEvent occurred) =>
+  ({bool completed, bool christGrowth}) workOnBackstoryEvent(OccurredEvent occurred) =>
       backstory.workOn(occurred, id, isConverted: isConverted);
 
   /// Sparse map for saving – see [NpcBackstory.captureProgress].
