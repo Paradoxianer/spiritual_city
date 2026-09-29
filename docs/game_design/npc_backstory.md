@@ -1,101 +1,124 @@
-# NPC-Vergangenheit: Lebensphasen
+# NPC-Vergangenheit: Lebensphasen-Simulation
 
-**Status: Entwurf v2, wartet auf Rückmeldung.** Noch kein Code, keine Issue-Nummer. Überarbeitet nach Rückmeldung zu v1 (siehe §7 „Was sich gegenüber v1 geändert hat"). Baut auf #171 (Interaktions-Varianz & NPC-Bedürfnisse) auf, ersetzt es nicht.
+**Status: Entwurf v3, wartet auf Rückmeldung.** Noch kein Code, keine Issue-Nummer. Baut auf #171 (Interaktions-Varianz & NPC-Bedürfnisse) auf, ersetzt es nicht. Änderungsverlauf siehe §8.
 
 ## 1. Idee
 
-Statt eines flachen Pools einzelner "Karten" bekommt jede NPC eine kleine, generierte **Lebensgeschichte** entlang fester Phasen (Kindheit, Jugend, Jetzt). Für jede Phase wird gewürfelt, was passiert ist – und bei negativen Ereignissen zusätzlich, ob die NPC das **durchgearbeitet** hat oder nicht. Durchgearbeitete negative Ereignisse machen die NPC mental stärker (gedämpfte negative Reaktionen), unverarbeitete bleiben eine offene Wunde. Dargestellt wird jedes Ereignis als **Emoji-Satz** (Sequenz, nicht ausgeschriebener Text) – genau der visuelle Stil, den das Spiel überall sonst schon nutzt (z. B. die Reaktions-Emoji-Ketten in `npc_component.dart`, die Aktions-Emoji in `building_actions.md`).
+Ein echtes, kleines NPC-Lebens-/Emotionssimulationssystem: Jede NPC durchläuft bei der Generierung ihre drei Lebensphasen (Kindheit → Jugend → Jetzt) **der Reihe nach**. Was in einer frühen Phase passiert, verschiebt die Wahrscheinlichkeiten der folgenden Phasen – eine unverarbeitete schwere Kindheit macht spätere Abwärtsspiralen (Sucht, Straffälligkeit) wahrscheinlicher und stabile Beziehungen/beruflichen Erfolg unwahrscheinlicher, genau wie im Beispiel beschrieben. Trotzdem bleibt alles eine einmalige, deterministische Berechnung ohne neuen Spielzustand – wie das Bedürfnis aus #171.
 
-## 2. Lebensphasen & Kategorien
+## 2. Phasen & Kategorien
 
-**Phasen (fest, für jede NPC gleich – siehe §7 zur Vereinfachung):** Kindheit → Jugend → Jetzt.
+Phasen: Kindheit → Jugend → Jetzt (fest für alle NPCs, siehe v2 §7 zur Begründung).
 
-**Kategorien pro Phase** (fünf, klein gehalten):
+Kategorien: Glaube, Geld/Beruf, Beziehung, Verlust, Gesundheit (inkl. Sucht/Straffälligkeit – siehe Katalog).
 
-| Kategorie | Glyphe | Mechanisch wirksam? |
-| :--- | :--- | :--- |
-| Glaube | ✝️ | Ja – direkter `faith`-Offset |
-| Geld / Beruf | 💼 | Ja – beeinflusst Spenden-/Großzügigkeits-Chance (`houseVisit`, `requestDonation`) |
-| Beziehung | 💞 | Nein (v1) – nur Varianz/Textur |
-| Verlust | ⚰️ | Nein (v1) – nur Varianz/Textur |
-| Gesundheit | 🩹 | Nein (v1) – nur Varianz/Textur |
+## 3. Ereignis-Katalog (gewichtet, nicht mehr nur Valenz)
 
-Nur zwei Kategorien bekommen in v1 eine echte Spielauswirkung, weil das genau die zwei sind, die der Pastor selbst als Ressource hat (Glaube, Material) – wie gewünscht "dieselben Werte, die der Pastor hat". Die anderen drei sorgen trotzdem für Abwechslung (das eigentliche Ziel), ohne dass jede Kategorie sofort einen neuen Spielmechanismus braucht. Können später mechanisch angebunden werden (z. B. Verlust → Trauer-Dialogvariante).
+Jedes Ereignis ist jetzt ein **benannter Eintrag mit eigener Stärke** (−10 bis +10) statt nur "positiv/negativ". Kleine, überschaubare Liste – Daten, kein Fließtext:
 
-## 3. Generierung (deterministisch, wie `NpcNeed`)
+| Kategorie | Ereignis | Glyphe | Stärke | Phasen | Anfälligkeits-sensitiv? |
+| :--- | :--- | :--- | ---: | :--- | :--- |
+| Beziehung | Vernachlässigung / wenig Liebe | 😠 | −4 | Kindheit | nein |
+| Beziehung | Trennung der Eltern | 💔 | −5 | Kindheit, Jugend | nein |
+| Beziehung | Gescheiterte Beziehung | 💔 | −5 | Jugend, Jetzt | leicht |
+| Beziehung | Geborgene Kindheit | 🤱 | +4 | Kindheit | invers |
+| Beziehung | Erste große Liebe | 💞 | +4 | Jugend | invers |
+| Beziehung | Glückliche Beziehung | 💑 | +6 | Jetzt | invers |
+| Verlust | Verlust eines Elternteils | ⚰️ | −7 | alle | nein |
+| Verlust | Verlust durch Gewalt (angedeutet) | 🕯️ | −8 | Jugend, Jetzt | nein |
+| Verlust | Schwere Krankheit in der Familie | 🏥 | −5 | alle | nein |
+| Gesundheit | Leichte gesundheitliche Sorgen | 🤒 | −2 | alle | nein |
+| Gesundheit | Alkoholmissbrauch | 🍺 | −6 | Jugend, Jetzt | **ja** |
+| Gesundheit | Drogen | 💉 | −8 | Jugend, Jetzt | **ja** |
+| Gesundheit | Straffälligkeit / Gefängnis | 👊 | −7 | Jugend, Jetzt | **ja** |
+| Gesundheit | Robuste Gesundheit | 💪 | +2 | alle | invers |
+| Geld | Arbeitslosigkeit | 📉 | −4 | Jugend, Jetzt | leicht |
+| Geld | Insolvenz / Schulden | 💸 | −5 | Jetzt | leicht |
+| Geld | Beruflicher Erfolg | 💼✨ | +5 | Jugend, Jetzt | invers |
+| Geld | Erbschaft / Wohlstand | 💰 | +4 | Jetzt | nein |
+| Glaube | Enttäuschung von der Kirche | ✝️💔 | −5 | alle | nein |
+| Glaube | Unbeantwortetes Gebet | 🙏💔 | −4 | alle | nein |
+| Glaube | Bekehrungserlebnis | ✝️✨ | +6 | alle | nein |
+| Glaube | Erhörtes Gebet / Wunder | 🙏✨ | +5 | alle | nein |
 
-Pro Phase × Kategorie wird gewürfelt (Hash aus NPC-`id` + Phase + Kategorie, wie beim bestehenden `need`-Mechanismus – **kein Verbrauch der Chunk-RNG**, also keine Nebenwirkung auf die Weltgenerierung):
+**"Anfälligkeits-sensitiv"** = die Wahrscheinlichkeit dieses konkreten Ereignisses steigt mit der `vulnerability` der NPC (s. §4). **"invers"** = sinkt stattdessen mit steigender `vulnerability` (positive Ereignisse werden unwahrscheinlicher, je belasteter die NPC ist – genau das im Beispiel beschriebene "weniger wahrscheinlich für ganze Beziehungen, Erfolg im Job"). Startwerte, über `GameBalance` (#83) tunbar.
 
-1. **Passiert etwas?** (Basis-Wahrscheinlichkeit je Kategorie, grob 30–45 %.)
-2. **Positiv oder negativ?** (grob 50/50, je Kategorie leicht verschoben – z. B. "Glaube" häufiger positiv, "Verlust" fast immer negativ.)
-3. **Nur bei negativ: durchgearbeitet?** Wahrscheinlichkeit steigt mit Abstand der Phase: Kindheit ~65 % (viel Zeit gehabt), Jugend ~45 %, Jetzt ~25 % (frisch, noch offen).
+## 4. Generierung: sequenziell mit Anfälligkeit
 
-Alles rein deterministisch aus der ID abgeleitet, **nicht persistiert** – wie das Bedürfnis aus #171 bei jeder Regeneration neu berechnet. Keine Schema-Änderung am Save nötig.
+Zwei laufende Größen, beide bei 0 startend, nur während der einmaligen Generierung existent (nicht Teil des dauerhaften NPC-Zustands):
 
-## 4. Mechanische Wirkung
+- **`vulnerability`** – wächst vor allem durch **unverarbeitete** negative Ereignisse, wächst kaum bei durchgearbeiteten.
+- **`resilience`** – wächst durch durchgearbeitete negative Ereignisse (posttraumatisches Wachstum).
 
-- **Glaube-Ereignis:** verschiebt den `faith`-Basiswert der NPC bei Generierung (Größenordnung ±5 bis ±15, je nach Phase).
-- **Geld-Ereignis:** verschiebt eine bei Bedarf berechnete "Großzügigkeit" (nicht gespeichert, aus den Ereignissen abgeleitet), die in die bestehende Spendenchance bei `houseVisit`/`requestDonation` einfließt.
-- **Durchgearbeitet (jede Kategorie mit negativem Ereignis):** der eigene negative Effekt wird gedämpft (≈30 % der vollen Wirkung statt 100 %) **und** erhöht eine kleine, gemeinsame `resilience`-Größe der NPC. Diese dämpft allgemein negative Interaktions-Ausschläge etwas ab (z. B. die −8 Faith bei abgelehntem Gebet) – eine NPC, die ihre Vergangenheit verarbeitet hat, ist spürbar stabiler, unabhängig davon, worum es dabei ging.
-- **Nicht durchgearbeitet:** volle negative Wirkung, keine Dämpfung – eine offene Wunde bleibt eine offene Wunde.
-- Positive Ereignisse brauchen keinen Verarbeitungs-Wurf, sie wirken direkt.
+Ablauf je Phase (Kindheit → Jugend → Jetzt, in dieser Reihenfolge – die Reihenfolge ist entscheidend, jede Phase liest die `vulnerability`, die die vorherigen Phasen hinterlassen haben):
 
-## 5. Aufdeckung: **ein** gemeinsamer Fortschritt, keine getrennten Kanäle
+```
+für jede Kategorie in dieser Phase:
+  passiert etwas? (Basis-Chance je Kategorie)
+    → wenn ja: negativ oder positiv, gewichtet nach vulnerability
+       (hohe vulnerability begünstigt anfälligkeits-sensitive negative
+        Ereignisse wie Drogen/Alkohol/Gefängnis und benachteiligt
+        inverse positive Ereignisse wie Erfolg/Beziehung)
+    → bei negativem Ereignis: durchgearbeitet? (Chance sinkt mit Phase-
+       Nähe zur Gegenwart UND mit bereits hoher vulnerability – wer schon
+       stark belastet ist, verarbeitet Neues schwerer)
+       → durchgearbeitet:      vulnerability += Stärke × 0.15,  resilience += Stärke × 0.3
+       → nicht durchgearbeitet: vulnerability += Stärke × 0.6
+    → bei positivem Ereignis:  vulnerability -= Stärke × 0.1
+```
 
-Kein neuer Zähler. Wiederverwendung des bereits vorhandenen `interactionCount` + `isFaithVague`/`isFaithRevealed` (Schwellen 3 / 6, `base_interactable_entity.dart`). Das passt schon heute genau zu "Seelsorge bringt mehr, kostet aber mehr": Seelsorge erhöht `interactionCount` bereits um **6** pro Nutzung (`npc_component.dart`), ein Gespräch nur um **1** – Seelsorge kostet zusätzlich Gesundheit, Gespräch nichts. Diese Gewichtung ist bereits genau richtig, ich muss nichts Neues einführen.
+Rein deterministisch: ein lokaler, aus der NPC-`id` abgeleiteter Zufallsgenerator (wie beim bestehenden `need`), verbraucht keine geteilte RNG-Sequenz, keine Nebenwirkung auf Weltgenerierung. Einmalig berechnet (`late final`), nicht persistiert.
 
-- **Vage (`isFaithVague`, ab 3):** ein einziges, immer gleiches Symbol (💭) – verrät nichts Kategorie-Spezifisches.
-- **Voll (`isFaithRevealed`, ab 6):** alle generierten Lebensphasen-Ereignisse als Emoji-Sätze, mit kurzer Beschriftung im Stil der bestehenden Tooltips (`tooltip: 'Anbetung'` usw.) – **kein** ausgeschriebener Satz, nur 2–3 Wörter Bildunterschrift, z. B. "Jugend · Verlust".
+**Beispiel, genau wie beschrieben:** Kindheit → "Vernachlässigung/wenig Liebe" (−4), nicht durchgearbeitet → `vulnerability` steigt spürbar. In der Jugend sind dadurch "Alkoholmissbrauch"/"Drogen"/"Straffälligkeit" wahrscheinlicher (anfälligkeits-sensitiv) und "Erste große Liebe"/"Beruflicher Erfolg" unwahrscheinlicher (invers) – ohne dass das irgendwo hart verdrahtet wurde, es folgt allein aus der einen laufenden Zahl.
 
-## 6. Emoji-Komposition (kein Pool aus 15 Einzelfällen – zusammengesetzt)
+## 5. Sollen NPCs genau dieselben Ressourcen wie der Pastor haben?
 
-Statt jede mögliche Kombination von Hand zu texten, wird die Sequenz aus drei Bausteinen zusammengesetzt: **Kategorie-Glyphe** + **Valenz-Glyphe** + (bei negativ) **Bewältigungs-Glyphe**.
+**Meine Empfehlung: Nein – nur Glaube bleibt eine echte, persistente Ressource. Geld wird ein abgeleiteter Wert, Gesundheit/Hunger bleiben reine Erzähl-Varianz ohne eigenen Ressourcen-Haushalt.**
 
-| Baustein | Glyphen |
-| :--- | :--- |
-| Valenz positiv | ✨ |
-| Valenz negativ | 💔 |
-| Durchgearbeitet | 🌱 |
-| Nicht durchgearbeitet | 🌫️ |
+Begründung:
+- **Glaube** existiert bei NPCs bereits, wird an vielen Stellen gebraucht (Bekehrung, `interactionScore`, Zell-Einfluss) – klarer Fall, bleibt.
+- **Materialien/Geld** als echte, tickende Ressource bräuchte einen eigenen Haushalt (Einnahmen/Ausgaben) für potenziell tausende NPCs in der Stadt, plus UI, die diesen Wert überhaupt zeigt – aktuell gibt es keine Spielmechanik, die eine "NPC hat X Materialien"-Zahl konsumiert, nur die *Chance*, dass sie bei einem Hausbesuch etwas spendet. Diese Chance kann direkt aus dem generierten Geld-Kategorie-Ergebnis abgeleitet werden ("Wohlstands-Modifier"), ohne dass dafür ein echter, laufender Ressourcen-Wert existieren muss.
+- **Gesundheit/Hunger** haben bei NPCs aktuell keinen einzigen Verbraucher (der Spieler füttert oder heilt keine NPCs). Ein eigener Haushalt dafür wäre Komplexität ohne Gegenstück im Spiel.
+- **Performance:** Nur NPCs mit `NPCDetailLevel.high` (nahe am Spieler) bekommen überhaupt laufende Logik; ein tickender 4-Ressourcen-Haushalt für alle generierten NPCs der Stadt wäre unnötiger Rechenaufwand für etwas, das der Spieler nie sieht.
 
-**Beispiele:**
-- Jugend, Beziehung, positiv → `💞✨` · Bildunterschrift "Jugend · Beziehung"
-- Kindheit, Verlust, negativ, nicht durchgearbeitet → `⚰️💔🌫️` · "Kindheit · Verlust"
-- Jetzt, Glaube, negativ, durchgearbeitet → `✝️💔🌱` · "Jetzt · Glaube"
-- Jugend, Geld, negativ, nicht durchgearbeitet → `💼💔🌫️` · "Jugend · Geld"
+Kurz: die *Wirkung* soll dieselbe Sprache sprechen wie die Pastoren-Ressourcen (das war dein Kernpunkt), aber nur Glaube muss dafür wirklich eine zweite, tickende Ressource sein. Alles andere bleibt ein bei der Generierung einmal berechneter Wert, der bestehende Mechaniken einfärbt.
 
-Das deckt automatisch auch "erwachsenere" Themen ab (Sucht, Scheidung, Verlust durch Gewalt fallen alle unter Verlust/Beziehung/Gesundheit negativ), ohne dass ich dafür explizite, möglicherweise geschmacklose Einzel-Emoji suchen muss – die Abstraktion (Kategorie + Valenz + Bewältigung) bleibt bewusst unspezifisch genug, um würdevoll zu bleiben, und ist beliebig erweiterbar, ohne dass die Sequenz-Bausteine wachsen müssen.
+## 6. Mechanische Wirkung
 
-## 7. Was sich gegenüber v1 geändert hat
+- **Glaube:** Summe der Glaube-Kategorie-Stärken (skaliert) verschiebt den `faith`-Basiswert bei Generierung.
+- **Geld (Wohlstands-Modifier):** Summe der Geld-Kategorie-Stärken verschiebt die bestehende Spendenchance in `houseVisit`/`requestDonation` – kein neuer Ressourcen-Haushalt, nur ein Faktor auf einen bereits vorhandenen Würfel.
+- **`resilience`:** dämpft allgemein negative Interaktions-Ausschläge (z. B. −8 bei abgelehntem Gebet) – eine NPC, die ihre Vergangenheit verarbeitet hat, reagiert stabiler, unabhängig vom Thema.
+- **`vulnerability`:** optionaler Zusatz-Hebel für später (z. B. höhere `wantsGift`-Chance, leicht höhere Ablehnungs-Chance bei Gebet) – nicht zwingend für v1, aber naheliegend, da der Wert ohnehin existiert.
 
-- ~~Ausgeschriebener Volltext bei voller Aufdeckung~~ → Emoji-Satz + Kurz-Label, passend zum Rest des Spiels.
-- ~~Getrennte `talkCount`/`counselCount`-Zähler, neuer Save-Schema-Bump~~ → Wiederverwendung von `interactionCount`/`isFaithVague`/`isFaithRevealed`, **keine** Save-Änderung nötig.
-- ~~Flacher Pool aus 15 von Hand getexteten Karten~~ → Lebensphasen × Kategorien, Ereignisse und ihre Emoji-Sätze werden zusammengesetzt statt einzeln autorisiert.
-- **Neu:** die "durchgearbeitet"-Mechanik (Resilienz) – war in v1 nicht enthalten.
+## 7. Aufdeckung – unverändert aus v2
 
-**Bewusste Vereinfachung, zur Rückmeldung:** Alle NPCs bekommen dieselben drei Phasen (Kindheit/Jugend/Jetzt), nicht abhängig vom tatsächlichen Alter – das Spiel führt aktuell kein Alter pro NPC. Eine altersabhängige Phasenzahl wäre möglich (z. B. junge NPCs ohne "Jetzt"-Volljährigkeits-Ereignisse), würde aber ein neues Alters-Konzept nur für dieses Feature einführen. Ich würde das als spätere Verfeinerung offenlassen, wenn das für dich in Ordnung ist.
+Ein gemeinsamer Fortschritt, keine getrennten Kanäle: Wiederverwendung von `interactionCount` + `isFaithVague`/`isFaithRevealed` (3/6). Seelsorge (+6) vs. Gespräch (+1) bildet "bringt mehr, kostet mehr" bereits ab. Vage (💭) ab 3, alle generierten Ereignisse als Emoji+Glyphe (Kategorie-Glyphe aus der Tabelle + 🌱/🌫️ bei negativ) ab 6, mit Kurz-Label ("Kindheit · Beziehung").
 
-## 8. Umsetzungsschritte (nach Freigabe)
+## 8. Änderungsverlauf
 
-1. `LifePhase`-Enum (childhood/youth/now), `LifeCategory`-Enum (5 Werte) im Domain-Modell.
-2. Deterministische Ereignis-Generierung pro NPC (Hash wie `NpcNeed`), `late final` Getter auf `NPCModel` – kein neuer Save-Zustand.
-3. Emoji-Komposition + Kurz-Label als reine, testbare Funktion.
-4. Verdrahtung: `faith`-Offset bei Generierung, Spendenchance-Modifier, Resilienz-Dämpfung in den bestehenden negativen Interaktionspfaden.
-5. UI: 💭-Hinweis ab `isFaithVague`, Emoji-Sätze ab `isFaithRevealed` im Dialog.
-6. Tests: Generierung deterministisch, Komposition korrekt, Resilienz-Dämpfung, Spendenchance-Modifier.
+- **v1 → v2:** Ausgeschriebener Text → Emoji-Sätze; getrennte Kanäle → ein gemeinsamer Fortschritt (Wiederverwendung `isFaithVague`/`isFaithRevealed`); flacher Kartenpool → Phasen × Kategorien.
+- **v2 → v3 (dieses Update):** Flache Valenz (nur positiv/negativ) → benannter, gewichteter Ereignis-Katalog mit eigener Stärke pro Ereignis; unabhängige Phasen-Würfe → sequenzielle Generierung, bei der `vulnerability` aus früheren Phasen die Wahrscheinlichkeiten späterer Phasen verschiebt (echte Verlaufs-Simulation); neu beantwortet: Ressourcen-Frage (§5, Empfehlung gegen volle 4-Ressourcen-Spiegelung).
 
-## 9. Akzeptanzkriterien (Entwurf)
+## 9. Umsetzungsschritte (nach Freigabe)
 
-- [ ] Jede NPC hat für jede Phase×Kategorie ein deterministisches Ergebnis (passiert/nicht, Valenz, Bewältigung bei negativ)
-- [ ] Emoji-Satz wird aus Bausteinen zusammengesetzt, kein ausgeschriebener Text
-- [ ] Aufdeckung nutzt ausschließlich `interactionCount`/`isFaithVague`/`isFaithRevealed`, keine neuen Zähler
-- [ ] Durchgearbeitete negative Ereignisse dämpfen sowohl ihren eigenen Effekt als auch allgemein negative Interaktions-Ausschläge
-- [ ] Glaube- und Geld-Kategorie sind mechanisch wirksam, die übrigen drei sind reine Varianz
+1. `LifeEvent`-Katalog als const-Liste (Tabelle aus §3) im Domain-Modell.
+2. Sequenzielle, deterministische Generierung (lokaler `Random` aus ID-Hash) mit `vulnerability`/`resilience`-Tracking – `late final` Getter auf `NPCModel`, kein neuer Save-Zustand.
+3. Wirkung: `faith`-Offset, Wohlstands-Modifier in `building_interaction_service.dart`, Resilienz-Dämpfung in den negativen Interaktionspfaden.
+4. UI: 💭 ab `isFaithVague`, generierte Ereignisse (Glyphe + Kurz-Label) ab `isFaithRevealed`.
+5. Tests: Katalog-Konsistenz, deterministische Generierung, Kaskaden-Effekt (belegen: hohe `vulnerability` aus Phase 1 erhöht messbar die Wahrscheinlichkeit anfälligkeits-sensitiver Ereignisse in Phase 2/3), Resilienz-Dämpfung, Wohlstands-Modifier.
+
+## 10. Akzeptanzkriterien (Entwurf)
+
+- [ ] Ereignisse sind gewichtet (eigene Stärke pro Ereignis, nicht nur positiv/negativ)
+- [ ] Reihenfolge Kindheit→Jugend→Jetzt ist kausal: frühe unverarbeitete negative Ereignisse erhöhen messbar die Wahrscheinlichkeit späterer anfälligkeits-sensitiver negativer Ereignisse und senken die inverser positiver Ereignisse
+- [ ] Durchgearbeitete Ereignisse erhöhen `resilience` spürbar stärker als `vulnerability`
+- [ ] Nur Glaube ist eine echte, persistente NPC-Ressource; Geld bleibt ein abgeleiteter Modifier ohne eigenen Haushalt
+- [ ] Aufdeckung nutzt weiterhin ausschließlich `interactionCount`/`isFaithVague`/`isFaithRevealed`
 - [ ] Keine Änderung am Save-Schema nötig
-- [ ] Unit-Tests für Generierung, Komposition, Resilienz-Dämpfung
+- [ ] Unit-Tests für Katalog, Kaskade, Resilienz, Wohlstands-Modifier
 
-## 10. Offene Fragen für später (nicht Teil von v1)
+## 11. Offene Fragen für später
 
-- Altersabhängige Phasenzahl (siehe §7).
+- `vulnerability` als zusätzlicher Live-Hebel (§6, letzter Punkt) – bewusst optional gehalten, um v1 nicht zu überladen.
+- Altersabhängige Phasenzahl (siehe v2 §7).
 - Content-Filter für Store-Freigabe, sobald #95/#153 entschieden sind.
-- Verknüpfung mit Missionen (#173): eine Tier-2-Kette könnte an ein unverarbeitetes Ereignis anknüpfen.
