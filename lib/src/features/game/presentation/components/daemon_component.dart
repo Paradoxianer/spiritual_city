@@ -271,10 +271,17 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
     model.energy += finalDamage;
     if (model.energy >= 0) {
-      if (mode == PrayerMode.drain) {
-        _absorb();
-      } else {
-        _explode();
+      switch (mode) {
+        case PrayerMode.drain:
+          _absorb();
+        case PrayerMode.liberation:
+        case null:
+          _explode();
+        case PrayerMode.rebuke:
+        case PrayerMode.slow:
+          // Control modes defeat the daemon but don't cleanse the area –
+          // cleansing is Liberation's job (daemons_and_combat.md §6).
+          _vanquish();
       }
     }
   }
@@ -299,6 +306,14 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         }
       }
     }
+    removeFromParent();
+  }
+
+  /// Daemon killed by Rebuke or Slow: defeated, but no area cleanse (that is
+  /// reserved for Liberation, so the modes keep distinct jobs).
+  void _vanquish() {
+    model.dissolved = true;
+    game.progress.addInsight(_killInsightReward);
     removeFromParent();
   }
 

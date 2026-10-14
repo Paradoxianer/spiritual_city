@@ -21,6 +21,19 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
   // Track which entities have already been hit by this specific wave
   final Set<String> _hitIds = {};
 
+  /// Share of a wave's strength that liberates the cells it passes over.
+  ///
+  /// Liberation is *the* tool for cleansing the city; Rebuke, Slow and
+  /// Drain are control/damage tools against daemons and liberate almost
+  /// nothing, so that the modes have distinct jobs and are worth switching
+  /// between and combining (docs/game_design/daemons_and_combat.md §6).
+  /// Was 0.15 for the control modes – enough that pure Rebuke spam still
+  /// cleansed noticeably, which made Liberation optional.
+  static const double controlModeCellFactor = 0.02;
+
+  static double cellImpactFactor(PrayerMode mode) =>
+      mode == PrayerMode.liberation ? 1.0 : controlModeCellFactor;
+
   ShockwaveComponent({
     required Vector2 position,
     required this.maxRadius,
@@ -73,10 +86,9 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
           if (dist <= _currentRadius && dist > _currentRadius - 20) {
             final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
             
-            // Mode-specific cell impact (Issue #9)
-            // Liberation is the primary tool for cleansing the city.
-            final modeMultiplier = mode == PrayerMode.liberation ? 1.0 : 0.15;
-            
+            // Mode-specific cell impact (Issue #9) – see cellImpactFactor.
+            final modeMultiplier = cellImpactFactor(mode);
+
             final impact = (strength / 100.0) * falloff * modeMultiplier;
             cell.spiritualState = (cell.spiritualState + impact).clamp(-1.0, 1.0);
             _hitIds.add(cellId);

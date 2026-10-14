@@ -57,6 +57,8 @@ Andere Reihenfolgen funktionieren, sind aber schwächer – so gibt es eine effe
 | Slow | Kontrolle: Grundlage der Kombo, hohe Dauer schon auf Level 0 |
 | Drain | Schaden über Zeit, Glaubens-Rückfluss gedeckelt |
 
+> **Umgesetzt (Teil 1):** Rebuke, Slow und Drain befreien Zellen nur noch minimal (`ShockwaveComponent.controlModeCellFactor = 0.02`, vorher 0.15 – reines Rückstoß-Spammen hat die Stadt spürbar mitbefreit und Liberation damit optional gemacht). Ein Dämon, der durch Rebuke oder Slow besiegt wird, löst sich auf, **ohne** flächig zu reinigen (`DaemonComponent._vanquish`); nur ein Liberation-Kill explodiert mit Reinigung im 3-Zellen-Radius, ein Drain-Kill bleibt beim Glaubens-Rückfluss. Erkenntnis gibt es weiterhin für jeden Kill. Die eigentlichen Kombo-Boni und Dämonentypen (§3/§4) sind noch offen (#178).
+
 ## 7. Abbruch des Gebets (Bezug #167)
 
 Erwartung: Das Gebet endet nur, wenn der Spieler loslässt oder Glauben bzw. Leben leer sind. Der Ist-Stand (Abbruch bei `faith < cost`, Aufladen bis `faith <= 1`, Skalierung mit `faith/100`) wird im Rahmen von #167 vereinheitlicht.
