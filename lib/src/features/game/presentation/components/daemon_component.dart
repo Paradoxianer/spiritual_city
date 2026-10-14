@@ -271,25 +271,41 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
     model.energy += finalDamage;
     if (model.energy >= 0) {
-      switch (mode) {
-        case PrayerMode.drain:
-          _absorb();
-        case PrayerMode.liberation:
-        case null:
-          _explode();
-        case PrayerMode.rebuke:
-        case PrayerMode.slow:
-          // Control modes defeat the daemon but don't cleanse the area –
-          // cleansing is Liberation's job (daemons_and_combat.md §6).
-          _vanquish();
+      // Every player-caused kill cleanses the area around it, whichever
+      // mode landed the final blow – only the *shockwaves* of the control
+      // modes are weak at liberating (ShockwaveComponent.cellImpactFactor).
+      if (mode == PrayerMode.drain) {
+        _absorb();
+      } else {
+        _explode();
       }
     }
   }
 
-  /// Daemon killed by Liberation: cleanses a 3-cell radius around the death point.
+  /// Daemon killed by Liberation, Rebuke or Slow: cleanses a 3-cell radius
+  /// around the death point.
   void _explode() {
     model.dissolved = true;
     game.progress.addInsight(_killInsightReward);
+    _cleanseAroundDeathPoint();
+    removeFromParent();
+  }
+
+  /// Daemon killed by Drain: Pastor absorbs its energy as Faith – and, like
+  /// every other player-caused kill, the area around it is cleansed too.
+  void _absorb() {
+    model.dissolved = true;
+    // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
+    final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0);
+    game.gainFaith(faithGain);
+    game.progress.addInsight(_killInsightReward);
+    _cleanseAroundDeathPoint();
+    removeFromParent();
+  }
+
+  /// Liberates a 3-cell radius around the daemon's position, strongest at
+  /// the centre. Shared by every player-caused kill, regardless of mode.
+  void _cleanseAroundDeathPoint() {
     const int radius = 3;
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
@@ -306,25 +322,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         }
       }
     }
-    removeFromParent();
-  }
-
-  /// Daemon killed by Rebuke or Slow: defeated, but no area cleanse (that is
-  /// reserved for Liberation, so the modes keep distinct jobs).
-  void _vanquish() {
-    model.dissolved = true;
-    game.progress.addInsight(_killInsightReward);
-    removeFromParent();
-  }
-
-  /// Daemon killed by Drain: Pastor absorbs energy, no explosion.
-  void _absorb() {
-    model.dissolved = true;
-    // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
-    final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0);
-    game.gainFaith(faithGain);
-    game.progress.addInsight(_killInsightReward);
-    removeFromParent();
   }
 
   /// Natural dissolution: daemon's energy ran out; leaves a residuum marker.

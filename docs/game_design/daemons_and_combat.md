@@ -57,7 +57,7 @@ Andere Reihenfolgen funktionieren, sind aber schwächer – so gibt es eine effe
 | Slow | Kontrolle: Grundlage der Kombo, hohe Dauer schon auf Level 0 |
 | Drain | Schaden über Zeit, Glaubens-Rückfluss gedeckelt |
 
-> **Umgesetzt (Teil 1):** Rebuke, Slow und Drain befreien Zellen nur noch minimal (`ShockwaveComponent.controlModeCellFactor = 0.02`, vorher 0.15 – reines Rückstoß-Spammen hat die Stadt spürbar mitbefreit und Liberation damit optional gemacht). Ein Dämon, der durch Rebuke oder Slow besiegt wird, löst sich auf, **ohne** flächig zu reinigen (`DaemonComponent._vanquish`); nur ein Liberation-Kill explodiert mit Reinigung im 3-Zellen-Radius, ein Drain-Kill bleibt beim Glaubens-Rückfluss. Erkenntnis gibt es weiterhin für jeden Kill. Die eigentlichen Kombo-Boni und Dämonentypen (§3/§4) sind noch offen (#178).
+> **Umgesetzt (Teil 1):** Rebuke, Slow und Drain befreien Zellen nur noch minimal (`ShockwaveComponent.controlModeCellFactor = 0.02`, vorher 0.15 – reines Rückstoß-Spammen hat die Stadt spürbar mitbefreit und Liberation damit optional gemacht). Der **Tod** eines Dämons befreit dagegen unabhängig vom Modus: Jeder vom Spieler verursachte Kill reinigt einen 3-Zellen-Radius (`DaemonComponent._cleanseAroundDeathPoint`) – auch ein Drain-Kill, der zusätzlich Glauben zurückgibt (vorher reinigte Drain gar nicht). Erkenntnis gibt es für jeden Kill. Kontroll-Modi lohnen sich also, um Dämonen zu erledigen, aber nicht, um mit ihren Wellen selbst Gebiet zu befreien. Die eigentlichen Kombo-Boni und Dämonentypen (§3/§4) sind noch offen (#178).
 
 ## 7. Abbruch des Gebets (Bezug #167)
 
