@@ -46,7 +46,7 @@ Dieses Dokument definiert die Aktionen, Kosten und Auswirkungen für die verschi
 - **Glaube vor Gesundheit (Nutzer-Feedback, umgesetzt):** Gesundheit war gefühlt fast so wichtig wie Glaube oder wichtiger, weil sogar die geistlichen Aktionen zu Hause Gesundheit kosteten. Glaube ist die zentrale Ressource, und Pastorenhaus und Kirche sind die Orte, an denen er aufgefüllt wird:
   - Pastorenhaus: *Bibel lesen* **+40 🙏** (vorher +20, −5 ❤️), *Beten* **+30 🙏** (vorher +15, −5 ❤️), beides ohne Gesundheitskosten.
   - Kirche: *Anbetung* **+8 🙏/Sek** (vorher 3/Sek, bei 7 s also +56 statt +21). *Gottesdienst* kostet nur noch **−25 ❤️** (vorher −60) und gibt dem Pastor **+40 🙏**.
-  - Gesundheit verliert man außerdem weniger an anderen Stellen: Ein Dämonen-Treffer kostet nur noch halb so viel ❤️ (4 statt 8 Basis, Glaubens-Schaden unverändert), das Lebensgespräch 🗣️ kostet −2 ❤️ / −5 🙏 (vorher −6 / −4).
+  - Das Lebensgespräch 🗣️ kostet −2 ❤️ / −5 🙏 (vorher −6 / −4). Dämonen-Treffer bleiben bewusst unverändert: Dämonen sollen gefährlich bleiben.
   - Werte als Konstanten in `BuildingInteractionService` (`pastorHouseReadBibleFaith`, `pastorHousePrayFaith`, `worshipFaithPerSecond`, `sundayServiceFaith`, `sundayServiceHealthCost`).
 - **Erkunden (#182):** Innenräume können diese Aktionen kontextuell anbieten (siehe `exploration.md`).
 
