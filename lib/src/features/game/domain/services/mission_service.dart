@@ -422,6 +422,7 @@ class MissionService {
   static ActionType? npcActionToType(String interactionType) {
     return switch (interactionType) {
       'talk'    => ActionType.npcConversation,
+      'lifetalk' => ActionType.npcConversation,
       'convert' => ActionType.npcGospelShare,
       _ => null,
     };

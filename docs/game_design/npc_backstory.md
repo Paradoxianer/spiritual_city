@@ -1,8 +1,8 @@
 # NPC-Vergangenheit: Lebensphasen-Simulation
 
-**Status: v4 umgesetzt.** Siehe §12 für die Änderungen gegenüber v3 (basierend auf dem ersten Live-Test): viel mehr gewöhnliche Füll-Ereignisse, "Verarbeiten" ist jetzt eine echte, spielergesteuerte Aktion statt eines Würfelwurfs bei der Erzeugung, Tab-UI pro Lebensphase, neue "Als Christ"-Phase. §3–§7 unten beschreiben teils noch den v3-Stand (Katalog-Tabelle, Reveal-Mechanik) – §12 fasst zusammen, was sich geändert hat; der Code in `npc_backstory.dart` ist die verbindliche Quelle.
+**Status: v5 umgesetzt.** Siehe §13: ein eigener Lebenslauf-Tab 📜 im Dialog statt Altersphasen-Tabs, Alter pro NPC, Probleme werden chronologisch Schritt für Schritt mit einem einzigen 🗣️ angesprochen (kostet einen Interaktionspunkt wie jede andere Aktion). §3–§12 dokumentieren den Weg dorthin; der Code in `npc_backstory.dart` ist die verbindliche Quelle.
 
-**Code:** `lib/src/features/game/domain/models/npc_backstory.dart` (Katalog, Generator, `NpcBackstory`, `OccurredEvent.advanceWork`), `lib/src/core/utils/stable_hash.dart` (gemeinsam mit `NpcNeed` genutzt), Verdrahtung in `npc_registry.dart`/`npc_component.dart`/`spirit_world_game.dart` (Glaube-Offset, Christ-Phase-Trigger, Persistenz des Bearbeitungs-Fortschritts), `building_interaction_service.dart` (Wohlstands-Modifier), Tab-UI in `game_screen.dart` (`_NpcBackstoryPanel`). Tests: `test/features/game/domain/models/npc_backstory_test.dart`, plus Ergänzungen in `npc_registry_test.dart` und `building_interaction_service_test.dart`.
+**Code:** `lib/src/features/game/domain/models/npc_backstory.dart` (Katalog, Generator, `NpcBackstory`, `OccurredEvent.advanceWork`), `lib/src/core/utils/stable_hash.dart` (gemeinsam mit `NpcNeed` genutzt), Verdrahtung in `npc_registry.dart`/`npc_component.dart`/`spirit_world_game.dart` (Glaube-Offset, Christ-Phase-Trigger, Persistenz des Bearbeitungs-Fortschritts), `building_interaction_service.dart` (Wohlstands-Modifier), Lebenslauf-Tab in `game_screen.dart` (`_DialogTabBar`, `_NpcLifeTimeline`, `_LifeTalkButton`), Lebensgespräch-Aktion `'lifetalk'` in `npc_component.dart`. Tests: `test/features/game/domain/models/npc_backstory_test.dart`, plus Ergänzungen in `npc_registry_test.dart` und `building_interaction_service_test.dart`.
 
 ## 1. Idee
 
@@ -164,3 +164,23 @@ Weitere Rückmeldung: Das 🗣️-Symbol sollte unten bei den anderen Aktions-Sy
 - **Bekehrung gibt jetzt Erkenntnis:** `_conversionInsightReward = 0.5` in `npc_component.dart` – der im #129-Issue notierte Zielwert (0,2) war nie tatsächlich verdrahtet; jetzt umgesetzt und bewusst höher als eine einzelne Bearbeitung (0,2), da Bekehrung ein selteneres, größeres Ereignis ist.
 - **Dämonen-Tötung gibt jetzt Erkenntnis:** `DaemonComponent._killInsightReward` (0,05–0,3, nach Dämon-Stärke skaliert) bei `_explode()` (Liberation) und `_absorb()` (Drain) – nicht bei natürlichem Zerfall oder wenn der Dämon den Spieler trifft.
 - **Ausgleich:** `kCombatUpgradeStep` (Verstärkung pro Kampf-Upgrade-Stufe) von 0,1 auf 0,08 gesenkt (`prayer_combat.dart`), damit die zusätzliche Erkenntnis nicht zu einer Kampf-Kraft-Spirale führt. Der Insight-*Preis* pro Stufe (`upgradeInsightCost`, Formel `1.5^Level`) bleibt bewusst unverändert – die Rückmeldung zielte auf die Wirkung der Upgrades, nicht auf ihren Preis.
+## 13. v5 — Eigener Lebenslauf-Tab, Schritt für Schritt
+
+Rückmeldung nach v4.3: Die Gesprächs-Interaktion war "viel zu kompliziert". Zwischen Kindheit und Jugend umschalten, einen Chip auswählen und dann unten 🗣️ tippen waren zu viele Klicks und zu inkonsistent. Außerdem verbrauchte 🗣️ als einzige Aktion **keinen Interaktionspunkt**. Gewünscht war wie früher ein eigener Tab, in dem man "in die Tiefe" gehen kann: ein dem Alter entsprechend simuliertes Leben (à la Dwarf Fortress) als Emoji-Lebenslauf, in dem man spricht und die Probleme vom Baby bis heute der Reihe nach behandelt werden. Die Lösungen sollen danach in die Lebensgeschichte eingehen.
+
+**Simulation**
+- Jede NPC hat ein deterministisches **Alter** (20–79, `NpcBackstoryService.ageFor`). Das Leben wird in Durchgängen simuliert: Kindheit (1–12), Jugend (13–19) und **ein Erwachsenen-Durchgang je ~20 Lebensjahre** (`yearsPerAdultPass`). Ältere Menschen haben also mehr erlebt.
+- Jedes Ereignis trägt das **Alter**, in dem es passierte (`OccurredEvent.age`). Die Liste ist chronologisch sortiert.
+- Ein Ereignis kommt höchstens einmal pro Leben vor. Ein Wiederholungs-Wurf heißt "nichts Neues passiert". Die Auswahl wird bewusst *nicht* gefiltert, sonst blieben in späten Durchgängen fast nur die seltenen dramatischen Ereignisse übrig.
+- Die Anfälligkeits-Kaskade beeinflusst die Ereignis-Gewichte nur bis `vulnerabilityWeightCap = 1.0`. Ohne diese Kappung summierte sie sich über mehrere Erwachsenen-Durchgänge auf, und fast jede zweite ältere NPC hatte Sucht, Gefängnis oder einen gewaltsamen Verlust in der Geschichte. Jetzt sind dramatische Ereignisse < 3 % aller Ereignisse, bei ~22 % der NPCs kommt im ganzen Leben eines vor.
+
+**UI: zwei Tabs im Dialog**
+- **💬** ist das Gespräch wie bisher (Sprechen, Seelsorge, Beten, Bibel, Hilfe, Bekehren). Das 🗣️ aus der Leiste ist entfernt, die Altersphasen-Tabs und die Freischalt-Schwellen 3/6/9 ebenfalls.
+- **📜** ist der Lebenslauf: eine durchgehende Emoji-Zeile ab 👶, jedes Ereignis mit seinem Alter. Sichtbar ist alles **bis einschließlich der frühesten offenen Herausforderung** (`NpcBackstory.currentChallenge`/`revealedCount`). Diese ist gelb umrandet, ihr Fortschritt erscheint als ●○○. Was danach kommt, bleibt ❓, bis man im Gespräch dort angekommen ist.
+- Darunter steht unter "🌱 *Alter*" das Heute: **jede bearbeitete Herausforderung erscheint dort als `💔→🌱`**, die Lösung wird also Teil der Lebensgeschichte. Im Lebenslauf selbst ist sie verblasst. Bei Christen folgen ✝️🕊️ und die gewachsenen "Als Christ"-Einträge.
+- Unten gibt es **eine einzige Aktion**: 🗣️ + Emoji der aktuellen Herausforderung. Es gibt keine Auswahl mehr, es geht immer um das Nächste in der Reihenfolge.
+
+**Konsistenz mit den anderen Aktionen**
+- 🗣️ ist jetzt eine normale Sitzungs-Interaktion `'lifetalk'` in `NPCComponent.handleInteraction`. Sie **verbraucht einen Interaktionspunkt**, erhöht `interactionCount`, zeigt die Deltas im Kopf an und zählt für Gesprächs-Missionen (`npcActionToType`). Nach dem letzten Punkt verabschiedet sich die NPC wie gewohnt.
+- Kosten bleiben −6 ❤️ / −4 🙏 (`NPCComponent.lifeTalkHealthCost`/`lifeTalkFaithCost`), Erkenntnis bleibt bei 0,2 / +0,3 / +0,5, nur liegt die Logik jetzt in der Komponente statt in der UI.
+- Neu: Wird eine Herausforderung abgeschlossen, gewinnt die NPC Glauben, nämlich |Schwere| × 2 × geistlicher Zell-Bonus. Heilung öffnet Menschen.

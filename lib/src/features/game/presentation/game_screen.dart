@@ -13,6 +13,7 @@ import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
 import '../domain/models/npc_backstory.dart';
+import 'components/npc_component.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/models/prayer_combat.dart';
@@ -559,65 +560,8 @@ class _DialogOverlayState extends State<DialogOverlay> {
     _scrollToBottom();
   }
 
-  // ── NPC backstory: "Ansprechen" (working through the selected challenge) ──
-  //
-  // The tabs above (_NpcBackstoryPanel) only *select* a challenge; the actual
-  // action lives here as a normal bottom action chip, alongside talk/pray/
-  // bible/help/convert – "ein Problem nach dem anderen ansprechen", per user
-  // feedback, rather than a small icon buried inside each chip.
-
-  OccurredEvent? _selectedBackstoryEvent;
-
-  static const double _backstoryWorkHealthCost = 6.0;
-
-  /// Costs a little Faith too, not just Health – working through someone
-  /// else's story draws on the pastor's own spiritual reserves.
-  static const double _backstoryWorkFaithCost = 4.0;
-
-  /// Insight reward for fully working through one backstory event – same
-  /// order of magnitude the #129 balancing note set for a conversion (0.2).
-  static const double _backstoryInsightOnCompletion = 0.2;
-
-  /// Extra Insight when completion also grew the "Als Christ" chapter –
-  /// visible spiritual fruit, rewarded like a medium building action.
-  static const double _backstoryInsightOnChristGrowth = 0.3;
-
-  /// Extra Insight when completion clears the *last* outstanding challenge
-  /// in this NPC's whole backstory – a bigger, rarer milestone.
-  static const double _backstoryInsightOnFullyResolved = 0.5;
-
-  bool get _canWorkOnSelectedBackstoryEvent {
-    final occurred = _selectedBackstoryEvent;
-    if (occurred == null || !occurred.isWorkable) return false;
-    return widget.game.health > _backstoryWorkHealthCost &&
-        widget.game.faith >= _backstoryWorkFaithCost;
-  }
-
-  void _workOnSelectedBackstoryEvent() {
-    final occurred = _selectedBackstoryEvent;
-    final model = widget.game.activeDialog?.npcModel;
-    if (occurred == null || model == null || !_canWorkOnSelectedBackstoryEvent) {
-      return;
-    }
-
-    widget.game.spendHealth(_backstoryWorkHealthCost);
-    widget.game.spendFaith(_backstoryWorkFaithCost);
-    final result = model.workOnBackstoryEvent(occurred);
-
-    _addMessage('🗣️', true);
-    if (result.completed) {
-      final fullyResolved = !model.backstory.events.any((o) => o.isWorkable);
-      widget.game.progress.addInsight(
-        _backstoryInsightOnCompletion +
-            (result.christGrowth ? _backstoryInsightOnChristGrowth : 0.0) +
-            (fullyResolved ? _backstoryInsightOnFullyResolved : 0.0),
-      );
-      _addMessage(occurred.displayGlyph, false);
-    }
-    setState(() {
-      if (result.completed) _selectedBackstoryEvent = null;
-    });
-  }
+  /// Which tab of the dialog is shown: the chat (💬) or the life story (📜).
+  bool _showLifeTab = false;
 
   void _handleInteraction(String type, String emoji) {
     if (_isWaiting || _isSessionOver || _isReadingBible) return;
@@ -851,24 +795,29 @@ class _DialogOverlayState extends State<DialogOverlay> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _NpcBackstoryPanel(
-                            game: widget.game,
-                            model: model,
-                            selectedEvent: _selectedBackstoryEvent,
-                            onSelectEvent: (occurred) =>
-                                setState(() => _selectedBackstoryEvent = occurred),
+                          _DialogTabBar(
+                            showLifeTab: _showLifeTab,
+                            onSelect: (life) => setState(() => _showLifeTab = life),
                           ),
+                          const SizedBox(height: 6),
                           Expanded(
-                            child: Scrollbar(
-                              controller: _scrollController,
-                              thumbVisibility: true,
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                itemCount: _messages.length,
-                                itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                              ),
-                            ),
+                            child: _showLifeTab
+                                ? _NpcLifeTimeline(model: model)
+                                : Scrollbar(
+                                    controller: _scrollController,
+                                    thumbVisibility: true,
+                                    child: ListView.builder(
+                                      controller: _scrollController,
+                                      itemCount: _messages.length,
+                                      itemBuilder: (context, index) =>
+                                          _ChatBubble(message: _messages[index]),
+                                    ),
+                                  ),
                           ),
+                          // The chat is hidden in the life tab, so its last
+                          // reaction stays visible there.
+                          if (_showLifeTab && _messages.isNotEmpty)
+                            _ChatBubble(message: _messages.last),
                         ],
                       ),
                     ),
@@ -909,6 +858,13 @@ class _DialogOverlayState extends State<DialogOverlay> {
                           const Text('📖', style: TextStyle(fontSize: 20)),
                         ],
                       )
+                    // ── Life tab: one action – talk about the next challenge ──
+                    : _showLifeTab
+                        ? _LifeTalkButton(
+                            model: model,
+                            game: widget.game,
+                            onTap: () => _handleInteraction('lifetalk', '🗣️'),
+                          )
                     // ── Normal action chips ────────────────────────────────────
                     : Builder(builder: (context) {
                         // Compute resource costs once for disabled-state checks.
@@ -976,18 +932,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
                                 isSpecial: true,
                                 onTap: () =>
                                     _handleInteraction('convert', '✝️?'),
-                              ),
-                            // "Ansprechen" – works through the backstory
-                            // challenge currently selected in the tabs
-                            // above. Only shown once there's at least one
-                            // workable challenge anywhere in this NPC's
-                            // story, so it doesn't clutter early on.
-                            if (model.backstory.events.any((o) => o.isWorkable))
-                              _EmojiChip(
-                                emoji: '🗣️',
-                                hint: '−❤️−🙏→🌱',
-                                isDisabled: !_canWorkOnSelectedBackstoryEvent,
-                                onTap: _workOnSelectedBackstoryEvent,
                               ),
                             ],
                           ),
@@ -4349,160 +4293,148 @@ class _SessionDotsRow extends StatelessWidget {
   }
 }
 
-/// Shows the NPC's generated life history above the chat messages, as tabs
-/// per life phase (docs/game_design/npc_backstory.md §7/§10) – unlocked one
-/// at a time as the relationship deepens, an "Als Christ" tab appearing once
-/// converted. Tapping an unprocessed negative event *selects* it; the actual
-/// "Ansprechen" action lives as a normal chip in the bottom action row
-/// (alongside talk/pray/bible/…), so working through backstory challenges
-/// feels like one more thing to address in the conversation, one at a time,
-/// rather than a small icon buried in each chip.
-class _NpcBackstoryPanel extends StatefulWidget {
-  final SpiritWorldGame game;
-  final NPCModel model;
-  final OccurredEvent? selectedEvent;
-  final void Function(OccurredEvent?) onSelectEvent;
+/// Two-tab switch at the top of the NPC dialog: 💬 (chat + actions) and 📜
+/// (life story with the single 🗣️ life-talk action).
+class _DialogTabBar extends StatelessWidget {
+  final bool showLifeTab;
+  final void Function(bool life) onSelect;
 
-  const _NpcBackstoryPanel({
-    required this.game,
-    required this.model,
-    required this.selectedEvent,
-    required this.onSelectEvent,
-  });
-
-  @override
-  State<_NpcBackstoryPanel> createState() => _NpcBackstoryPanelState();
-}
-
-class _NpcBackstoryPanelState extends State<_NpcBackstoryPanel> {
-  LifePhase? _selectedPhase;
-
-  /// Interaction-count threshold at which each chronological phase's tab
-  /// unlocks – Kindheit/Jugend/Jetzt at growing trust, in that order.  The
-  /// "Als Christ" tab has no interaction threshold of its own: conversion
-  /// itself is the milestone that unlocks it.
-  static const Map<LifePhase, int> _unlockThresholds = {
-    LifePhase.childhood: 3,
-    LifePhase.youth: 6,
-    LifePhase.now: 9,
-  };
-
-  bool _isUnlocked(LifePhase phase) {
-    if (phase == LifePhase.christ) return widget.model.isConverted;
-    return widget.model.interactionCount >= (_unlockThresholds[phase] ?? 0);
-  }
-
-  List<LifePhase> get _availableTabs => [
-        LifePhase.childhood,
-        LifePhase.youth,
-        LifePhase.now,
-        if (widget.model.isConverted) LifePhase.christ,
-      ];
-
-  static String _tabLabel(LifePhase phase) => switch (phase) {
-        LifePhase.childhood => 'Kindheit',
-        LifePhase.youth => 'Jugend',
-        LifePhase.now => 'Jetzt',
-        LifePhase.christ => 'Als Christ',
-      };
-
-  void _selectOrDeselect(OccurredEvent occurred) {
-    widget.onSelectEvent(widget.selectedEvent == occurred ? null : occurred);
-  }
+  const _DialogTabBar({required this.showLifeTab, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
-    if (!_isUnlocked(LifePhase.childhood) && !widget.model.isConverted) {
-      // Not even the first tab is reachable yet – nothing to show at all.
-      return const SizedBox.shrink();
+    Widget tab(String emoji, bool life) {
+      final selected = showLifeTab == life;
+      return GestureDetector(
+        onTap: () => onSelect(life),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white24 : Colors.black26,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(emoji, style: const TextStyle(fontSize: 18)),
+        ),
+      );
     }
 
-    final tabs = _availableTabs;
-    _selectedPhase ??= tabs.firstWhere(_isUnlocked, orElse: () => tabs.first);
-    final selected = _selectedPhase!;
+    return Row(
+      children: [tab('💬', false), const SizedBox(width: 6), tab('📜', true)],
+    );
+  }
+}
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+/// The NPC's life as one continuous emoji timeline, from 👶 to today
+/// (docs/game_design/npc_backstory.md v5). Revealed up to the earliest
+/// unresolved challenge – what lies beyond stays ❓ until the player has
+/// talked their way there. Worked-through challenges reappear at the end
+/// as "→🌱" entries: the solution becomes part of the life story.
+class _NpcLifeTimeline extends StatelessWidget {
+  final NPCModel model;
+
+  const _NpcLifeTimeline({required this.model});
+
+  @override
+  Widget build(BuildContext context) {
+    final backstory = model.backstory;
+    final current = backstory.currentChallenge;
+    final revealed = backstory.revealedCount;
+
+    final life = <Widget>[const _LifeChip(glyph: '👶')];
+    var hidden = 0;
+    for (var i = 0; i < backstory.events.length; i++) {
+      final o = backstory.events[i];
+      if (o.phase == LifePhase.christ) continue;
+      if (i >= revealed) {
+        hidden++;
+        continue;
+      }
+      life.add(_LifeChip(
+        glyph: o.event.glyph,
+        age: o.age,
+        isCurrent: o == current,
+        progress: o == current ? o.workProgress : null,
+        faded: o.event.isNegative && o.processed,
+      ));
+    }
+    if (hidden > 0) life.add(_LifeChip(glyph: '❓' * hidden.clamp(1, 3)));
+
+    final later = <Widget>[
+      for (final o in backstory.resolvedChallenges)
+        if (o.phase != LifePhase.christ) _LifeChip(glyph: '${o.event.glyph}→🌱'),
+      if (model.isConverted) const _LifeChip(glyph: '✝️🕊️'),
+      for (final o in backstory.events)
+        if (o.phase == LifePhase.christ)
+          _LifeChip(
+            glyph: o.displayGlyph,
+            isCurrent: o == current,
+            progress: o == current ? o.workProgress : null,
+          ),
+    ];
+
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              for (final phase in tabs) ...[
-                _BackstoryTabButton(
-                  label: _tabLabel(phase),
-                  selected: phase == selected,
-                  unlocked: _isUnlocked(phase),
-                  onTap: _isUnlocked(phase)
-                      ? () => setState(() => _selectedPhase = phase)
-                      : null,
-                ),
-                const SizedBox(width: 4),
-              ],
-            ],
-          ),
-          const SizedBox(height: 4),
-          _isUnlocked(selected)
-              ? _PhaseEvents(
-                  events: widget.model.backstory.events
-                      .where((o) => o.phase == selected)
-                      .toList(),
-                  selectedEvent: widget.selectedEvent,
-                  onSelect: _selectOrDeselect,
-                )
-              : Text(
-                  '💭 …da ist etwas, das sie/er noch nicht erzählen will.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.55),
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
+          Wrap(spacing: 4, runSpacing: 4, children: life),
+          if (later.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              '🌱 ${backstory.age}',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+            ),
+            const SizedBox(height: 2),
+            Wrap(spacing: 4, runSpacing: 4, children: later),
+          ],
         ],
       ),
     );
   }
 }
 
-class _BackstoryTabButton extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final bool unlocked;
-  final VoidCallback? onTap;
+/// One entry of [_NpcLifeTimeline]: glyph, optionally the age it happened
+/// at, highlighted (with ●○○ progress) when it is the challenge the next
+/// 🗣️ works on.
+class _LifeChip extends StatelessWidget {
+  final String glyph;
+  final int? age;
+  final bool isCurrent;
+  final int? progress;
+  final bool faded;
 
-  const _BackstoryTabButton({
-    required this.label,
-    required this.selected,
-    required this.unlocked,
-    required this.onTap,
+  const _LifeChip({
+    required this.glyph,
+    this.age,
+    this.isCurrent = false,
+    this.progress,
+    this.faded = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return Opacity(
+      opacity: faded ? 0.45 : 1.0,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-          color: selected ? Colors.white24 : Colors.black26,
-          borderRadius: BorderRadius.circular(8),
+          color: isCurrent ? Colors.amber.withValues(alpha: 0.25) : Colors.black26,
+          borderRadius: BorderRadius.circular(10),
+          border: isCurrent ? Border.all(color: Colors.amber, width: 1) : null,
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (!unlocked)
-              const Padding(
-                padding: EdgeInsets.only(right: 3),
-                child: Text('🔒', style: TextStyle(fontSize: 9)),
+            Text(glyph, style: const TextStyle(fontSize: 18)),
+            if (age != null)
+              Text(
+                '$age',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9),
               ),
-            Text(
-              label,
-              style: TextStyle(
-                color: unlocked ? Colors.white : Colors.white38,
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            if (progress != null)
+              Text(
+                '●' * progress! + '○' * (OccurredEvent.workRequired - progress!),
+                style: const TextStyle(color: Colors.amber, fontSize: 8),
               ),
-            ),
           ],
         ),
       ),
@@ -4510,85 +4442,30 @@ class _BackstoryTabButton extends StatelessWidget {
   }
 }
 
-class _PhaseEvents extends StatelessWidget {
-  final List<OccurredEvent> events;
-  final OccurredEvent? selectedEvent;
-  final void Function(OccurredEvent) onSelect;
+/// The life tab's only action: talk about the next challenge (🗣️ + its
+/// glyph). A normal session interaction – uses a session point like 💬/👂.
+class _LifeTalkButton extends StatelessWidget {
+  final NPCModel model;
+  final SpiritWorldGame game;
+  final VoidCallback onTap;
 
-  const _PhaseEvents({
-    required this.events,
-    required this.selectedEvent,
-    required this.onSelect,
-  });
+  const _LifeTalkButton({required this.model, required this.game, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    if (events.isEmpty) {
-      return Text(
-        '– nichts Besonderes –',
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
-      );
+    final current = model.backstory.currentChallenge;
+    if (current == null) {
+      return const Center(child: Text('🌱✨', style: TextStyle(fontSize: 20)));
     }
-    return Wrap(
-      spacing: 6,
-      runSpacing: 4,
-      children: [
-        for (final occurred in events)
-          _BackstoryEventChip(
-            occurred: occurred,
-            isSelected: occurred == selectedEvent,
-            onTap: occurred.isWorkable ? () => onSelect(occurred) : null,
-          ),
-      ],
-    );
-  }
-}
-
-class _BackstoryEventChip extends StatelessWidget {
-  final OccurredEvent occurred;
-  final bool isSelected;
-  final VoidCallback? onTap;
-
-  const _BackstoryEventChip({
-    required this.occurred,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.amber.withValues(alpha: 0.25) : Colors.black26,
-        borderRadius: BorderRadius.circular(10),
-        border: isSelected ? Border.all(color: Colors.amber, width: 1) : null,
+    final affordable = game.health > NPCComponent.lifeTalkHealthCost &&
+        game.faith >= NPCComponent.lifeTalkFaithCost;
+    return Center(
+      child: _EmojiChip(
+        emoji: '🗣️${current.event.glyph}',
+        hint: '−❤️−🙏→🌱',
+        isDisabled: !affordable,
+        onTap: onTap,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(occurred.displayGlyph, style: const TextStyle(fontSize: 12)),
-          const SizedBox(width: 4),
-          Text(
-            occurred.caption,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10),
-          ),
-          if (occurred.isWorkable) ...[
-            const SizedBox(width: 3),
-            Text(
-              '${occurred.workProgress}/${OccurredEvent.workRequired}',
-              style: TextStyle(color: Colors.amber.withValues(alpha: 0.8), fontSize: 9),
-            ),
-          ],
-        ],
-      ),
-    );
-    if (onTap == null) return chip;
-    return Tooltip(
-      message: isSelected
-          ? 'Ausgewählt – jetzt unten 🗣️ ansprechen'
-          : 'Antippen, um dieses Thema auszuwählen',
-      child: GestureDetector(onTap: onTap, child: chip),
     );
   }
 }

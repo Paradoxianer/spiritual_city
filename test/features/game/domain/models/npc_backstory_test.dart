@@ -507,4 +507,74 @@ void main() {
       expect(occurred.displayGlyph, event.glyph);
     });
   });
+
+  group('v5 Lebenslauf: age, chronology, step-by-step challenges', () {
+    test('age is deterministic and within range', () {
+      for (int i = 0; i < 200; i++) {
+        final id = 'npc_age_$i';
+        final b = NpcBackstoryService.generate(id);
+        expect(b.age, NpcBackstoryService.ageFor(id));
+        expect(b.age, inInclusiveRange(NpcBackstoryService.minAge, NpcBackstoryService.maxAge));
+      }
+    });
+
+    test('events are chronological and never older than the NPC', () {
+      for (int i = 0; i < 300; i++) {
+        final b = NpcBackstoryService.generate('npc_chrono_$i');
+        for (int k = 1; k < b.events.length; k++) {
+          expect(b.events[k].age, greaterThanOrEqualTo(b.events[k - 1].age));
+        }
+        expect(b.events.last.age, lessThanOrEqualTo(b.age));
+      }
+    });
+
+    test('an event id occurs at most once per life', () {
+      for (int i = 0; i < 300; i++) {
+        final ids = NpcBackstoryService.generate('npc_unique_$i').events.map((o) => o.event.id);
+        expect(ids.toSet().length, ids.length);
+      }
+    });
+
+    test('older NPCs have more adult events on average', () {
+      double avgAdult(bool old) {
+        final counts = <int>[];
+        for (int i = 0; counts.length < 200 && i < 5000; i++) {
+          final b = NpcBackstoryService.generate('npc_old_$i');
+          if ((b.age >= 60) != old) continue;
+          counts.add(b.events.where((o) => o.phase == LifePhase.now).length);
+        }
+        return counts.reduce((a, b) => a + b) / counts.length;
+      }
+
+      expect(avgAdult(true), greaterThan(avgAdult(false)));
+    });
+
+    test('currentChallenge is always the earliest workable event and '
+        'revealedCount ends right after it', () {
+      final b = List.generate(30, (i) => NpcBackstoryService.generate('npc_step_$i'))
+          .firstWhere((b) => b.events.where((o) => o.isWorkable).length >= 2);
+      final first = b.events.firstWhere((o) => o.isWorkable);
+      expect(b.currentChallenge, same(first));
+      expect(b.revealedCount, b.events.indexOf(first) + 1);
+
+      for (int k = 0; k < OccurredEvent.workRequired; k++) {
+        b.workOnCurrent('npc_step', isConverted: false);
+      }
+      expect(first.processed, isTrue);
+      expect(b.currentChallenge, isNot(same(first)));
+      expect(b.resolvedChallenges, contains(first));
+      expect(b.revealedCount, greaterThan(b.events.indexOf(first) + 1));
+    });
+
+    test('working through everything resolves the life and reveals it fully', () {
+      final b = NpcBackstoryService.generate('npc_full');
+      var guard = 0;
+      while (!b.fullyResolved && guard++ < 1000) {
+        b.workOnCurrent('npc_full', isConverted: true);
+      }
+      expect(b.fullyResolved, isTrue);
+      expect(b.revealedCount, b.events.length);
+      expect(b.workOnCurrent('npc_full', isConverted: true).completed, isFalse);
+    });
+  });
 }

@@ -103,6 +103,11 @@ class NPCModel extends BaseInteractableEntity {
   ({bool completed, bool christGrowth}) workOnBackstoryEvent(OccurredEvent occurred) =>
       backstory.workOn(occurred, id, isConverted: isConverted);
 
+  /// Works on the earliest unresolved challenge in this NPC's life (the
+  /// "🗣️" life talk – step by step from childhood to today).
+  ({bool completed, bool christGrowth}) workOnCurrentChallenge() =>
+      backstory.workOnCurrent(id, isConverted: isConverted);
+
   /// Sparse map for saving – see [NpcBackstory.captureProgress].
   Map<String, dynamic> captureBackstoryProgress() => backstory.captureProgress();
 

@@ -38,6 +38,26 @@ class NPCComponent extends PositionComponent
   /// milestone than a single worked-through backstory event (0.2, see
   /// `npc_backstory.md`), so it should read as clearly more rewarding.
   static const double _conversionInsightReward = 0.5;
+
+  // ── Life talk ("🗣️" in the Lebenslauf tab, npc_backstory.md v5) ─────────
+  //
+  // A normal session interaction like talk/counsel/pray: it uses up one
+  // session point and works on the NPC's earliest unresolved challenge.
+
+  /// Costs Health (like counseling) and a little Faith – working through
+  /// someone else's story draws on the pastor's own reserves.
+  static const double lifeTalkHealthCost = 6.0;
+  static const double lifeTalkFaithCost = 4.0;
+
+  /// Insight for fully working through one challenge; extra when it also
+  /// grew the "Als Christ" chapter, and when it was the last open one.
+  static const double _lifeTalkInsightOnCompletion = 0.2;
+  static const double _lifeTalkInsightOnChristGrowth = 0.3;
+  static const double _lifeTalkInsightOnFullyResolved = 0.5;
+
+  /// NPC faith gained per severity point of a challenge once it is worked
+  /// through – healing opens people up.
+  static const double _lifeTalkFaithPerSeverity = 2.0;
   final Random _random = Random();
 
   late final FaithCalculatorService _faithCalc;
@@ -206,6 +226,39 @@ class NPCComponent extends PositionComponent
       model.currentSessionInteractions++; // total = 2 for this action
       model.lastNpcFaithDelta = gain.toDouble();
       return ['👂💬', '👂🙏', '👂😊', '👂💛'][_random.nextInt(4)];
+    }
+
+    if (type == 'lifetalk') {
+      final challenge = model.backstory.currentChallenge;
+      if (challenge == null) {
+        model.currentSessionInteractions--;
+        return '🌱😊';
+      }
+      if (game.health <= lifeTalkHealthCost || game.faith < lifeTalkFaithCost) {
+        model.currentSessionInteractions--;
+        return game.health <= lifeTalkHealthCost ? '🚫❤️' : '🚫🙏';
+      }
+      game.gainHealth(-lifeTalkHealthCost);
+      game.gainFaith(-lifeTalkFaithCost);
+      model.lastPlayerHealthDelta = -lifeTalkHealthCost;
+      model.lastPlayerFaithDelta -= lifeTalkFaithCost;
+      model.recordAction('lifetalk');
+      model.interactionCount++;
+
+      final result = model.workOnCurrentChallenge();
+      if (!result.completed) return '${challenge.event.glyph}💭';
+
+      final gain =
+          (challenge.event.severity.abs() * _lifeTalkFaithPerSeverity * spiritualBonus)
+              .roundToDouble();
+      model.applyInfluence(gain);
+      model.lastNpcFaithDelta = gain;
+      game.progress.addInsight(
+        _lifeTalkInsightOnCompletion +
+            (result.christGrowth ? _lifeTalkInsightOnChristGrowth : 0.0) +
+            (model.backstory.fullyResolved ? _lifeTalkInsightOnFullyResolved : 0.0),
+      );
+      return '${challenge.event.glyph}🌱';
     }
 
     if (type == 'pray') {

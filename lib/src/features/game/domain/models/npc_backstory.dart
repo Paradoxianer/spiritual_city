@@ -7,8 +7,12 @@
 // via ongoing conversation/counseling – is real, persisted progress.
 //
 // Core ideas:
-// - Three chronological phases (childhood → youth → now) are resolved *in
-//   order*. A running vulnerability value carries forward between phases,
+// - Every NPC has a deterministic age (20–79). Its life is simulated
+//   chronologically from early childhood up to that age: childhood → youth →
+//   one adult pass per ~20 years lived. Each event carries the age at which
+//   it happened, so the UI can show one continuous emoji timeline
+//   ("Lebenslauf", v5 of the design doc) instead of per-phase tabs.
+// - The phases are resolved *in order*. A running vulnerability value carries forward between phases,
 //   so unprocessed hardship early in life skews later phases toward further
 //   hardship and away from positive outcomes.
 // - Most generated events are ordinary, mildly-toned life events (school,
@@ -20,7 +24,10 @@
 // - Processing a negative event is not decided at generation time. It
 //   starts unprocessed and only becomes processed through repeated player
 //   attention (see [OccurredEvent.advanceWork]) – "the more you work
-//   through it with them, the more resilient they become".
+//   through it with them, the more resilient they become". The player
+//   always works on the *earliest* unresolved challenge
+//   ([NpcBackstory.currentChallenge]) – step by step from childhood to
+//   today, no selecting.
 
 import 'dart:math';
 import '../../../../core/utils/stable_hash.dart';
@@ -98,12 +105,17 @@ class OccurredEvent {
   /// before it counts as processed.
   static const int workRequired = 3;
 
+  /// Age (in years) at which this happened – for "Als Christ" entries the
+  /// NPC's current age, since they grow in the present.
+  final int age;
+
   bool processed;
   int workProgress;
 
   OccurredEvent({
     required this.event,
     required this.phase,
+    this.age = 0,
     this.processed = false,
     this.workProgress = 0,
   });
@@ -155,9 +167,13 @@ class OccurredEvent {
 /// reflect the *current* processed-state of those events – not a frozen
 /// generation-time snapshot.
 class NpcBackstory {
-  /// Growable: the childhood/youth/now events are fixed at generation, but
-  /// [ensureChristPhaseFor] appends more once the NPC converts.
+  /// Chronological. Growable: the childhood/youth/now events are fixed at
+  /// generation, but [workOn] appends "Als Christ" entries once the NPC
+  /// converts.
   final List<OccurredEvent> events;
+
+  /// The NPC's current age in years (deterministic from its id).
+  final int age;
 
   bool _christPhaseGenerated = false;
 
@@ -166,7 +182,42 @@ class NpcBackstory {
   /// since it only fills via [workOn].
   bool get christPhaseUnlocked => _christPhaseGenerated;
 
-  NpcBackstory({required this.events});
+  NpcBackstory({required this.events, this.age = 40});
+
+  /// The earliest still-unresolved challenge – the one a "🗣️" life talk
+  /// works on next. `null` once everything is worked through.
+  OccurredEvent? get currentChallenge {
+    for (final o in events) {
+      if (o.isWorkable) return o;
+    }
+    return null;
+  }
+
+  /// Whether every challenge in this life has been worked through.
+  bool get fullyResolved => currentChallenge == null;
+
+  /// How many [events] (from the start) are visible in the timeline:
+  /// everything up to and including [currentChallenge]. What lies beyond it
+  /// stays hidden (❓) until the player has talked their way that far.
+  int get revealedCount {
+    final c = currentChallenge;
+    return c == null ? events.length : events.indexOf(c) + 1;
+  }
+
+  /// Negative events already worked through, in chronological (= resolution)
+  /// order – shown as "→🌱" entries appended to the life story.
+  List<OccurredEvent> get resolvedChallenges =>
+      events.where((o) => o.event.isNegative && o.processed).toList();
+
+  /// [workOn] applied to [currentChallenge]; a no-op once [fullyResolved].
+  ({bool completed, bool christGrowth}) workOnCurrent(
+    String npcId, {
+    required bool isConverted,
+  }) {
+    final c = currentChallenge;
+    if (c == null) return (completed: false, christGrowth: false);
+    return workOn(c, npcId, isConverted: isConverted);
+  }
 
   /// Accumulated from currently-*unprocessed* negative events (full weight)
   /// and currently-*processed* ones (much reduced weight), minus a small
@@ -275,7 +326,7 @@ class NpcBackstory {
     if (pool.isEmpty) return;
     final rng = Random(stableStringHash('$npcId#christgrowth#${processedEvent.event.id}'));
     final chosen = NpcBackstoryService._pickWeighted(rng, pool, vulnerability);
-    events.add(OccurredEvent(event: chosen, phase: LifePhase.christ));
+    events.add(OccurredEvent(event: chosen, phase: LifePhase.christ, age: age));
   }
 
   // ── Persistence of player-driven processing progress ─────────────────────
@@ -314,7 +365,7 @@ class NpcBackstory {
       if (events.any((o) => o.event.id == id)) continue;
       final matches = kChristPhaseCatalog.where((e) => e.id == id);
       if (matches.isEmpty) continue;
-      events.add(OccurredEvent(event: matches.first, phase: LifePhase.christ));
+      events.add(OccurredEvent(event: matches.first, phase: LifePhase.christ, age: age));
     }
 
     final work = (saved['work'] as Map?)?.cast<String, dynamic>() ?? saved;
@@ -437,15 +488,45 @@ abstract final class NpcBackstoryService {
   /// How much a positive event's severity reduces `vulnerability`.
   static const double positiveVulnerabilityReduction = 0.1;
 
+  /// Upper bound for how far `vulnerability` shifts event *weights* (not the
+  /// negative-vs-positive chance). Without it, the cascade keeps compounding
+  /// over several adult passes and older NPCs end up with addiction or
+  /// prison far too often – hard lives should stay the exception.
+  static const double vulnerabilityWeightCap = 1.0;
+
   /// If every category roll in a phase happened to miss, force one ordinary
   /// event so no phase ever comes up completely empty.
   static const int minEventsPerPhase = 1;
 
-  static final List<LifePhase> _chronologicalPhases = [
-    LifePhase.childhood,
-    LifePhase.youth,
-    LifePhase.now,
-  ];
+  /// NPC age range (years). City NPCs are adults.
+  static const int minAge = 20;
+  static const int maxAge = 79;
+
+  /// Adult life gets one "now" pass per this many years lived after 20, so
+  /// older NPCs have more (and longer) adult chapters.
+  static const int yearsPerAdultPass = 20;
+
+  /// Deterministic age for [npcId], independent of the event RNG.
+  static int ageFor(String npcId) =>
+      minAge + Random(stableStringHash('$npcId#age')).nextInt(maxAge - minAge + 1);
+
+  /// The chronological passes of a life of [age] years: (phase, first age,
+  /// last age). Childhood and youth once each, then the adult years split
+  /// into `1 + (age-20) ~/ yearsPerAdultPass` passes.
+  static List<(LifePhase, int, int)> _passesFor(int age) {
+    final adultPasses = 1 + (age - minAge) ~/ yearsPerAdultPass;
+    final adultYears = age - minAge + 1;
+    return [
+      (LifePhase.childhood, 1, 12),
+      (LifePhase.youth, 13, 19),
+      for (int k = 0; k < adultPasses; k++)
+        (
+          LifePhase.now,
+          minAge + (k * adultYears) ~/ adultPasses,
+          minAge + ((k + 1) * adultYears) ~/ adultPasses - 1,
+        ),
+    ];
+  }
 
   /// Generates the childhood/youth/now backstory for the NPC with the given
   /// [npcId]. The "Christ" phase is deliberately not generated here – it
@@ -458,11 +539,20 @@ abstract final class NpcBackstoryService {
   /// determinism.
   static NpcBackstory generate(String npcId) {
     final rng = Random(stableStringHash('$npcId#backstory'));
+    final age = ageFor(npcId);
     double vulnerability = 0.0;
     final events = <OccurredEvent>[];
 
-    for (final phase in _chronologicalPhases) {
+    for (final (phase, fromAge, toAge) in _passesFor(age)) {
       final beforeCount = events.length;
+      // An event id occurs at most once per life (keeps the id-based
+      // progress persistence unambiguous across multiple adult passes). A
+      // repeat roll simply means "nothing new happened" – filtering the
+      // pool instead would leave mostly the rare dramatic events in later
+      // passes and skew older NPCs toward catastrophe.
+      bool isNew(LifeEvent e) => !events.any((o) => o.event.id == e.id);
+      int rollAge() => fromAge + rng.nextInt(toAge - fromAge + 1);
+
       for (final category in LifeCategory.values) {
         final pool = kLifeEventCatalog
             .where((e) => e.category == category && e.phases.contains(phase))
@@ -471,23 +561,27 @@ abstract final class NpcBackstoryService {
         if (rng.nextDouble() >= categoryEventChance) continue;
 
         final chosen = _rollOne(rng, pool, vulnerability);
-        if (chosen == null) continue;
-        vulnerability = _apply(events, chosen, phase, vulnerability);
+        if (chosen == null || !isNew(chosen)) continue;
+        vulnerability = _apply(events, chosen, phase, rollAge(), vulnerability);
       }
 
-      // Guarantee: no phase stays completely empty.
+      // Guarantee: no pass stays completely empty.
       if (events.length - beforeCount < minEventsPerPhase) {
         final fallbackPool = kLifeEventCatalog
-            .where((e) => e.phases.contains(phase) && !e.isNegative)
+            .where((e) => e.phases.contains(phase) && !e.isNegative && isNew(e))
             .toList();
         if (fallbackPool.isNotEmpty) {
           final chosen = _pickWeighted(rng, fallbackPool, 0.0);
-          vulnerability = _apply(events, chosen, phase, vulnerability);
+          vulnerability = _apply(events, chosen, phase, rollAge(), vulnerability);
         }
       }
+
+      // Chronological within the pass, so the timeline reads in age order.
+      final pass = events.sublist(beforeCount)..sort((a, b) => a.age.compareTo(b.age));
+      events.replaceRange(beforeCount, events.length, pass);
     }
 
-    return NpcBackstory(events: events);
+    return NpcBackstory(events: events, age: age);
   }
 
   /// Picks a valence (negative vs. positive) weighted by [vulnerability],
@@ -512,9 +606,10 @@ abstract final class NpcBackstoryService {
     List<OccurredEvent> events,
     LifeEvent event,
     LifePhase phase,
+    int age,
     double vulnerability,
   ) {
-    events.add(OccurredEvent(event: event, phase: phase));
+    events.add(OccurredEvent(event: event, phase: phase, age: age));
     if (event.isNegative) {
       return vulnerability + event.severity.abs() * unprocessedVulnerabilityGain;
     }
@@ -530,8 +625,9 @@ abstract final class NpcBackstoryService {
     List<LifeEvent> pool,
     double vulnerability,
   ) {
+    final v = vulnerability.clamp(0.0, vulnerabilityWeightCap);
     final weights = pool
-        .map((e) => (e.baseWeight * (1.0 + vulnerability * e.vulnerabilityFactor))
+        .map((e) => (e.baseWeight * (1.0 + v * e.vulnerabilityFactor))
             .clamp(0.02, 100.0))
         .toList();
     final total = weights.fold(0.0, (a, b) => a + b);
