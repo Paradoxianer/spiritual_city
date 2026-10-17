@@ -193,3 +193,10 @@ Rückmeldung: Die Emoji-Kacheln nebeneinander waren schwer zu lesen. Gewünscht 
 - Jedes Katalog-Ereignis hat einen kurzen Satz in `AppStrings` (`life.<event-id>`, DE und EN), z. B. `💔 Erlebte die Trennung der Eltern.` Ein Test stellt sicher, dass kein Ereignis ohne Satz bleibt.
 - Die aktuelle Herausforderung ist gelb umrandet, ihr Fortschritt erscheint als ●○○. Alles danach steht zusammengefasst als `❓ Noch nicht erzählt …` da.
 - Kurz vor "Heute" stehen die Lösungen: `💔→🌱 Verarbeitet: Erlebte die Trennung der Eltern.`, bei Christen gefolgt von `✝️🕊️ Kam zum Glauben.` und den "Als Christ"-Einträgen.
+
+### v5.2 — Emoji-Sätze statt Text
+
+Rückmeldung zu v5.1: Das Spiel soll so weit wie möglich ohne Text auskommen, damit kaum etwas lokalisiert werden muss. Die Text-Sätze (`life.*` in `AppStrings`) sind wieder entfernt.
+
+- Jedes `LifeEvent` hat jetzt ein Feld `story`, einen kurzen **Emoji-Satz**, z. B. `👨💔👩🧒😢` (Trennung der Eltern), `🍺🍺🍺😵` (Alkoholsucht), `🏫📝🎓` (Schulabschluss). Ein Test stellt sicher, dass `story` nie Buchstaben enthält.
+- Eine Zeile besteht aus **Alter · Emoji-Satz**. Feste Zeilen: `0 👶🎉` (Geburt), `❓❓❓` (noch nicht erzählt), `💔➡️🌱` (verarbeitet), `🙏✝️🕊️` (zum Glauben gekommen), `<Alter> 📍` (heute).

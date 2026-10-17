@@ -59,6 +59,10 @@ class LifeEvent {
 
   final String glyph;
 
+  /// The event told as a short emoji "sentence" for the 📜 life list
+  /// (no text – the game stays emoji-first and needs no localisation).
+  final String story;
+
   /// Phases in which this event can occur.
   final Set<LifePhase> phases;
 
@@ -84,6 +88,7 @@ class LifeEvent {
     required this.category,
     required this.severity,
     required this.glyph,
+    required this.story,
     required this.phases,
     this.vulnerabilityFactor = 0.0,
     this.baseWeight = 1.0,
@@ -384,62 +389,62 @@ class NpcBackstory {
 /// with a low [LifeEvent.baseWeight] so they stay rare outliers.
 const List<LifeEvent> kLifeEventCatalog = [
   // ── Beziehung: gewöhnlicher Alltag (häufig) ───────────────────────────
-  LifeEvent(id: 'best_friends_childhood', category: LifeCategory.relationship, severity: 2, glyph: '🧑‍🤝‍🧑', phases: {LifePhase.childhood}, baseWeight: 2.0),
-  LifeEvent(id: 'playground_fun', category: LifeCategory.relationship, severity: 1, glyph: '🛝', phases: {LifePhase.childhood}, baseWeight: 2.0),
-  LifeEvent(id: 'sports_club', category: LifeCategory.relationship, severity: 2, glyph: '⚽', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 1.8),
-  LifeEvent(id: 'minor_sibling_rivalry', category: LifeCategory.relationship, severity: -1, glyph: '😤', phases: {LifePhase.childhood}, baseWeight: 1.5),
-  LifeEvent(id: 'first_crush', category: LifeCategory.relationship, severity: 2, glyph: '😊💕', phases: {LifePhase.youth}, baseWeight: 1.8),
-  LifeEvent(id: 'circle_of_friends', category: LifeCategory.relationship, severity: 2, glyph: '👯', phases: {LifePhase.youth}, baseWeight: 1.8),
-  LifeEvent(id: 'small_argument_with_friends', category: LifeCategory.relationship, severity: -1, glyph: '🙄', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 1.5),
-  LifeEvent(id: 'steady_friendships_now', category: LifeCategory.relationship, severity: 2, glyph: '🤝', phases: {LifePhase.now}, baseWeight: 2.0),
-  LifeEvent(id: 'occasional_loneliness', category: LifeCategory.relationship, severity: -2, glyph: '🥀', phases: {LifePhase.now}, baseWeight: 1.5),
+  LifeEvent(id: 'best_friends_childhood', category: LifeCategory.relationship, severity: 2, glyph: '🧑‍🤝‍🧑', story: '🧒🤝🧒🏡', phases: {LifePhase.childhood}, baseWeight: 2.0),
+  LifeEvent(id: 'playground_fun', category: LifeCategory.relationship, severity: 1, glyph: '🛝', story: '🧒🛝😄', phases: {LifePhase.childhood}, baseWeight: 2.0),
+  LifeEvent(id: 'sports_club', category: LifeCategory.relationship, severity: 2, glyph: '⚽', story: '🧒⚽🏆', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 1.8),
+  LifeEvent(id: 'minor_sibling_rivalry', category: LifeCategory.relationship, severity: -1, glyph: '😤', story: '👧😤👦', phases: {LifePhase.childhood}, baseWeight: 1.5),
+  LifeEvent(id: 'first_crush', category: LifeCategory.relationship, severity: 2, glyph: '😊💕', story: '🧑😊💕', phases: {LifePhase.youth}, baseWeight: 1.8),
+  LifeEvent(id: 'circle_of_friends', category: LifeCategory.relationship, severity: 2, glyph: '👯', story: '👯🎶🍕', phases: {LifePhase.youth}, baseWeight: 1.8),
+  LifeEvent(id: 'small_argument_with_friends', category: LifeCategory.relationship, severity: -1, glyph: '🙄', story: '🧑💢🧑', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 1.5),
+  LifeEvent(id: 'steady_friendships_now', category: LifeCategory.relationship, severity: 2, glyph: '🤝', story: '🧑‍🤝‍🧑☕😊', phases: {LifePhase.now}, baseWeight: 2.0),
+  LifeEvent(id: 'occasional_loneliness', category: LifeCategory.relationship, severity: -2, glyph: '🥀', story: '🧍🥀🌧️', phases: {LifePhase.now}, baseWeight: 1.5),
   // ── Beziehung: seltener, schwerer ─────────────────────────────────────
-  LifeEvent(id: 'neglect', category: LifeCategory.relationship, severity: -4, glyph: '😠', phases: {LifePhase.childhood}, baseWeight: 0.5),
-  LifeEvent(id: 'parents_separation', category: LifeCategory.relationship, severity: -5, glyph: '💔', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 0.4),
-  LifeEvent(id: 'failed_relationship', category: LifeCategory.relationship, severity: -5, glyph: '💔', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.6, vulnerabilityFactor: 0.5),
-  LifeEvent(id: 'sheltered_childhood', category: LifeCategory.relationship, severity: 4, glyph: '🤱', phases: {LifePhase.childhood}, baseWeight: 1.2, vulnerabilityFactor: -1.0),
-  LifeEvent(id: 'first_love', category: LifeCategory.relationship, severity: 4, glyph: '💞', phases: {LifePhase.youth}, baseWeight: 1.5, vulnerabilityFactor: -1.0),
-  LifeEvent(id: 'happy_relationship', category: LifeCategory.relationship, severity: 6, glyph: '💑', phases: {LifePhase.now}, baseWeight: 0.8, vulnerabilityFactor: -1.0),
+  LifeEvent(id: 'neglect', category: LifeCategory.relationship, severity: -4, glyph: '😠', story: '🧒😠🚪', phases: {LifePhase.childhood}, baseWeight: 0.5),
+  LifeEvent(id: 'parents_separation', category: LifeCategory.relationship, severity: -5, glyph: '💔', story: '👨💔👩🧒😢', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 0.4),
+  LifeEvent(id: 'failed_relationship', category: LifeCategory.relationship, severity: -5, glyph: '💔', story: '💑➡️💔😢', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.6, vulnerabilityFactor: 0.5),
+  LifeEvent(id: 'sheltered_childhood', category: LifeCategory.relationship, severity: 4, glyph: '🤱', story: '🤱🏡❤️', phases: {LifePhase.childhood}, baseWeight: 1.2, vulnerabilityFactor: -1.0),
+  LifeEvent(id: 'first_love', category: LifeCategory.relationship, severity: 4, glyph: '💞', story: '💞🌹😍', phases: {LifePhase.youth}, baseWeight: 1.5, vulnerabilityFactor: -1.0),
+  LifeEvent(id: 'happy_relationship', category: LifeCategory.relationship, severity: 6, glyph: '💑', story: '💑💍🏡', phases: {LifePhase.now}, baseWeight: 0.8, vulnerabilityFactor: -1.0),
 
   // ── Verlust: gewöhnlicher (häufiger, aber immer noch ein Verlust) ─────
-  LifeEvent(id: 'lost_pet', category: LifeCategory.loss, severity: -2, glyph: '🐾', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 1.8),
-  LifeEvent(id: 'moved_away_lost_friends', category: LifeCategory.loss, severity: -2, glyph: '📦', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 1.5),
-  LifeEvent(id: 'family_illness', category: LifeCategory.loss, severity: -4, glyph: '🏥', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 1.0),
+  LifeEvent(id: 'lost_pet', category: LifeCategory.loss, severity: -2, glyph: '🐾', story: '🐶🌈😢', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 1.8),
+  LifeEvent(id: 'moved_away_lost_friends', category: LifeCategory.loss, severity: -2, glyph: '📦', story: '📦🚚👋😢', phases: {LifePhase.childhood, LifePhase.youth}, baseWeight: 1.5),
+  LifeEvent(id: 'family_illness', category: LifeCategory.loss, severity: -4, glyph: '🏥', story: '👵🏥😟', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 1.0),
   // ── Verlust: selten, schwer ────────────────────────────────────────────
-  LifeEvent(id: 'loss_of_parent', category: LifeCategory.loss, severity: -7, glyph: '⚰️', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.3),
-  LifeEvent(id: 'violent_loss', category: LifeCategory.loss, severity: -8, glyph: '🕯️', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.05),
+  LifeEvent(id: 'loss_of_parent', category: LifeCategory.loss, severity: -7, glyph: '⚰️', story: '👨⚰️😭', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.3),
+  LifeEvent(id: 'violent_loss', category: LifeCategory.loss, severity: -8, glyph: '🕯️', story: '💥🕯️😭', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.05),
 
   // ── Gesundheit: gewöhnlicher (häufig) ──────────────────────────────────
-  LifeEvent(id: 'normal_childhood_illness', category: LifeCategory.health, severity: -1, glyph: '🤧', phases: {LifePhase.childhood}, baseWeight: 2.0),
-  LifeEvent(id: 'active_and_fit', category: LifeCategory.health, severity: 2, glyph: '🏃', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 2.0),
-  LifeEvent(id: 'robust_health', category: LifeCategory.health, severity: 2, glyph: '💪', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 1.5, vulnerabilityFactor: -1.0),
-  LifeEvent(id: 'minor_health_worries', category: LifeCategory.health, severity: -2, glyph: '🤒', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 1.5),
+  LifeEvent(id: 'normal_childhood_illness', category: LifeCategory.health, severity: -1, glyph: '🤧', story: '🧒🤧🛌', phases: {LifePhase.childhood}, baseWeight: 2.0),
+  LifeEvent(id: 'active_and_fit', category: LifeCategory.health, severity: 2, glyph: '🏃', story: '🏃🚴💪', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 2.0),
+  LifeEvent(id: 'robust_health', category: LifeCategory.health, severity: 2, glyph: '💪', story: '💪🍎😊', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 1.5, vulnerabilityFactor: -1.0),
+  LifeEvent(id: 'minor_health_worries', category: LifeCategory.health, severity: -2, glyph: '🤒', story: '🤒💊😟', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 1.5),
   // ── Gesundheit: selten, schwer (Sucht/Straffälligkeit) ────────────────
-  LifeEvent(id: 'alcohol_abuse', category: LifeCategory.health, severity: -6, glyph: '🍺', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.06, vulnerabilityFactor: 1.0),
-  LifeEvent(id: 'drugs', category: LifeCategory.health, severity: -8, glyph: '💉', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.03, vulnerabilityFactor: 1.0),
-  LifeEvent(id: 'imprisonment', category: LifeCategory.health, severity: -7, glyph: '👊', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.03, vulnerabilityFactor: 1.0),
+  LifeEvent(id: 'alcohol_abuse', category: LifeCategory.health, severity: -6, glyph: '🍺', story: '🍺🍺🍺😵', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.06, vulnerabilityFactor: 1.0),
+  LifeEvent(id: 'drugs', category: LifeCategory.health, severity: -8, glyph: '💉', story: '💉😵🌀', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.03, vulnerabilityFactor: 1.0),
+  LifeEvent(id: 'imprisonment', category: LifeCategory.health, severity: -7, glyph: '👊', story: '👊🚓⛓️', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.03, vulnerabilityFactor: 1.0),
 
   // ── Geld / Beruf: gewöhnlicher (häufig) ────────────────────────────────
-  LifeEvent(id: 'pocket_money', category: LifeCategory.money, severity: 1, glyph: '🪙', phases: {LifePhase.childhood}, baseWeight: 2.0),
-  LifeEvent(id: 'finished_school_ok', category: LifeCategory.money, severity: 2, glyph: '🎓', phases: {LifePhase.youth}, baseWeight: 2.0),
-  LifeEvent(id: 'enjoyed_school_days', category: LifeCategory.relationship, severity: 2, glyph: '🏫', phases: {LifePhase.youth}, baseWeight: 1.8),
-  LifeEvent(id: 'normal_job', category: LifeCategory.money, severity: 2, glyph: '👔', phases: {LifePhase.now}, baseWeight: 2.0),
-  LifeEvent(id: 'had_to_budget', category: LifeCategory.money, severity: -1, glyph: '💶', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 1.8),
+  LifeEvent(id: 'pocket_money', category: LifeCategory.money, severity: 1, glyph: '🪙', story: '🪙🐷😊', phases: {LifePhase.childhood}, baseWeight: 2.0),
+  LifeEvent(id: 'finished_school_ok', category: LifeCategory.money, severity: 2, glyph: '🎓', story: '🏫📝🎓', phases: {LifePhase.youth}, baseWeight: 2.0),
+  LifeEvent(id: 'enjoyed_school_days', category: LifeCategory.relationship, severity: 2, glyph: '🏫', story: '🏫📚😊', phases: {LifePhase.youth}, baseWeight: 1.8),
+  LifeEvent(id: 'normal_job', category: LifeCategory.money, severity: 2, glyph: '👔', story: '👔🏢💶', phases: {LifePhase.now}, baseWeight: 2.0),
+  LifeEvent(id: 'had_to_budget', category: LifeCategory.money, severity: -1, glyph: '💶', story: '💶📉🥫', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 1.8),
   // ── Geld: seltener, schwerer ────────────────────────────────────────────
-  LifeEvent(id: 'unemployment', category: LifeCategory.money, severity: -4, glyph: '📉', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.6, vulnerabilityFactor: 0.5),
-  LifeEvent(id: 'debt', category: LifeCategory.money, severity: -5, glyph: '💸', phases: {LifePhase.now}, baseWeight: 0.5, vulnerabilityFactor: 0.5),
-  LifeEvent(id: 'career_success', category: LifeCategory.money, severity: 5, glyph: '💼✨', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.8, vulnerabilityFactor: -1.0),
-  LifeEvent(id: 'inheritance', category: LifeCategory.money, severity: 4, glyph: '💰', phases: {LifePhase.now}, baseWeight: 0.6),
+  LifeEvent(id: 'unemployment', category: LifeCategory.money, severity: -4, glyph: '📉', story: '🏢🚪📉', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.6, vulnerabilityFactor: 0.5),
+  LifeEvent(id: 'debt', category: LifeCategory.money, severity: -5, glyph: '💸', story: '💸📨😰', phases: {LifePhase.now}, baseWeight: 0.5, vulnerabilityFactor: 0.5),
+  LifeEvent(id: 'career_success', category: LifeCategory.money, severity: 5, glyph: '💼✨', story: '💼📈✨', phases: {LifePhase.youth, LifePhase.now}, baseWeight: 0.8, vulnerabilityFactor: -1.0),
+  LifeEvent(id: 'inheritance', category: LifeCategory.money, severity: 4, glyph: '💰', story: '👴📜💰', phases: {LifePhase.now}, baseWeight: 0.6),
 
   // ── Glaube: gewöhnlicher (häufig) ───────────────────────────────────────
-  LifeEvent(id: 'sunday_school', category: LifeCategory.faith, severity: 2, glyph: '⛪🧒', phases: {LifePhase.childhood}, baseWeight: 1.8),
-  LifeEvent(id: 'said_grace_at_home', category: LifeCategory.faith, severity: 1, glyph: '🙏🏠', phases: {LifePhase.childhood}, baseWeight: 1.8),
-  LifeEvent(id: 'questioned_faith_as_teen', category: LifeCategory.faith, severity: -1, glyph: '🤔', phases: {LifePhase.youth}, baseWeight: 1.8),
+  LifeEvent(id: 'sunday_school', category: LifeCategory.faith, severity: 2, glyph: '⛪🧒', story: '🧒⛪🎶', phases: {LifePhase.childhood}, baseWeight: 1.8),
+  LifeEvent(id: 'said_grace_at_home', category: LifeCategory.faith, severity: 1, glyph: '🙏🏠', story: '🍽️🙏🏠', phases: {LifePhase.childhood}, baseWeight: 1.8),
+  LifeEvent(id: 'questioned_faith_as_teen', category: LifeCategory.faith, severity: -1, glyph: '🤔', story: '🧑🤔✝️', phases: {LifePhase.youth}, baseWeight: 1.8),
   // ── Glaube: seltener, prägender ──────────────────────────────────────
-  LifeEvent(id: 'church_disappointment', category: LifeCategory.faith, severity: -5, glyph: '✝️💔', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.5),
-  LifeEvent(id: 'unanswered_prayer', category: LifeCategory.faith, severity: -4, glyph: '🙏💔', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.8),
-  LifeEvent(id: 'conversion_experience', category: LifeCategory.faith, severity: 6, glyph: '✝️✨', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.5),
-  LifeEvent(id: 'answered_prayer', category: LifeCategory.faith, severity: 5, glyph: '🙏✨', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.6),
+  LifeEvent(id: 'church_disappointment', category: LifeCategory.faith, severity: -5, glyph: '✝️💔', story: '⛪💔😞', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.5),
+  LifeEvent(id: 'unanswered_prayer', category: LifeCategory.faith, severity: -4, glyph: '🙏💔', story: '🙏❓😞', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.8),
+  LifeEvent(id: 'conversion_experience', category: LifeCategory.faith, severity: 6, glyph: '✝️✨', story: '🙏✨✝️', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.5),
+  LifeEvent(id: 'answered_prayer', category: LifeCategory.faith, severity: 5, glyph: '🙏✨', story: '🙏✨😊', phases: {LifePhase.childhood, LifePhase.youth, LifePhase.now}, baseWeight: 0.6),
 ];
 
 /// Separate, smaller catalog for the "Als Christ" phase – only ever
@@ -447,13 +452,13 @@ const List<LifeEvent> kLifeEventCatalog = [
 /// Predominantly positive (growth after conversion), with a couple of
 /// realistic, mild setbacks so it doesn't read as saccharine.
 const List<LifeEvent> kChristPhaseCatalog = [
-  LifeEvent(id: 'first_bible_study', category: LifeCategory.faith, severity: 2, glyph: '📖', phases: {LifePhase.christ}, baseWeight: 2.0),
-  LifeEvent(id: 'new_church_friends', category: LifeCategory.relationship, severity: 3, glyph: '🤝✝️', phases: {LifePhase.christ}, baseWeight: 2.0),
-  LifeEvent(id: 'baptism', category: LifeCategory.faith, severity: 4, glyph: '💧✝️', phases: {LifePhase.christ}, baseWeight: 1.2),
-  LifeEvent(id: 'shared_faith_with_someone', category: LifeCategory.faith, severity: 3, glyph: '🗣️✝️', phases: {LifePhase.christ}, baseWeight: 1.5),
-  LifeEvent(id: 'grown_through_setback', category: LifeCategory.faith, severity: 3, glyph: '🌱✝️', phases: {LifePhase.christ}, baseWeight: 1.2),
-  LifeEvent(id: 'doubted_if_it_was_real', category: LifeCategory.faith, severity: -2, glyph: '🤔✝️', phases: {LifePhase.christ}, baseWeight: 1.5),
-  LifeEvent(id: 'small_group_conflict', category: LifeCategory.relationship, severity: -2, glyph: '😕⛪', phases: {LifePhase.christ}, baseWeight: 1.3),
+  LifeEvent(id: 'first_bible_study', category: LifeCategory.faith, severity: 2, glyph: '📖', story: '📖👥☕', phases: {LifePhase.christ}, baseWeight: 2.0),
+  LifeEvent(id: 'new_church_friends', category: LifeCategory.relationship, severity: 3, glyph: '🤝✝️', story: '⛪🤝😊', phases: {LifePhase.christ}, baseWeight: 2.0),
+  LifeEvent(id: 'baptism', category: LifeCategory.faith, severity: 4, glyph: '💧✝️', story: '💧✝️🙌', phases: {LifePhase.christ}, baseWeight: 1.2),
+  LifeEvent(id: 'shared_faith_with_someone', category: LifeCategory.faith, severity: 3, glyph: '🗣️✝️', story: '🗣️✝️👂', phases: {LifePhase.christ}, baseWeight: 1.5),
+  LifeEvent(id: 'grown_through_setback', category: LifeCategory.faith, severity: 3, glyph: '🌱✝️', story: '🌧️➡️🌱✝️', phases: {LifePhase.christ}, baseWeight: 1.2),
+  LifeEvent(id: 'doubted_if_it_was_real', category: LifeCategory.faith, severity: -2, glyph: '🤔✝️', story: '✝️🤔❓', phases: {LifePhase.christ}, baseWeight: 1.5),
+  LifeEvent(id: 'small_group_conflict', category: LifeCategory.relationship, severity: -2, glyph: '😕⛪', story: '👥😕⛪', phases: {LifePhase.christ}, baseWeight: 1.3),
 ];
 
 /// Generates a deterministic [NpcBackstory] from an NPC id.

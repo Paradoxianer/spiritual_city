@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:spiritual_city/src/core/i18n/app_strings.dart';
 import 'package:spiritual_city/src/features/game/domain/models/npc_backstory.dart';
 
 void main() {
@@ -579,16 +578,13 @@ void main() {
     });
   });
 
-  group('v5.1 Lebenslauf sentences', () {
-    test('every catalog event has a sentence in DE and EN', () {
-      for (final lang in ['de', 'en']) {
-        AppStrings.setLanguage(lang);
-        for (final e in [...kLifeEventCatalog, ...kChristPhaseCatalog]) {
-          final key = 'life.${e.id}';
-          expect(AppStrings.get(key), isNot(key), reason: '$lang: ${e.id}');
-        }
+  group('v5.2 Lebenslauf as emoji sentences', () {
+    test('every catalog event has an emoji-only story (no text to localise)', () {
+      final letters = RegExp(r'[A-Za-zÄÖÜäöüß]');
+      for (final e in [...kLifeEventCatalog, ...kChristPhaseCatalog]) {
+        expect(e.story, isNotEmpty, reason: e.id);
+        expect(letters.hasMatch(e.story), isFalse, reason: e.id);
       }
-      AppStrings.setLanguage('de');
     });
   });
 }

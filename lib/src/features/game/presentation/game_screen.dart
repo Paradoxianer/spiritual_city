@@ -4324,8 +4324,9 @@ class _DialogTabBar extends StatelessWidget {
   }
 }
 
-/// The NPC's life as a CV-style list, one sentence per line: birth at the
-/// top, today at the bottom (docs/game_design/npc_backstory.md v5.1).
+/// The NPC's life as a CV-style list, one emoji "sentence" per line: birth
+/// at the top, today at the bottom (docs/game_design/npc_backstory.md v5.2).
+/// No text – emoji only, so nothing needs localising.
 /// Revealed up to the earliest unresolved challenge – what lies beyond
 /// stays "not told yet" until the player has talked their way there.
 /// Worked-through challenges reappear just before "today" as "→🌱"
@@ -4335,7 +4336,6 @@ class _NpcLifeTimeline extends StatelessWidget {
 
   const _NpcLifeTimeline({required this.model});
 
-  static String _sentence(OccurredEvent o) => AppStrings.get('life.${o.event.id}');
 
   @override
   Widget build(BuildContext context) {
@@ -4344,7 +4344,7 @@ class _NpcLifeTimeline extends StatelessWidget {
     final revealed = backstory.revealedCount;
 
     final rows = <Widget>[
-      _LifeLine(age: 0, glyph: '👶', text: AppStrings.get('life.birth')),
+      const _LifeLine(age: 0, story: '👶🎉'),
     ];
     var hidden = 0;
     for (var i = 0; i < backstory.events.length; i++) {
@@ -4356,57 +4356,50 @@ class _NpcLifeTimeline extends StatelessWidget {
       }
       rows.add(_LifeLine(
         age: o.age,
-        glyph: o.event.glyph,
-        text: _sentence(o),
+        story: o.event.story,
         isCurrent: o == current,
         progress: o == current ? o.workProgress : null,
         faded: o.event.isNegative && o.processed,
       ));
     }
     if (hidden > 0) {
-      rows.add(_LifeLine(glyph: '❓', text: AppStrings.get('life.hidden'), faded: true));
+      rows.add(const _LifeLine(story: '❓❓❓', faded: true));
     }
 
     // Recent life: what the pastor helped resolve, faith, then today.
     for (final o in backstory.resolvedChallenges) {
       if (o.phase == LifePhase.christ) continue;
-      rows.add(_LifeLine(
-        glyph: '${o.event.glyph}→🌱',
-        text: '${AppStrings.get('life.resolved')} ${_sentence(o)}',
-      ));
+      rows.add(_LifeLine(story: '${o.event.glyph}➡️🌱'));
     }
     if (model.isConverted) {
-      rows.add(_LifeLine(glyph: '✝️🕊️', text: AppStrings.get('life.converted')));
+      rows.add(const _LifeLine(story: '🙏✝️🕊️'));
     }
     for (final o in backstory.events) {
       if (o.phase != LifePhase.christ) continue;
       rows.add(_LifeLine(
-        glyph: o.displayGlyph,
-        text: _sentence(o),
+        story: o.event.story,
         isCurrent: o == current,
         progress: o == current ? o.workProgress : null,
       ));
     }
-    rows.add(_LifeLine(age: backstory.age, glyph: '📍', text: AppStrings.get('life.today')));
+    rows.add(_LifeLine(age: backstory.age, story: '📍'));
 
     return ListView(children: rows);
   }
 }
 
-/// One line of [_NpcLifeTimeline]: age · glyph · sentence, highlighted
+/// One line of [_NpcLifeTimeline]: age · emoji sentence, highlighted
 /// (with ●○○ progress) when it is the challenge the next 🗣️ works on.
 class _LifeLine extends StatelessWidget {
   final int? age;
-  final String glyph;
-  final String text;
+  final String story;
   final bool isCurrent;
   final int? progress;
   final bool faded;
 
   const _LifeLine({
     this.age,
-    required this.glyph,
-    required this.text,
+    required this.story,
     this.isCurrent = false,
     this.progress,
     this.faded = false,
@@ -4434,16 +4427,9 @@ class _LifeLine extends StatelessWidget {
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 48,
-              child: Text(glyph, style: const TextStyle(fontSize: 16)),
-            ),
+            const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-              ),
+              child: Text(story, style: const TextStyle(fontSize: 18)),
             ),
             if (progress != null)
               Text(
