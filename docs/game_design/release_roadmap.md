@@ -114,7 +114,44 @@ So hat jeder Kampf ein Gesicht und jedes Gespräch eine Auswirkung im Kampf. Das
 - **Tag als Session-Einheit:** Schlafen im Pastorenhaus beendet den Tag. Danach kommt die **Tagesbilanz** (heute bekehrt, Geschichten geheilt, Zellen befreit, Fortschritt im Stadtteil). Das ist der natürliche Haltepunkt und zeigt Fortschritt sichtbar (#169 Meilensteine). Sonntag = Gottesdienst-Tag (Kirche wird besonders stark).
 - **Freischaltungen statt Prozente** (#179): Die erste Erweckung schaltet Predigen frei (#172), die zweite den verwundeten Heiler usw.
 
-### 3.4 Vereinfachung, damit das Wesentliche zählt
+### 3.4 Übung und Beziehung: Gespräche werden mit der Zeit wirksamer
+
+Heute steigert die Anzahl der Interaktionen nur wenig: mehr Sitzungspunkte (`sessionBonus`), eine höhere Annahme-Chance beim Gebet und einen Gebets-Multiplikator. Vorschlag mit zwei getrennten Achsen:
+
+- **Übung (Pastor, je Aktionsart):** Jede ausgeführte Aktion zählt global mit (Bibellesen, Gebet, Seelsorge, Gespräch, Lebensgespräch …). Je Aktionsart gibt es Übungsstufen (z. B. nach 10 / 30 / 80 / 200 Anwendungen), jede Stufe **+10 % Wirkung** bis maximal +50 %. Im Aktions-Knopf wird die Stufe als kleine Zahl bzw. ⭐ angezeigt. So lohnt sich gerade das, was man oft tut, und man sieht seinen Fortschritt.
+- **Beziehung (je NPC):** `interactionCount` wird zur sichtbaren **Beziehungsstufe** (♡ im Dialog-Kopf, gleiche Schwellen wie `sessionBonus`). Jede Stufe gibt **+10 %** auf alle Gewinne bei dieser Person. Lebensgespräche brauchen ab einer bestimmten Stufe einen Schritt weniger.
+- **Was bleibt:** Die abnehmenden Erträge *innerhalb einer Sitzung* (#171) bleiben. Übung macht eine Aktion insgesamt stärker, Abwechslung im einzelnen Gespräch lohnt sich trotzdem.
+- Persistenz: ein kleines Zählerfeld je Aktionsart im Spielstand. Die Übung baut auf dem Aktions-Modell aus §2.1 auf (eine `ActionId` statt Strings) und kommt deshalb in M1/M2.
+
+### 3.5 Gebäude betreten und erkunden
+
+Heute öffnet ein Gebäude ein Menü. Vorschlag (Erweiterung von #182, `exploration.md`): Beim Betreten wechselt man in einen **kleinen begehbaren Innenraum** mit derselben Steuerung (Joystick, Interaktion) wie in der Stadt.
+
+- Prozedural aus Gebäudetyp + Gebäude-id (deterministisch wie die Stadt): Wohnung = Flur, Küche, Wohnzimmer; Kirche = Schiff, Altar, Sakristei; Krankenhaus = Flure, Zimmer.
+- **Die bestehenden Gebäude-Aktionen werden zu Objekten im Raum:** Bibel auf dem Tisch = Bibel lesen, Bett = Schlafen, Altar = Anbetung, Küche = Essen. Bewohner stehen im Raum und sind normal ansprechbar.
+- Kleine eigene Karte (z. B. 12×10 Zellen) in einer eigenen Flame-`World`. Die Stadt wird währenddessen pausiert, die Prozessorlast ist dadurch gering.
+- Zu entdecken: zufällige Fundstücke (Loot), Erinnerungsstücke, die ein Ereignis aus der Lebensgeschichte der Bewohner aufdecken, und später verschiedene Einrichtung je Stadtteil.
+- Aufwand: groß. Gehört nach M3, weil es Sprites (M4) nicht zwingend braucht, aber vom Aktions-Modell (M1) abhängt.
+
+### 3.6 Lebendige unsichtbare Welt ("wabern")
+
+Heute: Pro Chunk ein Farbraster plus langsam driftende dunkle Kugeln mit Blur (`SpiritualRenderer`). Dieser "Lavalampen"-Effekt ist kaum wahrnehmbar, und der Blur je Chunk ist relativ teuer.
+
+Vorschlag: **ein einziger Fragment-Shader über den ganzen Bildschirm** (Flutter `FragmentProgram`, läuft auf Android/iOS (Impeller) und im Web (CanvasKit)):
+
+- Die Zellzustände der sichtbaren Chunks werden als **kleine Textur** übergeben (1 Pixel je Zelle, nur bei Änderung neu, ≤ 1 Hz wie heute).
+- Der Shader verwirbelt diese Textur mit animiertem Rauschen (Domain Warping). Dunkle Bereiche **wabern, ziehen Schlieren und pulsieren langsam**, helle Bereiche schimmern ruhig. Übergänge fließen weich statt Kachel für Kachel.
+- Dämonen und Schockwellen werden als wenige Uniforms (Position, Radius, Zeit) übergeben: **Dunkelheit zieht sich zu Dämonen hin**, Schockwellen lassen **sichtbare Licht-Ringe durch das Wabern laufen**.
+- **Prozessorlast:** ein einziger Durchgang pro Frame auf der GPU, ohne Blur-Layer je Chunk. Das ist voraussichtlich günstiger als heute. Schutz für schwache Geräte: Shader in halber Auflösung rendern, Qualitätsstufe "Effekte: niedrig" fällt auf den heutigen Renderer zurück, Messung mit dem Flutter-Performance-Overlay auf einem Mittelklasse-Handy vor dem Merge.
+- Gehört nach M2, weil die unsichtbare Welt zum Kern gehört.
+
+### 3.7 Grafik und Sound
+
+- **Grafik:** Kenney-Pakete unter CC0 (gemeinfrei, keine Namensnennung nötig, kommerziell erlaubt): *Roguelike Modern City* (über 1000 Tiles: Straßen, Gebäude, Details) und *RPG Urban Pack* (480 Tiles, Fahrzeuge, 6 Figuren mit Laufanimation). Beide sind Draufsicht und passen zum Raster (#13, #18).
+- **Sound:** Die Pixabay-API liefert mit einem normalen Schlüssel nur Bilder und Videos. Der Audio-Endpunkt antwortet mit 403 und braucht eine Freigabe für den vollen API-Zugang. Alternative: Kenney-Audiopakete unter CC0 (*Interface Sounds*, *UI Audio*, *Impact Sounds*, *RPG Audio*) für Klicks, Treffer und Effekte. Für Musik und Glocken einzelne Pixabay-Sounds von Hand auswählen; die Pixabay-Lizenz erlaubt die Nutzung im Spiel.
+- Lizenzen jedes Pakets in `assets/LICENSES.md` festhalten (Credits-Screen #151).
+
+### 3.8 Vereinfachung, damit das Wesentliche zählt
 
 - ~~**Vorschlag: Versorgung und Gesundheit zu einer Ressource "Kraft ❤️" zusammenlegen.**~~ *Abgelehnt: Die fünf Ressourcen bleiben getrennt.* Ursprünglicher Vorschlag: Essen und Schlafen füllen beide Kraft auf. Dann bleibt **Glaube 🙏** die klare Hauptressource, **Kraft ❤️** die Ausdauer, **Vorräte 📦** das Material und **Erkenntnis 📖** der Fortschritt. Das sind vier statt fünf Werte und weniger Pflege-Arbeit. Dämonen bleiben gefährlich: Ihr Treffer kostet Kraft und Glauben.
 - Spür-Feedback bei jeder Aktion (Säule 1): Sound (#10), Partikel, Haptik auf dem Handy.
@@ -126,10 +163,10 @@ So hat jeder Kampf ein Gesicht und jedes Gespräch eine Auswirkung im Kampf. Das
 | Meilenstein | Inhalt | Issues |
 | :--- | :--- | :--- |
 | **M0 – Spielbar auf dem Handy** | PR #184 nach Test mergen (Touch-HUD, Zurück-Taste, Seed, Save-Bugs, Varianz, Lebensgeschichten) | #162 #170 #171 #174–#177 |
-| **M1 – Einfach & konsistent** | Redesign §2 (Aktions-Modell, `ActionButton`, `OverlayShell`, Dateien aufteilen), Tutorial anpassen | #185 #83 #126 #92 |
-| **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Stadtteil-Erweckung + Bollwerk, Tag + Tagesbilanz §3.3 | #178 #180 #125 #169 #143 |
-| **M3 – Gemeinde** | Rollen, verwundeter Heiler §3.2, Gemeinde-Übersicht, Predigen, Fähigkeiten pro Stufe | #181 #172 #179 #173 |
-| **M4 – Release 1.0** | Grafik (Sprites, Distrikt-Identität, Innenräume), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 |
+| **M1 – Einfach & konsistent** | Redesign §2 (Aktions-Modell, `ActionButton`, `OverlayShell`, Dateien aufteilen), Übung & Beziehung §3.4, Tutorial anpassen | #185 #83 #126 #92 |
+| **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Stadtteil-Erweckung + Bollwerk, Tag + Tagesbilanz §3.3, wabernde unsichtbare Welt (Shader) §3.6, erste Sounds §3.7 | #178 #180 #125 #169 #143 |
+| **M3 – Gemeinde & Erkunden** | Rollen, verwundeter Heiler §3.2, Gemeinde-Übersicht, Predigen, Fähigkeiten pro Stufe, begehbare Innenräume §3.5 | #181 #172 #179 #173 |
+| **M4 – Release 1.0** | Grafik (Kenney-Sprites §3.7, Distrikt-Identität), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 |
 | **Nach 1.0** | Cloud-Speicher, reale Städte (OSM), dezente Werbung, Minimap | #165 #166 #128 #164 #146 |
 
 **Warum diese Reihenfolge:** M1 vor M2, weil jedes neue Feature sonst noch eine sechste UI-Variante und noch mehr String-Aktionen erzeugt. M2 vor M3, weil die Gemeinde erst Sinn ergibt, wenn es Etappen gibt, in denen sie hilft. Grafik und Audio kommen bewusst spät: Sie verstärken den Spaß, ersetzen aber keinen fehlenden Kern.
