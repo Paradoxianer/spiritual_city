@@ -10,6 +10,7 @@ import '../domain/actions/building_actions.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
 import '../domain/actions/practice.dart';
+import '../domain/actions/resource.dart';
 import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';

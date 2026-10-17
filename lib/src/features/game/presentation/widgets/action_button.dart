@@ -29,8 +29,8 @@ class ActionButton extends StatelessWidget {
   /// Cost/effect hint below the emoji, e.g. `−5🙏→🌱`.
   final String? hint;
 
-  /// Unavailable actions show their reason (`🔒3`, `🚫🙏`) instead of the
-  /// hint and ignore taps.
+  /// Unavailable actions ignore taps; locked ones show the lock (`🔒3`)
+  /// instead of the hint, unaffordable ones show the hint in red.
   final Availability availability;
 
   /// Extra switch for transient states (waiting, reading, countdown).
@@ -91,7 +91,13 @@ class ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final available = availability.isOk;
     final active = available && enabled;
-    final reason = availability.reason;
+    // Locked: show the lock reason. Unaffordable: show the cost in red, so
+    // the player sees how much is missing.
+    final reason = switch (availability) {
+      Locked(:final emoji) => emoji,
+      CannotAfford() => hint ?? availability.reason,
+      AvailableNow() => null,
+    };
     final showBadge = keyIndex != null && showKeyHints();
 
     final Color bg;

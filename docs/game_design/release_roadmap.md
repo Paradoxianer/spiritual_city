@@ -1,6 +1,6 @@
 # Release-Weg: Redesign, Spielspaß, nächste Features
 
-**Status: abgestimmt (2026-10-17), Entscheidungen in §5.** Klammer über `core_loop_and_retention.md` (Warum), `mobile_ui.md` (Touch-Regeln) und die Feature-Dokumente. Dieses Dokument legt fest, **in welcher Reihenfolge** wir bis zum Release vorgehen und **was** wir dafür in Code und Design grundsätzlich ändern.
+**Status: abgestimmt (2026-10-17), Entscheidungen in §5. M1 umgesetzt auf `feat/m1-redesign` (Stand §4.1).** Klammer über `core_loop_and_retention.md` (Warum), `mobile_ui.md` (Touch-Regeln) und die Feature-Dokumente. Dieses Dokument legt fest, **in welcher Reihenfolge** wir bis zum Release vorgehen und **was** wir dafür in Code und Design grundsätzlich ändern.
 
 ---
 
@@ -118,8 +118,8 @@ So hat jeder Kampf ein Gesicht und jedes Gespräch eine Auswirkung im Kampf. Das
 
 Heute steigert die Anzahl der Interaktionen nur wenig: mehr Sitzungspunkte (`sessionBonus`), eine höhere Annahme-Chance beim Gebet und einen Gebets-Multiplikator. Vorschlag mit zwei getrennten Achsen:
 
-- **Übung (Pastor, je Aktionsart):** Jede ausgeführte Aktion zählt global mit (Bibellesen, Gebet, Seelsorge, Gespräch, Lebensgespräch …). Je Aktionsart gibt es Übungsstufen (z. B. nach 10 / 30 / 80 / 200 Anwendungen), jede Stufe **+10 % Wirkung** bis maximal +50 %. Im Aktions-Knopf wird die Stufe als kleine Zahl bzw. ⭐ angezeigt. So lohnt sich gerade das, was man oft tut, und man sieht seinen Fortschritt.
-- **Beziehung (je NPC):** `interactionCount` wird zur sichtbaren **Beziehungsstufe** (♡ im Dialog-Kopf, gleiche Schwellen wie `sessionBonus`). Jede Stufe gibt **+10 %** auf alle Gewinne bei dieser Person. Lebensgespräche brauchen ab einer bestimmten Stufe einen Schritt weniger.
+- **Übung (Pastor, je geistlicher Disziplin):** Jede ausgeführte Aktion zählt bei ihrer Disziplin mit: 🙏 Gebet, 📖 Bibel, 💬 Gespräch, 👂 Seelsorge, 🤝 Dienst, 🤲 Anbetung. So zählt z. B. Beten im Pastorenhaus, in Wohnhäusern und beim NPC zur selben Übung. Stufen nach 10 / 30 / 80 / 200 / 400 Anwendungen, jede Stufe **+10 % Wirkung** bis maximal +50 % (bei NPCs auf den Glaubensgewinn der Person, in Gebäuden auf den eigenen Glaubensgewinn). Im Aktions-Knopf als ⭐ angezeigt, eine neue Stufe kommt als Toast `⭐ 🙏 2`. *Umgesetzt (`Practice`).*
+- **Beziehung (je NPC):** `interactionCount` wird zur sichtbaren **Beziehungsstufe** (♥ im Dialog-Kopf, gleiche Schwellen wie `sessionBonus`, max. 5). Jede Stufe gibt **+10 %** auf alle Gewinne bei dieser Person. Ab Stufe 3 („tiefes Vertrauen“) zählt ein Lebensgespräch doppelt. *Umgesetzt (`Relationship`).*
 - **Was bleibt:** Die abnehmenden Erträge *innerhalb einer Sitzung* (#171) bleiben. Übung macht eine Aktion insgesamt stärker, Abwechslung im einzelnen Gespräch lohnt sich trotzdem.
 - Persistenz: ein kleines Zählerfeld je Aktionsart im Spielstand. Die Übung baut auf dem Aktions-Modell aus §2.1 auf (eine `ActionId` statt Strings) und kommt deshalb in M1/M2.
 
@@ -184,7 +184,9 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 - Etwa 6–10 Missionen mit je 2–3 Sätzen, also rund 30 Strings je Sprache.
 - **Bibelstellen** (z. B. 1. Kor 12,10 für Unterscheidung der Geister) kommen aus gemeinfreien Übersetzungen je Sprache (Luther 1912, KJV) und müssen nicht übersetzt werden, nur ausgewählt.
 
-**Einordnung:** Den Rahmen (Missionstyp, Mentor, Freischaltung) zusammen mit den Dämonentypen in **M2** bauen, weil "Unterscheidung der Geister" die Dämonenarten sichtbar macht. Die übrigen Lern-Missionen kommen in **M3** zusammen mit den Fähigkeiten pro Stufe (#179). Offene Frage: ob die heute schon freien Funktionen (Lebensgespräch, alle Kampfmodi) für neue Spielstände erst gelernt werden müssen. Das wäre einfacher für Einsteiger, ändert aber, was Bestandsspieler gewohnt sind.
+**Einordnung:** Den Rahmen (Missionstyp, Mentor, Freischaltung) zusammen mit den Dämonentypen in **M2** bauen, weil "Unterscheidung der Geister" die Dämonenarten sichtbar macht. Die übrigen Lern-Missionen kommen in **M3** zusammen mit den Fähigkeiten pro Stufe (#179).
+
+**Entscheidung (2026-10-17):** **Neue Spielstände lernen, bestehende behalten alles.** Ein neuer Spielstand startet mit 💬 👂 🙏 📖 📦 ✝️🕊️ und dem Kampfmodus Befreiung. 📜 Lebensgespräch, Zurechtweisung/Verlangsamung/Entziehung und die Dämonenarten kommen über Lern-Missionen. Spielstände von vor der Einführung bekommen beim Laden alle Fähigkeiten als gelernt (Feld `learnedSkills` fehlt → alles gelernt). Begründung: Für Einsteiger wird der Anfang kleiner und jede Fähigkeit bekommt einen Moment, in dem sie erklärt wird (das ersetzt Teile des Tutorials #92). Bestandsspieler verlieren nichts, was sie schon nutzen. Das passt zur Säule "Freischaltungen statt Prozente".
 
 ---
 
@@ -201,6 +203,20 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 
 **Warum diese Reihenfolge:** M1 vor M2, weil jedes neue Feature sonst noch eine sechste UI-Variante und noch mehr String-Aktionen erzeugt. M2 vor M3, weil die Gemeinde erst Sinn ergibt, wenn es Etappen gibt, in denen sie hilft. Grafik und Audio kommen bewusst spät: Sie verstärken den Spaß, ersetzen aber keinen fehlenden Kern.
 
+### 4.1 Stand M1 (Branch `feat/m1-redesign`)
+
+| Punkt | Stand |
+| :--- | :--- |
+| Aktions-Modell §2.1 | ✅ `GameAction`/`ActionId`/`ResourceCost`/`ResourceWallet` (`domain/actions/`). NPC- und Gebäude-Aktionen in je einer Registry; Kostenhinweis generiert; Verfügbarkeit mit Grund (`🔒3`, rote Kosten). |
+| Domain-Services | ✅ `NpcInteractionService` (NPC-Regeln aus `NPCComponent` herausgelöst, getestet). Gebäude-Aktionen werden vor dem Service geprüft. |
+| `PlayerResources` | ✅ eigene Klasse, Spiel delegiert. |
+| Widget-Satz §2.2 | ✅ `ActionButton`/`ActionBar` ersetzen `_EmojiChip`, `_ActionMenuRow`, `_UpgradeRow`, `_BuyButton`, `_AttackTile`. ✅ `OverlayShell` für NPC-Dialog, Gebäude, Missionsbrett, Umgebung. Offen: `RadialAction` (Flame-Komponente, eigener Schritt), Pause/Tastenbelegung bleiben Menü-Bildschirme. |
+| Dateistruktur §2.3 | ✅ `game_screen.dart` 5800 → 440 Zeilen (`overlays/`, `hud/`, `widgets/`). ✅ `spirit_world_game.dart` 2500 → 1575 Zeilen (`game/save_state`, `game/overlay_control`, `game/building_actions`). Offen: `GameBalance` (#83) für die restlichen Zahlen. |
+| Übung & Beziehung §3.4 | ✅ umgesetzt und gespeichert. |
+| Tutorial | ✅ Texte erklären Kostenhinweis, 🔒, ⭐, ♥, 📜 und dass Pastorenhaus/Kirche Glauben auffüllen. |
+| Text in Spielbildschirmen | ✅ Gebäude, Missionen, Umgebung, Upgrades ohne Text (Adresse als Titel). |
+| Gefundene Fehler | 👂 war bei 2❤️ gesperrt, kostete aber 8❤️. Gebäude-Aktionen veränderten das Gebäude auch, wenn sie danach wegen fehlender Ressourcen abgelehnt wurden. Glaubenskosten in Gebäuden wurden nicht geprüft. |
+
 ---
 
 ## 5. Entscheidungen (2026-10-17)
@@ -210,3 +226,5 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 3. Wunden erzeugen Dämonen: **Nein**, Dämonen bleiben unabhängig von den Lebensgeschichten.
 4. Start: **Erst PR #184 nach Test mergen**, dann M1 auf frischem `main`.
 5. Dämonen bleiben gefährlich: Ihr Schaden wird nicht abgeschwächt (Rücknahme in `b4df08c`).
+6. Lern-Missionen (§3.9): Neue Spielstände lernen Fähigkeiten, bestehende behalten alles.
+7. Übung zählt je geistlicher Disziplin (🙏📖💬👂🤝🤲), nicht je einzelner Aktion.
