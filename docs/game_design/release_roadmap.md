@@ -156,6 +156,36 @@ Vorschlag: **ein einziger Fragment-Shader über den ganzen Bildschirm** (Flutter
 - ~~**Vorschlag: Versorgung und Gesundheit zu einer Ressource "Kraft ❤️" zusammenlegen.**~~ *Abgelehnt: Die fünf Ressourcen bleiben getrennt.* Ursprünglicher Vorschlag: Essen und Schlafen füllen beide Kraft auf. Dann bleibt **Glaube 🙏** die klare Hauptressource, **Kraft ❤️** die Ausdauer, **Vorräte 📦** das Material und **Erkenntnis 📖** der Fortschritt. Das sind vier statt fünf Werte und weniger Pflege-Arbeit. Dämonen bleiben gefährlich: Ihr Treffer kostet Kraft und Glauben.
 - Spür-Feedback bei jeder Aktion (Säule 1): Sound (#10), Partikel, Haptik auf dem Handy.
 
+### 3.9 Lern-Missionen: Fähigkeiten in Häusern finden (Jüngerschaft)
+
+Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterscheidung der Geister bekommt man nicht über Stufen. Man findet sie als **Lern-Missionen in bestimmten Häusern**, bei einem Mentor (ein bekehrter NPC, ein Mönch im Kloster, eine alte Beterin im Wohnhaus).
+
+**Warum das passt:**
+- Es ist **qualitativer Fortschritt** statt Prozente (#179, §3.3 "Freischaltungen statt Prozente"). Jede Mission schaltet etwas Sichtbares frei.
+- Es gibt einen **Grund zum Erkunden**: Häuser werden interessant (§3.5), und man sucht gezielt nach Mentoren.
+- Es ist ein **eingebautes Tutorial**: Ein System wird erst erklärt und freigeschaltet, wenn man es lernt. Am Anfang ist das Spiel kleiner und leichter zu verstehen, das hilft auch M1 (einfach & konsistent).
+- Es passt zum Thema: Jüngerschaft, also von anderen lernen, statt allein Punkte zu sammeln.
+
+**Beispiele (Startideen):**
+
+| Lern-Mission | Wo | Schaltet frei |
+| :--- | :--- | :--- |
+| 🎓🫂 Seelsorge lernen | Pastorenhaus / erfahrener Christ | Tab 📜 Lebensgespräch (heute sofort verfügbar) |
+| 🎓⚔️ Geistlicher Kampf | Kirche | Weitere Kampfmodi nach Liberation (Rebuke, Slow, Drain) |
+| 🎓👁️ Unterscheidung der Geister | Kloster / Mentor | **Dämonenarten werden angezeigt** (Symbol über dem Dämon, #178). Ohne diese Fähigkeit sieht man nur "einen Dämon". |
+| 🎓🙏 Fürbitte | Wohnhaus einer Beterin | Investitions-Aktion Fürbitte (`progression_and_unlocks.md` §3) |
+| 🎓🍞 Fasten | Kloster | Investitions-Aktion Fasten |
+| 🎓📢 Predigen | Kirche, nach erster Stadtteil-Erweckung | Predigen (#172) |
+
+**Ablauf (einfach):** Mentor ansprechen → kurzer Lehrtext (2–3 Sätze, mit Bibelstelle) → eine kleine Übungsaufgabe mit den vorhandenen Systemen (z. B. "bearbeite eine Wunde im Lebensgespräch", "besiege 3 Dämonen mit Rebuke") → Fähigkeit frei, mit ⭐ im Aktions-Knopf markiert. Die Lern-Missionen sind ein eigener Missionstyp in `MissionService`, kein neues System.
+
+**Text und Lokalisierung:** Hier ist Text sinnvoll und gewollt. Lehrinhalte lassen sich nicht mit Emojis erklären. Damit der Aufwand klein bleibt:
+- Text **nur im Lehrmoment** (wie Tutorial und Menüs über `AppStrings`). Die Aufgabe selbst und das Spiel bleiben Emoji (`🎓⚔️ 0/3 👹`).
+- Etwa 6–10 Missionen mit je 2–3 Sätzen, also rund 30 Strings je Sprache.
+- **Bibelstellen** (z. B. 1. Kor 12,10 für Unterscheidung der Geister) kommen aus gemeinfreien Übersetzungen je Sprache (Luther 1912, KJV) und müssen nicht übersetzt werden, nur ausgewählt.
+
+**Einordnung:** Den Rahmen (Missionstyp, Mentor, Freischaltung) zusammen mit den Dämonentypen in **M2** bauen, weil "Unterscheidung der Geister" die Dämonenarten sichtbar macht. Die übrigen Lern-Missionen kommen in **M3** zusammen mit den Fähigkeiten pro Stufe (#179). Offene Frage: ob die heute schon freien Funktionen (Lebensgespräch, alle Kampfmodi) für neue Spielstände erst gelernt werden müssen. Das wäre einfacher für Einsteiger, ändert aber, was Bestandsspieler gewohnt sind.
+
 ---
 
 ## 4. Release-Weg (Meilensteine)
@@ -164,8 +194,8 @@ Vorschlag: **ein einziger Fragment-Shader über den ganzen Bildschirm** (Flutter
 | :--- | :--- | :--- |
 | **M0 – Spielbar auf dem Handy** | PR #184 nach Test mergen (Touch-HUD, Zurück-Taste, Seed, Save-Bugs, Varianz, Lebensgeschichten) | #162 #170 #171 #174–#177 |
 | **M1 – Einfach & konsistent** | Redesign §2 (Aktions-Modell, `ActionButton`, `OverlayShell`, Dateien aufteilen), Übung & Beziehung §3.4, Tutorial anpassen | #185 #83 #126 #92 |
-| **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Stadtteil-Erweckung + Bollwerk, Tag + Tagesbilanz §3.3, wabernde unsichtbare Welt (Shader) §3.6, erste Sounds §3.7 | #178 #180 #125 #169 #143 |
-| **M3 – Gemeinde & Erkunden** | Rollen, verwundeter Heiler §3.2, Gemeinde-Übersicht, Predigen, Fähigkeiten pro Stufe, begehbare Innenräume §3.5 | #181 #172 #179 #173 |
+| **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Stadtteil-Erweckung + Bollwerk, Tag + Tagesbilanz §3.3, wabernde unsichtbare Welt (Shader) §3.6, erste Sounds §3.7, Lern-Missionen-Rahmen + "Unterscheidung der Geister" §3.9 | #178 #180 #125 #169 #143 |
+| **M3 – Gemeinde & Erkunden** | Rollen, verwundeter Heiler §3.2, Gemeinde-Übersicht, Predigen, Fähigkeiten pro Stufe, weitere Lern-Missionen §3.9, begehbare Innenräume §3.5 | #181 #172 #179 #173 |
 | **M4 – Release 1.0** | Grafik (Kenney-Sprites §3.7, Distrikt-Identität), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 |
 | **Nach 1.0** | Cloud-Speicher, reale Städte (OSM), dezente Werbung, Minimap | #165 #166 #128 #164 #146 |
 
