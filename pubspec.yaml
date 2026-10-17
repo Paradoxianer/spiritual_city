@@ -38,4 +38,10 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/images/kenney/roguelike_modern_city/
+    - assets/images/kenney/rpg_urban_pack/
     - assets/audio/
+    - assets/audio/kenney/interface_sounds/
+    - assets/audio/kenney/ui_audio/
+    - assets/audio/kenney/impact_sounds/
+    - assets/audio/kenney/rpg_audio/
