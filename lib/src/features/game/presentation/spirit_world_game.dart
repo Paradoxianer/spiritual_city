@@ -1294,7 +1294,10 @@ class SpiritWorldGame extends FlameGame
   /// Opens the building-interior overlay for [building].
   void openBuildingInterior(BuildingModel building) {
     building.resetSession();
-    activeBuildingData = GameBuildingData(building: building);
+    activeBuildingData = GameBuildingData(
+      building: building,
+      address: _addressForPixelPos(player.position),
+    );
     overlays.add('BuildingInteriorOverlay');
     paused = true;
     tutorialService.onBuildingInteracted();
