@@ -349,7 +349,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // Difficulty amplifier: hard daemons hit harder.
     final amp = _cellDrainMultiplier; // easy=0.67, normal=1.0, hard=2.0
 
-    final hpDamage     = (8.0 * strength * amp).clamp(1.0, 30.0);
+    // Faith is the main target of a daemon strike; Health only takes a
+    // small knock (halved from 8 – Health shouldn't rival Faith).
+    final hpDamage     = (4.0 * strength * amp).clamp(1.0, 15.0);
     final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0) *
         (1.0 - game.progress.combatProfile.shieldDamageReduction);
     final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0) *

@@ -475,21 +475,24 @@ void main() {
     });
 
     group('performAction – church', () {
-      test('sundayService: −50 materials, −60 health, massive AOE influence', () {
+      test('sundayService: −50 materials, a little health, faith for the pastor, '
+          'massive AOE influence', () {
         final b = church();
         final result = BuildingInteractionService().performAction('sundayService', b, 0.0);
         expect(result.playerMaterialsDelta, -50.0);
-        expect(result.playerHealthDelta, -60.0);
+        expect(result.playerHealthDelta, -BuildingInteractionService.sundayServiceHealthCost);
+        expect(result.playerFaithDelta, BuildingInteractionService.sundayServiceFaith);
         expect(result.actionDurationSeconds, greaterThan(0));
         expect(b.faith, greaterThan(0));
       });
 
-      test('worship: faith gain is 3× duration (3/sec), timed', () {
+      test('worship: faith gain is worshipFaithPerSecond × duration, timed', () {
         final b = church();
         final result = BuildingInteractionService().performAction('worship', b, 0.0);
         expect(result.playerFaithDelta, greaterThan(0));
         expect(result.actionDurationSeconds, greaterThan(0));
-        expect(result.playerFaithDelta, closeTo(result.actionDurationSeconds * 3.0, 0.001));
+        expect(result.playerFaithDelta, closeTo(
+            result.actionDurationSeconds * BuildingInteractionService.worshipFaithPerSecond, 0.001));
         expect(b.faith, greaterThan(0));
       });
 
@@ -680,10 +683,10 @@ void main() {
         expect(BuildingModel(buildingId: 'ph', type: BuildingType.pastorHouse).isAlwaysOpen, isTrue);
       });
 
-      test('readBible: +20 faith, −5 health, has duration', () {
+      test('readBible: lots of faith, no health cost, has duration', () {
         final result = BuildingInteractionService().performAction('readBible', pastorHouse(), 0.0);
-        expect(result.playerFaithDelta, 20.0);
-        expect(result.playerHealthDelta, -5.0);
+        expect(result.playerFaithDelta, BuildingInteractionService.pastorHouseReadBibleFaith);
+        expect(result.playerHealthDelta, 0.0, reason: 'spiritual home actions cost no health');
         expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);
       });
@@ -703,10 +706,10 @@ void main() {
         expect(result.success, isTrue);
       });
 
-      test('pray: +15 faith, −5 health, has duration', () {
+      test('pray: lots of faith, no health cost, has duration', () {
         final result = BuildingInteractionService().performAction('pray', pastorHouse(), 0.0);
-        expect(result.playerFaithDelta, 15.0);
-        expect(result.playerHealthDelta, -5.0);
+        expect(result.playerFaithDelta, BuildingInteractionService.pastorHousePrayFaith);
+        expect(result.playerHealthDelta, 0.0, reason: 'spiritual home actions cost no health');
         expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);
       });

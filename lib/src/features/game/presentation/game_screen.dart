@@ -3562,10 +3562,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       // ── Pastor's house ─────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         rows = [
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+40', tooltip: 'Bibel lesen', keyIndex: nk(), onTap: () => _performAction('readBible')),
           _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen', keyIndex: nk(), onTap: () => _performAction('eat')),
           _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen', keyIndex: nk(), onTap: () => _performAction('sleep')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🕊️+15', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🙏+30', tooltip: 'Beten', keyIndex: nk(), onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionen', keyIndex: nk(), onTap: () => _performAction('missions')),
         ];
 
@@ -3592,7 +3592,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       case BuildingType.church:
       case BuildingType.cathedral:
         rows = [
-          _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−50💰−60❤️→', trailingEmoji: '🔥AOE', tooltip: 'Gottesdienst', keyIndex: nk(), isDisabled: g.materials < 50 || g.health < 60, onTap: () => _performAction('sundayService')),
+          _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−50💰−25❤️→', trailingEmoji: '🙏+40🔥', tooltip: 'Gottesdienst', keyIndex: nk(), isDisabled: g.materials < 50 || g.health <= 25, onTap: () => _performAction('sundayService')),
           _ActionMenuRow(leadingEmoji: '🤲', arrowText: '⏱→', trailingEmoji: '+🙏/Sek', tooltip: 'Anbetung', keyIndex: nk(), onTap: () => _performAction('worship')),
         ];
 

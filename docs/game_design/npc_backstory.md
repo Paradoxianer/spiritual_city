@@ -182,5 +182,5 @@ Rückmeldung nach v4.3: Die Gesprächs-Interaktion war "viel zu kompliziert". Zw
 
 **Konsistenz mit den anderen Aktionen**
 - 🗣️ ist jetzt eine normale Sitzungs-Interaktion `'lifetalk'` in `NPCComponent.handleInteraction`. Sie **verbraucht einen Interaktionspunkt**, erhöht `interactionCount`, zeigt die Deltas im Kopf an und zählt für Gesprächs-Missionen (`npcActionToType`). Nach dem letzten Punkt verabschiedet sich die NPC wie gewohnt.
-- Kosten bleiben −6 ❤️ / −4 🙏 (`NPCComponent.lifeTalkHealthCost`/`lifeTalkFaithCost`), Erkenntnis bleibt bei 0,2 / +0,3 / +0,5, nur liegt die Logik jetzt in der Komponente statt in der UI.
+- Kosten −2 ❤️ / −5 🙏 (`NPCComponent.lifeTalkHealthCost`/`lifeTalkFaithCost`; Glaube ist die Hauptressource, siehe `building_actions.md`), Erkenntnis bleibt bei 0,2 / +0,3 / +0,5, nur liegt die Logik jetzt in der Komponente statt in der UI.
 - Neu: Wird eine Herausforderung abgeschlossen, gewinnt die NPC Glauben, nämlich |Schwere| × 2 × geistlicher Zell-Bonus. Heilung öffnet Menschen.

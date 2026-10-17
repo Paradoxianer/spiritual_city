@@ -43,6 +43,11 @@ Dieses Dokument definiert die Aktionen, Kosten und Auswirkungen für die verschi
   - Die Pastor-Regeneration (+3/Sek) entsprach schon der Spezifikation und wurde nicht verändert.
   - **Nicht geklärt:** ob "AoE-Effekt ist eher negativ" noch etwas anderes meinte als die schwächere Wirkung durch den falschen Multiplikator — dafür bräuchte es einen konkreten Repro-Fall.
 - **Balancing (#129):** Gebet im Pastorenhaus mehr Glauben/Befreiungs-AoE (+20 bis +25); Spende auf Aufforderung (NPC-Gespräch) mehr Glauben und mindestens 4 Interaktionen; Gebet im Wohngebäude erhöht auch den Gebäude-Glauben; Bibellesen in Gebäuden je nach Größe 0,2–0,3 Erkenntnis statt 0,5; *Jüngerschaftsgruppe* dauert 1–2 s und wirkt nur positiv, deutlich stärker auf die unsichtbare Welt; jede Bekehrung 0,2 Erkenntnis.
+- **Glaube vor Gesundheit (Nutzer-Feedback, umgesetzt):** Gesundheit war gefühlt fast so wichtig wie Glaube oder wichtiger, weil sogar die geistlichen Aktionen zu Hause Gesundheit kosteten. Glaube ist die zentrale Ressource, und Pastorenhaus und Kirche sind die Orte, an denen er aufgefüllt wird:
+  - Pastorenhaus: *Bibel lesen* **+40 🙏** (vorher +20, −5 ❤️), *Beten* **+30 🙏** (vorher +15, −5 ❤️), beides ohne Gesundheitskosten.
+  - Kirche: *Anbetung* **+8 🙏/Sek** (vorher 3/Sek, bei 7 s also +56 statt +21). *Gottesdienst* kostet nur noch **−25 ❤️** (vorher −60) und gibt dem Pastor **+40 🙏**.
+  - Gesundheit verliert man außerdem weniger an anderen Stellen: Ein Dämonen-Treffer kostet nur noch halb so viel ❤️ (4 statt 8 Basis, Glaubens-Schaden unverändert), das Lebensgespräch 🗣️ kostet −2 ❤️ / −5 🙏 (vorher −6 / −4).
+  - Werte als Konstanten in `BuildingInteractionService` (`pastorHouseReadBibleFaith`, `pastorHousePrayFaith`, `worshipFaithPerSecond`, `sundayServiceFaith`, `sundayServiceHealthCost`).
 - **Erkunden (#182):** Innenräume können diese Aktionen kontextuell anbieten (siehe `exploration.md`).
 
 ---

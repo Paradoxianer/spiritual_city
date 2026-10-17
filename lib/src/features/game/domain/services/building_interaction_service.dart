@@ -152,6 +152,16 @@ class BuildingInteractionService {
   static const int pastorHouseSleepSeconds = 8;
   static const int pastorHousePraySeconds = 5;
 
+  // Faith is the pastor's central resource and the pastor house / church
+  // are where it is refilled – so these give a lot and cost no Health
+  // (user feedback: Health had become about as important as Faith because
+  // even the spiritual home actions drained it).
+  static const double pastorHouseReadBibleFaith = 40.0;
+  static const double pastorHousePrayFaith = 30.0;
+  static const double worshipFaithPerSecond = 8.0;
+  static const double sundayServiceFaith = 40.0;
+  static const double sundayServiceHealthCost = 25.0;
+
   BuildingInteractionResult _pastorHouseAction(
     String actionType,
     BuildingModel building,
@@ -163,8 +173,7 @@ class BuildingInteractionService {
       case 'readBible':
         building.applyInfluence(8.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: 20.0,
-          playerHealthDelta: -5.0,
+          playerFaithDelta: pastorHouseReadBibleFaith,
           reactionEmoji: '📖✝️',
           actionDurationSeconds: pastorHouseReadBibleSeconds,
         );
@@ -185,8 +194,7 @@ class BuildingInteractionService {
         // Faith gain + massive area spiritual influence (handled in game layer).
         building.applyInfluence(10.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: 15.0,
-          playerHealthDelta: -5.0,
+          playerFaithDelta: pastorHousePrayFaith,
           reactionEmoji: '🙏🕊️',
           actionDurationSeconds: pastorHousePraySeconds,
         );
@@ -393,19 +401,22 @@ class BuildingInteractionService {
     BuildingModel building,
   ) {
     switch (actionType) {
-      // ── Gottesdienst: (Sonntag), -80% Materials, -60% Health → massiver AOE
+      // ── Gottesdienst: -50 Materials, etwas Kraft → massiver AOE und viel
+      //    Glauben für den Pastor (früher −60 ❤️ ohne Glaubensgewinn)
       case 'sundayService':
         building.interactionCount++;
         building.applyInfluence(80.0);
         building.influenceResidents(50.0);
         return const BuildingInteractionResult(
           playerMaterialsDelta: -50.0,
-          playerHealthDelta: -60.0,
+          playerHealthDelta: -sundayServiceHealthCost,
+          playerFaithDelta: sundayServiceFaith,
           reactionEmoji: '⛪🎹🔥🙌🕊️',
           actionDurationSeconds: sundayServiceSeconds,
         );
 
-      // ── Anbetung/Gebet: Zeit → Faith regeneriert (+3/Sek beim Pastor), Kirche gestärkt
+      // ── Anbetung/Gebet: Zeit → Faith regeneriert (+8/Sek beim Pastor, früher
+      //    3/Sek), Kirche gestärkt
       //
       // Issue #144: the pastor's regen already matched building_actions.md's
       // spec exactly (+3/sec), but the church's own faith gain (20) was weak
@@ -418,7 +429,7 @@ class BuildingInteractionService {
         building.applyInfluence(60.0);
         building.influenceResidents(45.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: worshipSeconds * 3.0,
+          playerFaithDelta: worshipSeconds * worshipFaithPerSecond,
           reactionEmoji: '🤲🙏🕊️🙌',
           actionDurationSeconds: worshipSeconds,
         );

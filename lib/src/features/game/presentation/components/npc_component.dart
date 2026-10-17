@@ -44,10 +44,11 @@ class NPCComponent extends PositionComponent
   // A normal session interaction like talk/counsel/pray: it uses up one
   // session point and works on the NPC's earliest unresolved challenge.
 
-  /// Costs Health (like counseling) and a little Faith – working through
-  /// someone else's story draws on the pastor's own reserves.
-  static const double lifeTalkHealthCost = 6.0;
-  static const double lifeTalkFaithCost = 4.0;
+  /// Mainly costs Faith (the central resource), only a little Health –
+  /// working through someone else's story draws on the pastor's spiritual
+  /// reserves more than on his body.
+  static const double lifeTalkHealthCost = 2.0;
+  static const double lifeTalkFaithCost = 5.0;
 
   /// Insight for fully working through one challenge; extra when it also
   /// grew the "Als Christ" chapter, and when it was the last open one.
