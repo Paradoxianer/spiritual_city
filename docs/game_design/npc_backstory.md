@@ -184,3 +184,12 @@ Rückmeldung nach v4.3: Die Gesprächs-Interaktion war "viel zu kompliziert". Zw
 - 🗣️ ist jetzt eine normale Sitzungs-Interaktion `'lifetalk'` in `NPCComponent.handleInteraction`. Sie **verbraucht einen Interaktionspunkt**, erhöht `interactionCount`, zeigt die Deltas im Kopf an und zählt für Gesprächs-Missionen (`npcActionToType`). Nach dem letzten Punkt verabschiedet sich die NPC wie gewohnt.
 - Kosten −2 ❤️ / −5 🙏 (`NPCComponent.lifeTalkHealthCost`/`lifeTalkFaithCost`; Glaube ist die Hauptressource, siehe `building_actions.md`), Erkenntnis bleibt bei 0,2 / +0,3 / +0,5, nur liegt die Logik jetzt in der Komponente statt in der UI.
 - Neu: Wird eine Herausforderung abgeschlossen, gewinnt die NPC Glauben, nämlich |Schwere| × 2 × geistlicher Zell-Bonus. Heilung öffnet Menschen.
+
+### v5.1 — Lebenslauf als Liste mit Sätzen
+
+Rückmeldung: Die Emoji-Kacheln nebeneinander waren schwer zu lesen. Gewünscht war eine Liste untereinander, oben Geburt und unten heute, in der jedes Ereignis ein "Satz" im Lebenslauf ist.
+
+- `_NpcLifeTimeline` ist jetzt eine senkrechte Liste aus `_LifeLine`-Zeilen der Form **Alter · Emoji · Satz**. Die erste Zeile ist `0 👶 Geboren.`, die letzte `<Alter> 📍 Heute.`
+- Jedes Katalog-Ereignis hat einen kurzen Satz in `AppStrings` (`life.<event-id>`, DE und EN), z. B. `💔 Erlebte die Trennung der Eltern.` Ein Test stellt sicher, dass kein Ereignis ohne Satz bleibt.
+- Die aktuelle Herausforderung ist gelb umrandet, ihr Fortschritt erscheint als ●○○. Alles danach steht zusammengefasst als `❓ Noch nicht erzählt …` da.
+- Kurz vor "Heute" stehen die Lösungen: `💔→🌱 Verarbeitet: Erlebte die Trennung der Eltern.`, bei Christen gefolgt von `✝️🕊️ Kam zum Glauben.` und den "Als Christ"-Einträgen.

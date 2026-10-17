@@ -4324,15 +4324,18 @@ class _DialogTabBar extends StatelessWidget {
   }
 }
 
-/// The NPC's life as one continuous emoji timeline, from 👶 to today
-/// (docs/game_design/npc_backstory.md v5). Revealed up to the earliest
-/// unresolved challenge – what lies beyond stays ❓ until the player has
-/// talked their way there. Worked-through challenges reappear at the end
-/// as "→🌱" entries: the solution becomes part of the life story.
+/// The NPC's life as a CV-style list, one sentence per line: birth at the
+/// top, today at the bottom (docs/game_design/npc_backstory.md v5.1).
+/// Revealed up to the earliest unresolved challenge – what lies beyond
+/// stays "not told yet" until the player has talked their way there.
+/// Worked-through challenges reappear just before "today" as "→🌱"
+/// lines: the solution becomes part of the life story.
 class _NpcLifeTimeline extends StatelessWidget {
   final NPCModel model;
 
   const _NpcLifeTimeline({required this.model});
+
+  static String _sentence(OccurredEvent o) => AppStrings.get('life.${o.event.id}');
 
   @override
   Widget build(BuildContext context) {
@@ -4340,7 +4343,9 @@ class _NpcLifeTimeline extends StatelessWidget {
     final current = backstory.currentChallenge;
     final revealed = backstory.revealedCount;
 
-    final life = <Widget>[const _LifeChip(glyph: '👶')];
+    final rows = <Widget>[
+      _LifeLine(age: 0, glyph: '👶', text: AppStrings.get('life.birth')),
+    ];
     var hidden = 0;
     for (var i = 0; i < backstory.events.length; i++) {
       final o = backstory.events[i];
@@ -4349,62 +4354,59 @@ class _NpcLifeTimeline extends StatelessWidget {
         hidden++;
         continue;
       }
-      life.add(_LifeChip(
-        glyph: o.event.glyph,
+      rows.add(_LifeLine(
         age: o.age,
+        glyph: o.event.glyph,
+        text: _sentence(o),
         isCurrent: o == current,
         progress: o == current ? o.workProgress : null,
         faded: o.event.isNegative && o.processed,
       ));
     }
-    if (hidden > 0) life.add(_LifeChip(glyph: '❓' * hidden.clamp(1, 3)));
+    if (hidden > 0) {
+      rows.add(_LifeLine(glyph: '❓', text: AppStrings.get('life.hidden'), faded: true));
+    }
 
-    final later = <Widget>[
-      for (final o in backstory.resolvedChallenges)
-        if (o.phase != LifePhase.christ) _LifeChip(glyph: '${o.event.glyph}→🌱'),
-      if (model.isConverted) const _LifeChip(glyph: '✝️🕊️'),
-      for (final o in backstory.events)
-        if (o.phase == LifePhase.christ)
-          _LifeChip(
-            glyph: o.displayGlyph,
-            isCurrent: o == current,
-            progress: o == current ? o.workProgress : null,
-          ),
-    ];
+    // Recent life: what the pastor helped resolve, faith, then today.
+    for (final o in backstory.resolvedChallenges) {
+      if (o.phase == LifePhase.christ) continue;
+      rows.add(_LifeLine(
+        glyph: '${o.event.glyph}→🌱',
+        text: '${AppStrings.get('life.resolved')} ${_sentence(o)}',
+      ));
+    }
+    if (model.isConverted) {
+      rows.add(_LifeLine(glyph: '✝️🕊️', text: AppStrings.get('life.converted')));
+    }
+    for (final o in backstory.events) {
+      if (o.phase != LifePhase.christ) continue;
+      rows.add(_LifeLine(
+        glyph: o.displayGlyph,
+        text: _sentence(o),
+        isCurrent: o == current,
+        progress: o == current ? o.workProgress : null,
+      ));
+    }
+    rows.add(_LifeLine(age: backstory.age, glyph: '📍', text: AppStrings.get('life.today')));
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(spacing: 4, runSpacing: 4, children: life),
-          if (later.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              '🌱 ${backstory.age}',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
-            ),
-            const SizedBox(height: 2),
-            Wrap(spacing: 4, runSpacing: 4, children: later),
-          ],
-        ],
-      ),
-    );
+    return ListView(children: rows);
   }
 }
 
-/// One entry of [_NpcLifeTimeline]: glyph, optionally the age it happened
-/// at, highlighted (with ●○○ progress) when it is the challenge the next
-/// 🗣️ works on.
-class _LifeChip extends StatelessWidget {
-  final String glyph;
+/// One line of [_NpcLifeTimeline]: age · glyph · sentence, highlighted
+/// (with ●○○ progress) when it is the challenge the next 🗣️ works on.
+class _LifeLine extends StatelessWidget {
   final int? age;
+  final String glyph;
+  final String text;
   final bool isCurrent;
   final int? progress;
   final bool faded;
 
-  const _LifeChip({
-    required this.glyph,
+  const _LifeLine({
     this.age,
+    required this.glyph,
+    required this.text,
     this.isCurrent = false,
     this.progress,
     this.faded = false,
@@ -4413,27 +4415,40 @@ class _LifeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Opacity(
-      opacity: faded ? 0.45 : 1.0,
+      opacity: faded ? 0.5 : 1.0,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(
-          color: isCurrent ? Colors.amber.withValues(alpha: 0.25) : Colors.black26,
-          borderRadius: BorderRadius.circular(10),
+          color: isCurrent ? Colors.amber.withValues(alpha: 0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
           border: isCurrent ? Border.all(color: Colors.amber, width: 1) : null,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            Text(glyph, style: const TextStyle(fontSize: 18)),
-            if (age != null)
-              Text(
-                '$age',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9),
+            SizedBox(
+              width: 26,
+              child: Text(
+                age == null ? '' : '$age',
+                textAlign: TextAlign.right,
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
               ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 48,
+              child: Text(glyph, style: const TextStyle(fontSize: 16)),
+            ),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ),
             if (progress != null)
               Text(
                 '●' * progress! + '○' * (OccurredEvent.workRequired - progress!),
-                style: const TextStyle(color: Colors.amber, fontSize: 8),
+                style: const TextStyle(color: Colors.amber, fontSize: 10),
               ),
           ],
         ),

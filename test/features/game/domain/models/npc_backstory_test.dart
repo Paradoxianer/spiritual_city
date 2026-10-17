@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiritual_city/src/core/i18n/app_strings.dart';
 import 'package:spiritual_city/src/features/game/domain/models/npc_backstory.dart';
 
 void main() {
@@ -575,6 +576,19 @@ void main() {
       expect(b.fullyResolved, isTrue);
       expect(b.revealedCount, b.events.length);
       expect(b.workOnCurrent('npc_full', isConverted: true).completed, isFalse);
+    });
+  });
+
+  group('v5.1 Lebenslauf sentences', () {
+    test('every catalog event has a sentence in DE and EN', () {
+      for (final lang in ['de', 'en']) {
+        AppStrings.setLanguage(lang);
+        for (final e in [...kLifeEventCatalog, ...kChristPhaseCatalog]) {
+          final key = 'life.${e.id}';
+          expect(AppStrings.get(key), isNot(key), reason: '$lang: ${e.id}');
+        }
+      }
+      AppStrings.setLanguage('de');
     });
   });
 }
