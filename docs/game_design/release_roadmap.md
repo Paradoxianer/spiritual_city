@@ -1,6 +1,6 @@
 # Release-Weg: Redesign, Spielspaß, nächste Features
 
-**Status: Vorschlag zur Abstimmung.** Klammer über `core_loop_and_retention.md` (Warum), `mobile_ui.md` (Touch-Regeln) und die Feature-Dokumente. Dieses Dokument legt fest, **in welcher Reihenfolge** wir bis zum Release vorgehen und **was** wir dafür in Code und Design grundsätzlich ändern.
+**Status: abgestimmt (2026-10-17), Entscheidungen in §5.** Klammer über `core_loop_and_retention.md` (Warum), `mobile_ui.md` (Touch-Regeln) und die Feature-Dokumente. Dieses Dokument legt fest, **in welcher Reihenfolge** wir bis zum Release vorgehen und **was** wir dafür in Code und Design grundsätzlich ändern.
 
 ---
 
@@ -90,7 +90,9 @@ Jeder Schritt ist ein eigener PR mit grünen Tests und ohne Änderung an der Spi
 
 Drei Hebel, alle auf vorhandenen Systemen aufgebaut, nichts völlig Neues.
 
-### 3.1 Menschen statt Zähler: Wunden verbinden die zwei Welten
+### 3.1 ~~Wunden verbinden die zwei Welten~~ (abgelehnt, siehe §5)
+
+> Entscheidung: Dämonen bleiben unabhängig von den Lebensgeschichten. Die Dämonentypen (#178) und Besessenheit (#180) folgen `daemons_and_combat.md` bzw. `npc_influence.md`. Der ursprüngliche Vorschlag bleibt hier zur Nachvollziehbarkeit stehen.
 
 Die Lebensgeschichte wird zum Scharnier zwischen realer und unsichtbarer Welt:
 
@@ -114,7 +116,7 @@ So hat jeder Kampf ein Gesicht und jedes Gespräch eine Auswirkung im Kampf. Das
 
 ### 3.4 Vereinfachung, damit das Wesentliche zählt
 
-- **Vorschlag: Versorgung und Gesundheit zu einer Ressource "Kraft ❤️" zusammenlegen.** Essen und Schlafen füllen beide Kraft auf. Dann bleibt **Glaube 🙏** die klare Hauptressource, **Kraft ❤️** die Ausdauer, **Vorräte 📦** das Material und **Erkenntnis 📖** der Fortschritt. Das sind vier statt fünf Werte und weniger Pflege-Arbeit. Dämonen bleiben gefährlich: Ihr Treffer kostet Kraft und Glauben.
+- ~~**Vorschlag: Versorgung und Gesundheit zu einer Ressource "Kraft ❤️" zusammenlegen.**~~ *Abgelehnt: Die fünf Ressourcen bleiben getrennt.* Ursprünglicher Vorschlag: Essen und Schlafen füllen beide Kraft auf. Dann bleibt **Glaube 🙏** die klare Hauptressource, **Kraft ❤️** die Ausdauer, **Vorräte 📦** das Material und **Erkenntnis 📖** der Fortschritt. Das sind vier statt fünf Werte und weniger Pflege-Arbeit. Dämonen bleiben gefährlich: Ihr Treffer kostet Kraft und Glauben.
 - Spür-Feedback bei jeder Aktion (Säule 1): Sound (#10), Partikel, Haptik auf dem Handy.
 
 ---
@@ -124,8 +126,8 @@ So hat jeder Kampf ein Gesicht und jedes Gespräch eine Auswirkung im Kampf. Das
 | Meilenstein | Inhalt | Issues |
 | :--- | :--- | :--- |
 | **M0 – Spielbar auf dem Handy** | PR #184 nach Test mergen (Touch-HUD, Zurück-Taste, Seed, Save-Bugs, Varianz, Lebensgeschichten) | #162 #170 #171 #174–#177 |
-| **M1 – Einfach & konsistent** | Redesign §2 (Aktions-Modell, `ActionButton`, `OverlayShell`, Dateien aufteilen), Ressourcen-Vereinfachung §3.4, Tutorial anpassen | #185 #83 #126 #92 |
-| **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Wunden-Dämonen §3.1, Stadtteil-Erweckung + Bollwerk, Tagesbilanz §3.3 | #178 #180 #125 #169 #143 |
+| **M1 – Einfach & konsistent** | Redesign §2 (Aktions-Modell, `ActionButton`, `OverlayShell`, Dateien aufteilen), Tutorial anpassen | #185 #83 #126 #92 |
+| **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Stadtteil-Erweckung + Bollwerk, Tag + Tagesbilanz §3.3 | #178 #180 #125 #169 #143 |
 | **M3 – Gemeinde** | Rollen, verwundeter Heiler §3.2, Gemeinde-Übersicht, Predigen, Fähigkeiten pro Stufe | #181 #172 #179 #173 |
 | **M4 – Release 1.0** | Grafik (Sprites, Distrikt-Identität, Innenräume), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 |
 | **Nach 1.0** | Cloud-Speicher, reale Städte (OSM), dezente Werbung, Minimap | #165 #166 #128 #164 #146 |
@@ -134,9 +136,10 @@ So hat jeder Kampf ein Gesicht und jedes Gespräch eine Auswirkung im Kampf. Das
 
 ---
 
-## 5. Offene Entscheidungen
+## 5. Entscheidungen (2026-10-17)
 
-1. Versorgung + Gesundheit zu **Kraft** zusammenlegen? (Empfehlung: ja)
-2. **Tag als Session-Einheit** mit Tagesbilanz? (Empfehlung: ja, schlafen beendet den Tag, kein Echtzeit-Druck)
-3. **Wunden erzeugen Dämonen** als Leitidee für #178/#180? (Empfehlung: ja)
-4. Mit M1 direkt starten, bevor #184 gemergt ist? (Empfehlung: erst mergen, dann M1 auf frischem `main`, damit der Umbau nicht auf einem 30-Commit-Branch stapelt)
+1. Versorgung + Gesundheit zusammenlegen: **Nein**, die fünf Ressourcen bleiben getrennt.
+2. Tag als Session-Einheit mit Tagesbilanz: **Ja.** Schlafen beendet den Tag, kein Echtzeit-Druck. Teil von M2.
+3. Wunden erzeugen Dämonen: **Nein**, Dämonen bleiben unabhängig von den Lebensgeschichten.
+4. Start: **Erst PR #184 nach Test mergen**, dann M1 auf frischem `main`.
+5. Dämonen bleiben gefährlich: Ihr Schaden wird nicht abgeschwächt (Rücknahme in `b4df08c`).
