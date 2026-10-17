@@ -55,6 +55,17 @@ class BuildingInteractionService {
 
   BuildingInteractionService({Random? rng}) : _rng = rng ?? Random();
 
+  /// Average NPC-backstory wealth modifier across [building]'s residents
+  /// (docs/game_design/npc_backstory.md §6) – nudges an existing donation
+  /// chance up or down, without any persistent NPC materials balance.
+  /// `0.0` for a building with no residents.
+  double _wealthModifier(BuildingModel building) {
+    if (building.residents.isEmpty) return 0.0;
+    final total = building.residents
+        .fold(0.0, (sum, npc) => sum + npc.backstory.wealthModifier);
+    return total / building.residents.length;
+  }
+
   // ── Access control ────────────────────────────────────────────────────────
 
   /// Returns `true` when the player is allowed to enter [building].
@@ -141,6 +152,16 @@ class BuildingInteractionService {
   static const int pastorHouseSleepSeconds = 8;
   static const int pastorHousePraySeconds = 5;
 
+  // Faith is the pastor's central resource and the pastor house / church
+  // are where it is refilled – so these give a lot and cost no Health
+  // (user feedback: Health had become about as important as Faith because
+  // even the spiritual home actions drained it).
+  static const double pastorHouseReadBibleFaith = 40.0;
+  static const double pastorHousePrayFaith = 30.0;
+  static const double worshipFaithPerSecond = 8.0;
+  static const double sundayServiceFaith = 40.0;
+  static const double sundayServiceHealthCost = 25.0;
+
   BuildingInteractionResult _pastorHouseAction(
     String actionType,
     BuildingModel building,
@@ -152,8 +173,7 @@ class BuildingInteractionService {
       case 'readBible':
         building.applyInfluence(8.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: 20.0,
-          playerHealthDelta: -5.0,
+          playerFaithDelta: pastorHouseReadBibleFaith,
           reactionEmoji: '📖✝️',
           actionDurationSeconds: pastorHouseReadBibleSeconds,
         );
@@ -174,8 +194,7 @@ class BuildingInteractionService {
         // Faith gain + massive area spiritual influence (handled in game layer).
         building.applyInfluence(10.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: 15.0,
-          playerHealthDelta: -5.0,
+          playerFaithDelta: pastorHousePrayFaith,
           reactionEmoji: '🙏🕊️',
           actionDurationSeconds: pastorHousePraySeconds,
         );
@@ -233,7 +252,8 @@ class BuildingInteractionService {
           );
         }
         building.interactionCount++;
-        final hasDonation = _rng.nextDouble() < 0.45;
+        final donationChance = (0.45 + _wealthModifier(building)).clamp(0.05, 0.9);
+        final hasDonation = _rng.nextDouble() < donationChance;
         if (hasDonation) {
           building.interactionCount += 4;
           final materials = (building.interactionCount * 0.5).clamp(3.0, 20.0);
@@ -341,7 +361,8 @@ class BuildingInteractionService {
         }
         building.interactionCount++;
         final faithScore = building.faith + building.interactionCount;
-        final successChance = (faithScore / 200.0 + 0.2).clamp(0.0, 0.9);
+        final successChance = (faithScore / 200.0 + 0.2 + _wealthModifier(building))
+            .clamp(0.0, 0.9);
         if (_rng.nextDouble() < successChance) {
           building.interactionCount += 4;
           final materials = 15.0 + _rng.nextDouble() * 25.0;
@@ -380,25 +401,35 @@ class BuildingInteractionService {
     BuildingModel building,
   ) {
     switch (actionType) {
-      // ── Gottesdienst: (Sonntag), -80% Materials, -60% Health → massiver AOE
+      // ── Gottesdienst: -50 Materials, etwas Kraft → massiver AOE und viel
+      //    Glauben für den Pastor (früher −60 ❤️ ohne Glaubensgewinn)
       case 'sundayService':
         building.interactionCount++;
         building.applyInfluence(80.0);
         building.influenceResidents(50.0);
         return const BuildingInteractionResult(
           playerMaterialsDelta: -50.0,
-          playerHealthDelta: -60.0,
+          playerHealthDelta: -sundayServiceHealthCost,
+          playerFaithDelta: sundayServiceFaith,
           reactionEmoji: '⛪🎹🔥🙌🕊️',
           actionDurationSeconds: sundayServiceSeconds,
         );
 
-      // ── Anbetung/Gebet: Zeit → Faith regeneriert (+3/Sek beim Pastor), Kirche gestärkt
+      // ── Anbetung/Gebet: Zeit → Faith regeneriert (+8/Sek beim Pastor, früher
+      //    3/Sek), Kirche gestärkt
+      //
+      // Issue #144: the pastor's regen already matched building_actions.md's
+      // spec exactly (+3/sec), but the church's own faith gain (20) was weak
+      // relative to a church's 50-faith starting value – worship barely
+      // moved it.  Tripled (20 → 60, 15 → 45 for residents) so a couple of
+      // worship sessions can visibly sanctify a church, matching "Anbetung
+      // sollte massiv mehr die faith ... der Kirche stärken" from the issue.
       case 'worship':
         building.interactionCount++;
-        building.applyInfluence(20.0);
-        building.influenceResidents(15.0);
+        building.applyInfluence(60.0);
+        building.influenceResidents(45.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: worshipSeconds * 3.0,
+          playerFaithDelta: worshipSeconds * worshipFaithPerSecond,
           reactionEmoji: '🤲🙏🕊️🙌',
           actionDurationSeconds: worshipSeconds,
         );

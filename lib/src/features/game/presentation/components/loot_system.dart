@@ -278,19 +278,24 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   /// Probability (0–1) that a newly-spawned pickup is an insight loot instead
   /// of a material pickup.  Insight loot gives a random reward in
   /// [[insightRewardMin]..[insightRewardMax]] on collection and grants *no* materials.
-  static const double insightChance = 0.20;
+  ///
+  /// Issue #141: "loots should return insight occasionally ... ranging von
+  /// 0.5 up to 5 ... but only verry seldom".  5 % (1 in 20 pickups) – kept
+  /// well under a "usually" chance since insight is meant as a rare bonus,
+  /// not routine income.
+  static const double insightChance = 0.05;
 
-  /// Minimum insight awarded by an insight-loot pickup.
-  static const double insightRewardMin = 0.1;
+  /// Minimum insight awarded by an insight-loot pickup (Issue #141: 0.5).
+  static const double insightRewardMin = 0.5;
 
-  /// Maximum insight awarded by an insight-loot pickup (rare).
-  static const double insightRewardMax = 1.0;
+  /// Maximum insight awarded by an insight-loot pickup (rare; Issue #141: 5).
+  static const double insightRewardMax = 5.0;
 
   /// Returns a random insight reward in [[insightRewardMin]..[insightRewardMax]].
   ///
   /// Uses a squared distribution so small values (≈ [insightRewardMin]) are
   /// common and large values (≈ [insightRewardMax]) are rare.
-  double _rollInsightReward() {
+  double rollInsightReward() {
     final x = _rng.nextDouble(); // uniform [0, 1)
     final raw = insightRewardMin + x * x * (insightRewardMax - insightRewardMin);
     return (raw * 10).round() / 10; // round to 1 decimal place
@@ -323,7 +328,7 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
 
     if (p.isInsight) {
       // Insight pickup: grants spiritual insight instead of materials.
-      final reward = _rollInsightReward();
+      final reward = rollInsightReward();
       game.progress.addInsight(reward);
       _log.info(
         '[LootSystem] collected $kInsightPickupEmoji (+${reward.toStringAsFixed(1)} insight) '

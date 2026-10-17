@@ -68,9 +68,13 @@ void main() {
       expect(set.radius, closeTo(1.0 + 3 * kCombatUpgradeStep, 0.0001));
     });
 
-    test('level 10 gives 2.0 radius multiplier', () {
+    test('level 10 gives the expected radius multiplier', () {
+      // Was a hardcoded 2.0 when kCombatUpgradeStep was 0.1; kept symbolic
+      // now that it's 0.08 (per-level boost reduced on user feedback, see
+      // prayer_combat.dart) so this test doesn't need updating again on the
+      // next balance tweak.
       final set = CombatModifierSet(radiusLevel: 10);
-      expect(set.radius, closeTo(2.0, 0.0001));
+      expect(set.radius, closeTo(1.0 + 10 * kCombatUpgradeStep, 0.0001));
     });
 
     test('toJson round-trips via fromJson', () {

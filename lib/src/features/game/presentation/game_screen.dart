@@ -12,6 +12,8 @@ import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
+import '../domain/models/npc_backstory.dart';
+import 'components/npc_component.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/models/prayer_combat.dart';
@@ -69,7 +71,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// Captures the current game state, persists it to Hive and returns to the
-  /// main menu.
+  /// main menu.  Used by the pause menu's "Save & Quit".
   Future<void> _saveAndQuit() async {
     final save = _game.gameSave;
     if (save == null) {
@@ -88,10 +90,35 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  /// Captures and persists the current game state without leaving the game.
+  /// Used by the pause menu's "Save" button.
+  Future<void> _saveOnly() async {
+    final save = _game.gameSave;
+    if (save == null) return;
+    setState(() => _isSaving = true);
+    try {
+      final state = _game.captureGameState();
+      await getIt<MenuService>().updateSaveState(save.id, state);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
+    return PopScope(
+      // There is nothing to pop – /game replaces the router stack – so the
+      // Android/desktop back gesture must never be allowed to fall through
+      // to the OS (which would silently kill the app with unsaved progress,
+      // Issue #162).  It is routed into the game's own escape handling
+      // instead, which closes overlays first and opens the pause menu.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _game.handleEscape();
+      },
+      child: Scaffold(
+        body: Stack(
         children: [
           GameWidget(
             game: _game,
@@ -104,6 +131,12 @@ class _GameScreenState extends State<GameScreen> {
                   MissionBoardOverlay(game: _game),
               'KeymapOverlay': (context, game) =>
                   KeymapOverlay(game: _game),
+              'PauseMenuOverlay': (context, game) => PauseMenuOverlay(
+                    game: _game,
+                    isSaving: _isSaving,
+                    onSave: _saveOnly,
+                    onSaveAndQuit: _saveAndQuit,
+                  ),
             },
           ),
           // Loading overlay – shown until the world is ready
@@ -114,7 +147,10 @@ class _GameScreenState extends State<GameScreen> {
               return const _LoadingOverlay();
             },
           ),
-          // Close (save & quit) button – only shown when the world is ready.
+          // Pause button – the single entry point for Help, Save and
+          // Save & Quit (Issue #162 / #174).  Replaces the former separate
+          // "X" (save & quit) and "?" (help) buttons, which overlapped the
+          // combat HUD buttons in the same corner.
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
@@ -124,8 +160,8 @@ class _GameScreenState extends State<GameScreen> {
                 right: 12,
                 child: SafeArea(
                   child: IconButton(
-                    onPressed: _isSaving ? null : _saveAndQuit,
-                    tooltip: AppStrings.get('game.saveQuit'),
+                    onPressed: _isSaving ? null : _game.openPauseMenu,
+                    tooltip: AppStrings.get('game.pause.button'),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.black54,
                       foregroundColor: Colors.white70,
@@ -133,32 +169,7 @@ class _GameScreenState extends State<GameScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: const Icon(Icons.close),
-                  ),
-                ),
-              );
-            },
-          ),
-          // Keymap help button – small "?" icon, bottom-right, only when world is ready.
-          ValueListenableBuilder<bool>(
-            valueListenable: _game.isWorldReady,
-            builder: (context, isReady, _) {
-              if (!isReady) return const SizedBox.shrink();
-              return Positioned(
-                bottom: 12,
-                right: 12,
-                child: SafeArea(
-                  child: IconButton(
-                    onPressed: _game.toggleKeymapOverlay,
-                    tooltip: 'Tastenbelegung (F1 / ?)',
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black54,
-                      foregroundColor: Colors.white70,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.help_outline),
+                    icon: const Icon(Icons.pause),
                   ),
                 ),
               );
@@ -274,6 +285,7 @@ class _GameScreenState extends State<GameScreen> {
             },
           ),
         ],
+        ),
       ),
     );
   }
@@ -548,6 +560,9 @@ class _DialogOverlayState extends State<DialogOverlay> {
     _scrollToBottom();
   }
 
+  /// Which tab of the dialog is shown: the chat (💬) or the life story (📜).
+  bool _showLifeTab = false;
+
   void _handleInteraction(String type, String emoji) {
     if (_isWaiting || _isSessionOver || _isReadingBible) return;
 
@@ -777,14 +792,33 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       color: const Color(0xFFECE5DD).withValues(alpha: 0.1),
-                      child: Scrollbar(
-                        controller: _scrollController,
-                        thumbVisibility: true,
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) => _ChatBubble(message: _messages[index]),
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _DialogTabBar(
+                            showLifeTab: _showLifeTab,
+                            onSelect: (life) => setState(() => _showLifeTab = life),
+                          ),
+                          const SizedBox(height: 6),
+                          Expanded(
+                            child: _showLifeTab
+                                ? _NpcLifeTimeline(model: model)
+                                : Scrollbar(
+                                    controller: _scrollController,
+                                    thumbVisibility: true,
+                                    child: ListView.builder(
+                                      controller: _scrollController,
+                                      itemCount: _messages.length,
+                                      itemBuilder: (context, index) =>
+                                          _ChatBubble(message: _messages[index]),
+                                    ),
+                                  ),
+                          ),
+                          // The chat is hidden in the life tab, so its last
+                          // reaction stays visible there.
+                          if (_showLifeTab && _messages.isNotEmpty)
+                            _ChatBubble(message: _messages.last),
+                        ],
                       ),
                     ),
                   ),
@@ -824,6 +858,13 @@ class _DialogOverlayState extends State<DialogOverlay> {
                           const Text('📖', style: TextStyle(fontSize: 20)),
                         ],
                       )
+                    // ── Life tab: one action – talk about the next challenge ──
+                    : _showLifeTab
+                        ? _LifeTalkButton(
+                            model: model,
+                            game: widget.game,
+                            onTap: () => _handleInteraction('lifetalk', '🗣️'),
+                          )
                     // ── Normal action chips ────────────────────────────────────
                     : Builder(builder: (context) {
                         // Compute resource costs once for disabled-state checks.
@@ -1962,6 +2003,152 @@ class _MissionProgressBar extends StatelessWidget {
   }
 }
 
+// ── Pause Menu Overlay (Issue #162 / #174) ──────────────────────────────────
+
+/// Full-screen pause menu – the single place to reach Help, Save and
+/// Save & Quit.  Opened via the pause button (top-right), the Escape key or
+/// the Android/desktop back gesture (see [GameScreen]'s `PopScope`).
+class PauseMenuOverlay extends StatelessWidget {
+  final SpiritWorldGame game;
+  final bool isSaving;
+  final Future<void> Function() onSave;
+  final Future<void> Function() onSaveAndQuit;
+
+  const PauseMenuOverlay({
+    super.key,
+    required this.game,
+    required this.isSaving,
+    required this.onSave,
+    required this.onSaveAndQuit,
+  });
+
+  Future<void> _confirmSaveAndQuit(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppStrings.get('game.pause.quitConfirm.title')),
+        content: Text(AppStrings.get('game.pause.quitConfirm.body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(AppStrings.get('game.pause.quitConfirm.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(AppStrings.get('game.pause.quitConfirm.confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await onSaveAndQuit();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Material(
+        type: MaterialType.transparency,
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.88),
+          child: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('⏸️', style: TextStyle(fontSize: 40)),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppStrings.get('game.pause.title'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _PauseMenuButton(
+                        icon: Icons.play_arrow,
+                        label: AppStrings.get('game.pause.resume'),
+                        onPressed: game.closePauseMenu,
+                        filled: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _PauseMenuButton(
+                        icon: Icons.save_outlined,
+                        label: AppStrings.get('game.pause.save'),
+                        onPressed: isSaving ? null : onSave,
+                      ),
+                      const SizedBox(height: 12),
+                      _PauseMenuButton(
+                        icon: Icons.help_outline,
+                        label: AppStrings.get('game.pause.help'),
+                        onPressed: () {
+                          game.closePauseMenu();
+                          game.openKeymapOverlay();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _PauseMenuButton(
+                        icon: Icons.logout,
+                        label: AppStrings.get('game.pause.quit'),
+                        onPressed:
+                            isSaving ? null : () => _confirmSaveAndQuit(context),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single full-width row in the [PauseMenuOverlay], sized generously for
+/// touch (Issue #174: touch targets ≥ 48 dp).
+class _PauseMenuButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final FutureOr<void> Function()? onPressed;
+  final bool filled;
+
+  const _PauseMenuButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = (filled ? FilledButton.styleFrom : OutlinedButton.styleFrom)(
+      minimumSize: const Size.fromHeight(52),
+      foregroundColor: filled ? null : Colors.white,
+      side: filled ? null : const BorderSide(color: Colors.white38),
+    );
+    final child = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: 10),
+        Text(label, style: const TextStyle(fontSize: 16)),
+      ],
+    );
+    return SizedBox(
+      width: double.infinity,
+      child: filled
+          ? FilledButton(onPressed: onPressed, style: style, child: child)
+          : OutlinedButton(onPressed: onPressed, style: style, child: child),
+    );
+  }
+}
+
 // ── Keymap Overlay ─────────────────────────────────────────────────────────────
 
 /// Full-screen overlay that displays all keyboard shortcuts grouped by
@@ -2364,9 +2551,10 @@ class _ConversionCounterState extends State<_ConversionCounter>
 
   @override
   Widget build(BuildContext context) {
-    final converted = widget.gameRef.chunkManager.allNPCModels
-        .where((m) => m.isConverted)
-        .length;
+    // Issue #170: use the game's merged live+saved count so the number does
+    // not visibly drop after loading a save, before the player has walked
+    // back through every previously-visited chunk this session.
+    final converted = widget.gameRef.knownChristianCount;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -3374,10 +3562,10 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       // ── Pastor's house ─────────────────────────────────────────────────
       case BuildingType.pastorHouse:
         rows = [
-          _ActionMenuRow(leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+20', tooltip: 'Bibel lesen', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('readBible')),
+          _ActionMenuRow(leadingEmoji: '📖', arrowText: '↔', trailingEmoji: '🙏+40', tooltip: 'Bibel lesen', keyIndex: nk(), onTap: () => _performAction('readBible')),
           _ActionMenuRow(leadingEmoji: '🍽️', arrowText: '→', trailingEmoji: '🍞+50', tooltip: 'Essen', keyIndex: nk(), onTap: () => _performAction('eat')),
           _ActionMenuRow(leadingEmoji: '😴', arrowText: '→', trailingEmoji: '❤️+50', tooltip: 'Schlafen', keyIndex: nk(), onTap: () => _performAction('sleep')),
-          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🕊️+15', tooltip: 'Beten', keyIndex: nk(), isDisabled: g.health <= 5, onTap: () => _performAction('pray')),
+          _ActionMenuRow(leadingEmoji: '🙏', arrowText: '↔', trailingEmoji: '🙏+30', tooltip: 'Beten', keyIndex: nk(), onTap: () => _performAction('pray')),
           _ActionMenuRow(leadingEmoji: '📋', arrowText: '→', trailingEmoji: '📜', tooltip: 'Missionen', keyIndex: nk(), onTap: () => _performAction('missions')),
         ];
 
@@ -3404,7 +3592,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay>
       case BuildingType.church:
       case BuildingType.cathedral:
         rows = [
-          _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−50💰−60❤️→', trailingEmoji: '🔥AOE', tooltip: 'Gottesdienst', keyIndex: nk(), isDisabled: g.materials < 50 || g.health < 60, onTap: () => _performAction('sundayService')),
+          _ActionMenuRow(leadingEmoji: '⛪', arrowText: '−50💰−25❤️→', trailingEmoji: '🙏+40🔥', tooltip: 'Gottesdienst', keyIndex: nk(), isDisabled: g.materials < 50 || g.health <= 25, onTap: () => _performAction('sundayService')),
           _ActionMenuRow(leadingEmoji: '🤲', arrowText: '⏱→', trailingEmoji: '+🙏/Sek', tooltip: 'Anbetung', keyIndex: nk(), onTap: () => _performAction('worship')),
         ];
 
@@ -4101,6 +4289,184 @@ class _SessionDotsRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Two-tab switch at the top of the NPC dialog: 💬 (chat + actions) and 📜
+/// (life story with the single 🗣️ life-talk action).
+class _DialogTabBar extends StatelessWidget {
+  final bool showLifeTab;
+  final void Function(bool life) onSelect;
+
+  const _DialogTabBar({required this.showLifeTab, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tab(String emoji, bool life) {
+      final selected = showLifeTab == life;
+      return GestureDetector(
+        onTap: () => onSelect(life),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white24 : Colors.black26,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(emoji, style: const TextStyle(fontSize: 18)),
+        ),
+      );
+    }
+
+    return Row(
+      children: [tab('💬', false), const SizedBox(width: 6), tab('📜', true)],
+    );
+  }
+}
+
+/// The NPC's life as a CV-style list, one emoji "sentence" per line: birth
+/// at the top, today at the bottom (docs/game_design/npc_backstory.md v5.2).
+/// No text – emoji only, so nothing needs localising.
+/// Revealed up to the earliest unresolved challenge – what lies beyond
+/// stays "not told yet" until the player has talked their way there.
+/// Worked-through challenges reappear just before "today" as "→🌱"
+/// lines: the solution becomes part of the life story.
+class _NpcLifeTimeline extends StatelessWidget {
+  final NPCModel model;
+
+  const _NpcLifeTimeline({required this.model});
+
+
+  @override
+  Widget build(BuildContext context) {
+    final backstory = model.backstory;
+    final current = backstory.currentChallenge;
+    final revealed = backstory.revealedCount;
+
+    final rows = <Widget>[
+      const _LifeLine(age: 0, story: '👶🎉'),
+    ];
+    var hidden = 0;
+    for (var i = 0; i < backstory.events.length; i++) {
+      final o = backstory.events[i];
+      if (o.phase == LifePhase.christ) continue;
+      if (i >= revealed) {
+        hidden++;
+        continue;
+      }
+      rows.add(_LifeLine(
+        age: o.age,
+        story: o.event.story,
+        isCurrent: o == current,
+        progress: o == current ? o.workProgress : null,
+        faded: o.event.isNegative && o.processed,
+      ));
+    }
+    if (hidden > 0) {
+      rows.add(const _LifeLine(story: '❓❓❓', faded: true));
+    }
+
+    // Recent life: what the pastor helped resolve, faith, then today.
+    for (final o in backstory.resolvedChallenges) {
+      if (o.phase == LifePhase.christ) continue;
+      rows.add(_LifeLine(story: '${o.event.glyph}➡️🌱'));
+    }
+    if (model.isConverted) {
+      rows.add(const _LifeLine(story: '🙏✝️🕊️'));
+    }
+    for (final o in backstory.events) {
+      if (o.phase != LifePhase.christ) continue;
+      rows.add(_LifeLine(
+        story: o.event.story,
+        isCurrent: o == current,
+        progress: o == current ? o.workProgress : null,
+      ));
+    }
+    rows.add(_LifeLine(age: backstory.age, story: '📍'));
+
+    return ListView(children: rows);
+  }
+}
+
+/// One line of [_NpcLifeTimeline]: age · emoji sentence, highlighted
+/// (with ●○○ progress) when it is the challenge the next 🗣️ works on.
+class _LifeLine extends StatelessWidget {
+  final int? age;
+  final String story;
+  final bool isCurrent;
+  final int? progress;
+  final bool faded;
+
+  const _LifeLine({
+    this.age,
+    required this.story,
+    this.isCurrent = false,
+    this.progress,
+    this.faded = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: faded ? 0.5 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: isCurrent ? Colors.amber.withValues(alpha: 0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: isCurrent ? Border.all(color: Colors.amber, width: 1) : null,
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 26,
+              child: Text(
+                age == null ? '' : '$age',
+                textAlign: TextAlign.right,
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(story, style: const TextStyle(fontSize: 18)),
+            ),
+            if (progress != null)
+              Text(
+                '●' * progress! + '○' * (OccurredEvent.workRequired - progress!),
+                style: const TextStyle(color: Colors.amber, fontSize: 10),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The life tab's only action: talk about the next challenge (🗣️ + its
+/// glyph). A normal session interaction – uses a session point like 💬/👂.
+class _LifeTalkButton extends StatelessWidget {
+  final NPCModel model;
+  final SpiritWorldGame game;
+  final VoidCallback onTap;
+
+  const _LifeTalkButton({required this.model, required this.game, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final current = model.backstory.currentChallenge;
+    if (current == null) {
+      return const Center(child: Text('🌱✨', style: TextStyle(fontSize: 20)));
+    }
+    final affordable = game.health > NPCComponent.lifeTalkHealthCost &&
+        game.faith >= NPCComponent.lifeTalkFaithCost;
+    return Center(
+      child: _EmojiChip(
+        emoji: '🗣️${current.event.glyph}',
+        hint: '−❤️−🙏→🌱',
+        isDisabled: !affordable,
+        onTap: onTap,
+      ),
     );
   }
 }
@@ -5137,9 +5503,11 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay>
     if (!_visible) return const SizedBox.shrink();
 
     final game = widget.game;
-    final allNpcs = game.chunkManager.allNPCModels;
-    final convertedCount = allNpcs.where((n) => n.isChristian).length;
-    final totalNpcs = allNpcs.length;
+    // Issue #170: merged live+saved counts so the ratio is consistent
+    // (converted never exceeds total) and doesn't regress after a load.
+    final npcCounts = game.knownNpcCounts;
+    final convertedCount = npcCounts.converted;
+    final totalNpcs = npcCounts.total;
 
     int totalCells = 0;
     int positiveCells = 0;

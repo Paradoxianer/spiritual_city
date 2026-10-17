@@ -21,7 +21,7 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   final CityGrid grid;
   final CityGenerator generator;
   final PositionComponent target;
-  final NPCRegistry npcRegistry = NPCRegistry();
+  final NPCRegistry npcRegistry;
 
   final Map<String, ChunkComponent> _renderedChunks = {};
 
@@ -72,7 +72,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
     required this.grid,
     required this.generator,
     required this.target,
-  });
+    int? seed,
+  }) : npcRegistry = NPCRegistry(seed: seed);
 
   @override
   void update(double dt) {

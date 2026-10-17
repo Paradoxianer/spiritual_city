@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 // ── Upgrade constants (Issue #4) ─────────────────────────────────────────────
 
 /// Multiplier increase per upgrade level for attack modifiers.
-const double kCombatUpgradeStep = 0.1;
+///
+/// Reduced from 0.1 (user feedback, after adding several new Insight
+/// sources — backstory work, conversion, daemon kills — the per-level boost
+/// itself should come out a bit more moderate, so the extra income doesn't
+/// snowball into overwhelming power).
+const double kCombatUpgradeStep = 0.08;
 
 /// Damage reduction per shield upgrade level (capped at 0.8).
 const double kShieldDamageReductionPerLevel = 0.08;

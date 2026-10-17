@@ -6,6 +6,22 @@ import 'package:spiritual_city/src/features/game/domain/models/cell_object.dart'
 import 'package:spiritual_city/src/features/game/domain/models/npc_model.dart';
 import 'package:spiritual_city/src/features/game/domain/services/building_interaction_service.dart';
 
+/// Finds an NPC whose generated backstory (docs/game_design/npc_backstory.md)
+/// has a wealth modifier clearly on the requested side of zero.
+NPCModel _npcWithWealthModifier({required bool positive}) {
+  for (int i = 0; i < 3000; i++) {
+    final npc = NPCModel(
+      id: 'npc_wealth_test_$i',
+      name: 'n',
+      type: NPCType.citizen,
+      homePosition: Vector2.zero(),
+    );
+    final w = npc.backstory.wealthModifier;
+    if (positive ? w > 0.05 : w < -0.05) return npc;
+  }
+  fail('No NPC with the desired wealth modifier found in the scanned range');
+}
+
 void main() {
   // ── BuildingModel tests ──────────────────────────────────────────────────
 
@@ -337,6 +353,34 @@ void main() {
         expect(result.actionDurationSeconds, greaterThan(0));
       });
 
+      // Issue: NPC backstory (docs/game_design/npc_backstory.md §6) – the
+      // resident's generated money-category life events nudge the existing
+      // donation chance instead of needing a new NPC materials balance.
+      test('houseVisit: a resident with a wealthy backstory donates more '
+          'often on average than one with a struggling backstory', () {
+        double donationRateOver(NPCModel resident, {int trials = 500}) {
+          final b = BuildingModel(
+            buildingId: 'h',
+            type: BuildingType.house,
+            residents: [resident],
+          )..interactionCount = 6;
+          final service = BuildingInteractionService(rng: Random(1));
+          int donations = 0;
+          for (int i = 0; i < trials; i++) {
+            final result = service.performAction('houseVisit', b, 0.0);
+            if (result.playerMaterialsDelta > 0) donations++;
+          }
+          return donations / trials;
+        }
+
+        final wealthyRate =
+            donationRateOver(_npcWithWealthModifier(positive: true));
+        final strugglingRate =
+            donationRateOver(_npcWithWealthModifier(positive: false));
+
+        expect(wealthyRate, greaterThan(strugglingRate));
+      });
+
       test('discipleshipGroup: blocked without converted resident', () {
         final b = house();
         b.interactionCount = 25;
@@ -431,21 +475,24 @@ void main() {
     });
 
     group('performAction – church', () {
-      test('sundayService: −50 materials, −60 health, massive AOE influence', () {
+      test('sundayService: −50 materials, a little health, faith for the pastor, '
+          'massive AOE influence', () {
         final b = church();
         final result = BuildingInteractionService().performAction('sundayService', b, 0.0);
         expect(result.playerMaterialsDelta, -50.0);
-        expect(result.playerHealthDelta, -60.0);
+        expect(result.playerHealthDelta, -BuildingInteractionService.sundayServiceHealthCost);
+        expect(result.playerFaithDelta, BuildingInteractionService.sundayServiceFaith);
         expect(result.actionDurationSeconds, greaterThan(0));
         expect(b.faith, greaterThan(0));
       });
 
-      test('worship: faith gain is 3× duration (3/sec), timed', () {
+      test('worship: faith gain is worshipFaithPerSecond × duration, timed', () {
         final b = church();
         final result = BuildingInteractionService().performAction('worship', b, 0.0);
         expect(result.playerFaithDelta, greaterThan(0));
         expect(result.actionDurationSeconds, greaterThan(0));
-        expect(result.playerFaithDelta, closeTo(result.actionDurationSeconds * 3.0, 0.001));
+        expect(result.playerFaithDelta, closeTo(
+            result.actionDurationSeconds * BuildingInteractionService.worshipFaithPerSecond, 0.001));
         expect(b.faith, greaterThan(0));
       });
 
@@ -455,6 +502,24 @@ void main() {
         final b = BuildingModel(buildingId: 'c', type: BuildingType.cathedral, residents: [priest]);
         BuildingInteractionService().performAction('worship', b, 0.0);
         expect(priest.faith, greaterThan(0.0));
+      });
+
+      // Issue #144: "Anbetung sollte massiv mehr die faith ... der Kirche
+      // staerken" – worship used to add only +20 building / +15 resident
+      // faith, barely moving a church that starts at 50.
+      test('worship: strengthens the church itself by +60 faith', () {
+        final b = BuildingModel(buildingId: 'c', type: BuildingType.church, faith: 0.0);
+        BuildingInteractionService().performAction('worship', b, 0.0);
+        expect(b.faith, 60.0);
+      });
+
+      test('worship: strengthens residents by +45 faith each', () {
+        final priest = NPCModel(id: 'p', name: 'Pfarrer', type: NPCType.priest,
+            homePosition: Vector2.zero(), faith: 0.0);
+        final b = BuildingModel(
+            buildingId: 'c', type: BuildingType.church, residents: [priest]);
+        BuildingInteractionService().performAction('worship', b, 0.0);
+        expect(priest.faith, 45.0);
       });
     });
 
@@ -618,10 +683,10 @@ void main() {
         expect(BuildingModel(buildingId: 'ph', type: BuildingType.pastorHouse).isAlwaysOpen, isTrue);
       });
 
-      test('readBible: +20 faith, −5 health, has duration', () {
+      test('readBible: lots of faith, no health cost, has duration', () {
         final result = BuildingInteractionService().performAction('readBible', pastorHouse(), 0.0);
-        expect(result.playerFaithDelta, 20.0);
-        expect(result.playerHealthDelta, -5.0);
+        expect(result.playerFaithDelta, BuildingInteractionService.pastorHouseReadBibleFaith);
+        expect(result.playerHealthDelta, 0.0, reason: 'spiritual home actions cost no health');
         expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);
       });
@@ -641,10 +706,10 @@ void main() {
         expect(result.success, isTrue);
       });
 
-      test('pray: +15 faith, −5 health, has duration', () {
+      test('pray: lots of faith, no health cost, has duration', () {
         final result = BuildingInteractionService().performAction('pray', pastorHouse(), 0.0);
-        expect(result.playerFaithDelta, 15.0);
-        expect(result.playerHealthDelta, -5.0);
+        expect(result.playerFaithDelta, BuildingInteractionService.pastorHousePrayFaith);
+        expect(result.playerHealthDelta, 0.0, reason: 'spiritual home actions cost no health');
         expect(result.actionDurationSeconds, greaterThan(0));
         expect(result.success, isTrue);
       });

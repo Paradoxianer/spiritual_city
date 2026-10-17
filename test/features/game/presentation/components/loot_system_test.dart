@@ -132,21 +132,49 @@ void main() {
 
   // ── Insight loot constants ────────────────────────────────────────────────
 
-  group('LootSystem insight loot constants', () {
-    test('insightChance is 20 % (0.20) – probability a pickup is insight loot', () {
-      expect(LootSystem.insightChance, closeTo(0.20, 0.0001));
+  group('LootSystem insight loot constants (Issue #141)', () {
+    test('insightChance is 5 % (0.05) – "verry seldom" per the issue', () {
+      expect(LootSystem.insightChance, closeTo(0.05, 0.0001));
     });
 
-    test('insightRewardMin is 0.1', () {
-      expect(LootSystem.insightRewardMin, closeTo(0.1, 0.0001));
+    test('insightRewardMin is 0.5 per the issue', () {
+      expect(LootSystem.insightRewardMin, closeTo(0.5, 0.0001));
     });
 
-    test('insightRewardMax is 1.0', () {
-      expect(LootSystem.insightRewardMax, closeTo(1.0, 0.0001));
+    test('insightRewardMax is 5.0 per the issue', () {
+      expect(LootSystem.insightRewardMax, closeTo(5.0, 0.0001));
     });
 
     test('insightRewardMin < insightRewardMax', () {
       expect(LootSystem.insightRewardMin, lessThan(LootSystem.insightRewardMax));
+    });
+  });
+
+  group('LootSystem.rollInsightReward distribution (Issue #141)', () {
+    test('always within [0.5, 5.0], skewed toward the low end', () {
+      final loot = LootSystem(seed: 42);
+      const samples = 5000;
+      double sum = 0;
+      int nearMin = 0; // < 1.5
+      int nearMax = 0; // > 4.0
+
+      for (int i = 0; i < samples; i++) {
+        final reward = loot.rollInsightReward();
+        expect(reward, greaterThanOrEqualTo(LootSystem.insightRewardMin));
+        expect(reward, lessThanOrEqualTo(LootSystem.insightRewardMax));
+        sum += reward;
+        if (reward < 1.5) nearMin++;
+        if (reward > 4.0) nearMax++;
+      }
+
+      // Squared distribution: values near the minimum should be far more
+      // common than values near the maximum (the "verry seldom" high roll).
+      expect(nearMin, greaterThan(nearMax * 3));
+      // Analytic mean of min + x²·(max-min) for x~Uniform(0,1) is
+      // min + (max-min)/3 = 0.5 + 4.5/3 = 2.0 – well below the arithmetic
+      // midpoint (2.75), confirming the skew.  Generous tolerance for
+      // sampling noise.
+      expect(sum / samples, closeTo(2.0, 0.3));
     });
   });
 }

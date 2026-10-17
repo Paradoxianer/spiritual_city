@@ -1,0 +1,16 @@
+# Asset-Lizenzen
+
+Alle Dateien unter `assets/images/kenney/` und `assets/audio/kenney/` stammen von **Kenney** (https://www.kenney.nl) und stehen unter **CC0 1.0** (gemeinfrei, https://creativecommons.org/publicdomain/zero/1.0/). Sie dürfen ohne Namensnennung verwendet werden, auch kommerziell. Kenney freut sich trotzdem über eine Erwähnung im Credits-Screen (#151).
+
+| Paket | Version / Quelle | Ordner | Inhalt |
+| :--- | :--- | :--- | :--- |
+| Roguelike Modern City | 2.0, https://kenney.nl/assets/roguelike-modern-city | `images/kenney/roguelike_modern_city/` | `tilemap_packed.png`, 592×448, 16×16-px-Tiles ohne Abstand, 37×28 = 1036 Tiles (Straßen, Gebäude, Details) |
+| RPG Urban Pack | https://kenney.nl/assets/rpg-urban-pack | `images/kenney/rpg_urban_pack/` | `tilemap_packed.png`, 432×288, 16×16-px-Tiles ohne Abstand, 27×18 Tiles (Gebäude, Fahrzeuge, 6 Figuren mit Laufanimation) |
+| Interface Sounds | https://kenney.nl/assets/interface-sounds | `audio/kenney/interface_sounds/` | 100 × OGG: back, bong, click, close, confirmation, drop, error, glass, glitch, maximize/minimize, open, pluck, question, scroll, select, switch, tick, toggle |
+| UI Audio | https://kenney.nl/assets/ui-audio | `audio/kenney/ui_audio/` | 51 × OGG: click, mouseclick/-release, rollover, switch |
+| Impact Sounds | https://kenney.nl/assets/impact-sounds | `audio/kenney/impact_sounds/` | 130 × OGG: Schritte (Teppich, Beton, Gras, Schnee, Holz), Glocke, Glas, Metall, Holz, Schlag, weich |
+| RPG Audio | https://kenney.nl/assets/rpg-audio | `audio/kenney/rpg_audio/` | 51 × OGG: Buch öffnen/blättern/schließen, Türen, Münzen, Schritte, Stoff, Metall |
+
+Vorschaubilder der Grafik-Pakete: `docs/assets_preview/` (nicht im App-Bundle).
+
+Heruntergeladen am 2026-10-17. Nicht übernommen wurden die Einzel-Tiles (1500+ PNGs, identisch mit den Spritesheets), die Varianten der Spritesheets mit Abstand und die WAV-Fassungen.
