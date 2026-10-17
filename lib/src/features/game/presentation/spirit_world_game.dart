@@ -8,6 +8,9 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
+import '../domain/actions/building_actions.dart';
+import '../domain/actions/practice.dart';
+import '../domain/actions/resource.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/city_chunk.dart';
@@ -43,7 +46,9 @@ bool _shouldShowKeyHints() {
       defaultTargetPlatform == TargetPlatform.macOS;
 }
 
-class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
+class SpiritWorldGame extends FlameGame
+    with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks
+    implements ResourceWallet {
   final _log = Logger('SpiritWorldGame');
 
   // ── Spiritual-world button dock constants (Issue #174) ────────────────────
@@ -221,6 +226,15 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   double get materials    => materialsNotifier.value;
   set materials(double v) => materialsNotifier.value = v;
+
+  @override
+  double amountOf(Resource r) => switch (r) {
+        Resource.faith => faith,
+        Resource.health => health,
+        Resource.hunger => hunger,
+        Resource.materials => materials,
+        Resource.insight => progress.insight.toDouble(),
+      };
 
   static const double worldToggleCost = 10.0;
 
@@ -1310,38 +1324,34 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
       return const BuildingInteractionResult(reactionEmoji: '📋', success: true);
     }
 
-    final result = buildingInteractionService.performAction(
+    // Check preconditions and costs *before* the service runs: the service
+    // mutates the building, so a refused action must never reach it.
+    final action = BuildingActions.find(data.building.type, actionType);
+    if (action != null) {
+      final availability = action.availability(data.building, this, difficulty);
+      if (!availability.isOk) {
+        return BuildingInteractionResult(
+          reactionEmoji: availability.reason ?? '🚫',
+          success: false,
+        );
+      }
+    }
+
+    var result = buildingInteractionService.performAction(
       actionType,
       data.building,
       faith,
     );
 
-    // Guard: refuse if the player cannot afford the material cost.
-    // materialCost is negative when playerMaterialsDelta > 0 (a gain), so the
-    // check `materialCost > 0` safely skips this guard for income actions.
-    final materialCost = -result.playerMaterialsDelta;
-    if (materialCost > 0 && materials < materialCost) {
-      return const BuildingInteractionResult(
-        reactionEmoji: '🚫💰',
-        success: false,
-      );
+    // Practice ("Übung", §3.4): the more often the pastor reads, prays and
+    // worships, the more faith these actions give him.
+    final discipline = action?.discipline;
+    if (discipline != null && result.playerFaithDelta > 0) {
+      result = result.withFaithDelta(
+          (result.playerFaithDelta * progress.practice.multiplier(discipline)).roundToDouble());
     }
-    // Guard: refuse if the player does not have enough health for the action.
-    final healthCost = -result.playerHealthDelta;
-    if (healthCost > 0 && health < healthCost) {
-      return const BuildingInteractionResult(
-        reactionEmoji: '🚫❤️',
-        success: false,
-      );
-    }
-    // Guard: refuse if the player does not have enough hunger for the action.
-    final hungerCost = -result.playerHungerDelta;
-    if (hungerCost > 0 && hunger < hungerCost) {
-      return const BuildingInteractionResult(
-        reactionEmoji: '🚫🍞',
-        success: false,
-      );
-    }
+    if (discipline != null && result.success) recordPractice(discipline);
+
     // Apply resource deltas immediately
     if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);
     if (result.playerMaterialsDelta > 0) {
@@ -1991,6 +2001,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     missionService.onPrayerCombat();
     tutorialService.onPrayerPerformed();
     _checkAndApplyModifiers();
+  }
+
+  /// Record one use of a spiritual discipline ("Übung", §3.4). A new level
+  /// is announced with a short toast, e.g. `⭐ 🙏 2`.
+  void recordPractice(Discipline discipline) {
+    if (!progress.practice.record(discipline)) return;
+    missionCompleteMessage.value =
+        '⭐ ${discipline.emoji} ${progress.practice.level(discipline)}';
+    Future.delayed(const Duration(seconds: 3), () {
+      missionCompleteMessage.value = null;
+    });
   }
 
   /// Record a completed conversation
