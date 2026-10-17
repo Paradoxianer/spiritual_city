@@ -43,6 +43,12 @@ extension GameBuildingActions on SpiritWorldGame {
           (result.playerFaithDelta * progress.practice.multiplier(discipline)).roundToDouble());
     }
     if (discipline != null && result.success) recordPractice(discipline);
+    if (result.success) {
+      if (discipline == Discipline.prayer) recordLessonTask(LessonTask.pray);
+      if (actionType == 'sundayService' || actionType == 'chapelService') {
+        recordLessonTask(LessonTask.service);
+      }
+    }
 
     // Apply resource deltas immediately
     if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);

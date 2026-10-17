@@ -9,6 +9,10 @@ import '../../../core/utils/seed_manager.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
+import '../domain/models/daemon_model.dart';
+import '../domain/models/skills.dart';
+import '../domain/services/daemon_combat_rules.dart';
+import '../domain/services/learning_service.dart';
 import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/city_generator.dart';
@@ -38,6 +42,7 @@ import 'components/prayer_hud_component.dart';
 import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
 
+part 'game/learning_control.dart';
 part 'game/save_state.dart';
 part 'game/overlay_control.dart';
 part 'game/building_actions.dart';
@@ -243,6 +248,65 @@ class SpiritWorldGame extends FlameGame
   void gainMaterials(double amount) => resources.gainMaterials(amount);
 
   static const double worldToggleCost = 10.0;
+
+  // ── Daemons (#178) ────────────────────────────────────────────────────────
+
+  /// Tier of new spawns, fixed when entering the spirit world.
+  int daemonTier = 1;
+
+  /// 👁️ Discernment of spirits learned: daemon kinds are shown.
+  bool get canDiscernSpirits => progress.skills.has(Skill.discernment);
+
+  /// A 👁️ possessor can only be fought once its host was cared for in the
+  /// real world (Mark 9:29 – prayer *and* care, npc_influence.md).
+  bool isPossessorVulnerable(DaemonModel daemon) {
+    final host = daemon.hostNpcId;
+    if (host == null) return true;
+    final npc = chunkManager.findNpcModel(host);
+    return npc == null || npc.possessionWeakened;
+  }
+
+  /// Insight for freeing a possessed person.
+  static const double possessionReleaseInsight = 0.5;
+
+  /// Faith a person gains when freed from possession.
+  static const double possessionReleaseFaith = 40.0;
+
+  /// Both worlds came together: the possessor was beaten after the person
+  /// was cared for. The person is free and much more open (#180).
+  void _releaseFromPossession(NPCModel npc) {
+    npc.possessed = false;
+    npc.possessionWeakened = false;
+    npc.applyInfluence(possessionReleaseFaith);
+    progress.addInsight(possessionReleaseInsight);
+    final comp = chunkManager.findNpcComponent(npc.id);
+    if (comp != null) {
+      _brightenspiritualAreaAroundPosition(comp.position, radius: 4, amount: 0.3);
+    }
+    _toast('👁️➡️🕊️ ${npc.name.split(' ').first}');
+  }
+
+  // ── Learning missions (§3.9) ──────────────────────────────────────────────
+
+  /// Lesson card currently shown (LessonOverlay), if any.
+  Lesson? activeLessonOffer;
+
+  /// Bumped whenever the active lesson changes (HUD chip listens).
+  final ValueNotifier<int> lessonNotifier = ValueNotifier(0);
+
+  /// The Slow → Drain → Rebuke chain completed on a daemon.
+  void onDaemonChain() {
+    lootPickupMessage.value = '⏳🪫🫸⚡';
+  }
+
+  /// A daemon was defeated by prayer (not dissolved on its own).
+  void onDaemonKilled(DaemonModel daemon) {
+    recordLessonTask(LessonTask.defeatDaemons);
+    if (daemon.hostNpcId != null) {
+      final npc = chunkManager.findNpcModel(daemon.hostNpcId!);
+      if (npc != null && npc.possessionWeakened) _releaseFromPossession(npc);
+    }
+  }
 
   /// Number of daemons spawned around the player on spiritual-world entry.
   /// Reduced so new players aren't overwhelmed immediately.
@@ -594,6 +658,12 @@ class SpiritWorldGame extends FlameGame
       tutorialService.onReturnedToCity();
     }
 
+    // Daemon strength follows the player's power, delayed by the grace
+    // period after an upgrade (#178).
+    if (isSpiritualWorld) {
+      daemonTier = DaemonCombatRules.tierFor(progress.onSpiritWorldEntered());
+    }
+
     // Immediately spawn daemons around the player when entering the spiritual
     // world so they are visible from the first moment (difficulty-scaled count).
     if (isSpiritualWorld) {
@@ -656,7 +726,17 @@ class SpiritWorldGame extends FlameGame
       worldToggleButton.position =
           Vector2(size.x - _sideButtonCenterOffset, size.y - 80);
 
-      final n = modeButtons.length;
+      // Only learned modes are shown (⚔️ lesson unlocks all but Liberation).
+      final shown = [
+        for (int i = 0; i < modeButtons.length; i++)
+          if (player.canUseMode(PrayerMode.values[i])) i,
+      ];
+      for (int i = 0; i < modeButtons.length; i++) {
+        if (shown.contains(i)) continue;
+        modeButtons[i].opacity = 0.0;
+        modeButtons[i].position = Vector2(-1000, -1000);
+      }
+      final n = shown.length;
       if (n > 0) {
         // Available width between the mode-row margins.  Clamp individual
         // spacing so buttons never overlap each other even on very small
@@ -668,14 +748,15 @@ class SpiritWorldGame extends FlameGame
         final totalModeWidth = (n - 1) * spacing;
         final modeStartX = (size.x - totalModeWidth) / 2;
 
-        for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          final i = shown[j];
           final btn = modeButtons[i];
           btn.opacity = 1.0;
           final isSelected = player.currentMode == PrayerMode.values[i];
           btn.size = Vector2.all(
               isSelected ? _modeButtonSizeSelected : _modeButtonSizeUnselected);
           btn.position = Vector2(
-            modeStartX + i * spacing,
+            modeStartX + j * spacing,
             isSelected ? size.y - 88.0 : size.y - 80.0,
           );
           btn.keyLabel = '${i + 1}';

@@ -435,6 +435,13 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             highlighted: missionEmoji != null && _actions[i].emoji.startsWith(missionEmoji),
             onTap: () => _performAction(_actions[i].type),
           ),
+        // 🎓 A mentor here offers a lesson (learning missions, §3.9).
+        for (final lesson in Lessons.offeredAt(building.type, g.progress.skills))
+          ActionButton(
+            emoji: '🎓${lesson.skill.emoji}',
+            highlighted: true,
+            onTap: () => g.openLesson(lesson),
+          ),
       ],
     );
   }

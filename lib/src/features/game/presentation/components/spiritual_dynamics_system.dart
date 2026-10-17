@@ -7,7 +7,10 @@ import '../spirit_world_game.dart';
 import '../../domain/models/city_chunk.dart';
 import '../../domain/models/city_cell.dart';
 import '../../domain/models/cell_object.dart';
+import '../../domain/models/daemon_kind.dart';
 import '../../domain/models/daemon_model.dart';
+import '../../domain/services/christian_support.dart';
+import '../../domain/services/daemon_combat_rules.dart';
 import 'daemon_component.dart';
 import 'cell_component.dart';
 
@@ -140,11 +143,30 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     }
   }
 
+  /// Packs cell coordinates into one int key (coordinates stay far below
+  /// ±2^20 in practice).
+  static int _cellKey(int x, int y) => ((x + 0x100000) << 21) | (y + 0x100000);
+
   void _tick() {
     final chunks = game.grid.getLoadedChunks();
 
     // We compute deltas first to avoid order-dependent updates.
     final Map<CityCell, double> deltas = {};
+
+    // Christians in reach of each cell (#180): they protect liberated cells.
+    final Map<int, int> christiansNear = {};
+    const r = ChristianSupport.radius;
+    for (final npc in game.chunkManager.allActiveNPCs) {
+      if (!npc.model.isChristian) continue;
+      final cx = (npc.position.x / CellComponent.cellSize).floor();
+      final cy = (npc.position.y / CellComponent.cellSize).floor();
+      for (int dy = -r; dy <= r; dy++) {
+        for (int dx = -r; dx <= r; dx++) {
+          final key = _cellKey(cx + dx, cy + dy);
+          christiansNear[key] = (christiansNear[key] ?? 0) + 1;
+        }
+      }
+    }
 
     for (final chunk in chunks) {
       for (int y = 0; y < CityChunk.chunkSize; y++) {
@@ -195,7 +217,10 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
           // 3. Natural fallback – areas not actively supported drift negative
           //    (represents ongoing spiritual "pressure" in a fallen world)
           if (cell.spiritualState > -0.05) {
-            delta -= fallbackRate * (1.0 - modifierDecayReduction);
+            delta -= fallbackRate *
+                (1.0 - modifierDecayReduction) *
+                ChristianSupport.fallbackFactor(
+                    christiansNear[_cellKey(cell.x, cell.y)] ?? 0);
           }
 
           // 4. Decay toward neutral for very weakly-held cells
@@ -277,9 +302,7 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       cell.x * CellComponent.cellSize + CellComponent.cellSize / 2,
       cell.y * CellComponent.cellSize + CellComponent.cellSize / 2,
     );
-    final model = DaemonModel(id: id, position: spawnPos, energy: _initialEnergy());
-    final component = DaemonComponent(model);
-    game.world.add(component);
+    game.world.add(DaemonComponent(_newDaemon(id, spawnPos)));
     _log.fine('Spawned daemon $id at (${cell.x}, ${cell.y})');
   }
 
@@ -344,6 +367,31 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     Difficulty.hard   => _daemonEnergyHard,
   };
 
+  /// A new daemon of a random kind (#178). Its tier follows the player's
+  /// grace-delayed power; one in four spawns is a tier weaker, so a fight
+  /// always mixes strengths a little.
+  DaemonModel _newDaemon(String id, Vector2 position, {DaemonKind? kind, String? host}) {
+    final k = kind ?? DaemonKind.randomSpawn(_rng);
+    var tier = game.daemonTier;
+    if (tier > 1 && _rng.nextDouble() < 0.25) tier--;
+    return DaemonModel(
+      id: id,
+      position: position,
+      energy: _initialEnergy() * k.energyFactor * DaemonCombatRules.tierEnergy(tier),
+      kind: k,
+      tier: tier,
+      hostNpcId: host,
+    );
+  }
+
+  /// Spawns a 👁️ possessor at [position] that belongs to the possessed NPC
+  /// [hostNpcId] (npc_influence.md).
+  void spawnPossessor(Vector2 position, String hostNpcId) {
+    final id = 'daemon_host_${_daemonIdCounter++}';
+    game.world.add(DaemonComponent(
+        _newDaemon(id, position.clone(), kind: DaemonKind.possessor, host: hostNpcId)));
+  }
+
   /// Spawns [count] daemons in a random ring (100–300 px) around the player.
   ///
   /// Called when the player enters the invisible world so that daemons are
@@ -352,8 +400,6 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     final playerPos = game.player.position;
     const double minDist = 100.0;
     const double maxDist = 300.0;
-    final energy = _initialEnergy();
-
     for (int i = 0; i < count; i++) {
       // Spread daemons evenly around the player (+ small random jitter)
       final baseAngle = (i / count) * math.pi * 2;
@@ -366,9 +412,7 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       );
 
       final id = 'daemon_entry_${_daemonIdCounter++}';
-      final model = DaemonModel(id: id, position: spawnPos, energy: energy);
-      final component = DaemonComponent(model);
-      game.world.add(component);
+      game.world.add(DaemonComponent(_newDaemon(id, spawnPos)));
       _log.fine('Entry-spawned daemon $id around player');
     }
   }

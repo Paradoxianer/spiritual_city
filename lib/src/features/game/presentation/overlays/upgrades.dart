@@ -17,7 +17,11 @@ class _UpgradePanelState extends State<_UpgradePanel> {
 
   void _buy(int level, VoidCallback apply) {
     setState(() {
-      if (_progress.spendInsight(upgradeInsightCost(level))) apply();
+      if (_progress.spendInsight(upgradeInsightCost(level))) {
+        apply();
+        // Daemons keep their strength for a few visits (#178 grace period).
+        _progress.onUpgradeBought();
+      }
     });
   }
 

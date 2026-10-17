@@ -4,6 +4,8 @@ import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
 import '../../domain/actions/npc_actions.dart';
+import '../../domain/services/learning_service.dart';
+import 'daemon_component.dart';
 import '../../domain/models/building_model.dart';
 import '../../domain/models/npc_model.dart';
 import '../../domain/models/cell_object.dart';
@@ -171,6 +173,10 @@ class NPCComponent extends PositionComponent
       _lightUpAround(gx, gy);
     }
     if (r.performed && discipline != null) game.recordPractice(discipline);
+    if (r.performed) {
+      if (type == 'counsel') game.recordLessonTask(LessonTask.counsel);
+      if (type == 'pray') game.recordLessonTask(LessonTask.pray);
+    }
     return r.reaction;
   }
 
@@ -209,6 +215,7 @@ class NPCComponent extends PositionComponent
     // a stable, stutter-free dt budget.
     if (game.isSpiritualWorld) {
       if (_targetPosition != null) _moveTowardsTarget(dt);
+      if (model.possessed) _updatePossessor(dt);
       return;
     }
     // ── Normal world: full AI ─────────────────────────────────────────────
@@ -224,6 +231,28 @@ class NPCComponent extends PositionComponent
         // Static placeholder – no logic executed
         break;
     }
+  }
+
+  // ── Possession (#180) ──────────────────────────────────────────────────────
+
+  double _possessorTimer = 0.0;
+
+  /// How often a possessed person sends out a new 👁️ possessor while the
+  /// pastor is near and none of theirs is around.
+  static const double possessorInterval = 10.0;
+
+  /// Possessed people only act when the pastor is this close (px).
+  static const double possessorReach = 420.0;
+
+  void _updatePossessor(double dt) {
+    _possessorTimer += dt;
+    if (_possessorTimer < possessorInterval) return;
+    _possessorTimer = 0.0;
+    if (position.distanceTo(game.player.position) > possessorReach) return;
+    final hasOne = game.world.children
+        .whereType<DaemonComponent>()
+        .any((d) => d.model.hostNpcId == model.id && !d.model.dissolved);
+    if (!hasOne) game.spiritualDynamics.spawnPossessor(position, model.id);
   }
 
   /// Daily: NPC faith state influences the cell they are standing on (Lastenheft §6.3)
@@ -505,5 +534,23 @@ class NPCComponent extends PositionComponent
     _auraPaint.color = Color.lerp(Colors.red, Colors.green, faithFactor)!
         .withValues(alpha: 0.3 + (faithFactor * 0.4));
     canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, _auraPaint);
+
+    // Possessed: a dark ring; with 👁️ discernment also the possessor's sign.
+    if (model.possessed) {
+      canvas.drawCircle((size / 2).toOffset(), size.x * 0.75, _possessedPaint);
+      if (game.canDiscernSpirits) {
+        _possessedGlyph.paint(canvas, Offset(size.x / 2 - _possessedGlyph.width / 2, -14));
+      }
+    }
   }
+
+  final Paint _possessedPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.5
+    ..color = const Color(0xDD000000);
+
+  static final TextPainter _possessedGlyph = TextPainter(
+    text: const TextSpan(text: '👁️', style: TextStyle(fontSize: 10)),
+    textDirection: TextDirection.ltr,
+  )..layout();
 }

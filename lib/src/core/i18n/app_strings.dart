@@ -170,6 +170,25 @@ class AppStrings {
       'tutorial.next': 'Weiter →',
       'tutorial.start': 'Los geht\'s! 🚀',
       'tutorial.skip': 'Tutorial überspringen',
+      // ── Lern-Missionen (release_roadmap.md §3.9). Verse: Luther 1912 ──
+      'lesson.pastoralCare.verse':
+          'Der uns tröstet in aller unsrer Trübsal, daß wir auch trösten können, '
+          'die da sind in allerlei Trübsal.',
+      'lesson.spiritualWarfare.verse':
+          'Denn wir haben nicht mit Fleisch und Blut zu kämpfen, sondern mit Fürsten '
+          'und Gewaltigen … mit den bösen Geistern unter dem Himmel.',
+      'lesson.discernment.verse':
+          'Ihr Lieben, glaubet nicht einem jeglichen Geist, sondern prüfet die Geister, '
+          'ob sie von Gott sind.',
+      'lesson.intercession.verse':
+          'So ermahne ich nun, daß man vor allen Dingen zuerst tue Bitte, Gebet, Fürbitte '
+          'und Danksagung für alle Menschen.',
+      'lesson.fasting.verse':
+          'Wenn du aber fastest, so salbe dein Haupt und wasche dein Angesicht, '
+          'auf daß du nicht scheinest vor den Leuten mit deinem Fasten.',
+      'lesson.preaching.verse':
+          'Wie sollen sie aber glauben, von dem sie nichts gehört haben? '
+          'Wie sollen sie aber hören ohne Prediger?',
 
     },
     'en': {
@@ -337,6 +356,24 @@ class AppStrings {
       'tutorial.next': 'Next →',
       'tutorial.start': 'Let\'s go! 🚀',
       'tutorial.skip': 'Skip Tutorial',
+      // ── Learning missions (release_roadmap.md §3.9). Verses: KJV ──
+      'lesson.pastoralCare.verse':
+          'Who comforteth us in all our tribulation, that we may be able to comfort '
+          'them which are in any trouble.',
+      'lesson.spiritualWarfare.verse':
+          'For we wrestle not against flesh and blood, but against principalities, '
+          'against powers … against spiritual wickedness in high places.',
+      'lesson.discernment.verse':
+          'Beloved, believe not every spirit, but try the spirits whether they are of God.',
+      'lesson.intercession.verse':
+          'I exhort therefore, that, first of all, supplications, prayers, intercessions, '
+          'and giving of thanks, be made for all men.',
+      'lesson.fasting.verse':
+          'But thou, when thou fastest, anoint thine head, and wash thy face; '
+          'that thou appear not unto men to fast.',
+      'lesson.preaching.verse':
+          'How shall they believe in him of whom they have not heard? '
+          'and how shall they hear without a preacher?',
 
     },
   };

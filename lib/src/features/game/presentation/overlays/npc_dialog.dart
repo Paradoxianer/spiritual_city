@@ -295,6 +295,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 children: [
                   _DialogTabBar(
                     showLifeTab: _showLifeTab,
+                    lifeLocked: !widget.game.progress.skills.has(Skill.pastoralCare),
                     onSelect: (life) => setState(() => _showLifeTab = life),
                   ),
                   const SizedBox(height: 6),
@@ -410,9 +411,16 @@ class GameDialogData {
 /// (life story with the single 🗣️ life-talk action).
 class _DialogTabBar extends StatelessWidget {
   final bool showLifeTab;
+
+  /// 📜 needs the 🫂 pastoral-care lesson (mentor in a 🏥 hospital).
+  final bool lifeLocked;
   final void Function(bool life) onSelect;
 
-  const _DialogTabBar({required this.showLifeTab, required this.onSelect});
+  const _DialogTabBar({
+    required this.showLifeTab,
+    required this.lifeLocked,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -432,7 +440,26 @@ class _DialogTabBar extends StatelessWidget {
     }
 
     return Row(
-      children: [tab('💬', false), const SizedBox(width: 6), tab('📜', true)],
+      children: [
+        tab('💬', false),
+        const SizedBox(width: 6),
+        if (lifeLocked)
+          // Locked: shows where to learn it instead of opening.
+          Tooltip(
+            message: '🎓🫂 🏥',
+            triggerMode: TooltipTriggerMode.tap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text('📜🔒', style: TextStyle(fontSize: 18)),
+            ),
+          )
+        else
+          tab('📜', true),
+      ],
     );
   }
 }

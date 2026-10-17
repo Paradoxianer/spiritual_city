@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
+import '../../domain/models/daemon_kind.dart';
 import '../../domain/models/daemon_model.dart';
+import '../../domain/services/daemon_combat_rules.dart';
 import '../../domain/models/city_cell.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../../domain/services/faith_calculator_service.dart';
@@ -23,7 +25,19 @@ import 'cell_component.dart';
 class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
   final DaemonModel model;
 
-  static const double _daemonSize = 18.0;
+  static const double _baseSize = 18.0;
+
+  /// Body size: base × type × tier (tier 3 is 50 % bigger than tier 1).
+  final double _daemonSize;
+
+  /// A 🦇 leech closer than this pulls faith from the pastor.
+  static const double leechReach = 140.0;
+
+  /// Faith per second a leech pulls while in reach.
+  static const double leechFaithPerSecond = 1.5;
+
+  /// Short white flash when the Slow → Drain → Rebuke chain completes.
+  double _chainFlashTimer = 0.0;
 
   /// Insight awarded for actually defeating a daemon (Liberation explode or
   /// Drain absorb – not for a daemon that merely decays naturally, and not
@@ -79,6 +93,10 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Aura paint – colour is updated each render() call; maskFilter set once.
   late final Paint _auraPaint;
   final Paint _corePaint = Paint();
+  final Paint _shieldPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3.0
+    ..color = const Color(0xCC000000);
   final Paint _arcPaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2.0;
@@ -93,9 +111,14 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   static final Color _auraLerpTo    = Colors.black.withValues(alpha: 0.9);
 
   DaemonComponent(this.model)
-      : super(
+      : _daemonSize = _baseSize *
+            model.kind.sizeFactor *
+            DaemonCombatRules.tierSize(model.tier),
+        super(
           position: model.position.clone(),
-          size: Vector2.all(_daemonSize),
+          size: Vector2.all(_baseSize *
+              model.kind.sizeFactor *
+              DaemonCombatRules.tierSize(model.tier)),
           anchor: Anchor.center,
           priority: 95,
         );
@@ -103,10 +126,11 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   @override
   Future<void> onLoad() async {
     _angularSpeed = switch (game.difficulty) {
-      Difficulty.easy   => _angularSpeedEasy,
-      Difficulty.normal => _angularSpeedNormal,
-      Difficulty.hard   => _angularSpeedHard,
-    };
+          Difficulty.easy   => _angularSpeedEasy,
+          Difficulty.normal => _angularSpeedNormal,
+          Difficulty.hard   => _angularSpeedHard,
+        } *
+        model.kind.speedFactor;
     _cellDrainMultiplier =
         1.0 / FaithCalculatorService.difficultyFactorFor(game.difficulty);
 
@@ -132,6 +156,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     }
 
     if (_hitFlickerTimer > 0) _hitFlickerTimer -= dt;
+    if (_chainFlashTimer > 0) _chainFlashTimer -= dt;
 
     // ── Update active effects (Issue #9) ──────────────────────────────────────
     _activeEffects.removeWhere((mode, remaining) => remaining <= 0);
@@ -145,9 +170,10 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     _orbitAngle += effectiveAngularSpeed * dt;
 
     // ── Shrink orbit radius (faster during prayer) ────────────────────────────
-    double spiralSpeed = game.spiritualDynamics.isPrayerAttractionActive
-        ? _spiralSpeedPrayer
-        : _spiralSpeedNormal;
+    double spiralSpeed = (game.spiritualDynamics.isPrayerAttractionActive
+            ? _spiralSpeedPrayer
+            : _spiralSpeedNormal) *
+        model.kind.speedFactor;
     
     if (_activeEffects.containsKey(PrayerMode.slow)) {
       spiralSpeed *= 0.5; // Shrink slower
@@ -185,6 +211,13 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // ── Slime trail: drain current cell every frame ───────────────────────────
     _drainCurrentCell(dt);
 
+    // ── 🦇 Leech: pulls faith from the pastor while close ──────────────────
+    if (model.kind == DaemonKind.leech &&
+        _orbitRadius < leechReach &&
+        !_activeEffects.containsKey(PrayerMode.drain)) {
+      game.spendFaith(leechFaithPerSecond * dt);
+    }
+
     // ── Energy tick ───────────────────────────────────────────────────────────
     _energyTimer += dt;
     if (_energyTimer >= _energyInterval) {
@@ -206,7 +239,12 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final cell = game.grid.getCell(gx, gy);
     if (cell == null) return;
     cell.spiritualState =
-        (cell.spiritualState - _slimeDrainRate * _cellDrainMultiplier * dt)
+        (cell.spiritualState -
+                _slimeDrainRate *
+                    _cellDrainMultiplier *
+                    model.kind.trailFactor *
+                    DaemonCombatRules.tierSize(model.tier) *
+                    dt)
             .clamp(-1.0, 1.0);
   }
 
@@ -235,45 +273,52 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   // ── Combat ─────────────────────────────────────────────────────────────────
 
+  /// Whether prayer can hurt this daemon right now. A 👁️ possessor is
+  /// only vulnerable once its host was cared for in the real world
+  /// (npc_influence.md: both worlds are needed).
+  bool get isVulnerable =>
+      model.kind != DaemonKind.possessor || game.isPossessorVulnerable(model);
+
   /// Called by the prayer combat system when this daemon is within range.
+  /// Weakness and combo rules: [DaemonCombatRules.hit].
   void takeDamage(double amount, {PrayerMode? mode, double duration = 0}) {
     if (model.dissolved) return;
     _hitFlickerTimer = _hitFlickerDuration;
-    
-    // Apply effect if provided
-    if (mode != null && duration > 0) {
-      _activeEffects[mode] = duration;
+    if (!isVulnerable) return;
+
+    if (mode == null) {
+      model.energy += amount;
+      if (model.energy >= 0) _explode();
+      return;
+    }
+
+    final hit = DaemonCombatRules.hit(
+      kind: model.kind,
+      mode: mode,
+      damage: amount,
+      duration: duration,
+      active: _activeEffects.keys.toSet(),
+      initialEnergy: model.initialEnergy,
+    );
+
+    if (hit.effectDuration > 0) {
+      _activeEffects[mode] = hit.effectDuration;
       if (mode == PrayerMode.rebuke) {
-        // Initial physical "push" velocity (The "Impact")
-        // Scaled by weight (heavier daemons are harder to push)
+        // Initial physical push, scaled by weight (heavier = harder to push).
         final weight = (model.initialEnergy.abs() / 50.0).clamp(1.0, 5.0);
-        final impulse = (120.0 + (game.faith / 2.0)) / weight;
-        _knockbackVelocity = impulse;
+        _knockbackVelocity =
+            (120.0 + (game.faith / 2.0)) / weight * hit.knockbackFactor;
       }
     }
-
-    double finalDamage = amount;
-    
-    // Drain effect makes the daemon take much more damage
-    if (_activeEffects.containsKey(PrayerMode.drain)) {
-      finalDamage *= 1.8; 
-    }
-    
-    // Liberation damage is standard, but specialized for cleansing
-    if (mode == PrayerMode.liberation) {
-      finalDamage *= 1.2;
+    if (hit.chainCompleted) {
+      _chainFlashTimer = 0.4;
+      game.onDaemonChain();
     }
 
-    // CC modes (Rebuke, Slow) deal extremely little damage as their focus is utility
-    if (mode == PrayerMode.rebuke || mode == PrayerMode.slow) {
-      finalDamage *= 0.05;
-    }
-
-    model.energy += finalDamage;
+    model.energy += hit.damage;
     if (model.energy >= 0) {
       // Every player-caused kill cleanses the area around it, whichever
-      // mode landed the final blow – only the *shockwaves* of the control
-      // modes are weak at liberating (ShockwaveComponent.cellImpactFactor).
+      // mode landed the final blow.
       if (mode == PrayerMode.drain) {
         _absorb();
       } else {
@@ -287,6 +332,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   void _explode() {
     model.dissolved = true;
     game.progress.addInsight(_killInsightReward);
+    game.onDaemonKilled(model);
     _cleanseAroundDeathPoint();
     removeFromParent();
   }
@@ -299,6 +345,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0);
     game.gainFaith(faithGain);
     game.progress.addInsight(_killInsightReward);
+    game.onDaemonKilled(model);
     _cleanseAroundDeathPoint();
     removeFromParent();
   }
@@ -382,15 +429,27 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   // ── Rendering ──────────────────────────────────────────────────────────────
 
+  /// Glyph painters per kind, laid out once (never in render()).
+  static final Map<DaemonKind, TextPainter> _glyphs = {};
+
+  static TextPainter _glyphFor(DaemonKind kind) => _glyphs.putIfAbsent(
+        kind,
+        () => TextPainter(
+          text: TextSpan(text: kind.glyph, style: const TextStyle(fontSize: 11)),
+          textDirection: TextDirection.ltr,
+        )..layout(),
+      );
+
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) return;
 
-    const center = Offset(_daemonSize / 2, _daemonSize / 2);
+    final center = Offset(_daemonSize / 2, _daemonSize / 2);
+    final discern = game.canDiscernSpirits;
 
     // Simple color pulse driven by the orbit angle – no extra variable needed.
     final t = (math.sin(_orbitAngle * 2) + 1) / 2;
-    final isFlickering = _hitFlickerTimer > 0;
+    final isFlickering = _hitFlickerTimer > 0 || _chainFlashTimer > 0;
 
     // Aura – reuse pre-allocated paint; only update the color.
     _auraPaint.color = isFlickering
@@ -398,9 +457,22 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         : Color.lerp(_auraLerpFrom, _auraLerpTo, t)!;
     canvas.drawCircle(center, _daemonSize * 0.7, _auraPaint);
 
-    // Core – reuse pre-allocated paint.
-    _corePaint.color = isFlickering ? _coreFlicker : _coreNormal;
+    // Core: with 👁️ discernment each kind shows its own colour; without it
+    // all daemons look alike (only size tells the tier).
+    _corePaint.color = isFlickering
+        ? _coreFlicker
+        : (discern ? model.kind.color.withValues(alpha: 0.95) : _coreNormal);
     canvas.drawCircle(center, _daemonSize * 0.35, _corePaint);
+
+    if (discern) {
+      final g = _glyphFor(model.kind);
+      g.paint(canvas, center - Offset(g.width / 2, g.height / 2));
+    }
+
+    // Not yet vulnerable (possessor): a closed dark ring.
+    if (!isVulnerable) {
+      canvas.drawCircle(center, _daemonSize * 0.6, _shieldPaint);
+    }
 
     // Active Effect Auras (Issue #9)
     if (_activeEffects.isNotEmpty) {

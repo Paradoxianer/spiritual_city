@@ -8,6 +8,7 @@ import 'cell_component.dart';
 import 'prayer_zone_component.dart';
 import 'shockwave_component.dart';
 import '../../domain/models/prayer_combat.dart';
+import '../../domain/models/skills.dart';
 
 class PlayerComponent extends PositionComponent 
     with HasGameReference<SpiritWorldGame>, KeyboardHandler {
@@ -75,7 +76,14 @@ class PlayerComponent extends PositionComponent
   double get faithPulse => prayerZone.pulseValue;
   double get zoneSize => prayerZone.sizeFactor;
 
+  /// Rebuke, Slow and Drain need the ⚔️ spiritual-warfare lesson
+  /// (learning missions, release_roadmap.md §3.9).
+  bool canUseMode(PrayerMode mode) =>
+      mode == PrayerMode.liberation ||
+      game.progress.skills.has(Skill.spiritualWarfare);
+
   void setMode(PrayerMode mode) {
+    if (!canUseMode(mode)) return;
     if (_currentMode != mode) {
       _currentMode = mode;
       _holdingTime = 0;
