@@ -370,6 +370,6 @@ if __name__ == '__main__':
     # wave_liberation.ogg is a Pixabay recording now (see assets/LICENSES.md);
     # wave_liberation() stays as the synthetic fallback.
     write_once('wave_rebuke', wave_rebuke(), 0.7)
-    write_once('wave_slow', wave_slow(), 0.55)
-    write_once('wave_drain', wave_drain(), 0.55)
+    # wave_slow.ogg is a Pixabay recording now (see assets/LICENSES.md).
+    # wave_drain.ogg is a Pixabay recording now (see assets/LICENSES.md).
     write_once('daemon_near', daemon_near(), 0.6)
