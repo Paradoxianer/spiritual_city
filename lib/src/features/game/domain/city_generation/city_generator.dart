@@ -63,6 +63,7 @@ class CityGenerator {
       density: density,
       crime: _calculateCrime(district, detail),
       spiritualState: _calculateInitialSpiritualState(wx, wy, data, district),
+      district: district,
     );
   }
 

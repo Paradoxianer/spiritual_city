@@ -15,11 +15,15 @@ class AppSettings {
   /// Sound effects on/off (pause menu 🔊/🔇).
   bool soundOn;
 
+  /// Version of the first-start notice the player accepted (#153).
+  int consentVersion;
+
   AppSettings({
     this.language = 'de',
     this.lastDifficulty = Difficulty.normal,
     this.tutorialCompleted = false,
     this.soundOn = true,
+    this.consentVersion = 0,
   });
 
   Map<String, dynamic> toMap() => {
@@ -27,6 +31,7 @@ class AppSettings {
         'lastDifficulty': lastDifficulty.index,
         'tutorialCompleted': tutorialCompleted,
         'soundOn': soundOn,
+        'consentVersion': consentVersion,
       };
 
   factory AppSettings.fromMap(Map<dynamic, dynamic> map) => AppSettings(
@@ -35,6 +40,7 @@ class AppSettings {
             Difficulty.values[map['lastDifficulty'] as int? ?? 1],
         tutorialCompleted: map['tutorialCompleted'] as bool? ?? false,
         soundOn: map['soundOn'] as bool? ?? true,
+        consentVersion: map['consentVersion'] as int? ?? 0,
       );
 }
 

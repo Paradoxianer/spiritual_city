@@ -39,6 +39,7 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
         if (cell == null) continue;
         final rect = Rect.fromLTWH(x * cellSize, y * cellSize, cellSize, cellSize);
         CityTileRenderer.renderCell(canvas, rect, cell.data);
+        CityTileRenderer.renderDistrictTint(canvas, rect, cell.district, cell.data);
         canvas.drawRect(rect, _borderPaint);
       }
     }

@@ -189,8 +189,8 @@ class KeymapOverlay extends StatelessWidget {
                     children: [
                       const Text('⌨️', style: TextStyle(fontSize: 22)),
                       const SizedBox(width: 10),
-                      const Text(
-                        'Tastenbelegung',
+                      Text(
+                        AppStrings.get('keymap.title'),
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -200,7 +200,7 @@ class KeymapOverlay extends StatelessWidget {
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.white70),
-                        tooltip: 'Schließen (F1 / ?)',
+                        tooltip: 'F1 / ?',
                         onPressed: game.closeKeymapOverlay,
                       ),
                     ],
@@ -221,7 +221,7 @@ class KeymapOverlay extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                cat.key.toUpperCase(),
+                                (cat.value.first.localizedCategory).toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.amber,
                                   fontSize: 11,
@@ -243,7 +243,7 @@ class KeymapOverlay extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
-                    'F1 / ?  –  Tastenbelegung schließen',
+                    'F1 / ?  ✕',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.35),
                       fontSize: 11,
@@ -292,7 +292,7 @@ class _KeyRow extends StatelessWidget {
           // Action description
           Expanded(
             child: Text(
-              entry.action,
+              entry.localizedAction,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.75),
                 fontSize: 13,

@@ -17,6 +17,7 @@ import '../domain/models/church.dart';
 import '../domain/models/day_stats.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
+import 'components/character_sprites.dart';
 import 'components/stronghold_component.dart';
 import '../domain/models/skills.dart';
 import '../domain/services/combat_abilities.dart';
@@ -479,6 +480,7 @@ class SpiritWorldGame extends FlameGame
   @override
   Future<void> onLoad() async {
     GameSound.preload();
+    await CharacterSprites.load(images);
     try {
       _log.info('--- INITIALIZING GAME ---');
       // ── Restore save state ──────────────────────────────────────────────────
@@ -901,7 +903,8 @@ class SpiritWorldGame extends FlameGame
       if (!offeredBuildingIds.add(model.buildingId)) continue; // already offered
       actions.add(RadialAction(
         label: BuildingComponent.buildingEmoji(model.type),
-        sublabel: BuildingComponent.buildingName(model.type).split(' ').first,
+        // No translated type name – the emoji says what it is.
+        sublabel: '',
         icon: Icons.meeting_room,
         onSelect: () {
           tutorialService.onRadialMenuActionSelected();

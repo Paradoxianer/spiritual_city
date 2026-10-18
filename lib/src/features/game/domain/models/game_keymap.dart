@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import '../../../../core/i18n/app_strings.dart';
+
 /// A single keyboard-shortcut entry for display in the in-game keymap overlay.
 class KeymapEntry {
   /// Human-readable key string, e.g. `"W / ↑"`.
@@ -11,9 +13,25 @@ class KeymapEntry {
   /// Display category, e.g. `"Bewegung"`.
   final String category;
 
+  /// English action description (#152 i18n).
+  final String actionEn;
+
+  String get localizedAction => AppStrings.currentLanguage == 'en' ? actionEn : action;
+
+  String get localizedCategory =>
+      AppStrings.currentLanguage == 'en' ? (_categoryEn[category] ?? category) : category;
+
+  static const Map<String, String> _categoryEn = {
+    'Bewegung': 'Movement',
+    'Interaktion': 'Interaction',
+    'Unsichtbare Welt': 'Invisible world',
+    'Allgemein': 'General',
+  };
+
   const KeymapEntry({
     required this.keys,
     required this.action,
+    required this.actionEn,
     required this.category,
   });
 }
@@ -89,61 +107,61 @@ class GameKeymap {
   // ── Display entries (rendered by KeymapOverlay) ────────────────────────────
   static const List<KeymapEntry> entries = [
     // Bewegung
-    KeymapEntry(keys: 'W / ↑', action: 'Nach oben bewegen',   category: 'Bewegung'),
-    KeymapEntry(keys: 'S / ↓', action: 'Nach unten bewegen',  category: 'Bewegung'),
-    KeymapEntry(keys: 'A / ←', action: 'Nach links bewegen',  category: 'Bewegung'),
-    KeymapEntry(keys: 'D / →', action: 'Nach rechts bewegen', category: 'Bewegung'),
-    KeymapEntry(keys: 'WW / SS / AA / DD', action: 'Sprinten (Doppeltippen, erhöht Hunger-Verbrauch)', category: 'Bewegung'),
-    KeymapEntry(keys: 'Shift', action: 'Sprinten (halten, Alternative)', category: 'Bewegung'),
+    KeymapEntry(keys: 'W / ↑', action: 'Nach oben bewegen', actionEn: 'Move up',   category: 'Bewegung'),
+    KeymapEntry(keys: 'S / ↓', action: 'Nach unten bewegen', actionEn: 'Move down',  category: 'Bewegung'),
+    KeymapEntry(keys: 'A / ←', action: 'Nach links bewegen', actionEn: 'Move left',  category: 'Bewegung'),
+    KeymapEntry(keys: 'D / →', action: 'Nach rechts bewegen', actionEn: 'Move right', category: 'Bewegung'),
+    KeymapEntry(keys: 'WW / SS / AA / DD', action: 'Sprinten (Doppeltippen, erhöht Hunger-Verbrauch)', actionEn: 'Sprint (double tap, uses more food)', category: 'Bewegung'),
+    KeymapEntry(keys: 'Shift', action: 'Sprinten (halten, Alternative)', actionEn: 'Sprint (hold, alternative)', category: 'Bewegung'),
 
     // Interaktion (reale Welt)
     KeymapEntry(
       keys: 'Leertaste / E',
-      action: 'Radialmenü öffnen / Interagieren',
+      action: 'Radialmenü öffnen / Interagieren', actionEn: 'Open action menu / interact',
       category: 'Interaktion',
     ),
     KeymapEntry(
       keys: '1 – 6',
-      action: 'Radialmenü / Dialog / Gebäude-Aktion auswählen',
+      action: 'Radialmenü / Dialog / Gebäude-Aktion auswählen', actionEn: 'Choose menu / dialog / building action',
       category: 'Interaktion',
     ),
     KeymapEntry(
       keys: 'Esc',
-      action: 'Menü / Dialog schließen',
+      action: 'Menü / Dialog schließen', actionEn: 'Close menu / dialog',
       category: 'Interaktion',
     ),
 
     // Unsichtbare Welt
     KeymapEntry(
       keys: 'Leertaste (halten)',
-      action: 'Geistlichen Kampf aktivieren',
+      action: 'Geistlichen Kampf aktivieren', actionEn: 'Pray (spiritual battle)',
       category: 'Unsichtbare Welt',
     ),
     KeymapEntry(
       keys: '1 – 4',
-      action: 'Gebetsmodus direkt auswählen',
+      action: 'Gebetsmodus direkt auswählen', actionEn: 'Choose prayer mode',
       category: 'Unsichtbare Welt',
     ),
 
     // Allgemein
     KeymapEntry(
       keys: 'Q / 🙏-Button',
-      action: 'Welt wechseln (−10 Glaube)',
+      action: 'Welt wechseln (−10 Glaube)', actionEn: 'Switch world (−10 faith)',
       category: 'Allgemein',
     ),
     KeymapEntry(
       keys: 'F1 / ?',
-      action: 'Tastenbelegung anzeigen',
+      action: 'Tastenbelegung anzeigen', actionEn: 'Show key bindings',
       category: 'Allgemein',
     ),
     KeymapEntry(
       keys: 'M',
-      action: 'Missionsboard öffnen / schließen',
+      action: 'Missionsboard öffnen / schließen', actionEn: 'Open / close mission board',
       category: 'Allgemein',
     ),
     KeymapEntry(
       keys: 'F9',
-      action: 'Win-Screen sofort auslösen (nur Debug-Build)',
+      action: 'Win-Screen sofort auslösen (nur Debug-Build)', actionEn: 'Trigger win screen (debug build only)',
       category: 'Allgemein',
     ),
   ];

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../domain/models/game_keymap.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
+import 'character_sprites.dart';
 import 'prayer_zone_component.dart';
 import 'shockwave_component.dart';
 import '../../domain/models/prayer_combat.dart';
@@ -138,6 +139,12 @@ class PlayerComponent extends PositionComponent
       canvas.drawCircle((size / 2).toOffset(), SpiritWorldGame.interactionRange * pulse, auraPaint);
     }
 
+    // Real world: the pastor as a Kenney figure (falls back to the drawn
+    // shape if the sheet is not loaded). Invisible world: a light.
+    if (!game.isSpiritualWorld &&
+        CharacterSprites.render(canvas, CharacterSprites.pastor, _anim, size)) {
+      return;
+    }
     final paint = Paint()..color = game.isSpiritualWorld ? Colors.amberAccent : Colors.blueAccent;
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, paint);
     
@@ -148,6 +155,9 @@ class PlayerComponent extends PositionComponent
   }
 
   final Vector2 _keyboardDirection = Vector2.zero();
+
+  /// Facing and walk frame for the sprite.
+  final CharacterAnimator _anim = CharacterAnimator();
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
@@ -313,6 +323,7 @@ class PlayerComponent extends PositionComponent
 
   @override
   void update(double dt) {
+    _anim.update(dt, position);
     super.update(dt);
     if (game.isSpiritualWorld) {
       _updatePrayerMechanics(dt);

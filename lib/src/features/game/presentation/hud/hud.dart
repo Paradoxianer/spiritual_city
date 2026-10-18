@@ -361,14 +361,7 @@ class _FaintOverlayState extends State<_FaintOverlay> with SingleTickerProviderS
                   children: [
                     Text('💫', style: TextStyle(fontSize: 52)),
                     SizedBox(height: 16),
-                    Text(
-                      'Der Pastor ist ohnmächtig...',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 16,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
+                    Text('😵 ➡️ 🏥', style: TextStyle(fontSize: 28)),
                   ],
                 ),
               ),

@@ -61,7 +61,6 @@ class AppStrings {
 
       // Settings
       'settings.title': 'Einstellungen',
-      'settings.placeholder': 'Einstellungen kommen in Phase 2',
       'settings.back': 'Zurück',
 
       // Common
@@ -173,6 +172,12 @@ class AppStrings {
       'tutorial.next': 'Weiter →',
       'tutorial.start': 'Los geht\'s! 🚀',
       'tutorial.skip': 'Tutorial überspringen',
+      'loading.verse1': '„Der HERR ist mein Hirte“ – Psalm 23,1',
+      'loading.verse2': '„Bittet, so wird euch gegeben“ – Mt 7,7',
+      'loading.verse3': '„Die Wahrheit wird euch frei machen“ – Joh 8,32',
+      'loading.verse4': '„Ich vermag alles durch den, der mich mächtig macht, Christus“ – Phil 4,13',
+      'loading.verse5': '„Gott ist die Liebe“ – 1 Joh 4,8',
+      'keymap.title': 'Tastenbelegung',
       // ── Lern-Missionen (release_roadmap.md §3.9). Verse: Luther 1912 ──
       'lesson.pastoralCare.verse':
           'Der uns tröstet in aller unsrer Trübsal, daß wir auch trösten können, '
@@ -252,7 +257,6 @@ class AppStrings {
 
       // Settings
       'settings.title': 'Settings',
-      'settings.placeholder': 'Settings coming in Phase 2',
       'settings.back': 'Back',
 
       // Common
@@ -362,6 +366,12 @@ class AppStrings {
       'tutorial.next': 'Next →',
       'tutorial.start': 'Let\'s go! 🚀',
       'tutorial.skip': 'Skip Tutorial',
+      'loading.verse1': '"The LORD is my shepherd" – Psalm 23:1',
+      'loading.verse2': '"Ask, and it shall be given you" – Matthew 7:7',
+      'loading.verse3': '"The truth shall make you free" – John 8:32',
+      'loading.verse4': '"I can do all things through Christ" – Philippians 4:13',
+      'loading.verse5': '"God is love" – 1 John 4:8',
+      'keymap.title': 'Key bindings',
       // ── Learning missions (release_roadmap.md §3.9). Verses: KJV ──
       'lesson.pastoralCare.verse':
           'Who comforteth us in all our tribulation, that we may be able to comfort '

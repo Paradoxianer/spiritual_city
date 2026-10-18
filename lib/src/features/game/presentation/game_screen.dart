@@ -322,13 +322,10 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
-  static const _verses = [
-    '"Der Herr ist mein Hirte" – Psalm 23,1',
-    '"Bittet, so wird euch gegeben" – Mt 7,7',
-    '"Die Wahrheit wird euch frei machen" – Joh 8,32',
-    '"Ich kann alles durch Christus" – Phil 4,13',
-    '"Gott ist Liebe" – 1 Joh 4,8',
-  ];
+  /// Loading verses (localised: Luther 1912 / KJV wording).
+  static List<String> get _verses => [
+        for (var i = 1; i <= 5; i++) AppStrings.get('loading.verse$i'),
+      ];
 
   int _verseIndex = 0;
   Timer? _verseTimer;
@@ -397,7 +394,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Die Stadt erwacht...',
+                  '🏙️ … ☀️',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 13,

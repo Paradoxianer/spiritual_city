@@ -217,8 +217,9 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                     const Text('✝️', style: TextStyle(fontSize: 72)),
                     const SizedBox(height: 12),
                     // Main heading
+                    // Emoji only (no text to translate).
                     const Text(
-                      'Die Stadt gehört Gott! 🙌',
+                      '🏙️✝️🙌',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.amber,
@@ -235,12 +236,9 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '🙌 Ihr habt es geschafft! 🙌',
+                      '🕊️ 🎉 🕊️',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFFB0D4FF),
-                        fontSize: 18,
-                      ),
+                      style: TextStyle(fontSize: 26),
                     ),
                     const SizedBox(height: 32),
                     // Stats card
@@ -262,25 +260,25 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                         children: [
                           _WinStatRow(
                             emoji: '✝️',
-                            label: 'Bekehrte Menschen',
+                            label: '',
                             value: '$convertedCount / $totalNpcs',
                           ),
                           const SizedBox(height: 10),
                           _WinStatRow(
                             emoji: '🟢',
-                            label: 'Befreite Bereiche',
+                            label: '',
                             value: '$positiveCells / $totalCells',
                           ),
                           const SizedBox(height: 10),
                           _WinStatRow(
                             emoji: '⏱️',
-                            label: 'Gespielte Zeit',
+                            label: '',
                             value: playTime,
                           ),
                           const SizedBox(height: 10),
                           _WinStatRow(
                             emoji: '✨',
-                            label: 'Gesammelter Glaube',
+                            label: '',
                             value: '$faithCollected',
                           ),
                         ],
@@ -293,7 +291,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                       child: ElevatedButton.icon(
                         onPressed: () => _startNewGame(context),
                         icon: const Text('🔄', style: TextStyle(fontSize: 18)),
-                        label: const Text('Nochmal spielen'),
+                        label: const Text('▶️'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1B5E20),
                           foregroundColor: Colors.white,
@@ -314,7 +312,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                       child: OutlinedButton.icon(
                         onPressed: () => context.go('/menu'),
                         icon: const Text('🏠', style: TextStyle(fontSize: 18)),
-                        label: const Text('Hauptmenü'),
+                        label: const Text('☰'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white70,
                           side: BorderSide(

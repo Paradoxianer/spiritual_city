@@ -4,6 +4,7 @@ import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../data/menu_repository.dart';
 import '../../../core/audio/game_sound.dart';
+import 'legal_texts.dart';
 import 'models/app_settings.dart';
 import 'models/difficulty.dart';
 import 'models/game_save.dart';
@@ -35,6 +36,7 @@ class MenuService {
     difficultyNotifier.value = settings.lastDifficulty;
     _isTutorialCompleted = settings.tutorialCompleted;
     GameSound.enabled = settings.soundOn;
+    _consentVersion = settings.consentVersion;
     _log.info('MenuService init: lang=${settings.language}, '
         'difficulty=${settings.lastDifficulty}, '
         'tutorialCompleted=$_isTutorialCompleted');
@@ -51,6 +53,18 @@ class MenuService {
   Future<void> markTutorialCompleted() async {
     if (_isTutorialCompleted) return; // already persisted
     _isTutorialCompleted = true;
+    await _persistSettings();
+  }
+
+  // --------------- First-start notice (#153) -------------------------------
+
+  int _consentVersion = 0;
+
+  /// The first-start notice must be shown (first start or new version).
+  bool get needsConsent => _consentVersion < LegalTexts.consentVersion;
+
+  Future<void> acceptConsent() async {
+    _consentVersion = LegalTexts.consentVersion;
     await _persistSettings();
   }
 
@@ -137,6 +151,7 @@ class MenuService {
       lastDifficulty: difficultyNotifier.value,
       tutorialCompleted: _isTutorialCompleted,
       soundOn: GameSound.enabled,
+      consentVersion: _consentVersion,
     );
     await _repository.saveSettings(settings);
   }

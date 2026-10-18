@@ -3,9 +3,11 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
+import '../../../../core/utils/stable_hash.dart';
 import '../../domain/actions/npc_actions.dart';
 import '../../domain/models/church.dart';
 import '../../domain/services/learning_service.dart';
+import 'character_sprites.dart';
 import 'daemon_component.dart';
 import '../../domain/models/building_model.dart';
 import '../../domain/models/npc_model.dart';
@@ -36,6 +38,10 @@ class NPCComponent extends PositionComponent
   static const double npcSize = 20.0;
 
   final Random _random = Random();
+
+  /// Sprite figure and walk animation (real world).
+  late int _figure = CharacterSprites.figureFor(stableStringHash(model.id));
+  final CharacterAnimator _anim = CharacterAnimator();
 
   /// Dialog type for a life-talk step carried by a 🩹 wounded healer.
   static const String healerTalkType = 'healertalk';
@@ -104,6 +110,7 @@ class NPCComponent extends PositionComponent
   /// recycling an existing component.
   void assignModel(NPCModel newModel) {
     _model = newModel;
+    _figure = CharacterSprites.figureFor(stableStringHash(newModel.id));
     position.setFrom(newModel.homePosition);
     _spiritualInfluenceTimer = 0.0;
     _targetPosition = null;
@@ -240,6 +247,7 @@ class NPCComponent extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    _anim.update(dt, position);
     if (game.paused) return;
 
     // ── Spiritual world: cheap movement-only pass ─────────────────────────
@@ -529,11 +537,18 @@ class NPCComponent extends PositionComponent
     } else {
       bodyColor = Color.lerp(Colors.grey, Colors.blue[100]!, model.faith / 50)!;
     }
-    // Reuse pre-allocated paint – no new object allocation per frame.
+    // Real world: a Kenney figure (deterministic per person) with a small
+    // faith-coloured ring at the feet; falls back to the drawn circle.
+    final drewSprite = !game.isSpiritualWorld &&
+        CharacterSprites.render(canvas, _figure, _anim, size);
     _bodyPaint.color = bodyColor;
-    canvas.drawCircle((size / 2).toOffset(), size.x / 2, _bodyPaint);
+    if (drewSprite) {
+      canvas.drawOval(Rect.fromLTWH(size.x * 0.15, size.y * 0.82, size.x * 0.7, size.y * 0.22), _bodyPaint);
+    } else {
+      canvas.drawCircle((size / 2).toOffset(), size.x / 2, _bodyPaint);
+    }
 
-    if (model.isChristian) {
+    if (model.isChristian && !drewSprite) {
       _crossPaint.color = Colors.amber;
       final center = (size / 2).toOffset();
       canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4),

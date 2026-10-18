@@ -34,7 +34,7 @@ extension GameOverlayControl on SpiritWorldGame {
       String? streetName;
 
       if (data is BuildingData) {
-        final name = BuildingComponent.buildingName(data.type);
+        final name = BuildingComponent.buildingEmoji(data.type);
         final num  = data.houseNumber != null ? ' ${data.houseNumber}' : '';
         label = '$name$num';
         // Try to find a named road adjacent to this building cell.

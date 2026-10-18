@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Image;
 
+import '../../domain/city_generation/district_selector.dart';
 import '../../domain/models/cell_object.dart';
 
 /// Static utility that renders a single physical city tile onto a [Canvas].
@@ -14,6 +15,29 @@ import '../../domain/models/cell_object.dart';
 /// only once for the entire application lifetime.
 class CityTileRenderer {
   CityTileRenderer._(); // non-instantiable utility class
+
+  // ── District identity (#182) ──────────────────────────────────────────────
+  //
+  // A light tint over every non-road cell gives each district its own
+  // colour world, so they are recognisable at a glance.
+
+  static final Map<DistrictType, Paint> _districtTint = {
+    DistrictType.downtown: Paint()..color = const Color(0x2290CAF9), // cool blue
+    DistrictType.commercial: Paint()..color = const Color(0x22FFCA28), // warm amber
+    DistrictType.suburbs: Paint()..color = const Color(0x1A81C784), // soft green
+    DistrictType.outskirts: Paint()..color = const Color(0x22C5E1A5), // pale olive
+    DistrictType.industrial: Paint()..color = const Color(0x2AFF7043), // rust
+    DistrictType.waterfront: Paint()..color = const Color(0x2226C6DA), // teal
+    DistrictType.park: Paint()..color = const Color(0x2266BB6A), // green
+    DistrictType.slums: Paint()..color = const Color(0x2A8D6E63), // brown-grey
+  };
+
+  /// Tints [rect] with the colour of [district] (roads stay neutral).
+  static void renderDistrictTint(Canvas canvas, Rect rect, DistrictType? district, CellData? data) {
+    if (district == null || data is RoadData) return;
+    final p = _districtTint[district];
+    if (p != null) canvas.drawRect(rect, p);
+  }
 
   // ── Road ─────────────────────────────────────────────────────────────────
 
