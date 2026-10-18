@@ -245,6 +245,18 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | Missions-Tiers (#173) | ✅ Teil: Belohnung × (1 + 0,5 × erweckte Viertel); die Erweckung selbst ist das Tier-3-Ziel mit qualitativer Belohnung (Predigen). Offen: Quest-Ketten (Tier 2). | |
 | Begehbare Innenräume (§3.5) | ✅ Vereinfacht im Raster des Raums: tippen zum Laufen, Möbel lösen Aktionen aus, ✨ Fundstück je Gebäude (einmalig), Bewohner stehen im Raum. Keine eigene Flame-Welt. | |
 
+### 4.4 Stand M4 (Branch `feat/m4-release`, gestapelt auf M3)
+
+| Punkt | Stand |
+| :--- | :--- |
+| Recht (#93, #150) | ✅ Datenschutz, Nutzungsbedingungen, Impressum in den Einstellungen (de/en); `web/privacy.html` als Store-URL. ⚠️ Impressum hat Platzhalter ⟨…⟩, die der Herausgeber ausfüllen muss. |
+| Eltern-Hinweis (#153) | ✅ beim ersten Start, versioniert; „Verlassen“ schließt die App. |
+| Credits (#151) | ✅ Kenney CC0, Bibelübersetzungen (gemeinfrei), Bibliotheks-Lizenzen über `showLicensePage`. |
+| i18n-Audit (#152) | ✅ Spielbildschirme textfrei bzw. de/en; Sprachwahl wird gespeichert. |
+| Grafik (#13/#18/#182) | ✅ Kenney-Figuren mit Laufanimation für Pastor und Menschen; Farbtönung je Distrikttyp. Offen: Stadt-Tiles aus dem Kenney-Sheet zuordnen. |
+| Audio (#10) | ✅ Effekte (M2). Offen: Ambient-Musik (nicht in den Kenney-Paketen). |
+| Store (#94/#95) | ✅ App-Name, vorläufiges Icon, Store-Texte de/en, Checkliste. ⚠️ App-ID, Signatur, Konten, IARC, Screenshots: Herausgeber, siehe `docs/release/release_checklist.md`. |
+
 ---
 
 ## 5. Entscheidungen (2026-10-17)
