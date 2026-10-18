@@ -2,7 +2,8 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart' show Colors, TextPainter, TextSpan, TextStyle, FontWeight;
+import 'package:flame/events.dart';
+import 'package:flutter/material.dart' show VoidCallback, Colors, TextPainter, TextSpan, TextStyle, FontWeight;
 
 import '../../../../../core/utils/stable_hash.dart';
 import '../../../domain/interior/interior_layout.dart';
@@ -91,14 +92,17 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
     for (var i = 0; i < rs.length && i < layout.residentSpots.length; i++) {
       final pos = centerOf(layout.residentSpots[i]);
       residents[rs[i]] = pos;
-      add(_Person(this, pos, CharacterSprites.figureFor(stableStringHash(rs[i].id)),
-          () => _faceOf(rs[i]), () => target is ResidentTarget && (target as ResidentTarget).npc == rs[i]));
+      final npc = rs[i];
+      add(_Person(this, pos, CharacterSprites.figureFor(stableStringHash(npc.id)),
+          () => _faceOf(npc), () => target is ResidentTarget && (target as ResidentTarget).npc == npc,
+          () => ResidentTarget(npc)));
     }
     if (lesson != null) {
       final spots = layout.residentSpots;
       final cellPos = spots.length > rs.length ? spots[rs.length] : layout.find;
       mentorPos = centerOf(cellPos);
-      add(_Person(this, mentorPos!, 5, () => '🎓${lesson!.skill.emoji}', () => target is MentorTarget));
+      add(_Person(this, mentorPos!, 5, () => '🎓${lesson!.skill.emoji}', () => target is MentorTarget,
+          () => MentorTarget(lesson!)));
     }
     add(_FindSparkle(this));
     pastor = InteriorPastor(this)..position = centerOf(layout.entry);
@@ -124,6 +128,7 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
   }
 
   void _updateTarget() {
+    if (_forced != null || pastor.isWalking) return;
     final px = pastor.position.x / cell;
     final py = pastor.position.y / cell;
     InteriorTarget? best;
@@ -156,6 +161,68 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
     target = best;
   }
 
+  /// Target chosen by a tap; kept while the pastor walks there.
+  InteriorTarget? _forced;
+
+  /// Tap on a station or a person: the pastor walks there by himself
+  /// (playtest: walking every time got tedious) and then acts.
+  void goAndAct(InteriorTarget t) {
+    if (isBusy || leaving) return;
+    final bool Function(int x, int y) goal = switch (t) {
+      StationTarget(:final furniture) => (x, y) =>
+          furniture.distanceTo(x + 0.5, y + 0.5) < (furniture.kind.blocks ? 0.95 : 0.2),
+      ResidentTarget(:final npc) => (x, y) => _nextTo(residents[npc], x, y),
+      MentorTarget() => (x, y) => _nextTo(mentorPos, x, y),
+      DoorTarget() => (x, y) => (x, y) == layout.entry,
+    };
+    final path = _route(goal);
+    if (path == null) return;
+    pastor.walk(path, () {
+      _forced = t;
+      target = t;
+      game.interiorInteract();
+      _forced = null;
+    });
+  }
+
+  bool _nextTo(Vector2? p, int x, int y) {
+    if (p == null) return false;
+    final px = (p.x / cell).floor(), py = (p.y / cell).floor();
+    return (px - x).abs() + (py - y).abs() == 1;
+  }
+
+  /// Shortest walk over free cells to the nearest cell that satisfies [goal].
+  List<Vector2>? _route(bool Function(int x, int y) goal) {
+    final start = pastor.cellPos;
+    if (goal(start.$1, start.$2)) return const [];
+    final prev = <(int, int), (int, int)>{};
+    final queue = <(int, int)>[start];
+    final seen = {start};
+    for (var i = 0; i < queue.length; i++) {
+      final cur = queue[i];
+      for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+        final n = (cur.$1 + dx, cur.$2 + dy);
+        if (seen.contains(n) || !layout.isWalkable(n.$1, n.$2) || n == layout.door) continue;
+        if (residents.values.any((p) => (p.x / cell).floor() == n.$1 && (p.y / cell).floor() == n.$2)) {
+          continue;
+        }
+        seen.add(n);
+        prev[n] = cur;
+        if (goal(n.$1, n.$2)) {
+          final path = <Vector2>[];
+          var p = n;
+          while (p != start) {
+            path.insert(0, centerOf(p));
+            p = prev[p]!;
+          }
+          return path;
+        }
+        queue.add(n);
+      }
+    }
+    return null;
+  }
+
   /// Short emoji that rises over the pastor and fades (reactions, rewards).
   void float(String text) => add(_FloatingText(text, pastor.position - Vector2(0, 26)));
 }
@@ -176,7 +243,17 @@ class InteriorPastor extends PositionComponent with HasGameReference<SpiritWorld
   InteriorPastor(this.room) : super(size: Vector2.all(26), anchor: Anchor.center, priority: 50);
 
   static const double speed = 95.0;
+  static const double autoSpeed = 190.0;
   final CharacterAnimator _anim = CharacterAnimator();
+
+  List<Vector2> _path = const [];
+  VoidCallback? _onArrive;
+  bool get isWalking => _onArrive != null;
+
+  void walk(List<Vector2> path, VoidCallback onArrive) {
+    _path = List.of(path);
+    _onArrive = onArrive;
+  }
 
   (int, int) get cellPos =>
       ((position.x / InteriorWorld.cell).floor(), (position.y / InteriorWorld.cell).floor());
@@ -197,6 +274,27 @@ class InteriorPastor extends PositionComponent with HasGameReference<SpiritWorld
     _anim.update(dt, position);
     if (room.isBusy || room.leaving) return;
     final dir = game.player.moveInput;
+    if (!dir.isZero()) {
+      _onArrive = null; // the player takes over
+      _path = const [];
+    } else if (_onArrive != null) {
+      if (_path.isEmpty) {
+        final done = _onArrive!;
+        _onArrive = null;
+        done();
+        return;
+      }
+      final to = _path.first;
+      final d = to - position;
+      final stepLen = autoSpeed * dt;
+      if (d.length <= stepLen) {
+        position.setFrom(to);
+        _path.removeAt(0);
+      } else {
+        position.add(d.normalized() * stepLen);
+      }
+      return;
+    }
     if (dir.isZero()) return;
     final step = dir * speed * dt;
     final nx = position.x + step.x, ny = position.y + step.y;
@@ -221,15 +319,19 @@ class InteriorPastor extends PositionComponent with HasGameReference<SpiritWorld
 }
 
 /// A resident or mentor standing in the room, with a small emoji above.
-class _Person extends PositionComponent {
+class _Person extends PositionComponent with TapCallbacks {
   final InteriorWorld room;
   final int figure;
   final String Function() label;
   final bool Function() isTarget;
+  final InteriorTarget Function() asTarget;
   final CharacterAnimator _anim = CharacterAnimator();
 
-  _Person(this.room, Vector2 pos, this.figure, this.label, this.isTarget)
-      : super(position: pos, size: Vector2.all(26), anchor: Anchor.center, priority: 40);
+  _Person(this.room, Vector2 pos, this.figure, this.label, this.isTarget, this.asTarget)
+      : super(position: pos, size: Vector2.all(30), anchor: Anchor.center, priority: 40);
+
+  @override
+  void onTapUp(TapUpEvent event) => room.goAndAct(asTarget());
 
   @override
   void render(Canvas canvas) {
@@ -244,18 +346,30 @@ class _Person extends PositionComponent {
 
 /// Emoji bubble over a station: small and quiet, big and bobbing when the
 /// pastor stands next to it; gold ring when the building's mission wants it.
-class _StationMarker extends PositionComponent {
+class _StationMarker extends PositionComponent with TapCallbacks {
   final InteriorWorld room;
   final Furniture f;
   final String emoji;
-  _StationMarker(this.room, this.f, this.emoji) : super(priority: 60);
+
+  /// Room for the bubble above the piece.
+  static const double _head = 30;
+
+  _StationMarker(this.room, this.f, this.emoji)
+      : super(
+          priority: 60,
+          position: Vector2(f.x * InteriorWorld.cell, f.y * InteriorWorld.cell - _head),
+          size: Vector2(f.kind.w * InteriorWorld.cell, f.kind.h * InteriorWorld.cell + _head),
+        );
+
+  @override
+  void onTapUp(TapUpEvent event) => room.goAndAct(StationTarget(f));
 
   @override
   void render(Canvas canvas) {
     final t = room.target;
     final active = t is StationTarget && identical(t.furniture, f);
-    final cx = (f.x + f.kind.w / 2) * InteriorWorld.cell;
-    final top = f.kind.blocks ? f.y * InteriorWorld.cell : (f.y + f.kind.h / 2) * InteriorWorld.cell;
+    final cx = f.kind.w / 2 * InteriorWorld.cell;
+    final top = f.kind.blocks ? _head : _head + f.kind.h / 2 * InteriorWorld.cell;
     final mission = room.building.activeMission?.actionEmoji;
     final wanted = mission != null && emoji.startsWith(mission);
     final c = Offset(cx, top - (active ? 10 : 4));

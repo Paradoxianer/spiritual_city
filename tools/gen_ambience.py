@@ -186,12 +186,12 @@ def spirit():
     out = pad / np.abs(pad).max() * 0.16 + low / np.abs(low).max() * 0.14 + pulse * 0.10 + wind * 0.07
     # Distant daemons: rare cries and whispers far away (quiet, echoing).
     far = np.zeros(N)
-    for _ in range(4):
+    for _ in range(6):
         place(far, shriek(rng.uniform(0.8, 1.4)) * rng.uniform(0.6, 1.0), int(rng.uniform(0, N)))
     for _ in range(5):
         place(far, whisper(rng.uniform(1.0, 1.8)) * 0.8, int(rng.uniform(0, N)))
     far = reverb(far / (np.abs(far).max() + 1e-9), taps=14, length=1.4, decay=1.8)
-    out += far / (np.abs(far).max() + 1e-9) * 0.045
+    out += far / (np.abs(far).max() + 1e-9) * 0.13
     # Glints of light remain: God is here too.
     for _ in range(8):
         f = rng.choice([880, 1046.5, 1318.5, 1760])
@@ -248,18 +248,38 @@ def sleep():
     return mix(2.4, parts)
 
 
+def choir_voice(f_path, dur, vowel=(700, 1150, 2600), vib=0.004, seed_shift=0.0):
+    """One sung 'a': harmonics shaped by vowel formants, gentle vibrato."""
+    n = int(dur * SR)
+    k = np.arange(n) / SR
+    f = np.interp(np.linspace(0, 1, n), np.linspace(0, 1, len(f_path)), f_path)
+    f = f * (1 + vib * np.sin(2 * np.pi * rng.uniform(4.5, 5.5) * k + seed_shift))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    out = np.zeros(n)
+    f0 = float(np.mean(f_path))
+    for h in range(1, int(4000 / f0)):
+        fh = h * f0
+        g = sum(np.exp(-((fh - fc) / bw) ** 2) * a
+                for fc, bw, a in zip(vowel, (130, 150, 250), (1.0, 0.7, 0.25)))
+        out += np.sin(h * ph) * (g + 0.02) / h ** 0.3
+    return out
+
+
 def wave_liberation():
-    # 🕊️ Rising bright sweep with a ringing major chord: light breaks in.
-    n = int(1.3 * SR)
-    kk = np.linspace(0, 1, n)
-    sweep = shaped_noise(800, 9000)[:n] * np.exp(-kk * 3) * 0.4
-    ph = 2 * np.pi * np.cumsum(500 + 1300 * kk ** 0.5) / SR
-    rise = np.sin(ph) * np.sin(np.pi * kk) * 0.4
-    bell = ((1, 1.0), (2.01, 0.35), (3.0, 0.15))
-    chord = mix(1.3, [(0.12, tone(880, 1.1, 0.005, 1.0, bell) * 0.35),
-                      (0.12, tone(1108.7, 1.1, 0.005, 1.0, bell) * 0.25),
-                      (0.12, tone(1318.5, 1.1, 0.005, 1.0, bell) * 0.25)])
-    return reverb(sweep + rise + chord, taps=6, length=0.4, decay=5)
+    # 🕊️ A short Gregorian phrase: men's voices in unison on "a", Dorian
+    # neume D–E–F–E, an octave drone below, long cathedral reverb.
+    d, e, f = 146.83, 164.81, 174.61
+    melody = [d, d, e, f, f, e, e]
+    dur = 1.5
+    voices = np.zeros(int(dur * SR))
+    for v in range(5):
+        detune = 1 + rng.uniform(-0.006, 0.006)
+        voices += choir_voice([m * detune for m in melody], dur, seed_shift=v)
+    drone = choir_voice([d / 2] * 3, dur, vowel=(600, 1000, 2500)) * 0.5
+    n = len(voices)
+    shape = env(n, 0.12, 0.5)
+    x = (voices / 5 + drone) * shape
+    return reverb(x, taps=22, length=1.6, decay=1.6)
 
 
 def wave_rebuke():
@@ -290,6 +310,12 @@ def wave_drain():
     down = np.sin(ph) * kk ** 2 * 0.5
     x = (swell * 0.6 + down) * np.clip((1 - kk) * 12, 0, 1)
     return reverb(x, taps=6, length=0.4, decay=4)
+
+
+def daemon_near():
+    # A daemon close by: a thin cry with a hiss, not too long.
+    x = shriek(1.1) + whisper(1.1) * 0.6
+    return reverb(x / (np.abs(x).max() + 1e-9), taps=6, length=0.5, decay=3)
 
 
 def write_once(name, x, peak=0.7):
@@ -344,3 +370,4 @@ if __name__ == '__main__':
     write_once('wave_rebuke', wave_rebuke(), 0.7)
     write_once('wave_slow', wave_slow(), 0.55)
     write_once('wave_drain', wave_drain(), 0.55)
+    write_once('daemon_near', daemon_near(), 0.6)

@@ -39,6 +39,7 @@ enum FurnitureKind {
   candelabra(1, 1),
   barrel(1, 1),
   bench(2, 1),
+  prayerCross(1, 1),
   fireplace(1, 1),
   rug(3, 2, blocks: false),
   carpet(1, 1, blocks: false),
@@ -131,7 +132,7 @@ class InteriorLayout {
         'readBible' => FurnitureKind.bookshelf,
         'eat' || 'houseVisit' => FurnitureKind.roundTable,
         'sleep' => FurnitureKind.bed,
-        'pray' || 'prayForPoliticians' => FurnitureKind.candelabra,
+        'pray' || 'prayForPoliticians' => FurnitureKind.prayerCross,
         'missions' || 'letterToManagement' || 'talkDirector' || 'blessPolice' ||
         'mayorAudience' || 'talkBoss' =>
           FurnitureKind.desk,

@@ -22,6 +22,7 @@ import '../domain/models/daemon_model.dart';
 import '../domain/models/day_stats.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
+import 'components/daemon_component.dart';
 import 'components/character_sprites.dart';
 import 'components/kenney_city_renderer.dart';
 import 'components/interior/interior_renderer.dart';
@@ -238,6 +239,23 @@ class SpiritWorldGame extends FlameGame
   double _cityZoom = 1.0;
   String _interiorButtonEmoji = '';
   double _ambienceTimer = 0;
+  double _daemonCryTimer = 2;
+  final Random _cryRandom = Random();
+
+  /// A daemon close by cries now and then – louder the nearer it is.
+  void _daemonCry(double dt) {
+    _daemonCryTimer -= dt;
+    if (_daemonCryTimer > 0) return;
+    _daemonCryTimer = 3 + _cryRandom.nextDouble() * 4;
+    const reach = 9 * CellComponent.cellSize;
+    var best = reach;
+    for (final d in world.children.whereType<DaemonComponent>()) {
+      final dist = d.position.distanceTo(player.position);
+      if (dist < best) best = dist;
+    }
+    if (best >= reach) return;
+    GameSound.play(Sfx.daemonNear, volume: 0.15 + 0.45 * (1 - best / reach));
+  }
 
   // ── City map (whole city, playtest 2026-10-18) ────────────────────────────
 
@@ -1124,6 +1142,7 @@ class SpiritWorldGame extends FlameGame
         _ambienceTimer = 0;
         GameAmbience.set(_ambienceHere());
       }
+      if (isSpiritualWorld && interior == null) _daemonCry(dt);
     }
     // Always push player position so the Flutter HUD compass stays live.
     playerWorldPosition.value = player.position.clone();

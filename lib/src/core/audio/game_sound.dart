@@ -24,7 +24,8 @@ enum Sfx {
   waveLiberation('actions/wave_liberation.ogg'),
   waveRebuke('actions/wave_rebuke.ogg'),
   waveSlow('actions/wave_slow.ogg'),
-  waveDrain('actions/wave_drain.ogg');
+  waveDrain('actions/wave_drain.ogg'),
+  daemonNear('actions/daemon_near.ogg');
 
   /// Path below assets/audio/.
   final String file;
@@ -95,7 +96,7 @@ abstract final class GameSound {
 /// tools/gen_ambience.py, so no licence questions.
 enum Ambience {
   none('', 0),
-  city('ambience/city.ogg', 0.35),
+  city('ambience/city.ogg', 0.2),
   home('ambience/home.ogg', 0.55),
   hall('ambience/hall.ogg', 0.4),
   church('ambience/church.ogg', 0.35),

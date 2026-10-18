@@ -153,6 +153,7 @@ abstract final class InteriorRenderer {
       FurnitureKind.candelabra => _sprite(c, _indoor, 16, 7, 1, 1, r),
       FurnitureKind.barrel => _sprite(c, _rpg, 23, 0, 1, 1, r),
       FurnitureKind.bench => _sprite(c, _indoor, 10, 3, 2, 1, r),
+      FurnitureKind.prayerCross => _prayerCross(c, r),
       FurnitureKind.fireplace => _sprite(c, _rpg, 54, 8, 1, 1, r),
       FurnitureKind.rug => _rug(c, r, highlightGreen),
       FurnitureKind.carpet => _carpet(c, r),
@@ -182,6 +183,20 @@ abstract final class InteriorRenderer {
       c.drawRect(Rect.fromLTWH(x, inner.top - 3, 2, 3), _fill);
       c.drawRect(Rect.fromLTWH(x, inner.bottom, 2, 3), _fill);
     }
+    return true;
+  }
+
+  /// A standing wooden cross on a small step, a candle at its foot.
+  static bool _prayerCross(Canvas c, Rect r) {
+    _fill.color = const Color(0xFF8C6A45);
+    c.drawRect(Rect.fromLTWH(r.left + 6, r.bottom - 7, r.width - 12, 5), _fill);
+    _fill.color = const Color(0xFF6B4A2B);
+    c.drawRect(Rect.fromLTWH(r.center.dx - 2.5, r.top + 2, 5, r.height - 8), _fill);
+    c.drawRect(Rect.fromLTWH(r.left + 8, r.top + 8, r.width - 16, 5), _fill);
+    _fill.color = const Color(0xFFB08458);
+    c.drawRect(Rect.fromLTWH(r.center.dx - 1.5, r.top + 3, 1.5, r.height - 10), _fill);
+    _fill.color = const Color(0xFFFFE082);
+    c.drawCircle(Offset(r.left + 7, r.bottom - 10), 2, _fill);
     return true;
   }
 
