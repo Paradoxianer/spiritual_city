@@ -147,18 +147,57 @@ def church():
     return air + organ / np.abs(organ).max() * 0.16
 
 
+def shriek(dur):
+    """A distant, thin daemon cry: band noise through a gliding resonance."""
+    n = int(dur * SR)
+    k = np.linspace(0, 1, n)
+    base = rng.standard_normal(n)
+    f = rng.uniform(900, 1500) * (1 + 0.6 * np.sin(np.pi * k)) * rng.choice([1, 0.8])
+    # Resonant band-pass via a phase-modulated sine riding the noise envelope.
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    voice = np.sin(ph + 0.8 * np.sin(ph * 1.5)) * (0.6 + 0.4 * np.abs(np.convolve(base, np.ones(200) / 200, 'same')))
+    breath = shaped_noise(1500, 6000)[:n] * 0.5
+    e = np.sin(np.pi * k) ** 3 * (0.7 + 0.3 * np.sin(2 * np.pi * rng.uniform(5, 9) * k))
+    return (voice + breath) * e
+
+
+def whisper(dur):
+    """Unintelligible whisper: speech-band noise with syllable bursts."""
+    n = int(dur * SR)
+    k = np.arange(n) / SR
+    syll = np.clip(np.sin(2 * np.pi * rng.uniform(4, 7) * k), 0, 1) ** 3
+    return shaped_noise(1800, 5500)[:n] * syll * np.sin(np.pi * k / dur) ** 2
+
+
 def spirit():
-    drone = (np.sin(2 * np.pi * 55 * t) + np.sin(2 * np.pi * 55.25 * t) * 0.8 +
-             np.sin(2 * np.pi * 82.5 * t) * 0.4)
-    drone *= 0.65 + 0.35 * lfo(3)
+    # Spherical: slow detuned pad on A with an open fifth.
+    pad = np.zeros(N)
+    for f, a in [(110, 1.0), (110.4, 0.8), (164.8, 0.5), (220.3, 0.3), (329.6, 0.15)]:
+        pad += np.sin(2 * np.pi * f * t + rng.uniform(0, 6)) * a
+    pad *= 0.6 + 0.4 * lfo(2)
+    # Danger underneath: a low tritone that swells and a slow pulse.
+    low = (np.sin(2 * np.pi * 55 * t) + np.sin(2 * np.pi * 77.78 * t) * 0.7) * (0.3 + 0.7 * lfo(3, 1.0) ** 2)
+    pulse = np.zeros(N)
+    beat = tone(48, 0.35, 0.01, 0.3) * 0.8
+    for b in range(0, SECONDS, 3):
+        place(pulse, beat, int(b * SR))
+        place(pulse, beat * 0.6, int((b + 0.45) * SR))
     wind = shaped_noise(150, 1200, slope=1.0) * (0.4 + 0.6 * lfo(4, 2))
-    out = drone / np.abs(drone).max() * 0.2 + wind * 0.08
-    # Glints of light.
-    for _ in range(10):
-        f = rng.choice([880, 1046.5, 1318.5, 1567.98, 1760])
+    out = pad / np.abs(pad).max() * 0.16 + low / np.abs(low).max() * 0.14 + pulse * 0.10 + wind * 0.07
+    # Distant daemons: rare cries and whispers far away (quiet, echoing).
+    far = np.zeros(N)
+    for _ in range(4):
+        place(far, shriek(rng.uniform(0.8, 1.4)) * rng.uniform(0.6, 1.0), int(rng.uniform(0, N)))
+    for _ in range(5):
+        place(far, whisper(rng.uniform(1.0, 1.8)) * 0.8, int(rng.uniform(0, N)))
+    far = reverb(far / (np.abs(far).max() + 1e-9), taps=14, length=1.4, decay=1.8)
+    out += far / (np.abs(far).max() + 1e-9) * 0.045
+    # Glints of light remain: God is here too.
+    for _ in range(8):
+        f = rng.choice([880, 1046.5, 1318.5, 1760])
         n = int(2.2 * SR)
         g = np.sin(2 * np.pi * f * np.arange(n) / SR) * env(n, 0.02, 2.1)
-        place(out, g * 0.04, int(rng.uniform(0, N)))
+        place(out, g * 0.035, int(rng.uniform(0, N)))
     return reverb(out, taps=10, length=1.5, decay=2.0)
 
 
@@ -209,6 +248,50 @@ def sleep():
     return mix(2.4, parts)
 
 
+def wave_liberation():
+    # 🕊️ Rising bright sweep with a ringing major chord: light breaks in.
+    n = int(1.3 * SR)
+    kk = np.linspace(0, 1, n)
+    sweep = shaped_noise(800, 9000)[:n] * np.exp(-kk * 3) * 0.4
+    ph = 2 * np.pi * np.cumsum(500 + 1300 * kk ** 0.5) / SR
+    rise = np.sin(ph) * np.sin(np.pi * kk) * 0.4
+    bell = ((1, 1.0), (2.01, 0.35), (3.0, 0.15))
+    chord = mix(1.3, [(0.12, tone(880, 1.1, 0.005, 1.0, bell) * 0.35),
+                      (0.12, tone(1108.7, 1.1, 0.005, 1.0, bell) * 0.25),
+                      (0.12, tone(1318.5, 1.1, 0.005, 1.0, bell) * 0.25)])
+    return reverb(sweep + rise + chord, taps=6, length=0.4, decay=5)
+
+
+def wave_rebuke():
+    # 🫸 A firm push: deep impact, a bright crack and a short shock rumble.
+    thump = tone(55, 0.5, 0.002, 0.45, ((1, 1.0), (2, 0.4))) * np.exp(-np.linspace(0, 5, int(0.5 * SR)))
+    crack = shaped_noise(1500, 9000)[:int(0.12 * SR)] * env(int(0.12 * SR), 0.001, 0.11)
+    rumble = shaped_noise(40, 300, slope=1.5)[:int(0.9 * SR)] * env(int(0.9 * SR), 0.01, 0.85)
+    return reverb(mix(1.0, [(0, thump * 0.9), (0, crack * 0.5), (0.02, rumble * 0.5)]), taps=5, length=0.3, decay=6)
+
+
+def wave_slow():
+    # ⏳ Time thickens: a falling, wobbling tone.
+    n = int(1.2 * SR)
+    kk = np.linspace(0, 1, n)
+    f = 420 * (1 - 0.55 * kk)
+    ph = 2 * np.pi * np.cumsum(f * (1 + 0.04 * np.sin(2 * np.pi * (6 - 4 * kk) * kk * 1.2))) / SR
+    x = (np.sin(ph) + 0.3 * np.sin(2 * ph)) * np.sin(np.pi * kk) ** 0.7
+    shimmer = shaped_noise(3000, 7000)[:n] * np.exp(-kk * 4) * 0.15
+    return reverb(x * 0.5 + shimmer, taps=8, length=0.6, decay=3)
+
+
+def wave_drain():
+    # 🪫 Power is drawn away: a reverse swell that sucks downwards.
+    n = int(1.1 * SR)
+    kk = np.linspace(0, 1, n)
+    swell = shaped_noise(200, 4000)[:n] * kk ** 2.5 * np.exp(-((kk - 0.85) / 0.12) ** 2 * 0.5)
+    ph = 2 * np.pi * np.cumsum(300 * (1 - 0.7 * kk)) / SR
+    down = np.sin(ph) * kk ** 2 * 0.5
+    x = (swell * 0.6 + down) * np.clip((1 - kk) * 12, 0, 1)
+    return reverb(x, taps=6, length=0.4, decay=4)
+
+
 def write_once(name, x, peak=0.7):
     out = os.path.join(os.path.dirname(__file__), '..', 'assets', 'audio', 'actions')
     x = x - x.mean()
@@ -257,3 +340,7 @@ if __name__ == '__main__':
     write_once('talk', talk(), 0.5)
     write_once('pray', pray(), 0.6)
     write_once('sleep', sleep(), 0.55)
+    write_once('wave_liberation', wave_liberation(), 0.55)
+    write_once('wave_rebuke', wave_rebuke(), 0.7)
+    write_once('wave_slow', wave_slow(), 0.55)
+    write_once('wave_drain', wave_drain(), 0.55)

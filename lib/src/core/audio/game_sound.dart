@@ -19,7 +19,12 @@ enum Sfx {
   // Synthesised by tools/gen_ambience.py (playtest 2026-10-18).
   talk('actions/talk.ogg'),
   pray('actions/pray.ogg'),
-  sleep('actions/sleep.ogg');
+  sleep('actions/sleep.ogg'),
+  // Prayer waves, one per mode (🕊️ 🫸 ⏳ 🪫).
+  waveLiberation('actions/wave_liberation.ogg'),
+  waveRebuke('actions/wave_rebuke.ogg'),
+  waveSlow('actions/wave_slow.ogg'),
+  waveDrain('actions/wave_drain.ogg');
 
   /// Path below assets/audio/.
   final String file;
@@ -59,6 +64,17 @@ abstract final class GameSound {
       case 'bible':
         play(Sfx.book, volume: 0.6);
     }
+  }
+
+  /// Sound of a prayer wave of mode [modeId] (PrayerMode.id).
+  static void playWave(String modeId) {
+    final sfx = switch (modeId) {
+      'rebuke' => Sfx.waveRebuke,
+      'slow' => Sfx.waveSlow,
+      'drain' => Sfx.waveDrain,
+      _ => Sfx.waveLiberation,
+    };
+    play(sfx, volume: 0.55);
   }
 
   static void play(Sfx sfx, {double volume = 0.6}) {

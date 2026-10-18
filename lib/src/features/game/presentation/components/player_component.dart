@@ -1,4 +1,5 @@
 import 'package:flame/components.dart';
+import '../../../../core/audio/game_sound.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
@@ -310,6 +311,7 @@ class PlayerComponent extends PositionComponent
     }
     game.faith -= cost;
 
+    GameSound.playWave(_currentMode.id);
     game.world.add(ShockwaveComponent(
       position: position.clone(),
       maxRadius: stats.radius,

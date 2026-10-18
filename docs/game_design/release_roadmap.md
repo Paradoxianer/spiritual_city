@@ -257,7 +257,7 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | Innenräume (§3.5, #182) | ✅ Dritte Ebene: begehbare Räume, prozedural je Gebäude (stabil aus der Gebäude-ID), Kenney Roguelike Indoors/RPG. Möbel sind Stationen der Gebäude-Aktionen; Bewohner, 🎓 Mentor, ✨. Alle Sondergebäude eigen eingerichtet. Anklopfen bleibt Tür-Dialog. |
 | Minimap & Stadtkarte | ✅ Oben rechts: Stadt (Straßen, Häuser, Sondergebäude, 📋-Ziele) bzw. unsichtbare Welt (Zellzustand, Dämonen, 🏰); Tippen vergrößert, Doppeltippen öffnet die Karte der ganzen Stadt (aus dem Generator berechnet, 🎓 Mentoren, erweckte Viertel). |
 | Missionen annehmen | ✅ 📍 im Missionsbrett: Ziel auf Minimap/Karte, Pfeil im HUD, gespeichert. Offen: Missions-Ketten, die zu neuen Fähigkeiten führen (Idee, siehe Lern-Missionen §3.9). |
-| Audio (#10) | ✅ Effekte (M2). ✅ Umgebungsgeräusche (Stadt, Wohnung, Halle, Kirche, unsichtbare Welt) und Aktionsklänge (💬, 🙏, 😴), synthetisch erzeugt (`tools/gen_ambience.py`). Offen: Musik / echte Aufnahmen (Pixabay-Audio-Zugang fehlt). |
+| Audio (#10) | ✅ Effekte (M2). ✅ Umgebungsgeräusche (Stadt, Wohnung, Halle, Kirche, unsichtbare Welt – sphärisch mit fernen Dämonenstimmen) und Klänge für 💬, 🙏, 😴 und die vier Gebetswellen (🕊️ 🫸 ⏳ 🪫), synthetisch erzeugt (`tools/gen_ambience.py`). Offen: Musik / echte Aufnahmen (Pixabay-Audio-Zugang fehlt). |
 | Android-Navigationsleiste (#190) | ❌ Offen: Systemleiste überdeckt HUD-Knöpfe (Kampf-Knopf teils nicht drückbar) → Immersive Mode + Insets beachten. |
 | Store (#94/#95) | ✅ App-Name, vorläufiges Icon, Store-Texte de/en, Checkliste. ⚠️ App-ID, Signatur, Konten, IARC, Screenshots: Herausgeber, siehe `docs/release/release_checklist.md`. |
 
