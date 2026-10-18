@@ -8,7 +8,7 @@ part of '../game_screen.dart';
 /// - Invisible world: the spiritual state of every cell (red = dark,
 ///   green = light), daemons as red dots, the 🏰 stronghold.
 ///
-/// Tap to make it bigger (shows more of the city). Hidden inside buildings.
+/// Tap to open the whole city ([CityMapOverlay]). Hidden inside buildings.
 class _Minimap extends StatefulWidget {
   final SpiritWorldGame game;
   const _Minimap({required this.game});
@@ -19,7 +19,6 @@ class _Minimap extends StatefulWidget {
 
 class _MinimapState extends State<_Minimap> {
   Timer? _timer;
-  bool _big = false;
   int _tick = 0;
 
   @override
@@ -41,10 +40,10 @@ class _MinimapState extends State<_Minimap> {
   Widget build(BuildContext context) {
     final g = widget.game;
     if (g.interior != null) return const SizedBox.shrink();
-    final size = _big ? 220.0 : 112.0;
+    const size = 112.0;
     final spirit = g.isSpiritualWorld;
     return GestureDetector(
-      onTap: () => setState(() => _big = !_big),
+      onTap: g.openCityMap,
       child: Container(
         width: size,
         height: size,
@@ -62,7 +61,7 @@ class _MinimapState extends State<_Minimap> {
             painter: _MinimapPainter(
               game: g,
               spirit: spirit,
-              radiusCells: _big ? 64 : 36,
+              radiusCells: 36,
               tick: _tick,
             ),
           ),

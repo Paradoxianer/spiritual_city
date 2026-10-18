@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'dart:math' show atan2, pi, Random, sin;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import '../domain/actions/npc_actions.dart';
 import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/models/base_interactable_entity.dart';
+import '../domain/city_generation/city_overview.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
@@ -37,6 +39,7 @@ part 'hud/hud.dart';
 part 'hud/minimap.dart';
 part 'overlays/building_interior.dart';
 part 'overlays/church.dart';
+part 'overlays/city_map.dart';
 part 'overlays/lesson.dart';
 part 'overlays/look.dart';
 part 'overlays/missions.dart';
@@ -155,6 +158,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
               'InteriorHud': (context, game) => InteriorHud(game: _game),
+              'CityMapOverlay': (context, game) => CityMapOverlay(game: _game),
               'UpgradeOverlay': (context, game) => UpgradeOverlay(game: _game),
               'LookOverlay': (context, game) => LookOverlay(game: _game),
               'MissionBoardOverlay': (context, game) =>

@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'dart:math' show Random, min;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show compute, ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/audio/game_sound.dart';
@@ -14,6 +15,7 @@ import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/interior/interior_layout.dart';
+import '../domain/city_generation/city_overview.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../domain/models/daemon_model.dart';
 import '../domain/models/day_stats.dart';
@@ -234,6 +236,38 @@ class SpiritWorldGame extends FlameGame
   double _cityZoom = 1.0;
   String _interiorButtonEmoji = '';
   double _ambienceTimer = 0;
+
+  // ── City map (whole city, playtest 2026-10-18) ────────────────────────────
+
+  CityOverview? cityOverview;
+  final ValueNotifier<ui.Image?> cityMapImage = ValueNotifier(null);
+  bool _cityMapLoading = false;
+
+  /// Computes the city plan once per game, off the UI thread.
+  Future<void> loadCityMap() async {
+    if (_cityMapLoading || cityMapImage.value != null) return;
+    _cityMapLoading = true;
+    try {
+      final o = await compute(CityOverview.build, seedManager.seed);
+      cityOverview = o;
+      ui.decodeImageFromPixels(o.pixels, CityOverview.size, CityOverview.size,
+          ui.PixelFormat.rgba8888, (img) => cityMapImage.value = img);
+    } catch (e) {
+      _log.warning('City map failed: $e');
+      _cityMapLoading = false;
+    }
+  }
+
+  void openCityMap() {
+    if (overlays.isActive('CityMapOverlay')) return;
+    overlays.add('CityMapOverlay');
+    paused = true;
+  }
+
+  void closeCityMap() {
+    overlays.remove('CityMapOverlay');
+    paused = false;
+  }
 
   /// Background sound for where the pastor is.
   Ambience _ambienceHere() {
@@ -616,6 +650,7 @@ class SpiritWorldGame extends FlameGame
       }
       isWorldReady.value = true;
       _sessionStartTime = DateTime.now();
+      loadCityMap(); // ready before the first tap on the minimap
       _log.info(
         '--- GAME READY --- '
         'pastorhousePos=${pastorhousePosition.value} '
