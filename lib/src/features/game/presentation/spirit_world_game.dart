@@ -13,7 +13,6 @@ import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/models/daemon_model.dart';
-import '../domain/models/church.dart';
 import '../domain/models/day_stats.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
@@ -320,40 +319,28 @@ class SpiritWorldGame extends FlameGame
   /// 📢 Preaching radius in cells.
   static const int preachRadiusCells = 8;
 
-  /// Today's counters (day summary when sleeping).
+  /// Internal day counter: sleeping starts a new one. Not shown in the UI
+  /// (playtest: visible days added too much complexity) – it only paces
+  /// once-per-sleep actions (🙏🏠, 📢, 🩹) and the church yield.
   DayStats get dayStats => progress.dayStats;
 
-  /// Bumped when the day changes (HUD day chip listens).
-  final ValueNotifier<int> dayNotifier = ValueNotifier(0);
-
-  /// Sleeping in the pastor house ends the day: show the summary.
-  void openDaySummary() {
+  /// Sleeping in the pastor house: the church's yield (#181) arrives, then a
+  /// new day starts – no real-time ticking, nothing is lost while paused.
+  void endDay() {
     GameSound.play(Sfx.dayEnd);
-    // The church's daily yield (#181) arrives at the end of the day – no
-    // real-time ticking, nothing is lost while paused.
     final y = progress.church.dailyYield();
     if (y.faith > 0) gainFaith(y.faith);
     if (y.materials > 0) gainMaterials(y.materials);
     if (y.insight > 0) progress.addInsight(y.insight);
-    lastChurchYield = y;
-    overlays.add('DaySummaryOverlay');
+    dayStats.nextDay();
+    lootPickupMessage.value = y.isEmpty ? '😴 → ☀️' : '😴 → ☀️  ⛪ ${y.label}';
   }
-
-  /// What the church brought in at the last day's end (day summary).
-  ChurchYield lastChurchYield = const ChurchYield();
 
   /// Church overview (pastor house ⛪👥).
   void openChurchOverview() => overlays.add('ChurchOverlay');
   void closeChurchOverview() => overlays.remove('ChurchOverlay');
 
-  /// Starts the next day after the summary.
-  void startNextDay() {
-    dayStats.nextDay();
-    dayNotifier.value++;
-    overlays.remove('DaySummaryOverlay');
-  }
-
-  /// Status of the neighbourhood the pastor is in (HUD chip).
+  /// Status of the neighbourhood the pastor is in.
   final ValueNotifier<QuarterStatus?> quarterStatus = ValueNotifier(null);
   double _quarterTimer = 0.0;
 

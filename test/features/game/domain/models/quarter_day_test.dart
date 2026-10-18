@@ -34,16 +34,15 @@ void main() {
   });
 
   group('DayStats', () {
-    test('next day clears the counters; every 7th day is Sunday', () {
+    test('next day clears the counters', () {
       final d = DayStats()
         ..conversions = 2
         ..daemonsDefeated = 5;
-      expect(d.rows, [('✝️', 2), ('👹', 5)]);
+      expect(d.isEmpty, isFalse);
       for (var i = 0; i < 6; i++) {
         d.nextDay();
       }
       expect(d.day, 7);
-      expect(d.isSunday, isTrue);
       expect(d.isEmpty, isTrue);
     });
 

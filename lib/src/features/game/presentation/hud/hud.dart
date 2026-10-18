@@ -147,8 +147,7 @@ class _MissionCompleteToast extends StatefulWidget {
   State<_MissionCompleteToast> createState() => _MissionCompleteToastState();
 }
 
-class _MissionCompleteToastState extends State<_MissionCompleteToast>
-    with SingleTickerProviderStateMixin {
+class _MissionCompleteToastState extends State<_MissionCompleteToast> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _opacity;
   Timer? _dismissTimer;
@@ -241,8 +240,7 @@ class _HealthAlarmOverlay extends StatefulWidget {
   State<_HealthAlarmOverlay> createState() => _HealthAlarmOverlayState();
 }
 
-class _HealthAlarmOverlayState extends State<_HealthAlarmOverlay>
-    with SingleTickerProviderStateMixin {
+class _HealthAlarmOverlayState extends State<_HealthAlarmOverlay> with SingleTickerProviderStateMixin {
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseAnim;
 
@@ -649,14 +647,6 @@ class _InsightDisplay extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(width: 4),
-        Text(
-          'Erkenntnis',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.55),
-            fontSize: 10,
-          ),
-        ),
       ],
     );
   }
@@ -687,8 +677,7 @@ class _ConversionCounter extends StatefulWidget {
   State<_ConversionCounter> createState() => _ConversionCounterState();
 }
 
-class _ConversionCounterState extends State<_ConversionCounter>
-    with SingleTickerProviderStateMixin {
+class _ConversionCounterState extends State<_ConversionCounter> with SingleTickerProviderStateMixin {
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -758,14 +747,6 @@ class _ConversionCounterState extends State<_ConversionCounter>
               ),
             ),
           ),
-        const SizedBox(width: 4),
-        Text(
-          AppStrings.get('hud.christians'),
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.55),
-            fontSize: 10,
-          ),
-        ),
       ],
     );
   }
@@ -809,8 +790,8 @@ class _AnimatedResourceBar extends StatefulWidget {
 }
 
 class _AnimatedResourceBarState extends State<_AnimatedResourceBar> with TickerProviderStateMixin {
-  static const double _barWidth = 130.0;
-  static const double _barHeight = 8.0;
+  static const double _barWidth = 90.0;
+  static const double _barHeight = 7.0;
   static const double _stageBarHeight = 2.0;
 
   late AnimationController _fadeCtrl;
@@ -823,7 +804,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar> with TickerP
   double _prevValue = 0.0;
   double _lastDelta = 0.0;
 
-  static const TextStyle _iconStyle = TextStyle(fontSize: 11);
+  static const TextStyle _iconStyle = TextStyle(fontSize: 14);
 
   @override
   void initState() {
@@ -875,10 +856,8 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar> with TickerP
     final deltaColor = _lastDelta >= 0 ? Colors.amber : Colors.redAccent;
 
     // Dynamic bar colour based on warning/critical thresholds
-    final bool isCritical =
-        widget.criticalThreshold != null && progress < widget.criticalThreshold!;
-    final bool isWarn =
-        !isCritical && widget.warnThreshold != null && progress < widget.warnThreshold!;
+    final bool isCritical = widget.criticalThreshold != null && progress < widget.criticalThreshold!;
+    final bool isWarn = !isCritical && widget.warnThreshold != null && progress < widget.warnThreshold!;
     Color effectiveColor = widget.color;
     if (isCritical) {
       effectiveColor = Colors.redAccent;
@@ -886,121 +865,86 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar> with TickerP
       effectiveColor = Colors.amber;
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Emoji icon – pulses when critically low
-        isCritical
-            ? AnimatedBuilder(
-                animation: _pulseAnim,
-                builder: (context, _) => Opacity(
-                  opacity: (0.4 + _pulseAnim.value * 0.6).clamp(0.0, 1.0),
-                  child: Text(widget.icon, style: _iconStyle),
+    // The name stays for screen readers only.
+    return Semantics(
+      label: '${widget.label} ${value.toInt()}/${widget.max.toInt()}',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Emoji icon – pulses when critically low
+          isCritical
+              ? AnimatedBuilder(
+                  animation: _pulseAnim,
+                  builder: (context, _) => Opacity(
+                    opacity: (0.4 + _pulseAnim.value * 0.6).clamp(0.0, 1.0),
+                    child: Text(widget.icon, style: _iconStyle),
+                  ),
+                )
+              : Text(widget.icon, style: _iconStyle),
+          const SizedBox(width: 4),
+          // Emoji + bar only (playtest: names, "x/y" and "Lv." were too much).
+          // The thin cyan strip on top is the progress to the next capacity
+          // stage.
+          SizedBox(
+            width: _barWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: _barWidth,
+                  height: _stageBarHeight,
+                  color: Colors.white.withValues(alpha: 0.05),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(
+                      widthFactor: stageProgress,
+                      child: Container(color: Colors.cyanAccent.withValues(alpha: 0.8)),
+                    ),
+                  ),
                 ),
-              )
-            : Text(widget.icon, style: _iconStyle),
-        const SizedBox(width: 4),
-        SizedBox(
-          width: _barWidth,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Label + current value + fading delta + Stage Level
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      '${widget.label} ${value.toInt()}/${widget.max.toInt()}',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                Container(
+                  width: _barWidth,
+                  height: _barHeight,
+                  decoration: const BoxDecoration(
+                    color: Colors.white12,
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(3)),
                   ),
-                  const SizedBox(width: 2),
-                  Text(
-                    'Lv.${widget.stage.stage}',
-                    style: const TextStyle(
-                      color: Colors.amberAccent,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  // Delta chip – only shown while the fade is in progress.
-                  if (_fadeCtrl.isAnimating || _fadeCtrl.value < 1.0)
-                    AnimatedBuilder(
-                      animation: _fadeAnim,
-                      builder: (context, _) => Opacity(
-                        opacity: _fadeAnim.value.clamp(0.0, 1.0),
-                        child: Text(
-                          deltaText,
-                          style: TextStyle(
-                            color: deltaColor,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(
+                      widthFactor: progress,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: effectiveColor,
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
                         ),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 1),
-              // Stage Progress Bar (Pixel strip)
-              Container(
-                width: _barWidth,
-                height: _stageBarHeight,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: stageProgress,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.cyanAccent.withValues(alpha: 0.8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.cyanAccent.withValues(alpha: 0.4),
-                            blurRadius: 2,
-                            spreadRadius: 0.5,
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
-              ),
-              // Main Progress bar (plain, no glow)
-              Container(
-                width: _barWidth,
-                height: _barHeight,
-                decoration: const BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(3)),
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: progress,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: effectiveColor,
-                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+          // Delta – only shown while the fade is in progress.
+          SizedBox(
+            width: 26,
+            child: (_fadeCtrl.isAnimating || _fadeCtrl.value < 1.0) && _lastDelta != 0
+                ? AnimatedBuilder(
+                    animation: _fadeAnim,
+                    builder: (context, _) => Opacity(
+                      opacity: _fadeAnim.value.clamp(0.0, 1.0),
+                      child: Text(
+                        ' $deltaText',
+                        style: TextStyle(color: deltaColor, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  )
+                : null,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -272,7 +272,6 @@ extension GameOverlayControl on SpiritWorldGame {
     if (_pauseMenuOpen)              { closePauseMenu();         return true; }
     if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
     if (activeLessonOffer != null)   { closeLesson();            return true; }
-    if (overlays.isActive('DaySummaryOverlay')) { startNextDay(); return true; }
     if (overlays.isActive('ChurchOverlay')) { closeChurchOverview(); return true; }
     if (activeDialog != null)        { closeDialog();            return true; }
     if (activeBuildingData != null)  { closeBuildingInterior();  return true; }

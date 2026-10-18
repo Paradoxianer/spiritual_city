@@ -23,7 +23,7 @@ class _ChurchOverlayState extends State<ChurchOverlay> {
       theme: OverlayTheme.home,
       leading: Text('⛪ ${members.length}', style: const TextStyle(fontSize: 22, color: Colors.white)),
       title: Text(
-        y.isEmpty ? '' : '${y.label} / ☀️',
+        y.isEmpty ? '' : '${y.label} / 😴',
         style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 13),
       ),
       onClose: widget.game.closeChurchOverview,

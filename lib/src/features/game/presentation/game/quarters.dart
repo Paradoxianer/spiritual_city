@@ -32,7 +32,16 @@ extension GameQuarters on SpiritWorldGame {
       people: people,
       awakened: progress.awakenedQuarters.contains(q.key),
     );
-    if (quarterStatus.value != status) quarterStatus.value = status;
+    final before = quarterStatus.value;
+    if (before != status) {
+      // No permanent HUD line (playtest): only announce the moment the
+      // neighbourhood's stronghold becomes attackable.
+      if (before != null && before.quarter == q && !before.strongholdOpen &&
+          status.strongholdOpen && !status.awakened) {
+        _toast('🏘️✝️ ➡️ 🏰⚔️');
+      }
+      quarterStatus.value = status;
+    }
 
     if (isSpiritualWorld) _ensureStronghold(status);
   }
