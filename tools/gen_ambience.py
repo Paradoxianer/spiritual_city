@@ -361,12 +361,14 @@ if __name__ == '__main__':
     write('city', city(), 0.5)
     write('home', home(), 0.45)
     write('hall', hall(), 0.5)
-    write('church', church(), 0.5)
+    # church.ogg is a Pixabay recording now (see assets/LICENSES.md);
+    # church() stays as the synthetic fallback.
     write('spirit', spirit(), 0.55)
     write_once('talk', talk(), 0.5)
     write_once('pray', pray(), 0.6)
     write_once('sleep', sleep(), 0.55)
-    write_once('wave_liberation', wave_liberation(), 0.55)
+    # wave_liberation.ogg is a Pixabay recording now (see assets/LICENSES.md);
+    # wave_liberation() stays as the synthetic fallback.
     write_once('wave_rebuke', wave_rebuke(), 0.7)
     write_once('wave_slow', wave_slow(), 0.55)
     write_once('wave_drain', wave_drain(), 0.55)

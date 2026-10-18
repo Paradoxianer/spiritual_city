@@ -73,6 +73,7 @@ Idee und Entwicklung: Matthias Lindner
 
 Grafik und Töne
 • Kenney (kenney.nl): Roguelike Modern City, Roguelike Indoors, Roguelike RPG Pack, RPG Urban Pack, Interface Sounds, UI Audio, Impact Sounds, RPG Audio – CC0 1.0 (gemeinfrei). Danke, Kenney!
+• Pixabay: „Reverbed Worship Tambourine“ von yaboi_dandg, „Sacral Chant“ von samuelfjohanns – Pixabay-Inhaltslizenz.
 
 Bibeltexte
 • Lutherbibel 1912 – gemeinfrei
@@ -137,6 +138,7 @@ Idea and development: Matthias Lindner
 
 Graphics and sounds
 • Kenney (kenney.nl): Roguelike Modern City, Roguelike Indoors, Roguelike RPG Pack, RPG Urban Pack, Interface Sounds, UI Audio, Impact Sounds, RPG Audio – CC0 1.0 (public domain). Thank you, Kenney!
+• Pixabay: "Reverbed Worship Tambourine" by yaboi_dandg, "Sacral Chant" by samuelfjohanns – Pixabay Content License.
 
 Bible texts
 • King James Version – public domain

@@ -13,7 +13,14 @@ Alle Dateien unter `assets/images/kenney/` und `assets/audio/kenney/` stammen vo
 | Impact Sounds | https://kenney.nl/assets/impact-sounds | `audio/kenney/impact_sounds/` | 130 × OGG: Schritte (Teppich, Beton, Gras, Schnee, Holz), Glocke, Glas, Metall, Holz, Schlag, weich |
 | RPG Audio | https://kenney.nl/assets/rpg-audio | `audio/kenney/rpg_audio/` | 51 × OGG: Buch öffnen/blättern/schließen, Türen, Münzen, Schritte, Stoff, Metall |
 
-**Umgebungsgeräusche** (`audio/ambience/`: `city`, `home`, `hall`, `church`, `spirit` – nahtlose 24-s-Schleifen) sind keine Aufnahmen, sondern mit `tools/gen_ambience.py` synthetisch erzeugt (eigene Arbeit, keine Fremdlizenz).
+**Umgebungsgeräusche** (`audio/ambience/`: `city`, `home`, `hall`, `spirit` – nahtlose 24-s-Schleifen) sind keine Aufnahmen, sondern mit `tools/gen_ambience.py` synthetisch erzeugt (eigene Arbeit, keine Fremdlizenz).
+
+**Pixabay** (Pixabay Content License, https://pixabay.com/service/license-summary/ – Nutzung in Apps/Spielen erlaubt, nicht als einzelne Datei weiterverkaufen):
+
+| Datei | Quelle | Bearbeitung |
+| :--- | :--- | :--- |
+| `audio/actions/wave_liberation.ogg` | „Reverbed Worship Tambourine“ von yaboi_dandg, https://pixabay.com/sound-effects/film-special-effects-reverbed-worship-tambourine-526584/ | auf 1,8 s gekürzt, ausgeblendet, lauter, mono, OGG (2026-10-18) |
+| `audio/ambience/church.ogg` | „Sacral Chant“ von samuelfjohanns, https://pixabay.com/sound-effects/sacral-chant-99557/ | 0,42–19,46 s als nahtlose 16,5-s-Schleife (Ende in den Anfang überblendet), mono, lauter, OGG (2026-10-18) |
 
 Vorschaubilder der Grafik-Pakete: `docs/assets_preview/` (nicht im App-Bundle).
 

@@ -93,13 +93,13 @@ abstract final class GameSound {
 }
 
 /// Looping background sound per place (playtest 2026-10-18). Synthesised by
-/// tools/gen_ambience.py, so no licence questions.
+/// tools/gen_ambience.py, except the church chant (Pixabay, assets/LICENSES.md).
 enum Ambience {
   none('', 0),
   city('ambience/city.ogg', 0.2),
   home('ambience/home.ogg', 0.55),
   hall('ambience/hall.ogg', 0.4),
-  church('ambience/church.ogg', 0.35),
+  church('ambience/church.ogg', 0.45),
   spirit('ambience/spirit.ogg', 0.3);
 
   final String file;
