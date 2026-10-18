@@ -227,6 +227,29 @@ extension GameOverlayControl on SpiritWorldGame {
     paused = true;
   }
 
+  /// Walking up into a door enters the building or knocks (playtest
+  /// 2026-10-18) – the same as 🖐️ in front of it. Fires once per push.
+  void _checkDoorStep() {
+    if (isSpiritualWorld || _currentMenu != null || activeBuildingData != null) return;
+    const cs = CellComponent.cellSize;
+    final p = player.position;
+    final px = (p.x / cs).floor(), py = (p.y / cs).floor();
+    final input = player.moveInput;
+    final pushing = input.y < -0.5 && input.y.abs() > input.x.abs();
+    final atDoor = p.y - py * cs < cs * 0.6 && KenneyCityRenderer.isDoor(grid.getCell, px, py - 1);
+    if (!pushing || !atDoor) {
+      _doorArmed = true;
+      return;
+    }
+    if (!_doorArmed) return;
+    _doorArmed = false;
+    final id = (grid.getCell(px, py - 1)!.data as BuildingData).buildingId;
+    chunkManager.allActiveBuildings
+        .where((b) => b.buildingModel.buildingId == id)
+        .firstOrNull
+        ?.onInteract();
+  }
+
   /// Leaves the building (inside) or closes its door overlay.
   void closeBuildingInterior() {
     if (interior != null) {
@@ -234,6 +257,7 @@ extension GameOverlayControl on SpiritWorldGame {
       return;
     }
     activeBuildingData = null;
+    _doorArmed = false; // still pushing against the door: stay outside
     overlays.remove('BuildingInteriorOverlay');
     // Also close the mission board if it was opened from inside the building.
     if (activeMissionBoardData != null) closeMissionBoard();

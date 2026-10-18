@@ -96,7 +96,7 @@ class AppStrings {
 
       // Tutorial
       'tutorial.goHome.goal': 'Geh in dein Pastorenhaus 🏠',
-      'tutorial.goHome.detail': 'Dein Zuhause ist das Haus mit dem Kreuz ✝️ auf dem Dach. Folge 📍 (türkis auf der Minimap). Vor der Tür leuchtet der 🖐️-Knopf unten rechts – antippen (oder Taste E), dann bist du drinnen.',
+      'tutorial.goHome.detail': 'Dein Zuhause ist das Haus mit dem Kreuz ✝️ auf dem Dach. Folge 📍 (türkis auf der Minimap). Lauf einfach in die Tür 🚪 hinein – oder tippe vor dem Haus den leuchtenden 🖐️-Knopf (Taste E).',
       'tutorial.readBible.goal': 'Lies in der Bibel 📖',
       'tutorial.readBible.detail': 'Glaube 🙏 ist deine Kraft für alles, was du tust. Tippe das leuchtende Bücherregal 📖 an – der Pastor geht hin und liest. Das füllt deinen Glauben auf.',
       'tutorial.talk.goal': 'Sprich mit einem Menschen',
@@ -255,7 +255,7 @@ class AppStrings {
 
       // Tutorial
       'tutorial.goHome.goal': 'Go into your pastor house 🏠',
-      'tutorial.goHome.detail': 'Your home is the house with the cross ✝️ on its roof. Follow 📍 (cyan on the minimap). At the door the 🖐️ button bottom right glows – tap it (or press E) to step inside.',
+      'tutorial.goHome.detail': 'Your home is the house with the cross ✝️ on its roof. Follow 📍 (cyan on the minimap). Just walk into the door 🚪 – or tap the glowing 🖐️ button in front of the house (or press E).',
       'tutorial.readBible.goal': 'Read the Bible 📖',
       'tutorial.readBible.detail': 'Faith 🙏 is your strength for everything you do. Tap the glowing bookshelf 📖 – the pastor walks over and reads. It fills up your faith.',
       'tutorial.talk.goal': 'Talk to a person',

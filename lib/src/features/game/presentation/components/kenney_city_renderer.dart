@@ -301,6 +301,24 @@ abstract final class KenneyCityRenderer {
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   /// Lot pitch per district (mirrors `LotGenerator._gridPitch`).
+  /// Whether the facade at ([wx], [wy]) shows the lot's door – walking
+  /// into it enters the building (playtest 2026-10-18).
+  static bool isDoor(CityCell? Function(int wx, int wy) lookup, int wx, int wy) {
+    final cell = lookup(wx, wy);
+    final data = cell?.data;
+    if (cell == null || data is! BuildingData) return false;
+    if (data.type == BuildingType.cemetery || data.type == BuildingType.stadium) return false;
+    bool same(int dy) {
+      final d = lookup(wx, wy + dy)?.data;
+      return d is BuildingData && d.buildingId == data.buildingId;
+    }
+
+    if (same(1) || !same(-1)) return false; // not the facade row
+    final pitch = _lotPitch(cell.district);
+    final (rootX, _) = _lotRoot(data.buildingId, wx, wy, pitch);
+    return wx - rootX == pitch ~/ 2;
+  }
+
   static int _lotPitch(DistrictType? d) => switch (d) {
         DistrictType.slums => 6,
         DistrictType.outskirts => 10,

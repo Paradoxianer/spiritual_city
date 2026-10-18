@@ -1206,6 +1206,9 @@ class SpiritWorldGame extends FlameGame
   // of closing the app (see GameScreen's PopScope).
 
   bool _pauseMenuOpen = false;
+
+  /// Re-armed once the pastor stops pushing into a door.
+  bool _doorArmed = true;
   bool get isPauseMenuOpen => _pauseMenuOpen;
 
   // ── Escape / close helper ─────────────────────────────────────────────────
@@ -1223,6 +1226,7 @@ class SpiritWorldGame extends FlameGame
       _updatePassiveResources(dt);
     } else if (isWorldReady.value && !paused) {
       _updateCamera(dt);
+      _checkDoorStep();
       _updateNearestInteractable();
       _updatePassiveResources(dt);
       _updateStreetLabel();

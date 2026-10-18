@@ -67,6 +67,7 @@ extension GameInterior on SpiritWorldGame {
     _lastStreetCellX = -999999; // street label comes back on the next tick
     overlays.remove('UpgradeOverlay');
     activeBuildingData = null;
+    _doorArmed = false;
     if (activeMissionBoardData != null) closeMissionBoard();
     GameSound.play(Sfx.door, volume: 0.4);
     _updateHudVisibility();
