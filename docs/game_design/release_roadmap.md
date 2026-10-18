@@ -217,6 +217,21 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | Text in Spielbildschirmen | ✅ Gebäude, Missionen, Umgebung, Upgrades ohne Text (Adresse als Titel). |
 | Gefundene Fehler | 👂 war bei 2❤️ gesperrt, kostete aber 8❤️. Gebäude-Aktionen veränderten das Gebäude auch, wenn sie danach wegen fehlender Ressourcen abgelehnt wurden. Glaubenskosten in Gebäuden wurden nicht geprüft. |
 
+### 4.2 Stand M2 (Branch `feat/m2-core`, gestapelt auf M1)
+
+| Punkt | Stand | Biblischer Bezug |
+| :--- | :--- | :--- |
+| Dämonentypen (#178) | ✅ 🐍 Schleicher (schwach gegen ⏳), 🪨 Brocken (🫸), 🦇 Sauger (🪫, zieht Glauben), 👁️ Besetzer. Stufe 1–3 an Größe und Schleimspur sichtbar, skaliert mit Upgrades und Erweckungen; Gnadenfrist 3 Besuche nach einem Upgrade. | Eph 6,12 – der Kampf ist geistlich |
+| Kombos | ✅ ⏳ → 🪫 → 🫸: längeres Entziehen, stärkerer Rückstoß, Kettenblitz (50 % der Dämonen-Energie). Reine Regeln in `DaemonCombatRules`, getestet. | |
+| Besessenheit (#180) | ✅ Sehr feindliche Menschen können besetzt sein. Frei werden sie nur, wenn beides geschieht: 👂 Seelsorge oder angenommenes 🙏 Gebet in der realen Welt **und** der besiegte 👁️ Besetzer in der unsichtbaren Welt. | Mk 9,29 |
+| Bekehrte stützen Zellen | ✅ Weniger Rückfall in der Nähe von Christen, mit abnehmendem Ertrag. | Mt 5,14 – Licht der Welt |
+| Lern-Missionen (§3.9) | ✅ Rahmen + 🫂 Seelsorge (🏥), ⚔️ Kampf (⛪), 👁️ Unterscheidung (📚/🏛️). Lektion = Emoji-Satz + Bibelvers (einziger Text, gemeinfreie Übersetzungen) + Aufgabe. Fürbitte/Fasten/Predigen sind angelegt, ihre Wirkung kommt in M3. | 2 Kor 1,4 · Eph 6,12 · 1 Joh 4,1 |
+| Viertel + Bollwerk (#125) | ✅ Viertel = 3×3 Chunks. 🏰 öffnet sich ab 25 % Christen (mind. 3), fällt nur durch anhaltendes Befreiungsgebet, regeneriert ohne Gebet, schickt Wachen. Erweckung: +3 📖, helles Gebiet. Die 50 % aus `core_loop_and_retention.md` waren für eine Session zu viel. | 2 Kor 10,4 |
+| Tag + Tagesbilanz (§3.3) | ✅ Schlafen im Pastorenhaus → Bilanz (✝️ 🌱 👹 🔥🏘️ 📋 🎓) → ☀️ nächster Tag. Jeder 7. Tag ist Sonntag: Gottesdienst ×1,5. | 1 Mo 2,2–3 – Ruhetag |
+| Missionsbrett | ✅ Emoji-Gleichung `👤 wer · 📍 wo  🙏 ×3 ⇒ +10🙏`, im Tutorial erklärt. | |
+| Wabern (§3.6) | ✅ Fragment-Shader je Chunk (Domain Warping), Rückfall auf den alten Renderer. | |
+| Erste Sounds (§3.7) | ✅ Kenney CC0, 🔊/🔇 im Pausemenü. | |
+
 ---
 
 ## 5. Entscheidungen (2026-10-17)
@@ -228,3 +243,6 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 5. Dämonen bleiben gefährlich: Ihr Schaden wird nicht abgeschwächt (Rücknahme in `b4df08c`).
 6. Lern-Missionen (§3.9): Neue Spielstände lernen Fähigkeiten, bestehende behalten alles.
 7. Übung zählt je geistlicher Disziplin (🙏📖💬👂🤝🤲), nicht je einzelner Aktion.
+8. Spielbildschirme so textfrei wie möglich; einziger echter Text in Lern-Missionen ist der Bibelvers (2026-10-18).
+9. Jede Mechanik soll zur biblischen Lehre und zum Gemeindebau passen, vereinfacht; der Bezug steht im Design (2026-10-18).
+10. Stadtteile sind Viertel aus 3×3 Chunks; ein Bollwerk öffnet sich ab 25 % Christen (statt 50 %).
