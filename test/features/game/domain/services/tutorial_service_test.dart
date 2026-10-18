@@ -4,9 +4,13 @@ import 'package:spiritual_city/src/features/game/domain/services/tutorial_servic
 void main() {
   test('the first steps follow the core loop, each ended by doing it', () {
     final t = TutorialService()..startTutorial();
-    expect(t.currentStep, TutorialStep.readBible);
+    expect(t.currentStep, TutorialStep.goHome);
     t.onNpcAction('talk');
-    expect(t.currentStep, TutorialStep.readBible, reason: 'only the current step counts');
+    expect(t.currentStep, TutorialStep.goHome, reason: 'only the current step counts');
+    t.onEnteredBuilding(isHomebase: false);
+    expect(t.currentStep, TutorialStep.goHome);
+    t.onEnteredBuilding(isHomebase: true);
+    expect(t.currentStep, TutorialStep.readBible);
     t.onBuildingAction('readBible');
     t.onNpcAction('talk');
     t.onNpcAction('pray');
@@ -29,5 +33,13 @@ void main() {
     t.skipTutorial();
     t.startTutorial();
     expect(t.isActive, isFalse);
+    t.restartTutorial();
+    expect(t.currentStep, TutorialStep.goHome);
+  });
+
+  test('reading the Bible also ends the step to go home', () {
+    final t = TutorialService()..startTutorial();
+    t.onBuildingAction('readBible');
+    expect(t.currentStep, TutorialStep.talk);
   });
 }

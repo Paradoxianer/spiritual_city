@@ -8,7 +8,8 @@ import 'package:flutter/foundation.dart';
 /// a pulsing button show where to go and what to press. Each step ends
 /// when the player does the thing (info steps end with ✓).
 enum TutorialStep {
-  readBible('🏠📖'),
+  goHome('🏠🚪'),
+  readBible('📖'),
   talk('👤💬'),
   prayPerson('👤🙏'),
   enterSpirit('🙏🌐'),
@@ -63,6 +64,12 @@ class TutorialService {
   /// Skips the tutorial entirely (pause menu).
   void skipTutorial() => completeTutorial();
 
+  /// Starts over from the first step (pause menu).
+  void restartTutorial() {
+    isTutorialCompleted = false;
+    currentStepNotifier.value = TutorialStep.values.first;
+  }
+
   void dispose() => currentStepNotifier.dispose();
 
   void _done(TutorialStep step) {
@@ -71,9 +78,17 @@ class TutorialService {
 
   // ── Event hooks ──────────────────────────────────────────────────────────
 
+  /// The pastor stepped into a building.
+  void onEnteredBuilding({required bool isHomebase}) {
+    if (isHomebase) _done(TutorialStep.goHome);
+  }
+
   /// A building action succeeded ([type] as in BuildingActions).
   void onBuildingAction(String type) {
-    if (type == 'readBible') _done(TutorialStep.readBible);
+    if (type == 'readBible') {
+      _done(TutorialStep.goHome); // read without the step being noticed
+      _done(TutorialStep.readBible);
+    }
   }
 
   /// An action in the dialog with a person ([type] as in NpcActions).

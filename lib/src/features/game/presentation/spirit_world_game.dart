@@ -300,7 +300,7 @@ class SpiritWorldGame extends FlameGame
   /// the pastor house, or the nearest person not yet a Christian.
   Vector2? get tutorialTargetPosition {
     switch (tutorialService.currentStep) {
-      case TutorialStep.readBible || TutorialStep.mission:
+      case TutorialStep.goHome || TutorialStep.readBible || TutorialStep.mission:
         return pastorhousePosition.value;
       case TutorialStep.talk || TutorialStep.prayPerson:
         Vector2? best;
@@ -319,14 +319,62 @@ class SpiritWorldGame extends FlameGame
     }
   }
 
-  /// The button the current tutorial step is about pulses golden.
+  /// What to do right here for the tutorial (playtest: a new player did
+  /// not know to walk to the house and press 🖐️): inside, the station or
+  /// the door to go to; outside, 🖐️ once the target is in reach.
+  String? get tutorialHint {
+    final step = tutorialService.currentStep;
+    if (step == null || step.isInfo) return null;
+    final room = interior;
+    if (room != null) {
+      final g = room.guide;
+      if (g == null) return null;
+      return g == InteriorWorld.guideDoor ? '🚪' : room.stationEmoji[g];
+    }
+    return _tutorialPressHere ? '🖐️' : null;
+  }
+
+  /// The pastor stands where the step's action button press is due.
+  bool get _tutorialPressHere {
+    final near = _nearestInteractable;
+    switch (tutorialService.currentStep) {
+      case TutorialStep.goHome || TutorialStep.readBible || TutorialStep.mission:
+        return near is BuildingComponent && near.buildingModel.isHomebase && !isSpiritualWorld;
+      case TutorialStep.talk || TutorialStep.prayPerson:
+        return near is NPCComponent && !isSpiritualWorld;
+      default:
+        return false;
+    }
+  }
+
+  /// The button the current tutorial step is about pulses golden; inside
+  /// a building the station (or the door) to go to pulses cyan.
   void _updateTutorialHighlights() {
     final step = tutorialService.currentStep;
-    actionButton.highlight = isSpiritualWorld &&
-        (step == TutorialStep.liberate || step == TutorialStep.defeatDaemon);
-    worldToggleButton.highlight = interior == null &&
-        ((step == TutorialStep.enterSpirit && !isSpiritualWorld) ||
-            (step == TutorialStep.returnCity && isSpiritualWorld));
+    final room = interior;
+    if (room != null) {
+      room.guide = switch (step) {
+        null || TutorialStep.quarter || TutorialStep.completed => null,
+        TutorialStep.readBible when room.building.isHomebase => 'readBible',
+        TutorialStep.mission when room.building.isHomebase => 'missions',
+        (TutorialStep.talk || TutorialStep.prayPerson) when room.residents.isNotEmpty &&
+            !room.building.isHomebase => null,
+        _ => InteriorWorld.guideDoor,
+      };
+      final t = room.target;
+      actionButton.highlight = room.guide != null &&
+          switch (t) {
+            StationTarget() => t.action == room.guide,
+            DoorTarget() => room.guide == InteriorWorld.guideDoor,
+            _ => false,
+          };
+      worldToggleButton.highlight = false;
+      return;
+    }
+    actionButton.highlight = _tutorialPressHere ||
+        isSpiritualWorld && (step == TutorialStep.liberate || step == TutorialStep.defeatDaemon);
+    worldToggleButton.highlight = (step == TutorialStep.enterSpirit && !isSpiritualWorld) ||
+        (step == TutorialStep.returnCity && isSpiritualWorld);
   }
 
   /// 📍 Accepted mission target (see GameMissionTracking).

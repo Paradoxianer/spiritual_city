@@ -52,6 +52,7 @@ extension GameInterior on SpiritWorldGame {
     _updateHudVisibility();
     interiorActive.value = true;
     currentStreetLabel.value = ''; // the interior bar shows the address
+    tutorialService.onEnteredBuilding(isHomebase: building.isHomebase);
   }
 
   void leaveInterior() {

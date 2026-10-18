@@ -78,6 +78,10 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
   /// Set once the visit is over (session limit), the pastor walks out.
   bool leaving = false;
 
+  /// Tutorial guide: a station action to pulse, or [guideDoor].
+  String? guide;
+  static const guideDoor = '🚪';
+
   Vector2 get size => Vector2(layout.width * cell, layout.height * cell);
 
   static Vector2 centerOf((int, int) c) => Vector2((c.$1 + 0.5) * cell, (c.$2 + 0.5) * cell);
@@ -109,6 +113,7 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
     pastor = InteriorPastor(this)..position = centerOf(layout.entry);
     add(pastor);
     add(_BusyBadge(this));
+    add(_TutorialGuide(this));
   }
 
   static String _faceOf(NPCModel n) => n.isChristian ? '😇' : (n.faith > 0 ? '🙂' : '😐');
@@ -379,6 +384,43 @@ class _StationMarker extends PositionComponent with TapCallbacks {
           .withValues(alpha: active ? 0.75 : (wanted ? 0.55 : 0.35));
     canvas.drawCircle(c, active ? 15 : 10, bg);
     _emoji(canvas, emoji, c, active ? 18 : 11, bob: active, alpha: active ? 1 : 0.85);
+  }
+}
+
+/// Pulsing cyan ring around what the tutorial wants next (the 📖 shelf,
+/// the 📋 board or the door out) – the same colour as on the minimap.
+class _TutorialGuide extends Component {
+  final InteriorWorld room;
+  _TutorialGuide(this.room) : super(priority: 59);
+
+  double _t = 0;
+  static final Paint _p = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3;
+
+  @override
+  void update(double dt) => _t += dt;
+
+  @override
+  void render(Canvas canvas) {
+    final g = room.guide;
+    if (g == null) return;
+    const c = InteriorWorld.cell;
+    Offset center;
+    double r;
+    if (g == InteriorWorld.guideDoor) {
+      final (dx, dy) = room.layout.door;
+      center = Offset((dx + 0.5) * c, (dy + 0.3) * c);
+      r = c * 0.8;
+    } else {
+      final f = room.layout.stations.where((f) => f.action == g).firstOrNull;
+      if (f == null) return;
+      center = Offset((f.x + f.kind.w / 2) * c, (f.y + f.kind.h / 2) * c);
+      r = max(f.kind.w, f.kind.h) * c * 0.65 + 6;
+    }
+    final pulse = (sin(_t * 5) + 1) / 2;
+    _p.color = const Color(0xFF80DEEA).withValues(alpha: 0.5 + 0.5 * pulse);
+    canvas.drawCircle(center, r + pulse * 6, _p);
   }
 }
 

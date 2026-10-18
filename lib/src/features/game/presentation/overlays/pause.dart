@@ -111,6 +111,16 @@ class PauseMenuOverlay extends StatelessWidget {
                             game.closePauseMenu();
                           },
                         ),
+                      ] else ...[
+                        const SizedBox(height: 12),
+                        _PauseMenuButton(
+                          icon: Icons.school,
+                          label: AppStrings.get('tutorial.restart'),
+                          onPressed: () {
+                            game.tutorialService.restartTutorial();
+                            game.closePauseMenu();
+                          },
+                        ),
                       ],
                       const SizedBox(height: 12),
                       _PauseMenuButton(
