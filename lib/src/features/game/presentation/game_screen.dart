@@ -8,6 +8,7 @@ import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/services/learning_service.dart';
+import '../domain/models/quarter.dart';
 import '../domain/models/skills.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
@@ -30,6 +31,7 @@ import 'widgets/overlay_shell.dart';
 
 part 'hud/hud.dart';
 part 'overlays/building_interior.dart';
+part 'overlays/day_summary.dart';
 part 'overlays/lesson.dart';
 part 'overlays/look.dart';
 part 'overlays/missions.dart';
@@ -136,6 +138,7 @@ class _GameScreenState extends State<GameScreen> {
               'MissionBoardOverlay': (context, game) =>
                   MissionBoardOverlay(game: _game),
               'LessonOverlay': (context, game) => LessonOverlay(game: _game),
+              'DaySummaryOverlay': (context, game) => DaySummaryOverlay(game: _game),
               'KeymapOverlay': (context, game) =>
                   KeymapOverlay(game: _game),
               'PauseMenuOverlay': (context, game) => PauseMenuOverlay(
@@ -201,6 +204,7 @@ class _GameScreenState extends State<GameScreen> {
                       children: [
                         _ResourceHud(gameRef: _game),
                         _PastorhouseHud(game: _game),
+                        _DayQuarterChips(game: _game),
                         _LessonChip(game: _game),
                       ],
                     ),

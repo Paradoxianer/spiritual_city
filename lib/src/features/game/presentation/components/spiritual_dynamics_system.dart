@@ -384,6 +384,12 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     );
   }
 
+  /// Spawns a stronghold guard of [kind] at [position] (#125).
+  void spawnGuard(Vector2 position, DaemonKind kind) {
+    final id = 'daemon_guard_${_daemonIdCounter++}';
+    game.world.add(DaemonComponent(_newDaemon(id, position.clone(), kind: kind)));
+  }
+
   /// Spawns a 👁️ possessor at [position] that belongs to the possessed NPC
   /// [hostNpcId] (npc_influence.md).
   void spawnPossessor(Vector2 position, String hostNpcId) {

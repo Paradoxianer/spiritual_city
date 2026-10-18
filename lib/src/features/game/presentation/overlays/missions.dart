@@ -70,7 +70,12 @@ class MissionBoardOverlay extends StatelessWidget {
   }
 }
 
-/// One mission: target → action ×count, progress, address, rewards.
+/// One mission as an emoji equation (no sentences to translate):
+///
+/// ```
+/// 👤 Anna · 📍 Lindenallee 14    🙏 ×3   ⇒   +10🙏 +0.5📖
+///    who / where                 do this     you get
+/// ```
 class _MissionRow extends StatelessWidget {
   final MissionEntry entry;
   const _MissionRow({required this.entry});
@@ -78,61 +83,56 @@ class _MissionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = entry;
-    final countLabel = m.targetCount > 1 ? ' ×${m.targetCount}' : '';
+    final who = [
+      if (m.targetName.isNotEmpty) m.targetName.split(' ').first,
+      if (m.address != null) '📍 ${m.address}',
+    ].join(' · ');
+    final rewards = [
+      if (m.faithReward > 0) '+${m.faithReward}🙏',
+      if (m.materialsReward > 0) '+${m.materialsReward}📦',
+      if (m.insightReward > 0) '+${m.insightReward.toStringAsFixed(1)}📖',
+    ].join(' ');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Text(m.targetEmoji, style: const TextStyle(fontSize: 24)),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: Text('→', style: TextStyle(color: Colors.white54, fontSize: 14)),
-          ),
-          Text('${m.actionEmoji}$countLabel', style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (m.targetCount > 1)
-                  _MissionProgressBar(progress: m.progress, targetCount: m.targetCount),
-                if (m.address != null) ...[
-                  const SizedBox(height: 3),
+                if (who.isNotEmpty)
                   Text(
-                    '📍 ${m.address}',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.60), fontSize: 11),
+                    who,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12),
                   ),
-                ],
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      '${m.actionEmoji} ×${m.targetCount}',
+                      style: const TextStyle(fontSize: 20, color: Colors.white),
+                    ),
+                    if (m.targetCount > 1) ...[
+                      const SizedBox(width: 8),
+                      _MissionProgressBar(progress: m.progress, targetCount: m.targetCount),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (m.insightReward > 0)
-                Text(
-                  '+${m.insightReward.toStringAsFixed(1)} 📖',
-                  style: const TextStyle(
-                    color: Color(0xFFFFD54F),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              if (m.faithReward > 0)
-                Text(
-                  '+${m.faithReward}🙏',
-                  style: const TextStyle(
-                      color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              if (m.materialsReward > 0)
-                Text(
-                  '+${m.materialsReward}📦',
-                  style: const TextStyle(color: Colors.lightBlue, fontSize: 12),
-                ),
-            ],
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Text('⇒', style: TextStyle(color: Colors.white54, fontSize: 20)),
+          ),
+          Text(
+            rewards,
+            style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 13, fontWeight: FontWeight.bold),
           ),
         ],
       ),

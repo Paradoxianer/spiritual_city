@@ -32,6 +32,7 @@ extension GameLearning on SpiritWorldGame {
       _toast(active.progressLabel(progress.lesson.progress));
       return;
     }
+    dayStats.lessonsLearned++;
     _toast('🎓✨ ${learned.emoji}');
     // ⚔️ shows the new prayer modes right away.
     if (learned == Skill.spiritualWarfare) _updateHudVisibility();

@@ -10,6 +10,10 @@ import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/models/daemon_model.dart';
+import '../domain/models/day_stats.dart';
+import '../domain/models/quarter.dart';
+import 'components/cell_component.dart';
+import 'components/stronghold_component.dart';
 import '../domain/models/skills.dart';
 import '../domain/services/daemon_combat_rules.dart';
 import '../domain/services/learning_service.dart';
@@ -43,6 +47,7 @@ import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
 
 part 'game/learning_control.dart';
+part 'game/quarters.dart';
 part 'game/save_state.dart';
 part 'game/overlay_control.dart';
 part 'game/building_actions.dart';
@@ -286,6 +291,28 @@ class SpiritWorldGame extends FlameGame
     _toast('👁️➡️🕊️ ${npc.name.split(' ').first}');
   }
 
+  // ── Neighbourhoods (§3.3) ─────────────────────────────────────────────────
+
+  /// Today's counters (day summary when sleeping).
+  DayStats get dayStats => progress.dayStats;
+
+  /// Bumped when the day changes (HUD day chip listens).
+  final ValueNotifier<int> dayNotifier = ValueNotifier(0);
+
+  /// Sleeping in the pastor house ends the day: show the summary.
+  void openDaySummary() => overlays.add('DaySummaryOverlay');
+
+  /// Starts the next day after the summary.
+  void startNextDay() {
+    dayStats.nextDay();
+    dayNotifier.value++;
+    overlays.remove('DaySummaryOverlay');
+  }
+
+  /// Status of the neighbourhood the pastor is in (HUD chip).
+  final ValueNotifier<QuarterStatus?> quarterStatus = ValueNotifier(null);
+  double _quarterTimer = 0.0;
+
   // ── Learning missions (§3.9) ──────────────────────────────────────────────
 
   /// Lesson card currently shown (LessonOverlay), if any.
@@ -301,6 +328,7 @@ class SpiritWorldGame extends FlameGame
 
   /// A daemon was defeated by prayer (not dissolved on its own).
   void onDaemonKilled(DaemonModel daemon) {
+    dayStats.daemonsDefeated++;
     recordLessonTask(LessonTask.defeatDaemons);
     if (daemon.hostNpcId != null) {
       final npc = chunkManager.findNpcModel(daemon.hostNpcId!);
@@ -661,7 +689,9 @@ class SpiritWorldGame extends FlameGame
     // Daemon strength follows the player's power, delayed by the grace
     // period after an upgrade (#178).
     if (isSpiritualWorld) {
-      daemonTier = DaemonCombatRules.tierFor(progress.onSpiritWorldEntered());
+      daemonTier = DaemonCombatRules.tierFor(
+          progress.onSpiritWorldEntered(extraPower: awakeningPower));
+      _updateQuarter();
     }
 
     // Immediately spawn daemons around the player when entering the spiritual
@@ -873,6 +903,7 @@ class SpiritWorldGame extends FlameGame
   /// a brief toast message.
 
   void _onMissionCompleted(MissionModel mission) {
+    dayStats.missionsCompleted++;
     if (mission.rewardFaith > 0) gainFaith(mission.rewardFaith);
     if (mission.rewardMaterials > 0) gainMaterials(mission.rewardMaterials);
     if (mission.insightReward > 0) progress.addInsight(mission.insightReward);
@@ -947,6 +978,11 @@ class SpiritWorldGame extends FlameGame
       influenceService.update(dt, grid);
       // Periodically check the win condition (spiritual state can change from
       // prayer combat and natural decay, not just NPC conversions).
+      _quarterTimer += dt;
+      if (_quarterTimer >= 1.0) {
+        _quarterTimer = 0.0;
+        _updateQuarter();
+      }
       _winCheckTimer += dt;
       if (_winCheckTimer >= _winCheckInterval) {
         _winCheckTimer = 0.0;
@@ -1186,6 +1222,7 @@ class SpiritWorldGame extends FlameGame
   /// Record an NPC conversion
   void recordConversion() {
     progress.recordConversion();
+    dayStats.conversions++;
     conversionToastMessage.value = '+1 ✝';
     _checkAndApplyModifiers();
     _checkWinCondition();

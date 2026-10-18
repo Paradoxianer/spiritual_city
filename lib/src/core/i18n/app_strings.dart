@@ -159,6 +159,9 @@ class AppStrings {
       'tutorial.homebase.trigger': '🏠 Betritt das Pastorenhaus, um fortzufahren.',
       'tutorial.firstMission.title': 'Erste Mission',
       'tutorial.firstMission.message': 'Du hast deine erste Mission!\n'
+          'Im 📋 Missionsbrett steht sie so:\n'
+          '👤 Anna  🙏 ×3  ⇒  +10🙏\n'
+          '= Bete 3× für Anna, dann bekommst du 10 Glauben.\n\n'
           'Besuche ein Gebäude in der Nähe\n'
           'und führe eine Aktion durch.',
       'tutorial.firstMission.trigger': '🏛️ Betritt ein Gebäude, um fortzufahren.',
@@ -345,6 +348,9 @@ class AppStrings {
       'tutorial.homebase.trigger': '🏠 Enter the pastor\'s house to continue.',
       'tutorial.firstMission.title': 'First Mission',
       'tutorial.firstMission.message': 'You have your first mission!\n'
+          'The 📋 mission board shows it like this:\n'
+          '👤 Anna  🙏 ×3  ⇒  +10🙏\n'
+          '= Pray for Anna 3 times, then you get 10 faith.\n\n'
           'Visit a nearby building\n'
           'and perform an action.',
       'tutorial.firstMission.trigger': '🏛️ Enter a building to continue.',

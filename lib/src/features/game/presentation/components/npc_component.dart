@@ -176,6 +176,8 @@ class NPCComponent extends PositionComponent
     if (r.performed) {
       if (type == 'counsel') game.recordLessonTask(LessonTask.counsel);
       if (type == 'pray') game.recordLessonTask(LessonTask.pray);
+      // A life-story challenge fully worked through (it pays insight).
+      if (type == 'lifetalk' && r.insightDelta > 0) game.dayStats.storiesHealed++;
     }
     return r.reaction;
   }

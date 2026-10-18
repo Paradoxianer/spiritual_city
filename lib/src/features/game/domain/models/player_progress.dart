@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../actions/practice.dart';
 import 'prayer_combat.dart';
+import 'day_stats.dart';
 import 'skills.dart';
 import '../services/learning_service.dart';
 
@@ -113,6 +114,12 @@ class PlayerProgress extends ChangeNotifier {
   final LearnedSkills skills = LearnedSkills();
   final LessonState lesson = LessonState();
 
+  // --- The current day and what happened in it (§3.3) ---
+  final DayStats dayStats = DayStats();
+
+  // --- Awakened neighbourhoods (Quarter keys "qx,qy", §3.3) ---
+  final Set<String> awakenedQuarters = {};
+
   // --- Daemon scaling with grace period (#178, daemons_and_combat.md §5) ---
 
   /// Player power the daemons currently scale with. Lags behind the real
@@ -187,6 +194,8 @@ class PlayerProgress extends ChangeNotifier {
     'daemonPower': daemonPower,
     'skills': skills.toJson(),
     'lesson': lesson.toJson(),
+    'awakened': awakenedQuarters.toList(),
+    'day': dayStats.toJson(),
     'graceVisitsLeft': graceVisitsLeft,
     'stages': {
       'faith': faithStage.toJson(),
@@ -209,6 +218,10 @@ class PlayerProgress extends ChangeNotifier {
     daemonPower = (json['daemonPower'] as num?)?.toInt() ?? 0;
     skills.loadFromJson(json['skills']);
     lesson.loadFromJson(json['lesson']);
+    dayStats.loadFromJson(json['day']);
+    awakenedQuarters
+      ..clear()
+      ..addAll([for (final k in (json['awakened'] as List?) ?? const []) '$k']);
     graceVisitsLeft = (json['graceVisitsLeft'] as num?)?.toInt() ?? 0;
     final practiceRaw = json['practice'];
     practice.loadFromJson(

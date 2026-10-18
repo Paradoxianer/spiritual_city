@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
 import 'daemon_component.dart';
+import 'stronghold_component.dart';
 import 'cell_component.dart';
 import '../../domain/models/prayer_combat.dart';
 
@@ -107,6 +108,23 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
         final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
         daemon.takeDamage(strength * 5.0 * falloff, mode: mode, duration: duration);
         _hitIds.add(daemon.model.id);
+      }
+    }
+
+    // 3. Impact on strongholds (#125)
+    _checkStrongholds();
+  }
+
+  void _checkStrongholds() {
+    for (final s in game.world.children.whereType<StrongholdComponent>()) {
+      final id = 'fort_${s.quarter.key}';
+      if (_hitIds.contains(id)) continue;
+      final dist = position.distanceTo(s.position);
+      if (dist <= _currentRadius + StrongholdComponent.radius &&
+          dist > _currentRadius - StrongholdComponent.radius) {
+        final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
+        s.takeHit(strength * 5.0 * falloff, mode);
+        _hitIds.add(id);
       }
     }
   }
