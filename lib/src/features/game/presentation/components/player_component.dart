@@ -1,5 +1,6 @@
 import 'package:flame/components.dart';
 import '../../../../core/audio/game_sound.dart';
+import '../../domain/services/combat_abilities.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,6 @@ import 'character_sprites.dart';
 import 'prayer_zone_component.dart';
 import 'shockwave_component.dart';
 import '../../domain/models/prayer_combat.dart';
-import '../../domain/models/skills.dart';
 
 class PlayerComponent extends PositionComponent 
     with HasGameReference<SpiritWorldGame>, KeyboardHandler {
@@ -80,9 +80,7 @@ class PlayerComponent extends PositionComponent
 
   /// Rebuke, Slow and Drain need the ⚔️ spiritual-warfare lesson
   /// (learning missions, release_roadmap.md §3.9).
-  bool canUseMode(PrayerMode mode) =>
-      mode == PrayerMode.liberation ||
-      game.progress.skills.has(Skill.spiritualWarfare);
+  bool canUseMode(PrayerMode mode) => CombatAbilities.canUse(mode, game.progress.skills);
 
   void setMode(PrayerMode mode) {
     if (!canUseMode(mode)) return;

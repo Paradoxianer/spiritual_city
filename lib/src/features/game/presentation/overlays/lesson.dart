@@ -11,7 +11,6 @@ class LessonOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final lesson = game.activeLessonOffer;
     if (lesson == null) return const SizedBox.shrink();
-    final key = 'lesson.${lesson.skill.name}';
     final replaces = game.progress.lesson.lesson;
 
     return OverlayShell(
@@ -40,7 +39,7 @@ class LessonOverlay extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '„${AppStrings.get('$key.verse')}“',
+                    '„${AppStrings.get(lesson.verseKey)}“',
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 13,

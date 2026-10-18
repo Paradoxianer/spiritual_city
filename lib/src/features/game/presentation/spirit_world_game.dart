@@ -447,10 +447,11 @@ class SpiritWorldGame extends FlameGame
   }
 
   /// A daemon was defeated by prayer (not dissolved on its own).
-  void onDaemonKilled(DaemonModel daemon) {
+  void onDaemonKilled(DaemonModel daemon, {PrayerMode? mode}) {
     dayStats.daemonsDefeated++;
     GameSound.play(Sfx.daemonDefeated, volume: 0.4);
     recordLessonTask(LessonTask.defeatDaemons);
+    if (mode != null) recordLessonTask(LessonTask.defeatWith(mode));
     if (daemon.hostNpcId != null) {
       final npc = chunkManager.findNpcModel(daemon.hostNpcId!);
       if (npc != null && npc.possessionWeakened) _releaseFromPossession(npc);

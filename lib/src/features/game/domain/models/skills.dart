@@ -8,8 +8,15 @@ enum Skill {
   /// 🫂 Seelsorge – unlocks the 📜 life-story talks (2 Cor 1:4).
   pastoralCare('🫂'),
 
-  /// ⚔️ Geistlicher Kampf – unlocks Rebuke, Slow and Drain (Eph 6:10–18).
+  /// ⚔️ Geistlicher Kampf – unlocks 🫸 Rebuke (Eph 6:10–18). Slow and
+  /// Drain are learned one by one after it (playtest 2026-10-18).
   spiritualWarfare('⚔️'),
+
+  /// ⏳ Binden – unlocks Slow (Mt 18:18).
+  binding('⏳'),
+
+  /// 🪫 Entwaffnen – unlocks Drain (Col 2:15).
+  disarming('🪫'),
 
   /// 👁️ Unterscheidung der Geister – daemon kinds become visible
   /// (1 Cor 12:10).
@@ -22,7 +29,18 @@ enum Skill {
   fasting('🍞'),
 
   /// 📢 Predigen – preaching to a crowd (Rom 10:14).
-  preaching('📢');
+  preaching('📢'),
+
+  // Mastery per prayer mode: lifts the upgrade cap of that mode (level 2 →
+  // 5 → 10), which also opens its two special abilities.
+  liberationMastery1('🕊️⭐'),
+  liberationMastery2('🕊️⭐⭐'),
+  rebukeMastery1('🫸⭐'),
+  rebukeMastery2('🫸⭐⭐'),
+  slowMastery1('⏳⭐'),
+  slowMastery2('⏳⭐⭐'),
+  drainMastery1('🪫⭐'),
+  drainMastery2('🪫⭐⭐');
 
   final String emoji;
   const Skill(this.emoji);
@@ -40,6 +58,8 @@ class LearnedSkills {
   static const Set<Skill> legacy = {
     Skill.pastoralCare,
     Skill.spiritualWarfare,
+    Skill.binding,
+    Skill.disarming,
     Skill.discernment,
   };
 

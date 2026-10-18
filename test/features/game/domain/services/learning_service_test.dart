@@ -1,5 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiritual_city/src/features/game/domain/models/prayer_combat.dart';
+import 'package:spiritual_city/src/features/game/domain/services/combat_abilities.dart';
 import 'package:spiritual_city/src/features/game/domain/models/cell_object.dart';
 import 'package:spiritual_city/src/features/game/domain/models/npc_model.dart';
 import 'package:spiritual_city/src/features/game/domain/models/player_progress.dart';
@@ -41,9 +43,51 @@ void main() {
 
       final warrior = LearnedSkills({Skill.spiritualWarfare});
       expect(Lessons.offeredAt(BuildingType.library, warrior).map((l) => l.skill),
-          [Skill.discernment]);
+          [Skill.binding, Skill.discernment]);
       expect(Lessons.offeredAt(BuildingType.church, warrior).map((l) => l.skill),
           isNot(contains(Skill.spiritualWarfare)));
+    });
+
+    test('prayer modes are learned one by one: 🫸 → ⏳ → 🪫 (needs an awakening)', () {
+      final none = LearnedSkills();
+      expect(CombatAbilities.canUse(PrayerMode.liberation, none), isTrue);
+      expect(CombatAbilities.canUse(PrayerMode.rebuke, none), isFalse);
+      final warrior = LearnedSkills({Skill.spiritualWarfare});
+      expect(CombatAbilities.canUse(PrayerMode.rebuke, warrior), isTrue);
+      expect(CombatAbilities.canUse(PrayerMode.slow, warrior), isFalse);
+      final binder = LearnedSkills({Skill.spiritualWarfare, Skill.binding});
+      final drain = Lessons.of(Skill.disarming);
+      expect(drain.isOpen(binder, 0), isFalse, reason: 'needs an awakened quarter');
+      expect(drain.isOpen(binder, 1), isTrue);
+      expect(drain.isOpen(warrior, 1), isFalse, reason: 'needs ⏳ first');
+    });
+
+    test('mentors lift the upgrade cap of a mode: 2 → 5 → 10', () {
+      final s = LearnedSkills({Skill.spiritualWarfare});
+      expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 2);
+      s.learn(Skill.rebukeMastery1);
+      expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 5);
+      expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 1), isFalse);
+      expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 2), isTrue);
+      s.learn(Skill.rebukeMastery2);
+      expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 10);
+      // The abilities stay reachable under the caps.
+      expect(CombatAbilities.milestones.every((m) => m <= 10), isTrue);
+    });
+
+    test('mastery lessons count kills of their own mode only', () {
+      final learned = LearnedSkills({Skill.spiritualWarfare});
+      final state = LessonState()..start(Skill.rebukeMastery1);
+      expect(state.record(LessonTask.defeatLiberation, learned), isNull);
+      expect(state.progress, 0);
+      expect(state.record(LessonTask.defeatWith(PrayerMode.rebuke), learned), isNull);
+      expect(state.progress, 1);
+    });
+
+    test('every skill has a lesson', () {
+      for (final s in Skill.values) {
+        expect(Lessons.all.where((l) => l.skill == s), hasLength(1), reason: '$s');
+      }
     });
 
     test('practising the task finishes the lesson and teaches the skill', () {

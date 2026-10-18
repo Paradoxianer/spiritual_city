@@ -289,7 +289,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
     if (mode == null) {
       model.energy += amount;
-      if (model.energy >= 0) _explode();
+      if (model.energy >= 0) _explode(null);
       return;
     }
 
@@ -324,17 +324,17 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
       if (mode == PrayerMode.drain) {
         _absorb();
       } else {
-        _explode();
+        _explode(mode);
       }
     }
   }
 
   /// Daemon killed by Liberation, Rebuke or Slow: cleanses a 3-cell radius
   /// around the death point.
-  void _explode() {
+  void _explode(PrayerMode? mode) {
     model.dissolved = true;
     game.progress.addInsight(_killInsightReward);
-    game.onDaemonKilled(model);
+    game.onDaemonKilled(model, mode: mode);
     _cleanseAroundDeathPoint();
     removeFromParent();
   }
@@ -350,7 +350,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
             : 1.0);
     game.gainFaith(faithGain);
     game.progress.addInsight(_killInsightReward);
-    game.onDaemonKilled(model);
+    game.onDaemonKilled(model, mode: PrayerMode.drain);
     _cleanseAroundDeathPoint();
     removeFromParent();
   }

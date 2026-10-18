@@ -213,9 +213,7 @@ class _LearningPath extends StatelessWidget {
           final l = Lessons.all[i];
           final learned = p.skills.has(l.skill);
           final active = p.lesson.active == l.skill;
-          final open = !learned &&
-              l.requires.every(p.skills.has) &&
-              (!l.requiresAwakening || awakenings > 0);
+          final open = l.isOpen(p.skills, awakenings);
           final key = GameMissionTracking.lessonKey(l.skill);
           final mentors = l.mentorAt.map(BuildingComponent.buildingEmoji).join(' ');
           final String status;
@@ -229,7 +227,7 @@ class _LearningPath extends StatelessWidget {
             status = '🔒 ${[
               for (final r in l.requires)
                 if (!p.skills.has(r)) r.emoji,
-              if (l.requiresAwakening && awakenings == 0) '🏰🔥',
+              if (awakenings < l.minAwakenings) '🏰🔥×${l.minAwakenings}',
             ].join(' ')}';
           }
           return Opacity(

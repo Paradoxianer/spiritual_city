@@ -87,15 +87,26 @@ class _UpgradePanelState extends State<_UpgradePanel> {
 
   Widget _buildModeGroup(PrayerMode mode) {
     final s = _profile.getFor(mode);
+    final skills = _progress.skills;
+    final tier = CombatAbilities.tier(s);
+    final level = CombatAbilities.modeLevel(s);
+    // Not learned yet, or at the mentor cap: the next step is a 🎓 lesson.
+    final modeSkill = CombatAbilities.modeSkill(mode);
+    final cap = CombatAbilities.levelCap(mode, skills);
+    final (m1, m2) = CombatAbilities.mastery(mode);
+    final Availability? lock = !CombatAbilities.canUse(mode, skills)
+        ? Locked('🎓${modeSkill!.emoji}')
+        : level >= cap
+            ? (cap >= CombatAbilities.levelCaps.last ? const Locked('✅') : Locked('🎓${(skills.has(m1) ? m2 : m1).emoji}'))
+            : null;
     _UpgradeTile tile(String emoji, int level, double value, VoidCallback apply) => _UpgradeTile(
           emoji: emoji,
           level: level,
           effect: _pct(value),
           insight: _progress.insight,
+          lock: lock,
           onBuy: () => _buy(level, apply),
         );
-    final tier = CombatAbilities.tier(s);
-    final level = CombatAbilities.modeLevel(s);
     return _UpgradeGroup(
       icon: mode.icon,
       color: mode.color,
@@ -103,6 +114,9 @@ class _UpgradePanelState extends State<_UpgradePanel> {
       footer: Wrap(
         spacing: 10,
         children: [
+          // Mode level and the cap a mentor lifts (🎓⭐ / ⭐⭐).
+          Text('$level/$cap',
+              style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7))),
           for (var i = 0; i < CombatAbilities.milestones.length; i++)
             Opacity(
               opacity: i < tier ? 1.0 : 0.45,
@@ -174,12 +188,16 @@ class _UpgradeTile extends StatelessWidget {
   final int insight;
   final VoidCallback onBuy;
 
+  /// Set when a mentor has to teach the next step first.
+  final Availability? lock;
+
   const _UpgradeTile({
     required this.emoji,
     required this.level,
     required this.effect,
     required this.insight,
     required this.onBuy,
+    this.lock,
   });
 
   @override
@@ -191,10 +209,9 @@ class _UpgradeTile extends StatelessWidget {
         ActionButton(
           emoji: emoji,
           hint: '−$cost📖',
-          availability: insight >= cost
-              ? const AvailableNow()
-              : const CannotAfford(Resource.insight),
-          onTap: onBuy,
+          availability: lock ??
+              (insight >= cost ? const AvailableNow() : const CannotAfford(Resource.insight)),
+          onTap: lock == null ? onBuy : () {},
         ),
         const SizedBox(height: 2),
         Text(

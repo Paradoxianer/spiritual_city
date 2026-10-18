@@ -197,6 +197,22 @@ class AppStrings {
       'lesson.preaching.verse':
           'Wie sollen sie aber glauben, von dem sie nichts gehört haben? '
           'Wie sollen sie aber hören ohne Prediger?',
+      'lesson.binding.verse':
+          'Wahrlich ich sage euch: Was ihr auf Erden binden werdet, '
+          'soll auch im Himmel gebunden sein.',
+      'lesson.disarming.verse':
+          'Und hat ausgezogen die Fürstentümer und die Gewaltigen und sie schaugetragen '
+          'öffentlich und einen Triumph aus ihnen gemacht durch sich selbst.',
+      'lesson.mastery.liberation.verse':
+          'Wen nun der Sohn frei macht, den macht ihr recht frei.',
+      'lesson.mastery.rebuke.verse':
+          'So seid nun Gott untertänig. Widerstehet dem Teufel, so flieht er von euch.',
+      'lesson.mastery.slow.verse':
+          'Es kann niemand einem Starken in sein Haus fallen und seinen Hausrat rauben, '
+          'es sei denn, daß er zuvor den Starken binde.',
+      'lesson.mastery.drain.verse':
+          'Sehet, ich habe euch Macht gegeben, zu treten auf Schlangen und Skorpione, '
+          'und über alle Gewalt des Feindes.',
 
     },
     'en': {
@@ -390,6 +406,22 @@ class AppStrings {
       'lesson.preaching.verse':
           'How shall they believe in him of whom they have not heard? '
           'and how shall they hear without a preacher?',
+      'lesson.binding.verse':
+          'Verily I say unto you, Whatsoever ye shall bind on earth '
+          'shall be bound in heaven.',
+      'lesson.disarming.verse':
+          'And having spoiled principalities and powers, he made a shew of them openly, '
+          'triumphing over them in it.',
+      'lesson.mastery.liberation.verse':
+          'If the Son therefore shall make you free, ye shall be free indeed.',
+      'lesson.mastery.rebuke.verse':
+          'Submit yourselves therefore to God. Resist the devil, and he will flee from you.',
+      'lesson.mastery.slow.verse':
+          'No man can enter into a strong man\'s house, and spoil his goods, '
+          'except he will first bind the strong man.',
+      'lesson.mastery.drain.verse':
+          'Behold, I give unto you power to tread on serpents and scorpions, '
+          'and over all the power of the enemy.',
 
     },
   };
