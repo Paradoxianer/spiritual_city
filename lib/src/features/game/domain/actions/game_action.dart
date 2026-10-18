@@ -72,6 +72,18 @@ enum ActionId {
   genericPray,
   witness,
   distribute,
+
+  // ── Civic & work places (playtest 2026-10-18: what a pastor really does
+  //    there; only prayer refreshes his own faith) ───────────────────────
+  blessVehicles,
+  chaplaincy,
+  bringMeal,
+  sendCards,
+  study,
+  bookCircle,
+  churchHistory,
+  workShift,
+  prayWorkers,
 }
 
 /// Whether an action can be used right now, and if not, why.

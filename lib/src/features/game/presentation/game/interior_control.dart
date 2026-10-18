@@ -174,9 +174,6 @@ extension GameInterior on SpiritWorldGame {
     // Session limit reached: the visit ends, the pastor is shown out.
     if (result.success && room.building.isReadyToLeave) {
       room.leaving = true;
-      // Say why: the visit points are used up – come back another time.
-      final dots = '●' * room.building.maxSessionInteractions.clamp(1, 12);
-      _toast('$dots ➡️ 👋🚪');
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (interior == room) leaveInterior();
       });

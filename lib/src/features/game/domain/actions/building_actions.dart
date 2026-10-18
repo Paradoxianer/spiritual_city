@@ -321,6 +321,105 @@ abstract final class BuildingActions {
     discipline: Discipline.service,
   );
 
+  // ── Civic & work places (playtest 2026-10-18) ──────────────────────────
+  // A pastor serves here; it costs him something and strengthens the place
+  // and its people. Only prayer gives a little faith back.
+
+  /// 🚒🙏 Blessing the vehicles and the crew – a real tradition.
+  static final blessVehicles = GameAction<BuildingModel>(
+    id: ActionId.blessVehicles,
+    type: 'blessVehicles',
+    emoji: '🚒🙏',
+    effect: '✝️👥',
+    cost: _c({Resource.faith: 15}),
+    discipline: Discipline.prayer,
+  );
+
+  /// 👂 Emergency chaplaincy after a hard call-out: draining, deep effect.
+  static final chaplaincy = GameAction<BuildingModel>(
+    id: ActionId.chaplaincy,
+    type: 'chaplaincy',
+    emoji: '👂🚒',
+    effect: '✝️👥📖',
+    cost: _c({Resource.health: 10, Resource.hunger: 8}),
+    baseSeconds: 8,
+    discipline: Discipline.counsel,
+    lockedBy: (b) => _needsVisits(b, 2),
+  );
+
+  /// 🍲 Bringing a meal to the shift.
+  static final bringMeal = GameAction<BuildingModel>(
+    id: ActionId.bringMeal,
+    type: 'bringMeal',
+    emoji: '🍲',
+    effect: '✝️😊',
+    cost: _c({Resource.materials: 10}),
+    discipline: Discipline.service,
+  );
+
+  /// ✉️ Writing encouragement cards to people in the quarter.
+  static final sendCards = GameAction<BuildingModel>(
+    id: ActionId.sendCards,
+    type: 'sendCards',
+    emoji: '✉️💌',
+    effect: '✝️👥',
+    cost: _c({Resource.materials: 5}),
+    discipline: Discipline.service,
+  );
+
+  /// 📖 Quiet study: insight, no faith.
+  static final study = GameAction<BuildingModel>(
+    id: ActionId.study,
+    type: 'study',
+    emoji: '📚',
+    effect: '📖+',
+    cost: _c({Resource.hunger: 6}),
+    baseSeconds: 8,
+    discipline: Discipline.bible,
+  );
+
+  /// 💬 A reading circle with the visitors.
+  static final bookCircle = GameAction<BuildingModel>(
+    id: ActionId.bookCircle,
+    type: 'bookCircle',
+    emoji: '📖👥',
+    effect: '✝️👥',
+    cost: _c({Resource.materials: 3}),
+    discipline: Discipline.conversation,
+    lockedBy: (b) => _needsVisits(b, 2),
+  );
+
+  /// 🖼️ Church history in the exhibition: a little insight.
+  static final churchHistory = GameAction<BuildingModel>(
+    id: ActionId.churchHistory,
+    type: 'churchHistory',
+    emoji: '🖼️⛪',
+    effect: '📖+',
+    cost: _c({Resource.hunger: 4}),
+    baseSeconds: 6,
+    discipline: Discipline.bible,
+  );
+
+  /// 🛠️ Working a shift alongside the workers: earns supplies, costs strength.
+  static final workShift = GameAction<BuildingModel>(
+    id: ActionId.workShift,
+    type: 'workShift',
+    emoji: '🛠️',
+    effect: '📦+',
+    cost: _c({Resource.health: 12, Resource.hunger: 12}),
+    baseSeconds: 6,
+    discipline: Discipline.service,
+  );
+
+  /// 🙏 Praying for the workers' safety.
+  static final prayWorkers = GameAction<BuildingModel>(
+    id: ActionId.prayWorkers,
+    type: 'prayWorkers',
+    emoji: '🙏👷',
+    effect: '🙏✝️',
+    discipline: Discipline.prayer,
+  );
+
   // ── Learned abilities (M3, §3.9) ────────────────────────────────────────
 
   /// 🙏🏠 Fürbitte für ein Haus (1 Tim 2:1): today the door opens more
@@ -397,7 +496,14 @@ abstract final class BuildingActions {
         BuildingType.office ||
         BuildingType.skyscraper =>
           [talkBoss, shopping, bless, requestDonation],
-        _ => [genericPray, witness, distribute],
+        BuildingType.fireStation => [blessVehicles, chaplaincy, bringMeal],
+        BuildingType.postOffice => [sendCards, witness, genericPray],
+        BuildingType.library => [study, bookCircle, witness],
+        BuildingType.museum => [churchHistory, witness],
+        BuildingType.factory ||
+        BuildingType.warehouse ||
+        BuildingType.powerPlant =>
+          [workShift, prayWorkers, witness],
       };
 
   /// The action of [type] with wire type [actionType], if it exists there.

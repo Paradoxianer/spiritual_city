@@ -132,7 +132,15 @@ class InteriorLayout {
         'readBible' => FurnitureKind.bookshelf,
         'eat' || 'houseVisit' => FurnitureKind.roundTable,
         'sleep' => FurnitureKind.bed,
-        'pray' || 'prayForPoliticians' => FurnitureKind.prayerCross,
+        'pray' || 'prayForPoliticians' || 'blessVehicles' || 'prayWorkers' =>
+          FurnitureKind.prayerCross,
+        'chaplaincy' => FurnitureKind.armchair,
+        'bringMeal' => FurnitureKind.diningTable,
+        'sendCards' => FurnitureKind.desk,
+        'study' => FurnitureKind.bookshelf,
+        'bookCircle' => FurnitureKind.roundTable,
+        'churchHistory' => FurnitureKind.lectern,
+        'workShift' => FurnitureKind.barrel,
         'missions' || 'letterToManagement' || 'talkDirector' || 'blessPolice' ||
         'mayorAudience' || 'talkBoss' =>
           FurnitureKind.desk,
