@@ -815,7 +815,9 @@ class SpiritWorldGame extends FlameGame
   void toggleWorld() {
     if (interior != null) return; // no world switch inside a building
     if (!isSpiritualWorld && faith < worldToggleCost) {
-      _log.warning('Not enough faith to enter spiritual world');
+      // Say why nothing happens: entering costs faith (playtest).
+      GameSound.play(Sfx.denied, volume: 0.5);
+      _toast('🙏 ${faith.floor()}/${worldToggleCost.round()} ❌');
       return;
     }
     
@@ -1576,13 +1578,21 @@ class SpiritWorldGame extends FlameGame
     if (viewportSize.x <= 0) return;
 
     final camPos = camera.viewfinder.position;
-    final pPos = player.position;
+    final portrait = viewportSize.y > viewportSize.x;
 
-    final limitX = viewportSize.x * 0.375; 
-    final limitY = viewportSize.y * 0.375;
+    // Playtest: in portrait the pastor could walk under the resource HUD
+    // and the minimap, and so far to the edge that the action ring stuck
+    // out of the screen. Keep him near the middle – a little below it,
+    // because the HUD sits at the top.
+    final target = Vector2(
+      player.position.x,
+      player.position.y - (portrait ? viewportSize.y * 0.08 : 0),
+    );
+    final limitX = viewportSize.x * (portrait ? 0.12 : 0.3);
+    final limitY = viewportSize.y * (portrait ? 0.1 : 0.25);
 
-    final dx = pPos.x - camPos.x;
-    final dy = pPos.y - camPos.y;
+    final dx = target.x - camPos.x;
+    final dy = target.y - camPos.y;
 
     double pushX = 0;
     double pushY = 0;

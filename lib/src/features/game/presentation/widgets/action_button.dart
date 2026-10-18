@@ -210,13 +210,30 @@ class ActionBar extends StatelessWidget {
   final List<Widget> children;
   const ActionBar({super.key, required this.children});
 
+  /// One row only (playtest: a second row could stick out of the dialog,
+  /// and buttons outside it could not be tapped). Too many buttons scroll
+  /// sideways instead.
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.spaceEvenly,
-      spacing: 8,
-      runSpacing: 10,
-      children: children,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: constraints.maxWidth.isFinite ? constraints.maxWidth : 0,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                children[i],
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

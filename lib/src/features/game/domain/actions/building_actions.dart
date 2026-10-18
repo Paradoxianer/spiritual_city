@@ -412,7 +412,7 @@ abstract final class BuildingActions {
   );
 
   /// 🙏 Praying for the workers' safety.
-  static final prayWorkers = GameAction<BuildingModel>(
+  static const prayWorkers = GameAction<BuildingModel>(
     id: ActionId.prayWorkers,
     type: 'prayWorkers',
     emoji: '🙏👷',

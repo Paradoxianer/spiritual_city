@@ -105,6 +105,7 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
           () => MentorTarget(lesson!)));
     }
     add(_FindSparkle(this));
+    if (!building.isHomebase) add(_WallStatus(this));
     pastor = InteriorPastor(this)..position = centerOf(layout.entry);
     add(pastor);
     add(_BusyBadge(this));
@@ -378,6 +379,59 @@ class _StationMarker extends PositionComponent with TapCallbacks {
           .withValues(alpha: active ? 0.75 : (wanted ? 0.55 : 0.35));
     canvas.drawCircle(c, active ? 15 : 10, bg);
     _emoji(canvas, emoji, c, active ? 18 : 11, bob: active, alpha: active ? 1 : 0.85);
+  }
+}
+
+/// Visit points on the top wall (like the dialog header) and the house's
+/// ✝️ holiness as a bar in the right wall (playtest 2026-10-18).
+class _WallStatus extends Component {
+  final InteriorWorld room;
+  _WallStatus(this.room) : super(priority: 20);
+
+  static final Paint _p = Paint();
+
+  @override
+  void render(Canvas canvas) {
+    const c = InteriorWorld.cell;
+    final b = room.building;
+    final l = room.layout;
+
+    // ●●○ – used points bright; all used → the visit ends.
+    final max = b.maxSessionInteractions.clamp(1, 12);
+    final done = b.currentSessionInteractions.clamp(0, max);
+    const r = 6.0, gap = 18.0;
+    final x0 = l.width * c / 2 - (max - 1) * gap / 2;
+    for (var i = 0; i < max; i++) {
+      final o = Offset(x0 + i * gap, c * 0.5);
+      _p.color = const Color(0xAA000000);
+      canvas.drawCircle(o, r + 1.5, _p);
+      _p.color = i < done ? const Color(0xFFFFD54F) : const Color(0x55FFFFFF);
+      canvas.drawCircle(o, r, _p);
+    }
+
+    // ✝️ holiness: ? until known, rounded while vague, exact once revealed.
+    final x = (l.width - 0.5) * c;
+    final top = 2.2 * c, bottom = (l.height - 1.6) * c;
+    final bar = Rect.fromLTRB(x - 5, top, x + 5, bottom);
+    _p.color = const Color(0xAA000000);
+    canvas.drawRRect(RRect.fromRectAndRadius(bar.inflate(2), const Radius.circular(6)), _p);
+    _p.color = const Color(0x33FFFFFF);
+    canvas.drawRRect(RRect.fromRectAndRadius(bar, const Radius.circular(5)), _p);
+    _emoji(canvas, '✝️', Offset(x, top - 14), 14);
+    if (!b.isFaithVague) {
+      _emoji(canvas, '?', bar.center, 11);
+      return;
+    }
+    final norm = ((b.faith + 100) / 200).clamp(0.0, 1.0);
+    final shown = b.isFaithRevealed ? norm : ((norm * 4).round() / 4).clamp(0.0, 1.0);
+    _p.color = Color.lerp(const Color(0xFFD32F2F), const Color(0xFF43A047), norm)!;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(bar.left, bar.bottom - bar.height * shown, bar.right, bar.bottom),
+        const Radius.circular(5),
+      ),
+      _p,
+    );
   }
 }
 
