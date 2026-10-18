@@ -77,6 +77,16 @@ class AppStrings {
 
       // Resources
       'resource.health': 'Gesundheit',
+      'upgrade.shield': 'Schild',
+      'upgrade.helm': 'Helm',
+      'upgrade.radius': 'Radius',
+      'upgrade.strength': 'Stärke',
+      'upgrade.duration': 'Dauer',
+      'upgrade.speed': 'Tempo',
+      'mode.liberation': 'Befreiung',
+      'mode.rebuke': 'Zurechtweisen',
+      'mode.slow': 'Binden',
+      'mode.drain': 'Entwaffnen',
       'resource.provision': 'Versorgung',
       'resource.faith': 'Glaube',
       'resource.supplies': 'Vorräte',
@@ -289,6 +299,16 @@ class AppStrings {
 
       // Resources
       'resource.health': 'Health',
+      'upgrade.shield': 'Shield',
+      'upgrade.helm': 'Helmet',
+      'upgrade.radius': 'Radius',
+      'upgrade.strength': 'Strength',
+      'upgrade.duration': 'Duration',
+      'upgrade.speed': 'Speed',
+      'mode.liberation': 'Liberation',
+      'mode.rebuke': 'Rebuke',
+      'mode.slow': 'Binding',
+      'mode.drain': 'Disarming',
       'resource.provision': 'Provision',
       'resource.faith': 'Faith',
       'resource.supplies': 'Supplies',

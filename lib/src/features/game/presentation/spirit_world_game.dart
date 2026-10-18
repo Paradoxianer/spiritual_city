@@ -236,6 +236,9 @@ class SpiritWorldGame extends FlameGame
 
   /// The building the pastor is inside right now (third layer), if any.
   InteriorWorld? interior;
+
+  /// True while inside a building (drives the Flutter interior bar).
+  final ValueNotifier<bool> interiorActive = ValueNotifier(false);
   double _cityZoom = 1.0;
   String _interiorButtonEmoji = '';
   double _ambienceTimer = 0;

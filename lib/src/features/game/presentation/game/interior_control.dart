@@ -50,7 +50,8 @@ extension GameInterior on SpiritWorldGame {
     camera.viewfinder.zoom = fit.clamp(0.85, 1.6);
     _interiorButtonEmoji = '';
     _updateHudVisibility();
-    overlays.add('InteriorHud');
+    interiorActive.value = true;
+    currentStreetLabel.value = ''; // the interior bar shows the address
   }
 
   void leaveInterior() {
@@ -61,7 +62,8 @@ extension GameInterior on SpiritWorldGame {
     camera.viewfinder.zoom = _cityZoom;
     camera.viewfinder.position = player.position.clone();
     room.removeFromParent();
-    overlays.remove('InteriorHud');
+    interiorActive.value = false;
+    _lastStreetCellX = -999999; // street label comes back on the next tick
     overlays.remove('UpgradeOverlay');
     activeBuildingData = null;
     if (activeMissionBoardData != null) closeMissionBoard();
@@ -172,6 +174,9 @@ extension GameInterior on SpiritWorldGame {
     // Session limit reached: the visit ends, the pastor is shown out.
     if (result.success && room.building.isReadyToLeave) {
       room.leaving = true;
+      // Say why: the visit points are used up – come back another time.
+      final dots = '●' * room.building.maxSessionInteractions.clamp(1, 12);
+      _toast('$dots ➡️ 👋🚪');
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (interior == room) leaveInterior();
       });

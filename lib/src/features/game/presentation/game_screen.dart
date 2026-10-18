@@ -13,7 +13,6 @@ import '../domain/models/skills.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
 import '../domain/actions/practice.dart';
-import '../domain/actions/resource.dart';
 import '../domain/models/base_interactable_entity.dart';
 import '../domain/city_generation/city_overview.dart';
 import '../domain/models/building_model.dart';
@@ -158,7 +157,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               'DialogOverlay': (context, game) => DialogOverlay(game: _game),
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
-              'InteriorHud': (context, game) => InteriorHud(game: _game),
               'UpgradeOverlay': (context, game) => UpgradeOverlay(game: _game),
               'LookOverlay': (context, game) => LookOverlay(game: _game),
               'MissionBoardOverlay': (context, game) =>
@@ -317,6 +315,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
+          // Inside a building: its bar above the HUD.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.interiorActive,
+            builder: (context, inside, _) =>
+                inside ? InteriorHud(game: _game) : const SizedBox.shrink(),
+          ),
           // City map – above the HUD so nothing covers it.
           ValueListenableBuilder<bool>(
             valueListenable: _game.cityMapOpen,

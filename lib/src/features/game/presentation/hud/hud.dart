@@ -11,7 +11,8 @@ class _StreetLabel extends StatelessWidget {
     return ValueListenableBuilder<String>(
       valueListenable: game.currentStreetLabel,
       builder: (context, label, _) {
-        if (label.isEmpty) return const SizedBox.shrink();
+        // Inside a building its own bar takes the top centre.
+        if (label.isEmpty || game.interior != null) return const SizedBox.shrink();
         return Positioned(
           top: 14,
           left: 60,
