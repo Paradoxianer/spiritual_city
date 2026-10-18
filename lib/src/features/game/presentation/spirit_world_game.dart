@@ -17,6 +17,7 @@ import '../domain/models/day_stats.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
 import 'components/character_sprites.dart';
+import 'components/kenney_city_renderer.dart';
 import 'components/stronghold_component.dart';
 import '../domain/models/skills.dart';
 import '../domain/services/combat_abilities.dart';
@@ -468,6 +469,7 @@ class SpiritWorldGame extends FlameGame
   Future<void> onLoad() async {
     GameSound.preload();
     await CharacterSprites.load(images);
+    await KenneyCityRenderer.load(images);
     try {
       _log.info('--- INITIALIZING GAME ---');
       // ── Restore save state ──────────────────────────────────────────────────
