@@ -232,6 +232,19 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | Wabern (§3.6) | ✅ Fragment-Shader je Chunk (Domain Warping), Rückfall auf den alten Renderer. | |
 | Erste Sounds (§3.7) | ✅ Kenney CC0, 🔊/🔇 im Pausemenü. | |
 
+### 4.3 Stand M3 (Branch `feat/m3-community`, gestapelt auf M2)
+
+| Punkt | Stand | Biblischer Bezug |
+| :--- | :--- | :--- |
+| Gemeinde (#181) | ✅ Bekehrte werden Mitglieder: 🙏 Fürbeter (+🙏), 📖 Hauskreis (+📖), 🤝 Helfer (+📦), 🩹 verwundeter Heiler. Ertrag am Tagesende, flach (n^0,8). Übersicht ⛪👥 im Pastorenhaus, Rolle per Tippen wechseln. Zentral gespeichert, zählt auch außerhalb geladener Chunks. | Eph 4,11–12 · 1 Kor 12 |
+| Verwundeter Heiler (§3.2) | ✅ Wer eine Wunde verarbeitet hat, trägt bei anderen mit derselben Wunde einen Lebensgesprächs-Schritt (kostenlos, einmal am Tag). | 2 Kor 1,4 |
+| Fürbitte | ✅ 🙏🏠 in Wohnhäusern: Tür öffnet heute leichter (+30 %), Gespräche mit Bewohnern ×1,5. | 1 Tim 2,1 |
+| Fasten | ✅ ➖🍞 im Pastorenhaus: Gebetswellen im nächsten Kampf −40 % 🙏. | Mt 6,16–18 |
+| Predigen (#172) | ✅ 📢 in Kirchen, einmal am Tag: alle in 8 Zellen, flach; helle Zellen und Christen verstärken, sehr Feindliche wenden sich ab. Lernbar erst nach der ersten Erweckung. Bewusst als Gebäude-Aktion statt Halten-Mechanik (einfacher). | Röm 10,14 |
+| Fähigkeiten pro Stufe (#179) | ✅ Je Modus zwei Fähigkeiten ab Modus-Stufe 3 und 6 (Summe der vier Upgrades), im ⚔️-Panel mit 🔒 und Ansage beim Freischalten. | |
+| Missions-Tiers (#173) | ✅ Teil: Belohnung × (1 + 0,5 × erweckte Viertel); die Erweckung selbst ist das Tier-3-Ziel mit qualitativer Belohnung (Predigen). Offen: Quest-Ketten (Tier 2). | |
+| Begehbare Innenräume (§3.5) | ✅ Vereinfacht im Raster des Raums: tippen zum Laufen, Möbel lösen Aktionen aus, ✨ Fundstück je Gebäude (einmalig), Bewohner stehen im Raum. Keine eigene Flame-Welt. | |
+
 ---
 
 ## 5. Entscheidungen (2026-10-17)
