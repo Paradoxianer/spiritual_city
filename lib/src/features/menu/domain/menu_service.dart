@@ -74,6 +74,7 @@ class MenuService {
 
   Future<void> setSoundOn(bool on) async {
     GameSound.enabled = on;
+    if (!on) GameAmbience.stop();
     await _persistSettings();
   }
 

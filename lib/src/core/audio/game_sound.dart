@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame_audio/flame_audio.dart';
 import 'package:logging/logging.dart';
 
@@ -52,5 +54,75 @@ abstract final class GameSound {
     } catch (e) {
       _log.fine('Sound ${sfx.name} failed: $e');
     }
+  }
+}
+
+/// Looping background sound per place (playtest 2026-10-18). Synthesised by
+/// tools/gen_ambience.py, so no licence questions.
+enum Ambience {
+  none('', 0),
+  city('ambience/city.ogg', 0.35),
+  home('ambience/home.ogg', 0.55),
+  hall('ambience/hall.ogg', 0.4),
+  church('ambience/church.ogg', 0.35),
+  spirit('ambience/spirit.ogg', 0.3);
+
+  final String file;
+  final double volume;
+  const Ambience(this.file, this.volume);
+}
+
+/// Plays one [Ambience] at a time and cross-fades on change.
+abstract final class GameAmbience {
+  static final _log = Logger('GameAmbience');
+  static Ambience _current = Ambience.none;
+  static AudioPlayer? _player;
+  static int _generation = 0;
+  static bool _failed = false;
+
+  static const Duration _fade = Duration(milliseconds: 1200);
+
+  /// Switches to [a] (cheap no-op when it is already playing).
+  static Future<void> set(Ambience a) async {
+    if (!GameSound.enabled || _failed) a = Ambience.none;
+    if (a == _current) return;
+    final from = _current;
+    _current = a;
+    final gen = ++_generation;
+    final old = _player;
+    _player = null;
+    if (old != null) _ramp(old, from.volume, 0, stopAfter: true);
+    if (a == Ambience.none) return;
+    try {
+      final p = await FlameAudio.loop(a.file, volume: 0);
+      if (gen != _generation) {
+        await p.dispose();
+        return;
+      }
+      _player = p;
+      _ramp(p, 0, a.volume);
+    } catch (e) {
+      _failed = true;
+      _log.warning('Ambience failed, off: $e');
+    }
+  }
+
+  static void stop() => set(Ambience.none);
+
+  static void _ramp(AudioPlayer p, double from, double to, {bool stopAfter = false}) {
+    const steps = 20;
+    var i = 0;
+    Timer.periodic(_fade ~/ steps, (timer) async {
+      i++;
+      try {
+        await p.setVolume(from + (to - from) * (i / steps));
+        if (i >= steps) {
+          timer.cancel();
+          if (stopAfter) await p.dispose();
+        }
+      } catch (_) {
+        timer.cancel();
+      }
+    });
   }
 }

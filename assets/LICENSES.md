@@ -13,6 +13,8 @@ Alle Dateien unter `assets/images/kenney/` und `assets/audio/kenney/` stammen vo
 | Impact Sounds | https://kenney.nl/assets/impact-sounds | `audio/kenney/impact_sounds/` | 130 × OGG: Schritte (Teppich, Beton, Gras, Schnee, Holz), Glocke, Glas, Metall, Holz, Schlag, weich |
 | RPG Audio | https://kenney.nl/assets/rpg-audio | `audio/kenney/rpg_audio/` | 51 × OGG: Buch öffnen/blättern/schließen, Türen, Münzen, Schritte, Stoff, Metall |
 
+**Umgebungsgeräusche** (`audio/ambience/`: `city`, `home`, `hall`, `church`, `spirit` – nahtlose 24-s-Schleifen) sind keine Aufnahmen, sondern mit `tools/gen_ambience.py` synthetisch erzeugt (eigene Arbeit, keine Fremdlizenz).
+
 Vorschaubilder der Grafik-Pakete: `docs/assets_preview/` (nicht im App-Bundle).
 
 Heruntergeladen am 2026-10-17. Nicht übernommen wurden die Einzel-Tiles (1500+ PNGs, identisch mit den Spritesheets), die Varianten der Spritesheets mit Abstand und die WAV-Fassungen.

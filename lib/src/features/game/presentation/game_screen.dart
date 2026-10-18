@@ -15,6 +15,7 @@ import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
+import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
 import '../domain/models/npc_backstory.dart';
 import '../domain/models/npc_model.dart';
@@ -24,12 +25,16 @@ import '../domain/models/quarter.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../domain/services/tutorial_service.dart';
 import '../presentation/components/building_component.dart';
+import 'components/cell_component.dart';
+import 'components/daemon_component.dart';
 import 'components/npc_component.dart';
+import 'components/stronghold_component.dart';
 import 'spirit_world_game.dart';
 import 'widgets/action_button.dart';
 import 'widgets/overlay_shell.dart';
 
 part 'hud/hud.dart';
+part 'hud/minimap.dart';
 part 'overlays/building_interior.dart';
 part 'overlays/church.dart';
 part 'overlays/lesson.dart';
@@ -59,13 +64,14 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late final SpiritWorldGame _game;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _game = SpiritWorldGame(
       difficulty: widget.difficulty,
       gameSave: widget.gameSave,
@@ -76,6 +82,20 @@ class _GameScreenState extends State<GameScreen> {
     if (getIt<MenuService>().isTutorialCompleted) {
       _game.tutorialService.isTutorialCompleted = true;
     }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    GameAmbience.stop();
+    super.dispose();
+  }
+
+  /// No background sound while the app is not in front; the game sets it
+  /// again on its next tick.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) GameAmbience.stop();
   }
 
   /// Captures the current game state, persists it to Hive and returns to the
@@ -184,6 +204,18 @@ class _GameScreenState extends State<GameScreen> {
                     icon: const Icon(Icons.pause),
                   ),
                 ),
+              );
+            },
+          ),
+          // Minimap – top right, below the pause button.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return Positioned(
+                top: 68,
+                right: 12,
+                child: _Minimap(game: _game),
               );
             },
           ),

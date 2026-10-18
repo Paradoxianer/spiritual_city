@@ -233,6 +233,20 @@ class SpiritWorldGame extends FlameGame
   InteriorWorld? interior;
   double _cityZoom = 1.0;
   String _interiorButtonEmoji = '';
+  double _ambienceTimer = 0;
+
+  /// Background sound for where the pastor is.
+  Ambience _ambienceHere() {
+    final inside = interior;
+    if (inside != null) {
+      return switch (inside.building.type) {
+        BuildingType.house || BuildingType.apartment || BuildingType.pastorHouse => Ambience.home,
+        BuildingType.church || BuildingType.cathedral || BuildingType.cemetery => Ambience.church,
+        _ => Ambience.hall,
+      };
+    }
+    return isSpiritualWorld ? Ambience.spirit : Ambience.city;
+  }
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
 
   // Progress & Modifiers
@@ -1056,6 +1070,13 @@ class SpiritWorldGame extends FlameGame
       if (_winCheckTimer >= _winCheckInterval) {
         _winCheckTimer = 0.0;
         _checkWinCondition();
+      }
+    }
+    if (isWorldReady.value) {
+      _ambienceTimer += dt;
+      if (_ambienceTimer >= 0.5) {
+        _ambienceTimer = 0;
+        GameAmbience.set(_ambienceHere());
       }
     }
     // Always push player position so the Flutter HUD compass stays live.

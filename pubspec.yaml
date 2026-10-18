@@ -45,6 +45,7 @@ flutter:
     - assets/images/kenney/roguelike_indoors/
     - assets/images/kenney/roguelike_rpg/
     - assets/audio/
+    - assets/audio/ambience/
     - assets/audio/kenney/interface_sounds/
     - assets/audio/kenney/ui_audio/
     - assets/audio/kenney/impact_sounds/
