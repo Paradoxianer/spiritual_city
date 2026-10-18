@@ -93,6 +93,7 @@ class NpcInteractionService {
     required double playerHealth,
     required double playerMaterials,
     double practiceMultiplier = 1.0,
+    bool freeLifeTalk = false,
   }) {
     npc.currentSessionInteractions++;
 
@@ -168,10 +169,14 @@ class NpcInteractionService {
       case 'lifetalk':
         final challenge = npc.backstory.currentChallenge;
         if (challenge == null) return refused('🌱😊');
-        if (playerHealth <= NpcActions.lifeTalkHealthCost) return refused('🚫❤️');
-        if (playerFaith < NpcActions.lifeTalkFaithCost) return refused('🚫🙏');
-        playerFaith0 -= NpcActions.lifeTalkFaithCost;
-        npc.lastPlayerHealthDelta = -NpcActions.lifeTalkHealthCost;
+        // A 🩹 wounded healer from the church carries this step: free
+        // (2 Cor 1:4 – comforting with the comfort one received).
+        final hpCost = freeLifeTalk ? 0.0 : NpcActions.lifeTalkHealthCost;
+        final faithCost = freeLifeTalk ? 0.0 : NpcActions.lifeTalkFaithCost;
+        if (!freeLifeTalk && playerHealth <= hpCost) return refused('🚫❤️');
+        if (!freeLifeTalk && playerFaith < faithCost) return refused('🚫🙏');
+        playerFaith0 -= faithCost;
+        npc.lastPlayerHealthDelta = -hpCost;
         npc.lastPlayerFaithDelta = playerFaith0;
         npc.recordAction('lifetalk');
         npc.interactionCount++;
@@ -186,7 +191,7 @@ class NpcInteractionService {
           return NpcInteractionResult(
             reaction: '${challenge.event.glyph}💭',
             playerFaithDelta: playerFaith0,
-            playerHealthDelta: -NpcActions.lifeTalkHealthCost,
+            playerHealthDelta: -hpCost,
           );
         }
         final g = (challenge.event.severity.abs() *
@@ -199,7 +204,7 @@ class NpcInteractionService {
         return NpcInteractionResult(
           reaction: '${challenge.event.glyph}🌱',
           playerFaithDelta: playerFaith0,
-          playerHealthDelta: -NpcActions.lifeTalkHealthCost,
+          playerHealthDelta: -hpCost,
           insightDelta: lifeTalkInsightOnCompletion +
               (result.christGrowth ? lifeTalkInsightOnChristGrowth : 0.0) +
               (npc.backstory.fullyResolved ? lifeTalkInsightOnFullyResolved : 0.0),

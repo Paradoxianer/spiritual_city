@@ -46,6 +46,13 @@ class DaySummaryOverlay extends StatelessWidget {
                     ),
                 ],
               ),
+            if (!game.lastChurchYield.isEmpty) ...[
+              const SizedBox(height: 18),
+              Text(
+                game.lastChurchYield.label,
+                style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 18),
+              ),
+            ],
             if (quarter != null) ...[
               const SizedBox(height: 18),
               Text(quarter.label, style: const TextStyle(color: Colors.white70, fontSize: 15)),

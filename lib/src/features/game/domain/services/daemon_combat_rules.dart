@@ -1,5 +1,6 @@
 import '../models/daemon_kind.dart';
 import '../models/prayer_combat.dart';
+import 'combat_abilities.dart';
 
 /// What one prayer-wave hit does to a daemon.
 class DaemonHit {
@@ -67,7 +68,9 @@ abstract final class DaemonCombatRules {
     required double duration,
     required Set<PrayerMode> active,
     required double initialEnergy,
+    Map<PrayerMode, int> abilityTier = const {},
   }) {
+    int t(PrayerMode m) => abilityTier[m] ?? 0;
     final weak = kind.weakness == mode;
     var dmg = damage;
     var dur = duration;
@@ -75,6 +78,9 @@ abstract final class DaemonCombatRules {
     var chain = false;
 
     if (active.contains(PrayerMode.drain)) dmg *= drainedDamageFactor;
+    if (active.contains(PrayerMode.slow) && t(PrayerMode.slow) >= 2) {
+      dmg *= CombatAbilities.slowedDamage;
+    }
     switch (mode) {
       case PrayerMode.liberation:
         dmg *= liberationDamageFactor;
@@ -82,12 +88,16 @@ abstract final class DaemonCombatRules {
       case PrayerMode.slow:
         dmg *= controlDamageFactor;
         if (weak) dur *= slowWeaknessDuration;
+        if (t(PrayerMode.slow) >= 1) dur *= CombatAbilities.slowDuration;
       case PrayerMode.drain:
         if (weak) dmg *= damageWeakness;
+        if (t(PrayerMode.drain) >= 2) dmg *= CombatAbilities.drainDamage;
         if (active.contains(PrayerMode.slow)) dur *= drainAfterSlowDuration;
       case PrayerMode.rebuke:
         dmg *= controlDamageFactor;
+        if (t(PrayerMode.rebuke) >= 2) dmg *= CombatAbilities.rebukeDamage;
         if (weak) knock *= rebukeWeaknessKnockback;
+        if (t(PrayerMode.rebuke) >= 1) knock *= CombatAbilities.rebukeKnockback;
         if (active.contains(PrayerMode.drain)) {
           knock *= rebukeAfterDrainKnockback;
           if (active.contains(PrayerMode.slow)) {

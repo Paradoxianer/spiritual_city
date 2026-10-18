@@ -53,6 +53,15 @@ class MissionService {
 
   static const int _startMissionCount = 4;
 
+  /// Player stage for reward scaling (#173): number of awakened
+  /// neighbourhoods. reward = base × (1 + stage × [stageRewardFactor]).
+  /// Set by the game; missions keep growing in worth as the city awakens.
+  int stage = 0;
+  static const double stageRewardFactor = 0.5;
+
+  /// Reward factor for the current [stage].
+  double get rewardScale => 1.0 + stage * stageRewardFactor;
+
   // ── Legacy reward constants (used by radial-menu completion path) ─────────
   static const int faithReward    = 10;
   static const int materialsReward = 5;
@@ -333,9 +342,9 @@ class MissionService {
       actionType: tmpl.actionType,
       description: tmpl.description,
       targetCount: tmpl.targetCount,
-      rewardFaith: tmpl.rewardFaith,
-      rewardMaterials: tmpl.rewardMaterials,
-      insightReward: tmpl.insightReward,
+      rewardFaith: (tmpl.rewardFaith * rewardScale).roundToDouble(),
+      rewardMaterials: (tmpl.rewardMaterials * rewardScale).roundToDouble(),
+      insightReward: tmpl.insightReward * rewardScale,
       difficulty: tmpl.difficulty,
     );
     t.assign(mission);
@@ -422,7 +431,7 @@ class MissionService {
   static ActionType? npcActionToType(String interactionType) {
     return switch (interactionType) {
       'talk'    => ActionType.npcConversation,
-      'lifetalk' => ActionType.npcConversation,
+      'lifetalk' || 'healertalk' => ActionType.npcConversation,
       'convert' => ActionType.npcGospelShare,
       _ => null,
     };

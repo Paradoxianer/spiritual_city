@@ -29,6 +29,10 @@ extension GameBuildingActions on SpiritWorldGame {
       }
     }
 
+    // Learned abilities are handled here, not in the service (§3.9, M3).
+    final special = _learnedAbility(actionType, data.building);
+    if (special != null) return special;
+
     var result = buildingInteractionService.performAction(
       actionType,
       data.building,
@@ -268,7 +272,100 @@ extension GameBuildingActions on SpiritWorldGame {
   ///
   /// Returns `true` if access is granted (always true for non-residential).
   bool attemptBuildingAccess(BuildingModel building) {
+    // 🙏🏠 Interceded for today: the door opens far more easily.
+    if (building.intercededDay == dayStats.day && !building.isAlwaysOpen) {
+      final chance = (building.accessChance(faith) + SpiritWorldGame.intercessionAccessBonus).clamp(0.0, 1.0);
+      return Random().nextDouble() < chance;
+    }
     return buildingInteractionService.attemptAccess(building, faith);
+  }
+
+  /// Collects the room's hidden ✨ find (walkable interiors, §3.5): once per
+  /// building, a little insight or supplies – deterministic from its id.
+  String collectFind(BuildingModel building) {
+    if (building.findCollected) return '✨✅';
+    building.findCollected = true;
+    final insight = stableStringHash('${building.buildingId}#find').isEven;
+    if (insight) {
+      progress.addInsight(SpiritWorldGame.roomFindInsight);
+    } else {
+      gainMaterials(SpiritWorldGame.roomFindMaterials);
+    }
+    GameSound.play(Sfx.learned, volume: 0.5);
+    return insight ? '✨ +$SpiritWorldGame.roomFindInsight📖' : '✨ +${SpiritWorldGame.roomFindMaterials.round()}📦';
+  }
+
+  /// 🙏🏠 / ➖🍞 / 📢 – effects of learned abilities.
+  BuildingInteractionResult? _learnedAbility(String actionType, BuildingModel building) {
+    switch (actionType) {
+      case 'intercede':
+        if (building.intercededDay == dayStats.day) {
+          return const BuildingInteractionResult(reactionEmoji: '🙏🏠✅', success: false);
+        }
+        spendFaith(BuildingActions.intercessionFaithCost);
+        building.intercededDay = dayStats.day;
+        building.applyInfluence(5.0);
+        recordPractice(Discipline.prayer);
+        recordLessonTask(LessonTask.pray);
+        building.currentSessionInteractions++;
+        return const BuildingInteractionResult(
+          reactionEmoji: '🙏🏠✨',
+          playerFaithDelta: -BuildingActions.intercessionFaithCost,
+        );
+      case 'fast':
+        if (isFasting) {
+          return const BuildingInteractionResult(reactionEmoji: '➖🍞✅', success: false);
+        }
+        spendHunger(30);
+        isFasting = true;
+        recordPractice(Discipline.prayer);
+        return const BuildingInteractionResult(reactionEmoji: '➖🍞🙏', playerHungerDelta: -30);
+      case 'preach':
+        if (building.preachedDay == dayStats.day) {
+          return const BuildingInteractionResult(reactionEmoji: '📢✅', success: false);
+        }
+        spendFaith(30);
+        building.preachedDay = dayStats.day;
+        final reached = _preachAround(player.position);
+        recordPractice(Discipline.bible);
+        building.currentSessionInteractions++;
+        return BuildingInteractionResult(
+          reactionEmoji: '📢👥 $reached',
+          playerFaithDelta: -30,
+        );
+    }
+    return null;
+  }
+
+  /// Preaching (#172): everyone within [preachRadiusCells] hears at once –
+  /// broad but flat. Liberated ground amplifies (×0.5 … ×1.5), every
+  /// Christian nearby adds 10 %, very hostile people turn away (−5).
+  /// Returns how many people were reached.
+  int _preachAround(Vector2 at) {
+    const cell = CellComponent.cellSize;
+    final reach = SpiritWorldGame.preachRadiusCells * cell;
+    final rng = Random();
+    final near = chunkManager.allActiveNPCs
+        .where((c) => c.position.distanceTo(at) <= reach)
+        .toList();
+    final christians = near.where((c) => c.model.isChristian).length;
+    final community = 1.0 + 0.1 * christians;
+    for (final c in near) {
+      final npc = c.model;
+      if (npc.isChristian) continue;
+      if (npc.faith < -30) {
+        npc.applyInfluence(-5);
+        continue;
+      }
+      final st = grid
+              .getCell((c.position.x / cell).floor(), (c.position.y / cell).floor())
+              ?.spiritualState ??
+          0.0;
+      final cellFactor = (1.0 + st * 0.5).clamp(0.5, 1.5);
+      final falloff = 1.0 - (c.position.distanceTo(at) / reach) * 0.5;
+      npc.applyInfluence(((2 + rng.nextInt(3)) * cellFactor * community * falloff).roundToDouble());
+    }
+    return near.length;
   }
 
   /// Applies [delta] spiritual influence to the city cell directly beneath

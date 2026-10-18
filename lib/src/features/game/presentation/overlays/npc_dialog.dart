@@ -341,6 +341,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
         game: widget.game,
         enabled: !_isWaiting,
         onTap: () => _handleInteraction(NpcActions.lifeTalk.type, NpcActions.lifeTalk.emoji),
+        onHealer: () => _handleInteraction(NPCComponent.healerTalkType, '🩹'),
       );
     }
     // Fixed key slots 1–6; hidden actions keep their number.
@@ -589,12 +590,14 @@ class _LifeTalkButton extends StatelessWidget {
   final SpiritWorldGame game;
   final bool enabled;
   final VoidCallback onTap;
+  final VoidCallback onHealer;
 
   const _LifeTalkButton({
     required this.model,
     required this.game,
     required this.enabled,
     required this.onTap,
+    required this.onHealer,
   });
 
   @override
@@ -603,17 +606,33 @@ class _LifeTalkButton extends StatelessWidget {
     if (current == null) {
       return const Center(child: Text('🌱✨', style: TextStyle(fontSize: 20)));
     }
-    return Center(
-      child: ActionButton.of(
-        NpcActions.lifeTalk,
-        model,
-        emoji: '${NpcActions.lifeTalk.emoji}${current.event.glyph}',
-        wallet: game,
-        difficulty: game.difficulty,
-        practice: game.progress.practice,
-        enabled: enabled,
-        onTap: onTap,
-      ),
+    final healer = game.progress.church.healerFor(
+      current.event.id,
+      game.dayStats.day,
+      exceptNpcId: model.id,
+    );
+    return ActionBar(
+      children: [
+        ActionButton.of(
+          NpcActions.lifeTalk,
+          model,
+          emoji: '${NpcActions.lifeTalk.emoji}${current.event.glyph}',
+          wallet: game,
+          difficulty: game.difficulty,
+          practice: game.progress.practice,
+          enabled: enabled,
+          onTap: onTap,
+        ),
+        // 🩹 A church member who went through the same wound helps – free.
+        if (healer != null)
+          ActionButton(
+            emoji: '🩹${current.event.glyph}',
+            hint: healer.name.split(' ').first,
+            highlighted: true,
+            enabled: enabled,
+            onTap: onHealer,
+          ),
+      ],
     );
   }
 }

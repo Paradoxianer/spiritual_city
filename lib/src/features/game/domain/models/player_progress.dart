@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../actions/practice.dart';
 import 'prayer_combat.dart';
+import 'church.dart';
 import 'day_stats.dart';
 import 'skills.dart';
 import '../services/learning_service.dart';
@@ -117,6 +118,9 @@ class PlayerProgress extends ChangeNotifier {
   // --- The current day and what happened in it (§3.3) ---
   final DayStats dayStats = DayStats();
 
+  // --- The church: members and roles (#181) ---
+  final Church church = Church();
+
   // --- Awakened neighbourhoods (Quarter keys "qx,qy", §3.3) ---
   final Set<String> awakenedQuarters = {};
 
@@ -196,6 +200,7 @@ class PlayerProgress extends ChangeNotifier {
     'lesson': lesson.toJson(),
     'awakened': awakenedQuarters.toList(),
     'day': dayStats.toJson(),
+    'church': church.toJson(),
     'graceVisitsLeft': graceVisitsLeft,
     'stages': {
       'faith': faithStage.toJson(),
@@ -219,6 +224,7 @@ class PlayerProgress extends ChangeNotifier {
     skills.loadFromJson(json['skills']);
     lesson.loadFromJson(json['lesson']);
     dayStats.loadFromJson(json['day']);
+    church.loadFromJson(json['church']);
     awakenedQuarters
       ..clear()
       ..addAll([for (final k in (json['awakened'] as List?) ?? const []) '$k']);

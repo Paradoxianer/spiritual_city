@@ -70,6 +70,7 @@ extension GameSaveState on SpiritWorldGame {
       final progressData = state['progress'];
       if (progressData is Map) {
         progress.loadFromJson(progressData.cast<String, dynamic>());
+        missionService.stage = progress.awakenedQuarters.length;
       }
       _checkAndApplyModifiers(); // Sync modifiers with loaded progress
     }
@@ -170,6 +171,7 @@ extension GameSaveState on SpiritWorldGame {
     if (saved == null) return;
     building.faith            = (saved['faith'] as num?)?.toDouble() ?? building.faith;
     building.interactionCount = (saved['conv']  as num?)?.toInt()    ?? building.interactionCount;
+    building.findCollected    = saved['found'] as bool? ?? false;
     // Restore active mission if one was saved.
     if (saved['mission'] is Map) {
       building.activeMission = MissionModel.fromJson(
@@ -240,11 +242,12 @@ extension GameSaveState on SpiritWorldGame {
     for (final comp in chunkManager.allActiveBuildings) {
       final building = comp.buildingModel;
       if (building.faith != 0.0 || building.interactionCount != 0 ||
-          building.activeMission != null) {
+          building.activeMission != null || building.findCollected) {
         buildingStates[building.buildingId] = {
           if (building.faith != 0.0)            'faith': building.faith,
           if (building.interactionCount != 0)   'conv':  building.interactionCount,
           if (building.activeMission != null)   'mission': building.activeMission!.toJson(),
+          if (building.findCollected)           'found': true,
         };
       }
     }

@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/utils/stable_hash.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/actions/building_actions.dart';
+import '../domain/services/combat_abilities.dart';
 import '../domain/services/learning_service.dart';
 import '../domain/models/quarter.dart';
 import '../domain/models/skills.dart';
@@ -26,18 +28,21 @@ import '../domain/models/prayer_combat.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../domain/services/tutorial_service.dart';
 import '../presentation/components/building_component.dart';
+import 'components/npc_component.dart';
 import 'spirit_world_game.dart';
 import 'widgets/action_button.dart';
 import 'widgets/overlay_shell.dart';
 
 part 'hud/hud.dart';
 part 'overlays/building_interior.dart';
+part 'overlays/church.dart';
 part 'overlays/day_summary.dart';
 part 'overlays/lesson.dart';
 part 'overlays/look.dart';
 part 'overlays/missions.dart';
 part 'overlays/npc_dialog.dart';
 part 'overlays/pause.dart';
+part 'overlays/room.dart';
 part 'overlays/shared.dart';
 part 'overlays/tutorial.dart';
 part 'overlays/upgrades.dart';
@@ -140,6 +145,7 @@ class _GameScreenState extends State<GameScreen> {
                   MissionBoardOverlay(game: _game),
               'LessonOverlay': (context, game) => LessonOverlay(game: _game),
               'DaySummaryOverlay': (context, game) => DaySummaryOverlay(game: _game),
+              'ChurchOverlay': (context, game) => ChurchOverlay(game: _game),
               'KeymapOverlay': (context, game) =>
                   KeymapOverlay(game: _game),
               'PauseMenuOverlay': (context, game) => PauseMenuOverlay(

@@ -34,6 +34,10 @@ class Lesson {
   /// Skills that must be learned first.
   final Set<Skill> requires;
 
+  /// Only offered after the first awakened neighbourhood (preaching is
+  /// the reward of the first stage goal, #172/#173).
+  final bool requiresAwakening;
+
   /// Bible reference shown with the lesson (the verse text is localised –
   /// the only real text of a lesson; everything else is emoji).
   final String reference;
@@ -49,6 +53,7 @@ class Lesson {
     required this.reference,
     required this.unlocks,
     this.requires = const {},
+    this.requiresAwakening = false,
   });
 
   /// `🎓⚔️ 1/3 👹`
@@ -108,6 +113,7 @@ abstract final class Lessons {
       task: LessonTask.service,
       count: 1,
       reference: 'Röm 10,14',
+      requiresAwakening: true,
       unlocks: '📢⛪ ➡️ 👥✝️',
       requires: {Skill.spiritualWarfare},
     ),
@@ -117,11 +123,12 @@ abstract final class Lessons {
 
   /// Lessons a mentor in [type] offers to a pastor who knows [learned]:
   /// not yet learned, prerequisites met.
-  static List<Lesson> offeredAt(BuildingType type, LearnedSkills learned) => [
+  static List<Lesson> offeredAt(BuildingType type, LearnedSkills learned, {int awakenings = 0}) => [
         for (final l in all)
           if (l.mentorAt.contains(type) &&
               !learned.has(l.skill) &&
-              l.requires.every(learned.has))
+              l.requires.every(learned.has) &&
+              (!l.requiresAwakening || awakenings > 0))
             l,
       ];
 }

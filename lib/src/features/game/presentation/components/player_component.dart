@@ -290,7 +290,10 @@ class PlayerComponent extends PositionComponent
     );
 
     // Faith cost per wave (higher cost for stronger waves; +50% if hunger critical)
-    final cost = 5.0 * game.modifiers.faithCostMultiplier * game.hungerFaithCostMultiplier;
+    final cost = 5.0 *
+        game.modifiers.faithCostMultiplier *
+        game.hungerFaithCostMultiplier *
+        (game.isFasting ? SpiritWorldGame.fastingWaveCostFactor : 1.0);
     if (game.faith < cost) {
       _isChargingIntensity = false;
       return;

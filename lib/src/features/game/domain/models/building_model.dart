@@ -120,6 +120,15 @@ class BuildingModel extends BaseInteractableEntity {
   /// the "Werte-Vortrag halten" action.
   bool isLecturePrepared = false;
 
+  /// The room's hidden ✨ find was already collected (once per building).
+  bool findCollected = false;
+
+  /// Day on which the pastor last interceded for this house (🙏🏠).
+  int intercededDay = 0;
+
+  /// Day on which the pastor last preached here (📢, once a day).
+  int preachedDay = 0;
+
   BuildingModel({
     required this.buildingId,
     required this.type,
