@@ -198,7 +198,7 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | **M1 – Einfach & konsistent** | Redesign §2 (Aktions-Modell, `ActionButton`, `OverlayShell`, Dateien aufteilen), Übung & Beziehung §3.4, Tutorial anpassen | #185 #83 #126 #92 |
 | **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Stadtteil-Erweckung + Bollwerk, Tag + Tagesbilanz §3.3, wabernde unsichtbare Welt (Shader) §3.6, erste Sounds §3.7, Lern-Missionen-Rahmen + "Unterscheidung der Geister" §3.9 | #178 #180 #125 #169 #143 |
 | **M3 – Gemeinde & Erkunden** | Rollen, verwundeter Heiler §3.2, Gemeinde-Übersicht, Predigen, Fähigkeiten pro Stufe, weitere Lern-Missionen §3.9, begehbare Innenräume §3.5 | #181 #172 #179 #173 |
-| **M4 – Release 1.0** | Grafik (Kenney-Sprites §3.7, Distrikt-Identität), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 |
+| **M4 – Release 1.0** | Grafik (Kenney-Sprites §3.7, Distrikt-Identität), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits, Vollbild/Insets auf Android | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 #190 |
 | **Nach 1.0** | Cloud-Speicher, reale Städte (OSM), dezente Werbung, Minimap | #165 #166 #128 #164 #146 |
 
 **Warum diese Reihenfolge:** M1 vor M2, weil jedes neue Feature sonst noch eine sechste UI-Variante und noch mehr String-Aktionen erzeugt. M2 vor M3, weil die Gemeinde erst Sinn ergibt, wenn es Etappen gibt, in denen sie hilft. Grafik und Audio kommen bewusst spät: Sie verstärken den Spaß, ersetzen aber keinen fehlenden Kern.
@@ -253,8 +253,11 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | Eltern-Hinweis (#153) | ✅ beim ersten Start, versioniert; „Verlassen“ schließt die App. |
 | Credits (#151) | ✅ Kenney CC0, Bibelübersetzungen (gemeinfrei), Bibliotheks-Lizenzen über `showLicensePage`. |
 | i18n-Audit (#152) | ✅ Spielbildschirme textfrei bzw. de/en; Sprachwahl wird gespeichert. |
-| Grafik (#13/#18/#182) | ✅ Kenney-Figuren mit Laufanimation für Pastor und Menschen; Farbtönung je Distrikttyp. Offen: Stadt-Tiles aus dem Kenney-Sheet zuordnen. |
-| Audio (#10) | ✅ Effekte (M2). Offen: Ambient-Musik (nicht in den Kenney-Paketen). |
+| Grafik (#13/#18/#182) | ✅ Kenney-Figuren mit Laufanimation für Pastor und Menschen; Farbtönung je Distrikttyp. ✅ Stadt aus Kenney-Kacheln: ein Gebäude pro Grundstück mit Dach, Fassade, Tür, Garten (Playtest 2026-10-18). |
+| Innenräume (§3.5, #182) | ✅ Dritte Ebene: begehbare Räume, prozedural je Gebäude (stabil aus der Gebäude-ID), Kenney Roguelike Indoors/RPG. Möbel sind Stationen der Gebäude-Aktionen; Bewohner, 🎓 Mentor, ✨. Alle Sondergebäude eigen eingerichtet. Anklopfen bleibt Tür-Dialog. |
+| Minimap | ✅ Oben rechts: Stadt (Straßen, Häuser, Sondergebäude, 📋-Ziele) bzw. unsichtbare Welt (Zellzustand, Dämonen, 🏰); Antippen vergrößert. |
+| Audio (#10) | ✅ Effekte (M2). ✅ Umgebungsgeräusche (Stadt, Wohnung, Halle, Kirche, unsichtbare Welt), synthetisch erzeugt (`tools/gen_ambience.py`). Offen: Musik / echte Aufnahmen (Pixabay-Audio-Zugang fehlt). |
+| Android-Navigationsleiste (#190) | ❌ Offen: Systemleiste überdeckt HUD-Knöpfe (Kampf-Knopf teils nicht drückbar) → Immersive Mode + Insets beachten. |
 | Store (#94/#95) | ✅ App-Name, vorläufiges Icon, Store-Texte de/en, Checkliste. ⚠️ App-ID, Signatur, Konten, IARC, Screenshots: Herausgeber, siehe `docs/release/release_checklist.md`. |
 
 ---
