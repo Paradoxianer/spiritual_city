@@ -8,7 +8,8 @@ part of '../game_screen.dart';
 /// - Invisible world: the spiritual state of every cell (red = dark,
 ///   green = light), daemons as red dots, the 🏰 stronghold.
 ///
-/// Tap to open the whole city ([CityMapOverlay]). Hidden inside buildings.
+/// Tap: bigger / smaller. Double tap: the whole city ([CityMapOverlay]).
+/// Hidden inside buildings.
 class _Minimap extends StatefulWidget {
   final SpiritWorldGame game;
   const _Minimap({required this.game});
@@ -19,6 +20,7 @@ class _Minimap extends StatefulWidget {
 
 class _MinimapState extends State<_Minimap> {
   Timer? _timer;
+  bool _big = false;
   int _tick = 0;
 
   @override
@@ -40,10 +42,11 @@ class _MinimapState extends State<_Minimap> {
   Widget build(BuildContext context) {
     final g = widget.game;
     if (g.interior != null) return const SizedBox.shrink();
-    const size = 112.0;
+    final size = _big ? 200.0 : 112.0;
     final spirit = g.isSpiritualWorld;
     return GestureDetector(
-      onTap: g.openCityMap,
+      onTap: () => setState(() => _big = !_big),
+      onDoubleTap: g.openCityMap,
       child: Container(
         width: size,
         height: size,
@@ -61,7 +64,7 @@ class _MinimapState extends State<_Minimap> {
             painter: _MinimapPainter(
               game: g,
               spirit: spirit,
-              radiusCells: 36,
+              radiusCells: _big ? 60 : 36,
               tick: _tick,
             ),
           ),
@@ -161,6 +164,38 @@ class _MinimapPainter extends CustomPainter {
       canvas.drawCircle(o, r + 1, _p);
       _p.color = c;
       canvas.drawCircle(o, r, _p);
+    }
+
+    // 📍 Accepted mission: ring on the map, or an arrow at the edge.
+    final target = game.trackedTargetPosition;
+    if (target != null) {
+      final o = toMap(target);
+      final pulse = 0.5 + 0.5 * sin(tick * 1.4);
+      final ring = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = const Color(0xFFFFC107);
+      if (o != null) {
+        canvas.drawCircle(o, 4 + 3 * pulse, ring);
+        _p.color = const Color(0xFFFFC107);
+        canvas.drawCircle(o, 2.5, _p);
+      } else {
+        final c = Offset(size.width / 2, size.height / 2);
+        final d = Offset(target.x / cs - pcx, target.y / cs - pcy);
+        final len = d.distance;
+        if (len > 0) {
+          final u = d / len;
+          final tip = c + u * (size.width / 2 - 5);
+          final side = Offset(-u.dy, u.dx);
+          final path = Path()
+            ..moveTo(tip.dx, tip.dy)
+            ..lineTo((tip - u * 9 + side * 5).dx, (tip - u * 9 + side * 5).dy)
+            ..lineTo((tip - u * 9 - side * 5).dx, (tip - u * 9 - side * 5).dy)
+            ..close();
+          _p.color = const Color(0xFFFFC107);
+          canvas.drawPath(path, _p);
+        }
+      }
     }
 
     // The pastor in the middle.

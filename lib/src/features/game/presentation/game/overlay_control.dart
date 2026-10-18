@@ -109,6 +109,7 @@ extension GameOverlayControl on SpiritWorldGame {
         progress: m.progress,
         targetCount: m.targetCount,
         address: _addressForPixelPos(npcComp.position),
+        trackKey: GameMissionTracking.npcKey(npc.id),
       ));
     }
     for (final bldComp in chunkManager.allActiveBuildings) {
@@ -128,6 +129,7 @@ extension GameOverlayControl on SpiritWorldGame {
         progress: m.progress,
         targetCount: m.targetCount,
         address: _addressForPixelPos(bldComp.position),
+        trackKey: GameMissionTracking.buildingKey(bld.buildingId),
       ));
     }
     activeMissionBoardData = MissionBoardData(entries: entries);
@@ -182,6 +184,7 @@ extension GameOverlayControl on SpiritWorldGame {
   String handleInteraction(String type) {
     if (_nearestInteractable == null) return '❓';
     final result = _nearestInteractable!.handleInteraction(type);
+    GameSound.playAction(type, NpcActions.byType(type)?.discipline?.name);
 
     // ── ActionType mission advancement for NPC interactions (Issue #131) ──
     final at = MissionService.npcActionToType(type);
@@ -282,7 +285,7 @@ extension GameOverlayControl on SpiritWorldGame {
   bool handleEscape() {
     if (_pauseMenuOpen)              { closePauseMenu();         return true; }
     if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
-    if (overlays.isActive('CityMapOverlay')) { closeCityMap();   return true; }
+    if (cityMapOpen.value)           { closeCityMap();           return true; }
     if (activeLessonOffer != null)   { closeLesson();            return true; }
     if (overlays.isActive('ChurchOverlay')) { closeChurchOverview(); return true; }
     if (overlays.isActive('UpgradeOverlay')) { overlays.remove('UpgradeOverlay'); return true; }

@@ -92,6 +92,7 @@ extension GameSaveState on SpiritWorldGame {
 
     // Restore tutorial completion flag so the tutorial isn't shown again.
     tutorialService.isTutorialCompleted = state['tutorialCompleted'] == true;
+    trackedMission.value = state['trackedMission'] as String?;
   }
 
   /// Called by [ChunkManager] immediately after a chunk's cells are generated.
@@ -282,6 +283,7 @@ extension GameSaveState on SpiritWorldGame {
       'playerY':            player.position.y,
       'isSpiritualWorld':   isSpiritualWorld,
       'tutorialCompleted':  tutorialService.isTutorialCompleted,
+      'trackedMission':     trackedMission.value,
       'progress':           progress.toJson(),
       'cells':              cellStates,
       'npcs':               npcStates,

@@ -25,6 +25,7 @@ import '../domain/models/npc_reaction.dart';
 import '../domain/models/prayer_combat.dart';
 import '../domain/models/quarter.dart';
 import '../domain/services/faith_calculator_service.dart';
+import '../domain/services/learning_service.dart';
 import '../domain/services/tutorial_service.dart';
 import '../presentation/components/building_component.dart';
 import 'components/cell_component.dart';
@@ -158,7 +159,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
               'InteriorHud': (context, game) => InteriorHud(game: _game),
-              'CityMapOverlay': (context, game) => CityMapOverlay(game: _game),
               'UpgradeOverlay': (context, game) => UpgradeOverlay(game: _game),
               'LookOverlay': (context, game) => LookOverlay(game: _game),
               'MissionBoardOverlay': (context, game) =>
@@ -242,6 +242,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       children: [
                         _ResourceHud(gameRef: _game),
                         _PastorhouseHud(game: _game),
+                        _TrackedMissionHud(game: _game),
                         _LessonChip(game: _game),
                       ],
                     ),
@@ -316,6 +317,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
+          // City map – above the HUD so nothing covers it.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.cityMapOpen,
+            builder: (context, open, _) =>
+                open ? CityMapOverlay(game: _game) : const SizedBox.shrink(),
+          ),
           // Tutorial overlay – shown for new players until tutorial is complete.
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,

@@ -15,7 +15,11 @@ enum Sfx {
   chain('kenney/impact_sounds/impactGlass_heavy_002.ogg'),
   awakening('kenney/impact_sounds/impactBell_heavy_003.ogg'),
   learned('kenney/interface_sounds/confirmation_002.ogg'),
-  dayEnd('kenney/interface_sounds/confirmation_004.ogg');
+  dayEnd('kenney/interface_sounds/confirmation_004.ogg'),
+  // Synthesised by tools/gen_ambience.py (playtest 2026-10-18).
+  talk('actions/talk.ogg'),
+  pray('actions/pray.ogg'),
+  sleep('actions/sleep.ogg');
 
   /// Path below assets/audio/.
   final String file;
@@ -40,6 +44,20 @@ abstract final class GameSound {
     } catch (e) {
       _failed = true;
       _log.warning('Sound preload failed, sounds off: $e');
+    }
+  }
+
+  /// The sound of a finished action: 😴 sleeping, 🙏 prayer and worship,
+  /// 💬 talking and 👂 listening, 📖 reading.
+  static void playAction(String actionType, String? disciplineName) {
+    if (actionType == 'sleep') return play(Sfx.sleep, volume: 0.6);
+    switch (disciplineName) {
+      case 'prayer' || 'worship':
+        play(Sfx.pray, volume: 0.5);
+      case 'conversation' || 'counsel':
+        play(Sfx.talk, volume: 0.6);
+      case 'bible':
+        play(Sfx.book, volume: 0.6);
     }
   }
 

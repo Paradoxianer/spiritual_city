@@ -77,6 +77,10 @@ class DistrictSelector {
   // ---- Public API ---------------------------------------------------------
 
   DistrictType getDistrictType(int wx, int wy) {
+    // 0. The pastor's home stands in a calm suburb: a full lot with roof
+    //    and cross, never cut by slum lots, industry, a park or water.
+    if (_nearHome(wx, wy)) return DistrictType.suburbs;
+
     // 1. Water check (rivers / coast)
     if (_isRiverCell(wx, wy)) return DistrictType.waterfront;
 

@@ -17,6 +17,9 @@ class MissionEntry {
   /// Formatted address, e.g. "Lindenallee 14" or "Nr. 22". May be null.
   final String? address;
 
+  /// 📍 key to accept / follow this mission (see GameMissionTracking).
+  final String? trackKey;
+
   const MissionEntry({
     required this.targetEmoji,
     required this.targetName,
@@ -28,6 +31,7 @@ class MissionEntry {
     this.progress = 0,
     this.targetCount = 1,
     this.address,
+    this.trackKey,
   });
 }
 
@@ -64,7 +68,16 @@ class MissionBoardOverlay extends StatelessWidget {
               shrinkWrap: true,
               itemCount: data.entries.length,
               separatorBuilder: (_, __) => const Divider(color: Colors.white12),
-              itemBuilder: (context, i) => _MissionRow(entry: data.entries[i]),
+              itemBuilder: (context, i) => ValueListenableBuilder<String?>(
+                valueListenable: game.trackedMission,
+                builder: (context, tracked, _) => _MissionRow(
+                  entry: data.entries[i],
+                  tracked: tracked != null && tracked == data.entries[i].trackKey,
+                  onTrack: data.entries[i].trackKey == null
+                      ? null
+                      : () => game.toggleTrackedMission(data.entries[i].trackKey!),
+                ),
+              ),
             ),
     );
   }
@@ -78,7 +91,11 @@ class MissionBoardOverlay extends StatelessWidget {
 /// ```
 class _MissionRow extends StatelessWidget {
   final MissionEntry entry;
-  const _MissionRow({required this.entry});
+
+  /// 📍 This mission is accepted and shown on the map.
+  final bool tracked;
+  final VoidCallback? onTrack;
+  const _MissionRow({required this.entry, this.tracked = false, this.onTrack});
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +151,10 @@ class _MissionRow extends StatelessWidget {
             rewards,
             style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 13, fontWeight: FontWeight.bold),
           ),
+          if (onTrack != null) ...[
+            const SizedBox(width: 8),
+            ActionButton(emoji: tracked ? '📍✅' : '📍', highlighted: tracked, onTap: onTrack!),
+          ],
         ],
       ),
     );

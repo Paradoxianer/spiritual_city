@@ -1,7 +1,7 @@
 part of '../game_screen.dart';
 
 /// The whole city (playtest 2026-10-18), opened by tapping the minimap.
-/// Pinch to zoom, drag to move. No text: districts as colours, the river,
+/// Pinch to zoom, drag to move; ✕ (top right), back or Escape closes it. No text: districts as colours, the river,
 /// boulevards, special buildings as emoji, 🏠 the pastor house, the pastor
 /// as a bright dot. In the invisible world awakened neighbourhoods glow 🔥
 /// and the current one is outlined.
@@ -88,9 +88,18 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
               right: 8,
               child: IconButton(
                 onPressed: g.closeCityMap,
-                style: IconButton.styleFrom(backgroundColor: Colors.black54),
-                icon: const Icon(Icons.close, color: Colors.white70),
+                iconSize: 32,
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xCC000000),
+                  side: const BorderSide(color: Colors.white38),
+                ),
+                icon: const Icon(Icons.close, color: Colors.white),
               ),
+            ),
+            Positioned(
+              bottom: 12,
+              left: 12,
+              child: _LessonLegend(game: g),
             ),
             Positioned(
               bottom: 12,
@@ -157,8 +166,19 @@ class _CityMapPainter extends CustomPainter {
     // Special buildings – tiny dots far out, emoji when zoomed in.
     final emojiSize = (13 / zoom).clamp(3.0, 13.0);
     final dot = Paint();
+    final mentorTypes = {
+      for (final t in BuildingType.values)
+        if (Lessons.offeredAt(t, game.progress.skills,
+                awakenings: game.progress.awakenedQuarters.length)
+            .isNotEmpty)
+          t,
+    };
     for (final (x, y, t) in game.cityOverview?.landmarks ?? const <(int, int, BuildingType)>[]) {
       final o = _cell(x, y);
+      // 🎓 A mentor waits here with something new to learn.
+      if (mentorTypes.contains(t) && zoom >= 1.2) {
+        _emojiAt(canvas, '🎓', o + Offset(emojiSize * 0.8, -emojiSize * 0.8), emojiSize * 0.9);
+      }
       if (zoom < 1.2 && !_major(t)) {
         dot.color = const Color(0xCCFFFFFF);
         canvas.drawCircle(o, 1.2 / zoom.clamp(0.5, 2), dot);
@@ -169,6 +189,9 @@ class _CityMapPainter extends CustomPainter {
 
     final home = game.pastorhousePosition.value;
     _emojiAt(canvas, '🏠', home != null ? toMap(home) * _s : _cell(220, 222), emojiSize * 1.5);
+
+    final target = game.trackedTargetPosition;
+    if (target != null) _emojiAt(canvas, '📍', toMap(target) * _s - Offset(0, emojiSize), emojiSize * 1.8);
 
     // The pastor.
     final me = toMap(game.player.position) * _s;
@@ -222,4 +245,38 @@ class _CityMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CityMapPainter old) => true;
+}
+
+/// What can be learned now and where (emoji only): `🎓🫂 🏥`.
+class _LessonLegend extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _LessonLegend({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = game.progress;
+    final lessons = <Lesson>{
+      for (final t in BuildingType.values)
+        ...Lessons.offeredAt(t, p.skills, awakenings: p.awakenedQuarters.length),
+    };
+    if (lessons.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final l in lessons)
+            Text(
+              '🎓${l.skill.emoji}  ${l.mentorAt.map(BuildingComponent.buildingEmoji).join(' ')}',
+              style: const TextStyle(fontSize: 16),
+            ),
+        ],
+      ),
+    );
+  }
 }

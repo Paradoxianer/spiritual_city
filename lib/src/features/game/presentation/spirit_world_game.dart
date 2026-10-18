@@ -14,6 +14,7 @@ import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/actions/game_action.dart';
+import '../domain/actions/npc_actions.dart';
 import '../domain/interior/interior_layout.dart';
 import '../domain/city_generation/city_overview.dart';
 import '../domain/services/faith_calculator_service.dart';
@@ -65,6 +66,7 @@ part 'game/save_state.dart';
 part 'game/overlay_control.dart';
 part 'game/building_actions.dart';
 part 'game/interior_control.dart';
+part 'game/mission_tracking.dart';
 
 /// Whether keyboard shortcut hint badges should be shown on HUD buttons.
 /// True on desktop (Windows / Linux / macOS) and web; false on mobile.
@@ -258,14 +260,22 @@ class SpiritWorldGame extends FlameGame
     }
   }
 
+  /// 📍 Accepted mission target (see GameMissionTracking).
+  final ValueNotifier<String?> trackedMission = ValueNotifier(null);
+
+  /// The city map sits above the HUD (not a Flame overlay), so nothing
+  /// covers its close button.
+  final ValueNotifier<bool> cityMapOpen = ValueNotifier(false);
+
   void openCityMap() {
-    if (overlays.isActive('CityMapOverlay')) return;
-    overlays.add('CityMapOverlay');
+    if (cityMapOpen.value) return;
+    cityMapOpen.value = true;
     paused = true;
   }
 
   void closeCityMap() {
-    overlays.remove('CityMapOverlay');
+    if (!cityMapOpen.value) return;
+    cityMapOpen.value = false;
     paused = false;
   }
 
@@ -387,7 +397,7 @@ class SpiritWorldGame extends FlameGame
   /// Sleeping in the pastor house: the church's yield (#181) arrives, then a
   /// new day starts – no real-time ticking, nothing is lost while paused.
   void endDay() {
-    GameSound.play(Sfx.dayEnd);
+    // The 😴 lullaby (Sfx.sleep) is played by the sleep action itself.
     final y = progress.church.dailyYield();
     if (y.faith > 0) gainFaith(y.faith);
     if (y.materials > 0) gainMaterials(y.materials);
@@ -1100,6 +1110,7 @@ class SpiritWorldGame extends FlameGame
       if (_quarterTimer >= 1.0) {
         _quarterTimer = 0.0;
         _updateQuarter();
+        _checkTrackedMission();
       }
       _winCheckTimer += dt;
       if (_winCheckTimer >= _winCheckInterval) {

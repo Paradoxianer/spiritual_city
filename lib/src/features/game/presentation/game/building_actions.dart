@@ -47,6 +47,7 @@ extension GameBuildingActions on SpiritWorldGame {
           (result.playerFaithDelta * progress.practice.multiplier(discipline)).roundToDouble());
     }
     if (discipline != null && result.success) recordPractice(discipline);
+    if (result.success) GameSound.playAction(actionType, discipline?.name);
     if (result.success) {
       if (discipline == Discipline.prayer) recordLessonTask(LessonTask.pray);
       if (actionType == 'sundayService' || actionType == 'chapelService') {

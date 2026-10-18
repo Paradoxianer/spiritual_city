@@ -530,18 +530,59 @@ class _PastorhouseHud extends StatelessWidget {
     );
   }
 
-  /// Maps an angle in degrees (−180…180) to an arrow Unicode character.
-  /// Uses screen-space atan2 where Y grows downward:
-  ///   0°=→  90°=↓  ±180°=←  −90°=↑
-  String _directionArrow(double deg) {
-    if (deg < -157.5 || deg >= 157.5) return '←';
-    if (deg < -112.5) return '↖';
-    if (deg < -67.5) return '↑';
-    if (deg < -22.5) return '↗';
-    if (deg < 22.5) return '→';
-    if (deg < 67.5) return '↘';
-    if (deg < 112.5) return '↓';
-    return '↙';
+}
+
+/// Arrow for an angle in degrees (screen space, y down).
+/// Uses screen-space atan2 where Y grows downward:
+///   0°=→  90°=↓  ±180°=←  −90°=↑
+String _directionArrow(double deg) {
+  if (deg < -157.5 || deg >= 157.5) return '←';
+  if (deg < -112.5) return '↖';
+  if (deg < -67.5) return '↑';
+  if (deg < -22.5) return '↗';
+  if (deg < 22.5) return '→';
+  if (deg < 67.5) return '↘';
+  if (deg < 112.5) return '↓';
+  return '↙';
+}
+
+/// 📍 Arrow to the accepted mission's target (playtest 2026-10-18).
+class _TrackedMissionHud extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _TrackedMissionHud({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<String?>(
+      valueListenable: game.trackedMission,
+      builder: (context, key, _) {
+        if (key == null) return const SizedBox.shrink();
+        return ValueListenableBuilder<Vector2>(
+          valueListenable: game.playerWorldPosition,
+          builder: (context, me, _) {
+            final t = game.trackedTargetPosition;
+            if (t == null) return const SizedBox.shrink();
+            final dx = t.x - me.x, dy = t.y - me.y;
+            final near = dx * dx + dy * dy < 64 * 64;
+            return Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFFFC107).withValues(alpha: 0.8)),
+                ),
+                child: Text(
+                  near ? '📍 ✅' : '📍 ${_directionArrow(atan2(dy, dx) * 180 / pi)}',
+                  style: const TextStyle(color: Color(0xFFFFC107), fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }
 
@@ -581,7 +622,6 @@ class _ResourceHud extends StatelessWidget {
                 label: AppStrings.get('resource.health'),
                 color: Colors.redAccent,
                 criticalThreshold: SpiritWorldGame.healthAlarmThreshold,
-                showValue: true,
               ),
               const SizedBox(height: 2),
               _AnimatedResourceBar(
@@ -602,7 +642,6 @@ class _ResourceHud extends StatelessWidget {
                 icon: '🙏',
                 label: AppStrings.get('resource.faith'),
                 color: Colors.purpleAccent,
-                showValue: true,
               ),
               const SizedBox(height: 2),
               _AnimatedResourceBar(
@@ -843,11 +882,7 @@ class _AnimatedResourceBar extends StatefulWidget {
     required this.color,
     this.warnThreshold,
     this.criticalThreshold,
-    this.showValue = false,
   });
-
-  /// Shows the current value next to the bar (❤️ and 🙏, playtest).
-  final bool showValue;
 
   @override
   State<_AnimatedResourceBar> createState() => _AnimatedResourceBarState();
@@ -947,7 +982,7 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar> with TickerP
                 )
               : Text(widget.icon, style: _iconStyle),
           const SizedBox(width: 4),
-          // Emoji + bar only (playtest: names, "x/y" and "Lv." were too much).
+          // Emoji, bar, value and stage; names only for screen readers.
           // The thin cyan strip on top is the progress to the next capacity
           // stage.
           SizedBox(
@@ -991,14 +1026,25 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar> with TickerP
               ],
             ),
           ),
-          if (widget.showValue)
-            SizedBox(
-              width: 30,
-              child: Text(
-                ' ${_compactInt(value.round())}',
-                style: TextStyle(color: effectiveColor, fontSize: 10, fontWeight: FontWeight.bold),
-              ),
+          // Value / capacity and capacity stage (playtest: wanted back).
+          SizedBox(
+            width: 52,
+            child: Text(
+              ' ${_compactInt(value.round())}/${_compactInt(widget.max.round())}',
+              style: TextStyle(color: effectiveColor, fontSize: 10, fontWeight: FontWeight.bold),
             ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.cyanAccent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Lv.${widget.stage.stage}',
+              style: const TextStyle(color: Colors.cyanAccent, fontSize: 9, fontWeight: FontWeight.bold),
+            ),
+          ),
           // Delta – only shown while the fade is in progress.
           SizedBox(
             width: 26,

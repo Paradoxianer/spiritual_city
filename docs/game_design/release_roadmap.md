@@ -255,8 +255,9 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | i18n-Audit (#152) | ✅ Spielbildschirme textfrei bzw. de/en; Sprachwahl wird gespeichert. |
 | Grafik (#13/#18/#182) | ✅ Kenney-Figuren mit Laufanimation für Pastor und Menschen; Farbtönung je Distrikttyp. ✅ Stadt aus Kenney-Kacheln: ein Gebäude pro Grundstück mit Dach, Fassade, Tür, Garten (Playtest 2026-10-18). |
 | Innenräume (§3.5, #182) | ✅ Dritte Ebene: begehbare Räume, prozedural je Gebäude (stabil aus der Gebäude-ID), Kenney Roguelike Indoors/RPG. Möbel sind Stationen der Gebäude-Aktionen; Bewohner, 🎓 Mentor, ✨. Alle Sondergebäude eigen eingerichtet. Anklopfen bleibt Tür-Dialog. |
-| Minimap | ✅ Oben rechts: Stadt (Straßen, Häuser, Sondergebäude, 📋-Ziele) bzw. unsichtbare Welt (Zellzustand, Dämonen, 🏰); Antippen vergrößert. |
-| Audio (#10) | ✅ Effekte (M2). ✅ Umgebungsgeräusche (Stadt, Wohnung, Halle, Kirche, unsichtbare Welt), synthetisch erzeugt (`tools/gen_ambience.py`). Offen: Musik / echte Aufnahmen (Pixabay-Audio-Zugang fehlt). |
+| Minimap & Stadtkarte | ✅ Oben rechts: Stadt (Straßen, Häuser, Sondergebäude, 📋-Ziele) bzw. unsichtbare Welt (Zellzustand, Dämonen, 🏰); Tippen vergrößert, Doppeltippen öffnet die Karte der ganzen Stadt (aus dem Generator berechnet, 🎓 Mentoren, erweckte Viertel). |
+| Missionen annehmen | ✅ 📍 im Missionsbrett: Ziel auf Minimap/Karte, Pfeil im HUD, gespeichert. Offen: Missions-Ketten, die zu neuen Fähigkeiten führen (Idee, siehe Lern-Missionen §3.9). |
+| Audio (#10) | ✅ Effekte (M2). ✅ Umgebungsgeräusche (Stadt, Wohnung, Halle, Kirche, unsichtbare Welt) und Aktionsklänge (💬, 🙏, 😴), synthetisch erzeugt (`tools/gen_ambience.py`). Offen: Musik / echte Aufnahmen (Pixabay-Audio-Zugang fehlt). |
 | Android-Navigationsleiste (#190) | ❌ Offen: Systemleiste überdeckt HUD-Knöpfe (Kampf-Knopf teils nicht drückbar) → Immersive Mode + Insets beachten. |
 | Store (#94/#95) | ✅ App-Name, vorläufiges Icon, Store-Texte de/en, Checkliste. ⚠️ App-ID, Signatur, Konten, IARC, Screenshots: Herausgeber, siehe `docs/release/release_checklist.md`. |
 

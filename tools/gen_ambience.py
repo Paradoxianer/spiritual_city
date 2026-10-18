@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Generates the ambience loops in assets/audio/ambience/ (playtest 2026-10-18).
+"""Generates the ambience loops in assets/audio/ambience/ and the action
+sounds in assets/audio/actions/ (playtest 2026-10-18).
 
 Everything is synthesised here – no recordings, so no licence questions.
 Each loop is built on a circular buffer (noise is shaped in the frequency
@@ -161,6 +162,73 @@ def spirit():
     return reverb(out, taps=10, length=1.5, decay=2.0)
 
 
+# ── Action sounds (one-shots, not loops) ─────────────────────────────────────
+
+def tone(f, dur, attack=0.01, release=None, harmonics=((1, 1.0),)):
+    n = int(dur * SR)
+    k = np.arange(n) / SR
+    x = sum(np.sin(2 * np.pi * f * h * k) * a for h, a in harmonics)
+    return x * env(n, attack, release or dur * 0.9)
+
+
+def mix(length, parts):
+    out = np.zeros(int(length * SR))
+    for at, x in parts:
+        i = int(at * SR)
+        out[i:i + len(x)] += x[:len(out) - i]
+    return out
+
+
+def talk():
+    # Three soft "voice" blips: a vowel-like tone gliding in pitch.
+    parts = []
+    for i, (f0, f1) in enumerate([(210, 240), (250, 220), (230, 260)]):
+        n = int(0.11 * SR)
+        k = np.linspace(0, 1, n)
+        ph = 2 * np.pi * np.cumsum(f0 + (f1 - f0) * k) / SR
+        v = (np.sin(ph) + 0.5 * np.sin(2 * ph) + 0.3 * np.sin(3 * ph) + 0.15 * np.sin(5 * ph))
+        parts.append((i * 0.14, v * np.sin(np.pi * k) ** 1.5))
+    return mix(0.5, parts)
+
+
+def pray():
+    # A soft bell chord (D major) with a shimmering tail.
+    bell = ((1, 1.0), (2.01, 0.4), (3.02, 0.2), (4.2, 0.1))
+    parts = [(0.0, tone(587.33, 2.2, 0.005, 2.1, bell) * 0.6),
+             (0.12, tone(739.99, 2.0, 0.005, 1.9, bell) * 0.45),
+             (0.24, tone(880.0, 1.8, 0.005, 1.7, bell) * 0.4)]
+    return reverb(np.pad(mix(2.6, parts), (0, 0)), taps=8, length=0.5, decay=4.0)
+
+
+def sleep():
+    # A little lullaby falling asleep: three falling notes, then quiet.
+    soft = ((1, 1.0), (2, 0.25))
+    parts = [(0.0, tone(659.25, 0.7, 0.03, 0.6, soft) * 0.5),
+             (0.45, tone(523.25, 0.7, 0.03, 0.6, soft) * 0.45),
+             (0.9, tone(392.0, 1.4, 0.03, 1.3, soft) * 0.45)]
+    return mix(2.4, parts)
+
+
+def write_once(name, x, peak=0.7):
+    out = os.path.join(os.path.dirname(__file__), '..', 'assets', 'audio', 'actions')
+    x = x - x.mean()
+    x = x / (np.abs(x).max() + 1e-9) * peak
+    pcm = (x * 32767).astype(np.int16)
+    os.makedirs(out, exist_ok=True)
+    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+        path = f.name
+    with wave.open(path, 'wb') as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        w.writeframes(pcm.tobytes())
+    dst = os.path.join(out, f'{name}.ogg')
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', path, '-c:a', 'libvorbis',
+                    '-q:a', '4', dst], check=True)
+    os.remove(path)
+    print(dst, os.path.getsize(dst) // 1024, 'KB')
+
+
 def write(name, x, peak=0.6):
     x = x - x.mean()
     x = x / (np.abs(x).max() + 1e-9) * peak
@@ -186,3 +254,6 @@ if __name__ == '__main__':
     write('hall', hall(), 0.5)
     write('church', church(), 0.5)
     write('spirit', spirit(), 0.55)
+    write_once('talk', talk(), 0.5)
+    write_once('pray', pray(), 0.6)
+    write_once('sleep', sleep(), 0.55)
