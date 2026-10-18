@@ -227,10 +227,6 @@ class SpiritWorldGame extends FlameGame
 
   int _lastStreetCellX = -999999;
   int _lastStreetCellY = -999999;
-  /// True after [_updateStreetLabel] has run once (sets the spawn-position
-  /// baseline).  Prevents firing the tutorial movement hook on the very first
-  /// cell-position detection (which is not a real player movement).
-  bool _streetLabelInitialized = false;
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
 
@@ -295,6 +291,42 @@ class SpiritWorldGame extends FlameGame
       _log.warning('City map failed: $e');
       _cityMapLoading = false;
     }
+  }
+
+  /// Tutorial step from the save (resumed instead of starting over).
+  TutorialStep? _savedTutorialStep;
+
+  /// Where the current tutorial step wants the pastor to go, if anywhere:
+  /// the pastor house, or the nearest person not yet a Christian.
+  Vector2? get tutorialTargetPosition {
+    switch (tutorialService.currentStep) {
+      case TutorialStep.readBible || TutorialStep.mission:
+        return pastorhousePosition.value;
+      case TutorialStep.talk || TutorialStep.prayPerson:
+        Vector2? best;
+        var bestD = double.infinity;
+        for (final n in chunkManager.allActiveNPCs) {
+          if (n.model.isChristian) continue;
+          final d = n.position.distanceToSquared(player.position);
+          if (d < bestD) {
+            bestD = d;
+            best = n.position;
+          }
+        }
+        return best;
+      default:
+        return null;
+    }
+  }
+
+  /// The button the current tutorial step is about pulses golden.
+  void _updateTutorialHighlights() {
+    final step = tutorialService.currentStep;
+    actionButton.highlight = isSpiritualWorld &&
+        (step == TutorialStep.liberate || step == TutorialStep.defeatDaemon);
+    worldToggleButton.highlight = interior == null &&
+        ((step == TutorialStep.enterSpirit && !isSpiritualWorld) ||
+            (step == TutorialStep.returnCity && isSpiritualWorld));
   }
 
   /// 📍 Accepted mission target (see GameMissionTracking).
@@ -468,6 +500,7 @@ class SpiritWorldGame extends FlameGame
   /// A daemon was defeated by prayer (not dissolved on its own).
   void onDaemonKilled(DaemonModel daemon, {PrayerMode? mode}) {
     dayStats.daemonsDefeated++;
+    tutorialService.onDaemonKilled();
     GameSound.play(Sfx.daemonDefeated, volume: 0.4);
     recordLessonTask(LessonTask.defeatDaemons);
     if (mode != null) recordLessonTask(LessonTask.defeatWith(mode));
@@ -711,7 +744,8 @@ class SpiritWorldGame extends FlameGame
       // Start tutorial for new players (or players who haven't finished it yet).
       if (!tutorialService.isTutorialCompleted) {
         // Short delay so the loading overlay has faded before the tutorial appears.
-        Future.delayed(const Duration(milliseconds: 600), () => tutorialService.startTutorial());
+        Future.delayed(const Duration(milliseconds: 600),
+            () => tutorialService.startTutorial(at: _savedTutorialStep));
       }
 
       // Assign starting missions to NPCs / buildings in the spawn chunk.
@@ -980,7 +1014,6 @@ class SpiritWorldGame extends FlameGame
         label: '👀',
         icon: Icons.search,
         onSelect: () {
-          tutorialService.onRadialMenuActionSelected();
           openLookOverlay();
         },
       ),
@@ -1010,7 +1043,6 @@ class SpiritWorldGame extends FlameGame
         sublabel: target.interactionLabel.split(' ').first,
         icon: Icons.chat_bubble,
         onSelect: () {
-          tutorialService.onRadialMenuActionSelected();
           _nearestInteractable = target;
           target.onInteract();
         },
@@ -1028,7 +1060,6 @@ class SpiritWorldGame extends FlameGame
         sublabel: '',
         icon: Icons.meeting_room,
         onSelect: () {
-          tutorialService.onRadialMenuActionSelected();
           openBuildingInterior(model);
         },
       ));
@@ -1165,6 +1196,7 @@ class SpiritWorldGame extends FlameGame
       }
     }
     if (isWorldReady.value) {
+      _updateTutorialHighlights();
       _ambienceTimer += dt;
       if (_ambienceTimer >= 0.5) {
         _ambienceTimer = 0;
@@ -1182,14 +1214,11 @@ class SpiritWorldGame extends FlameGame
     final cx = (player.position.x / cellSize).floor();
     final cy = (player.position.y / cellSize).floor();
     if (cx == _lastStreetCellX && cy == _lastStreetCellY) return;
-    final wasInitialized = _streetLabelInitialized;
-    _streetLabelInitialized = true;
     _lastStreetCellX = cx;
     _lastStreetCellY = cy;
 
     // Fire tutorial movement hook only after the initial position has been
     // established (first call sets the spawn-cell baseline, not real movement).
-    if (wasInitialized) { tutorialService.onPlayerMoved(); }
 
     // Try the player's own cell first, then the 4 cardinal neighbours.
     // Accept ANY road cell (named or unnamed) for address lookup so the
@@ -1681,6 +1710,9 @@ class HudButton extends PositionComponent with TapCallbacks {
   Color color;
   double opacity = 1.0;
   bool plain = false;
+
+  /// Pulsing golden ring: the tutorial points at this button.
+  bool highlight = false;
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
   String? keyLabel;
   
@@ -1708,6 +1740,18 @@ class HudButton extends PositionComponent with TapCallbacks {
     final center = Offset(size.x / 2, size.y / 2);
     final radius = size.x / 2;
     final selected = isActive?.call() ?? false;
+
+    if (highlight) {
+      final t = (DateTime.now().millisecondsSinceEpoch % 1000) / 1000.0;
+      canvas.drawCircle(
+        center,
+        radius + 6 + 8 * t,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..color = const Color(0xFFFFD54F).withValues(alpha: (1 - t) * opacity),
+      );
+    }
 
     if (!plain) {
       // 1. Schwarzer Rand / Schatten

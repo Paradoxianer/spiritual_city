@@ -352,7 +352,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
               if (!isReady) return const SizedBox.shrink();
-              return _TutorialOverlay(game: _game);
+              return _TutorialChip(game: _game);
             },
           ),
           // Win screen – shown when the player has converted all NPCs and

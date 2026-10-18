@@ -5,7 +5,6 @@ extension GameOverlayControl on SpiritWorldGame {
     activeDialog = GameDialogData(npcName: name, npcEmoji: emoji, npcModel: model);
     overlays.add('DialogOverlay');
     paused = true;
-    tutorialService.onNpcDialogOpened();
   }
 
   /// Opens the look overlay, describing nearby cells around the player.
@@ -185,6 +184,7 @@ extension GameOverlayControl on SpiritWorldGame {
     if (_nearestInteractable == null) return '❓';
     final result = _nearestInteractable!.handleInteraction(type);
     GameSound.playAction(type, NpcActions.byType(type)?.discipline?.name);
+    tutorialService.onNpcAction(type);
 
     // ── ActionType mission advancement for NPC interactions (Issue #131) ──
     final at = MissionService.npcActionToType(type);
@@ -219,7 +219,6 @@ extension GameOverlayControl on SpiritWorldGame {
       building: building,
       address: _addressForPixelPos(player.position),
     );
-    tutorialService.onBuildingInteracted();
     if (building.isAlwaysOpen) {
       enterInterior(building);
       return;

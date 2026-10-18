@@ -92,6 +92,8 @@ extension GameSaveState on SpiritWorldGame {
 
     // Restore tutorial completion flag so the tutorial isn't shown again.
     tutorialService.isTutorialCompleted = state['tutorialCompleted'] == true;
+    final step = state['tutorialStep'];
+    _savedTutorialStep = TutorialStep.values.where((s) => s.name == step).firstOrNull;
     trackedMission.value = state['trackedMission'] as String?;
   }
 
@@ -283,6 +285,7 @@ extension GameSaveState on SpiritWorldGame {
       'playerY':            player.position.y,
       'isSpiritualWorld':   isSpiritualWorld,
       'tutorialCompleted':  tutorialService.isTutorialCompleted,
+      'tutorialStep':       tutorialService.currentStep?.name,
       'trackedMission':     trackedMission.value,
       'progress':           progress.toJson(),
       'cells':              cellStates,

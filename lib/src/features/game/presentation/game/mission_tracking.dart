@@ -37,6 +37,7 @@ extension GameMissionTracking on SpiritWorldGame {
 
   void toggleTrackedMission(String key) {
     trackedMission.value = trackedMission.value == key ? null : key;
+    if (trackedMission.value != null) tutorialService.onMissionTracked();
     GameSound.play(Sfx.tap, volume: 0.4);
   }
 

@@ -101,6 +101,17 @@ class PauseMenuOverlay extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (game.tutorialService.isActive) ...[
+                        const SizedBox(height: 12),
+                        _PauseMenuButton(
+                          icon: Icons.skip_next,
+                          label: AppStrings.get('tutorial.skip'),
+                          onPressed: () {
+                            game.tutorialService.skipTutorial();
+                            game.closePauseMenu();
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       _PauseMenuButton(
                         icon: Icons.logout,

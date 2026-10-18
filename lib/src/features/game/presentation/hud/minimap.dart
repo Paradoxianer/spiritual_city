@@ -166,37 +166,44 @@ class _MinimapPainter extends CustomPainter {
       canvas.drawCircle(o, r, _p);
     }
 
-    // 📍 Accepted mission: ring on the map, or an arrow at the edge.
-    final target = game.trackedTargetPosition;
-    if (target != null) {
+    // 📍 Accepted mission (amber) and the tutorial's target (cyan): ring
+    // on the map, or an arrow at the edge.
+    void guide(Vector2? target, Color color) {
+      if (target == null) return;
       final o = toMap(target);
       final pulse = 0.5 + 0.5 * sin(tick * 1.4);
-      final ring = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = const Color(0xFFFFC107);
       if (o != null) {
-        canvas.drawCircle(o, 4 + 3 * pulse, ring);
-        _p.color = const Color(0xFFFFC107);
+        canvas.drawCircle(
+            o,
+            4 + 3 * pulse,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2
+              ..color = color);
+        _p.color = color;
         canvas.drawCircle(o, 2.5, _p);
-      } else {
-        final c = Offset(size.width / 2, size.height / 2);
-        final d = Offset(target.x / cs - pcx, target.y / cs - pcy);
-        final len = d.distance;
-        if (len > 0) {
-          final u = d / len;
-          final tip = c + u * (size.width / 2 - 5);
-          final side = Offset(-u.dy, u.dx);
-          final path = Path()
-            ..moveTo(tip.dx, tip.dy)
-            ..lineTo((tip - u * 9 + side * 5).dx, (tip - u * 9 + side * 5).dy)
-            ..lineTo((tip - u * 9 - side * 5).dx, (tip - u * 9 - side * 5).dy)
-            ..close();
-          _p.color = const Color(0xFFFFC107);
-          canvas.drawPath(path, _p);
-        }
+        return;
       }
+      final c = Offset(size.width / 2, size.height / 2);
+      final d = Offset(target.x / cs - pcx, target.y / cs - pcy);
+      final len = d.distance;
+      if (len == 0) return;
+      final u = d / len;
+      final tip = c + u * (size.width / 2 - 5);
+      final side = Offset(-u.dy, u.dx);
+      final a = tip - u * 9 + side * 5, b = tip - u * 9 - side * 5;
+      _p.color = color;
+      canvas.drawPath(
+          Path()
+            ..moveTo(tip.dx, tip.dy)
+            ..lineTo(a.dx, a.dy)
+            ..lineTo(b.dx, b.dy)
+            ..close(),
+          _p);
     }
+
+    guide(game.trackedTargetPosition, const Color(0xFFFFC107));
+    guide(game.tutorialTargetPosition, const Color(0xFF80DEEA));
 
     // The pastor in the middle.
     final me = Offset((radiusCells + 0.5) * px, (radiusCells + 0.5) * px);
