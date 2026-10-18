@@ -51,12 +51,28 @@ class DistrictSelector {
   // Noise amplitude that "blurs" ring boundaries (in cells)
   static const double _ringNoiseAmp      = 40.0;
 
+  // Noise thresholds. The noises run at frequency 1 so the coordinate
+  // factors below are the real scales; values spread about ±0.9 (fixed
+  // 2026-10-18 – before, fast_noise's default frequency 0.01 shrank them to
+  // ±0.1 and no river, park, industry or slum ever appeared).
+  static const double _riverThreshold      = 0.40; // ~6 % waterfront + water
+  static const double _waterThreshold      = 0.48; // ~3 % open water
+  static const double _industrialThreshold = 0.33; // ~10 % of the mid ring
+  static const double _parkThreshold       = 0.33; // ~10 % outside the centre
+  static const double _slumsThreshold      = 0.36; // ~8 % of the transition
+
+  /// No water at the pastor's house and the spawn point.
+  static bool _nearHome(int wx, int wy) {
+    final dx = wx - 220, dy = wy - 223;
+    return dx * dx + dy * dy < 24 * 24;
+  }
+
   DistrictSelector({required int seed})
-      : _ringNoise       = PerlinNoise(seed: seed + 2),
-        _riverNoise      = PerlinNoise(seed: seed + 1),
-        _industrialNoise = PerlinNoise(seed: seed + 7),
-        _parkNoise       = PerlinNoise(seed: seed + 11),
-        _slumsNoise      = PerlinNoise(seed: seed + 13);
+      : _ringNoise       = PerlinNoise(seed: seed + 2, frequency: 1),
+        _riverNoise      = PerlinNoise(seed: seed + 1, frequency: 1),
+        _industrialNoise = PerlinNoise(seed: seed + 7, frequency: 1),
+        _parkNoise       = PerlinNoise(seed: seed + 11, frequency: 1),
+        _slumsNoise      = PerlinNoise(seed: seed + 13, frequency: 1);
 
   // ---- Public API ---------------------------------------------------------
 
@@ -70,19 +86,19 @@ class DistrictSelector {
     // 3. Industrial pockets in mid-ring (commercial → suburbs band)
     if (dist > _downtownRadius && dist < _suburbsRadius) {
       final double iVal = _industrialNoise.getNoise2(wx * 0.008, wy * 0.008);
-      if (iVal > 0.55) return DistrictType.industrial;
+      if (iVal > _industrialThreshold) return DistrictType.industrial;
     }
 
     // 4. Park pockets – scattered everywhere outside downtown
     if (dist > _commercialRadius) {
       final double pVal = _parkNoise.getNoise2(wx * 0.012, wy * 0.012);
-      if (pVal > 0.6) return DistrictType.park;
+      if (pVal > _parkThreshold) return DistrictType.park;
     }
 
     // 5. Slum pockets in the commercial-to-suburbs transition
     if (dist > _commercialRadius && dist < _suburbsRadius + 50) {
       final double sVal = _slumsNoise.getNoise2(wx * 0.01, wy * 0.01);
-      if (sVal > 0.58) return DistrictType.slums;
+      if (sVal > _slumsThreshold) return DistrictType.slums;
     }
 
     // 6. Basic ring assignment
@@ -95,7 +111,8 @@ class DistrictSelector {
 
   bool isWater(int wx, int wy) {
     // True open water: higher threshold than waterfront
-    return _riverNoise.getNoise2(wx * 0.008, wy * 0.008) > 0.72;
+    if (_nearHome(wx, wy)) return false;
+    return _riverNoise.getNoise2(wx * 0.008, wy * 0.008) > _waterThreshold;
   }
 
   // ---- Helpers ------------------------------------------------------------
@@ -109,6 +126,7 @@ class DistrictSelector {
   }
 
   bool _isRiverCell(int wx, int wy) {
-    return _riverNoise.getNoise2(wx * 0.008, wy * 0.008) > 0.65;
+    if (_nearHome(wx, wy)) return false;
+    return _riverNoise.getNoise2(wx * 0.008, wy * 0.008) > _riverThreshold;
   }
 }

@@ -137,7 +137,7 @@ class SpiritWorldGame extends FlameGame
   ///   • version 1 → version 2: NPC counters unified into interactionCount
   ///     ('conv' key); separate 'pray' and 'counsel' keys removed.
   ///   • version 2 → version 3: Added PlayerProgress and CombatProfile persistence.
-  static const int kSaveDataVersion = 3;
+  static const int kSaveDataVersion = 4;
 
   /// Difficulty level selected in the main menu.
   final Difficulty difficulty;

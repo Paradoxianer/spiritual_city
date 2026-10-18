@@ -23,7 +23,7 @@ class LotGenerator {
   LotGenerator({required int seed, required SpecialBuildingRegistry registry})
       : _registry = registry,
         _lotSeed = seed * 2654435761,
-        _spiritNoise = PerlinNoise(seed: seed + 99);
+        _spiritNoise = PerlinNoise(seed: seed + 99, frequency: 1);
 
   CellData? generateLotContent(
       int wx, int wy, DistrictType district, Random rand) {

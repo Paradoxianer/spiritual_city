@@ -49,6 +49,21 @@ extension GameSaveState on SpiritWorldGame {
       version = 2;
     }
 
+    // v3 → v4: the city generator's noise was fixed (rivers, parks,
+    // industry, slums now appear), so the world under old saves changed.
+    // Everything tied to places is dropped and the pastor starts at home
+    // again; personal progress (resources, insight, skills, church) stays.
+    if (version < 4) {
+      state.remove('cells');
+      state.remove('npcs');
+      state.remove('buildings');
+      state.remove('loot');
+      state['playerX'] = 7040.0;
+      state['playerY'] = 7168.0;
+      state['isSpiritualWorld'] = false;
+      version = 4;
+    }
+
     if (originalVersion != SpiritWorldGame.kSaveDataVersion) {
       _log.info(
         'Save schema migrated: v$originalVersion → v$SpiritWorldGame.kSaveDataVersion',
