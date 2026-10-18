@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math' show Random;
+import 'dart:math' show Random, min;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -12,12 +12,17 @@ import '../../../core/utils/stable_hash.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
+import '../domain/actions/game_action.dart';
+import '../domain/interior/interior_layout.dart';
+import '../domain/services/faith_calculator_service.dart';
 import '../domain/models/daemon_model.dart';
 import '../domain/models/day_stats.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
 import 'components/character_sprites.dart';
 import 'components/kenney_city_renderer.dart';
+import 'components/interior/interior_renderer.dart';
+import 'components/interior/interior_world.dart';
 import 'components/stronghold_component.dart';
 import '../domain/models/skills.dart';
 import '../domain/services/combat_abilities.dart';
@@ -57,6 +62,7 @@ part 'game/quarters.dart';
 part 'game/save_state.dart';
 part 'game/overlay_control.dart';
 part 'game/building_actions.dart';
+part 'game/interior_control.dart';
 
 /// Whether keyboard shortcut hint badges should be shown on HUD buttons.
 /// True on desktop (Windows / Linux / macOS) and web; false on mobile.
@@ -222,6 +228,11 @@ class SpiritWorldGame extends FlameGame
   bool _streetLabelInitialized = false;
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
+
+  /// The building the pastor is inside right now (third layer), if any.
+  InteriorWorld? interior;
+  double _cityZoom = 1.0;
+  String _interiorButtonEmoji = '';
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
 
   // Progress & Modifiers
@@ -470,6 +481,7 @@ class SpiritWorldGame extends FlameGame
     GameSound.preload();
     await CharacterSprites.load(images);
     await KenneyCityRenderer.load(images);
+    await InteriorRenderer.load(images);
     try {
       _log.info('--- INITIALIZING GAME ---');
       // ── Restore save state ──────────────────────────────────────────────────
@@ -701,6 +713,7 @@ class SpiritWorldGame extends FlameGame
   // ── State capture (called when the player saves and quits) ────────────────
 
   void toggleWorld() {
+    if (interior != null) return; // no world switch inside a building
     if (!isSpiritualWorld && faith < worldToggleCost) {
       _log.warning('Not enough faith to enter spiritual world');
       return;
@@ -751,6 +764,10 @@ class SpiritWorldGame extends FlameGame
   }
 
   void handleActionUp() {
+    if (interior != null && activeDialog == null) {
+      interiorInteract();
+      return;
+    }
     if (isSpiritualWorld) {
       player.releasePrayer();
     } else {
@@ -774,6 +791,16 @@ class SpiritWorldGame extends FlameGame
   }
 
   void _updateHudVisibility() {
+    if (interior != null) {
+      if (joystick.parent == null) camera.viewport.add(joystick);
+      actionButton.position = Vector2(size.x - 80, size.y - 80);
+      actionButton.keyLabel = 'E';
+      worldToggleButton.position = Vector2(-1000, -1000);
+      for (final btn in modeButtons) {
+        btn.opacity = 0.0;
+      }
+      return;
+    }
     if (isSpiritualWorld) {
       if (joystick.parent != null) joystick.removeFromParent();
 
@@ -1007,7 +1034,10 @@ class SpiritWorldGame extends FlameGame
   void update(double dt) {
     super.update(dt);
     if (_currentMenu != null) _currentMenu!.position = player.position;
-    if (isWorldReady.value && !paused) {
+    if (isWorldReady.value && !paused && interior != null) {
+      _updateInteriorCamera();
+      _updatePassiveResources(dt);
+    } else if (isWorldReady.value && !paused) {
       _updateCamera(dt);
       _updateNearestInteractable();
       _updatePassiveResources(dt);
@@ -1126,6 +1156,7 @@ class SpiritWorldGame extends FlameGame
   /// 3. Resets resources and applies a spiritual setback around the faint location.
   /// 4. Shows the wakeup message.
   Future<void> _triggerFaint() async {
+    leaveInterior();
     final faintPosition = player.position.clone();
     isFainting.value = true;
 

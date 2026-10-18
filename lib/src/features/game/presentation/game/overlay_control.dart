@@ -206,20 +206,31 @@ extension GameOverlayControl on SpiritWorldGame {
   }
 
   /// Opens the building-interior overlay for [building].
+  /// Always-open buildings are entered straight away (walkable room); homes
+  /// show the door to knock first.
   void openBuildingInterior(BuildingModel building) {
+    if (interior != null) return;
     building.resetSession();
     GameSound.play(Sfx.door, volume: 0.5);
     activeBuildingData = GameBuildingData(
       building: building,
       address: _addressForPixelPos(player.position),
     );
+    tutorialService.onBuildingInteracted();
+    if (building.isAlwaysOpen) {
+      enterInterior(building);
+      return;
+    }
     overlays.add('BuildingInteriorOverlay');
     paused = true;
-    tutorialService.onBuildingInteracted();
   }
 
-  /// Closes the building-interior overlay.
+  /// Leaves the building (inside) or closes its door overlay.
   void closeBuildingInterior() {
+    if (interior != null) {
+      leaveInterior();
+      return;
+    }
     activeBuildingData = null;
     overlays.remove('BuildingInteriorOverlay');
     // Also close the mission board if it was opened from inside the building.
@@ -273,6 +284,7 @@ extension GameOverlayControl on SpiritWorldGame {
     if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
     if (activeLessonOffer != null)   { closeLesson();            return true; }
     if (overlays.isActive('ChurchOverlay')) { closeChurchOverview(); return true; }
+    if (overlays.isActive('UpgradeOverlay')) { overlays.remove('UpgradeOverlay'); return true; }
     if (activeDialog != null)        { closeDialog();            return true; }
     if (activeBuildingData != null)  { closeBuildingInterior();  return true; }
     if (activeLookData != null)      { closeLookOverlay();       return true; }

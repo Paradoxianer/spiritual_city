@@ -72,7 +72,7 @@ Eltern finden alle Infos unter Einstellungen → Hinweis für Eltern, Datenschut
 Idee und Entwicklung: Matthias Lindner
 
 Grafik und Töne
-• Kenney (kenney.nl): Roguelike Modern City, RPG Urban Pack, Interface Sounds, UI Audio, Impact Sounds, RPG Audio – CC0 1.0 (gemeinfrei). Danke, Kenney!
+• Kenney (kenney.nl): Roguelike Modern City, Roguelike Indoors, Roguelike RPG Pack, RPG Urban Pack, Interface Sounds, UI Audio, Impact Sounds, RPG Audio – CC0 1.0 (gemeinfrei). Danke, Kenney!
 
 Bibeltexte
 • Lutherbibel 1912 – gemeinfrei
@@ -136,7 +136,7 @@ Parents find everything under Settings → For parents, Privacy and Imprint.''',
 Idea and development: Matthias Lindner
 
 Graphics and sounds
-• Kenney (kenney.nl): Roguelike Modern City, RPG Urban Pack, Interface Sounds, UI Audio, Impact Sounds, RPG Audio – CC0 1.0 (public domain). Thank you, Kenney!
+• Kenney (kenney.nl): Roguelike Modern City, Roguelike Indoors, Roguelike RPG Pack, RPG Urban Pack, Interface Sounds, UI Audio, Impact Sounds, RPG Audio – CC0 1.0 (public domain). Thank you, Kenney!
 
 Bible texts
 • King James Version – public domain

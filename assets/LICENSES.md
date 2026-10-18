@@ -6,6 +6,8 @@ Alle Dateien unter `assets/images/kenney/` und `assets/audio/kenney/` stammen vo
 | :--- | :--- | :--- | :--- |
 | Roguelike Modern City | 2.0, https://kenney.nl/assets/roguelike-modern-city | `images/kenney/roguelike_modern_city/` | `tilemap_packed.png`, 592×448, 16×16-px-Tiles ohne Abstand, 37×28 = 1036 Tiles (Straßen, Gebäude, Details) |
 | RPG Urban Pack | https://kenney.nl/assets/rpg-urban-pack | `images/kenney/rpg_urban_pack/` | `tilemap_packed.png`, 432×288, 16×16-px-Tiles ohne Abstand, 27×18 Tiles (Gebäude, Fahrzeuge, 6 Figuren mit Laufanimation) |
+| Roguelike Indoors | https://kenney.nl/assets/roguelike-indoors | `images/kenney/roguelike_indoors/` | `tilesheet.png`, 458×305, 16×16-px-Tiles mit 1 px Abstand, 27×18 Tiles (Möbel: Betten, Tische, Stühle, Küche, Klavier, Teppiche, Kerzen) – heruntergeladen 2026-10-18 |
+| Roguelike RPG Pack | https://kenney.nl/assets/roguelike-rpg-pack | `images/kenney/roguelike_rpg/` | `tilesheet.png`, 968×526, 16×16-px-Tiles mit 1 px Abstand, 57×31 Tiles (Böden, Bücherregale, Fenster, Kreuz, Banner, Kamin) – heruntergeladen 2026-10-18 |
 | Interface Sounds | https://kenney.nl/assets/interface-sounds | `audio/kenney/interface_sounds/` | 100 × OGG: back, bong, click, close, confirmation, drop, error, glass, glitch, maximize/minimize, open, pluck, question, scroll, select, switch, tick, toggle |
 | UI Audio | https://kenney.nl/assets/ui-audio | `audio/kenney/ui_audio/` | 51 × OGG: click, mouseclick/-release, rollover, switch |
 | Impact Sounds | https://kenney.nl/assets/impact-sounds | `audio/kenney/impact_sounds/` | 130 × OGG: Schritte (Teppich, Beton, Gras, Schnee, Holz), Glocke, Glas, Metall, Holz, Schlag, weich |

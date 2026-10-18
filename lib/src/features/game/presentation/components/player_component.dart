@@ -332,7 +332,14 @@ class PlayerComponent extends PositionComponent
     }
   }
 
+  /// Current walking input (joystick first, then keys); also drives the
+  /// pastor inside buildings.
+  Vector2 get moveInput =>
+      joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
+
   void _updateMovement(double dt) {
+    // Inside a building the interior pastor walks, not this one.
+    if (game.interior != null) return;
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
     final moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
     // Track the last non-zero direction for particle rendering.

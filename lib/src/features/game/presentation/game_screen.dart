@@ -5,12 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../core/utils/stable_hash.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
-import '../domain/actions/building_actions.dart';
 import '../domain/services/combat_abilities.dart';
-import '../domain/services/learning_service.dart';
 import '../domain/models/skills.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
@@ -18,7 +15,6 @@ import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/models/base_interactable_entity.dart';
 import '../domain/models/building_model.dart';
-import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
 import '../domain/models/npc_backstory.dart';
 import '../domain/models/npc_model.dart';
@@ -41,7 +37,6 @@ part 'overlays/look.dart';
 part 'overlays/missions.dart';
 part 'overlays/npc_dialog.dart';
 part 'overlays/pause.dart';
-part 'overlays/room.dart';
 part 'overlays/shared.dart';
 part 'overlays/tutorial.dart';
 part 'overlays/upgrades.dart';
@@ -139,6 +134,8 @@ class _GameScreenState extends State<GameScreen> {
               'DialogOverlay': (context, game) => DialogOverlay(game: _game),
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
+              'InteriorHud': (context, game) => InteriorHud(game: _game),
+              'UpgradeOverlay': (context, game) => UpgradeOverlay(game: _game),
               'LookOverlay': (context, game) => LookOverlay(game: _game),
               'MissionBoardOverlay': (context, game) =>
                   MissionBoardOverlay(game: _game),
