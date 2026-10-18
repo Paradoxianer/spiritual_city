@@ -208,6 +208,7 @@ extension GameOverlayControl on SpiritWorldGame {
   /// Opens the building-interior overlay for [building].
   void openBuildingInterior(BuildingModel building) {
     building.resetSession();
+    GameSound.play(Sfx.door, volume: 0.5);
     activeBuildingData = GameBuildingData(
       building: building,
       address: _addressForPixelPos(player.position),

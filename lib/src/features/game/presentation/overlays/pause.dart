@@ -87,6 +87,21 @@ class PauseMenuOverlay extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 12),
+                      // Sound on/off – emoji only, no label to translate.
+                      StatefulBuilder(
+                        builder: (context, setState) => IconButton(
+                          iconSize: 30,
+                          onPressed: () async {
+                            await getIt<MenuService>().setSoundOn(!GameSound.enabled);
+                            setState(() {});
+                          },
+                          icon: Text(
+                            GameSound.enabled ? '🔊' : '🔇',
+                            style: const TextStyle(fontSize: 28),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       _PauseMenuButton(
                         icon: Icons.logout,
                         label: AppStrings.get('game.pause.quit'),

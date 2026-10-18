@@ -5,6 +5,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import '../../../core/audio/game_sound.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
@@ -300,7 +301,10 @@ class SpiritWorldGame extends FlameGame
   final ValueNotifier<int> dayNotifier = ValueNotifier(0);
 
   /// Sleeping in the pastor house ends the day: show the summary.
-  void openDaySummary() => overlays.add('DaySummaryOverlay');
+  void openDaySummary() {
+    GameSound.play(Sfx.dayEnd);
+    overlays.add('DaySummaryOverlay');
+  }
 
   /// Starts the next day after the summary.
   void startNextDay() {
@@ -323,12 +327,14 @@ class SpiritWorldGame extends FlameGame
 
   /// The Slow → Drain → Rebuke chain completed on a daemon.
   void onDaemonChain() {
+    GameSound.play(Sfx.chain);
     lootPickupMessage.value = '⏳🪫🫸⚡';
   }
 
   /// A daemon was defeated by prayer (not dissolved on its own).
   void onDaemonKilled(DaemonModel daemon) {
     dayStats.daemonsDefeated++;
+    GameSound.play(Sfx.daemonDefeated, volume: 0.4);
     recordLessonTask(LessonTask.defeatDaemons);
     if (daemon.hostNpcId != null) {
       final npc = chunkManager.findNpcModel(daemon.hostNpcId!);
@@ -433,6 +439,7 @@ class SpiritWorldGame extends FlameGame
 
   @override
   Future<void> onLoad() async {
+    GameSound.preload();
     try {
       _log.info('--- INITIALIZING GAME ---');
       // ── Restore save state ──────────────────────────────────────────────────
@@ -1205,6 +1212,7 @@ class SpiritWorldGame extends FlameGame
   /// is announced with a short toast, e.g. `⭐ 🙏 2`.
   void recordPractice(Discipline discipline) {
     if (!progress.practice.record(discipline)) return;
+    GameSound.play(Sfx.learned);
     missionCompleteMessage.value =
         '⭐ ${discipline.emoji} ${progress.practice.level(discipline)}';
     Future.delayed(const Duration(seconds: 3), () {
@@ -1223,6 +1231,7 @@ class SpiritWorldGame extends FlameGame
   void recordConversion() {
     progress.recordConversion();
     dayStats.conversions++;
+    GameSound.play(Sfx.conversion);
     conversionToastMessage.value = '+1 ✝';
     _checkAndApplyModifiers();
     _checkWinCondition();

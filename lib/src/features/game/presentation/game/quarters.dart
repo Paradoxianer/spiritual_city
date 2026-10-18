@@ -49,6 +49,7 @@ extension GameQuarters on SpiritWorldGame {
     progress.addInsight(Awakening.insightReward);
     _brightenspiritualAreaAroundPosition(fort.position, radius: 22, amount: 0.6);
     dayStats.awakenings++;
+    GameSound.play(Sfx.awakening, volume: 0.8);
     quarterStatus.value = null; // recomputed on the next tick
     _toast('🏰💥 ➡️ 🏘️🔥✝️');
   }
