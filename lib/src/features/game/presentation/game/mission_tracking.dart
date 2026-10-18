@@ -7,6 +7,34 @@ extension GameMissionTracking on SpiritWorldGame {
   static String npcKey(String id) => 'npc:$id';
   static String buildingKey(String id) => 'b:$id';
 
+  /// 🎓 The nearest mentor for [skill] (learning path tab).
+  static String lessonKey(Skill skill) => 'lesson:${skill.name}';
+
+  /// Nearest building where a mentor teaches [lesson]: loaded buildings
+  /// first, else the city plan's special buildings.
+  Vector2? _nearestMentor(Lesson lesson) {
+    Vector2? best;
+    var bestD = double.infinity;
+    void consider(Vector2 p) {
+      final d = p.distanceToSquared(player.position);
+      if (d < bestD) {
+        bestD = d;
+        best = p;
+      }
+    }
+
+    for (final b in chunkManager.allActiveBuildings) {
+      if (lesson.mentorAt.contains(b.buildingModel.type)) consider(b.position);
+    }
+    if (best != null) return best;
+    for (final (x, y, t) in cityOverview?.landmarks ?? const <(int, int, BuildingType)>[]) {
+      if (lesson.mentorAt.contains(t)) {
+        consider(Vector2((x + 0.5) * CellComponent.cellSize, (y + 0.5) * CellComponent.cellSize));
+      }
+    }
+    return best;
+  }
+
   void toggleTrackedMission(String key) {
     trackedMission.value = trackedMission.value == key ? null : key;
     GameSound.play(Sfx.tap, volume: 0.4);
@@ -16,6 +44,10 @@ extension GameMissionTracking on SpiritWorldGame {
   Vector2? get trackedTargetPosition {
     final key = trackedMission.value;
     if (key == null) return null;
+    if (key.startsWith('lesson:')) {
+      final skill = Skill.values.where((s) => 'lesson:${s.name}' == key).firstOrNull;
+      return skill == null ? null : _nearestMentor(Lessons.of(skill));
+    }
     if (key.startsWith('npc:')) {
       return chunkManager.findNpcComponent(key.substring(4))?.position;
     }
@@ -38,6 +70,14 @@ extension GameMissionTracking on SpiritWorldGame {
   void _checkTrackedMission() {
     final key = trackedMission.value;
     if (key == null) return;
+    if (key.startsWith('lesson:')) {
+      // Done once the skill is learned or its lesson has been accepted.
+      final skill = Skill.values.where((s) => 'lesson:${s.name}' == key).firstOrNull;
+      if (skill == null || progress.skills.has(skill) || progress.lesson.active == skill) {
+        trackedMission.value = null;
+      }
+      return;
+    }
     if (key.startsWith('npc:')) {
       final npc = chunkManager.findNpcModel(key.substring(4));
       if (npc != null && npc.activeMission == null) trackedMission.value = null;

@@ -43,22 +43,48 @@ class MissionBoardData {
 
 // ── Mission Board Overlay ─────────────────────────────────────────────────────
 
-/// Shows all active missions as an emoji-styled list with addresses.
-/// Opened from inside the pastor house via the '📋 Missionen' action.
-class MissionBoardOverlay extends StatelessWidget {
+/// Mission board, opened in the pastor house (📋): two tabs –
+/// 📋 the missions of the people and buildings around, 🎓 the learning path
+/// (which skills there are, where their mentors are). Both can be accepted
+/// with 📍 and are then shown on the map.
+class MissionBoardOverlay extends StatefulWidget {
   final SpiritWorldGame game;
   const MissionBoardOverlay({super.key, required this.game});
 
   @override
+  State<MissionBoardOverlay> createState() => _MissionBoardOverlayState();
+}
+
+class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
+  int _tab = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final game = widget.game;
     final data = game.activeMissionBoardData;
     if (data == null) return const SizedBox.shrink();
 
+    Widget tab(String emoji, int i) => GestureDetector(
+          onTap: () => setState(() => _tab = i),
+          child: Container(
+            margin: const EdgeInsets.only(left: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _tab == i ? const Color(0x55FFD54F) : Colors.black26,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(emoji, style: const TextStyle(fontSize: 18)),
+          ),
+        );
+
     return OverlayShell(
       theme: OverlayTheme.missions,
-      leading: const Text('📋', style: TextStyle(fontSize: 22)),
+      leading: Text(_tab == 0 ? '📋' : '🎓', style: const TextStyle(fontSize: 22)),
+      trailing: [Row(mainAxisSize: MainAxisSize.min, children: [tab('📋', 0), tab('🎓', 1)])],
       onClose: () => game.closeMissionBoard(),
-      body: data.entries.isEmpty
+      body: _tab == 1
+          ? _LearningPath(game: game)
+          : data.entries.isEmpty
           ? const Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: Text('📋💤', style: TextStyle(fontSize: 32))),
@@ -162,3 +188,88 @@ class _MissionRow extends StatelessWidget {
 }
 
 // ── Mission progress bar ───────────────────────────────────────────────────────
+
+// ── 🎓 Learning path ───────────────────────────────────────────────────────────
+
+/// All skills as emoji rows: ✅ learned, the running lesson with progress,
+/// learnable ones with their mentors' buildings and 📍, 🔒 locked ones with
+/// what they need first.
+class _LearningPath extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _LearningPath({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = game.progress;
+    final awakenings = p.awakenedQuarters.length;
+    return ValueListenableBuilder<String?>(
+      valueListenable: game.trackedMission,
+      builder: (context, tracked, _) => ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        shrinkWrap: true,
+        itemCount: Lessons.all.length,
+        separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+        itemBuilder: (context, i) {
+          final l = Lessons.all[i];
+          final learned = p.skills.has(l.skill);
+          final active = p.lesson.active == l.skill;
+          final open = !learned &&
+              l.requires.every(p.skills.has) &&
+              (!l.requiresAwakening || awakenings > 0);
+          final key = GameMissionTracking.lessonKey(l.skill);
+          final mentors = l.mentorAt.map(BuildingComponent.buildingEmoji).join(' ');
+          final String status;
+          if (learned) {
+            status = '✅';
+          } else if (active) {
+            status = '${p.lesson.progress}/${l.count} ${l.task.emoji}';
+          } else if (open) {
+            status = '🎓 $mentors';
+          } else {
+            status = '🔒 ${[
+              for (final r in l.requires)
+                if (!p.skills.has(r)) r.emoji,
+              if (l.requiresAwakening && awakenings == 0) '🏰🔥',
+            ].join(' ')}';
+          }
+          return Opacity(
+            opacity: learned ? 0.55 : (open || active ? 1 : 0.6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Text(l.skill.emoji, style: const TextStyle(fontSize: 26)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(status,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: active ? Colors.amber : Colors.white,
+                              fontWeight: FontWeight.bold,
+                            )),
+                        const SizedBox(height: 2),
+                        // What it unlocks, as an emoji sentence.
+                        Text(l.unlocks,
+                            style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.75))),
+                      ],
+                    ),
+                  ),
+                  if (open)
+                    ActionButton(
+                      emoji: tracked == key ? '📍✅' : '📍',
+                      highlighted: tracked == key,
+                      onTap: () => game.toggleTrackedMission(key),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
