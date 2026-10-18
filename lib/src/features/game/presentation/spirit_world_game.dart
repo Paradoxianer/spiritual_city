@@ -234,6 +234,22 @@ class SpiritWorldGame extends FlameGame
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
 
+  /// System bars, notch and gesture zones (#190): HUD buttons and the
+  /// joystick stay clear of them. Set by the GameScreen from MediaQuery.
+  EdgeInsets safeInsets = EdgeInsets.zero;
+
+  void setSafeInsets(EdgeInsets insets) {
+    if (insets == safeInsets) return;
+    safeInsets = insets;
+    if (!isLoaded || !isWorldReady.value) return;
+    joystick.margin = EdgeInsets.only(
+      left: _kJoystickMarginLeft + insets.left,
+      bottom: _kJoystickMarginBottom + insets.bottom,
+    );
+    if (joystick.isMounted) joystick.onGameResize(size);
+    _updateHudVisibility();
+  }
+
   /// The building the pastor is inside right now (third layer), if any.
   InteriorWorld? interior;
 
@@ -681,6 +697,9 @@ class SpiritWorldGame extends FlameGame
         _updateButtonStyles();
       }
       isWorldReady.value = true;
+      final pending = safeInsets;
+      safeInsets = EdgeInsets.zero;
+      setSafeInsets(pending);
       _sessionStartTime = DateTime.now();
       loadCityMap(); // ready before the first tap on the minimap
       _log.info(
@@ -872,9 +891,12 @@ class SpiritWorldGame extends FlameGame
   }
 
   void _updateHudVisibility() {
+    // Keep every button out of the system bars and gesture zones (#190).
+    final inL = safeInsets.left, inR = safeInsets.right, inB = safeInsets.bottom;
+    final bottomY = size.y - 80 - inB;
     if (interior != null) {
       if (joystick.parent == null) camera.viewport.add(joystick);
-      actionButton.position = Vector2(size.x - 80, size.y - 80);
+      actionButton.position = Vector2(size.x - 80 - inR, bottomY);
       actionButton.keyLabel = 'E';
       worldToggleButton.position = Vector2(-1000, -1000);
       for (final btn in modeButtons) {
@@ -896,11 +918,11 @@ class SpiritWorldGame extends FlameGame
       // *selected* mode button can never reach the side buttons (see the
       // constant's doc comment for why the old fixed 90 px wasn't enough).
 
-      actionButton.position = Vector2(_sideButtonCenterOffset, size.y - 80);
+      actionButton.position = Vector2(_sideButtonCenterOffset + inL, bottomY);
       actionButton.keyLabel = 'Space';
 
       worldToggleButton.position =
-          Vector2(size.x - _sideButtonCenterOffset, size.y - 80);
+          Vector2(size.x - _sideButtonCenterOffset - inR, bottomY);
 
       // Only learned modes are shown (⚔️ lesson unlocks all but Liberation).
       final shown = [
@@ -919,10 +941,10 @@ class SpiritWorldGame extends FlameGame
         // screens; on screens narrower than the row genuinely needs, spacing
         // bottoms out at _minModeButtonSpacing and the row may symmetrically
         // spill past the margin rather than overlap on one side only.
-        final available = size.x - _modeRowMargin * 2;
+        final available = size.x - _modeRowMargin * 2 - inL - inR;
         final spacing = n > 1 ? (available / (n - 1)).clamp(_minModeButtonSpacing, _maxModeButtonSpacing) : 0.0;
         final totalModeWidth = (n - 1) * spacing;
-        final modeStartX = (size.x - totalModeWidth) / 2;
+        final modeStartX = inL + (size.x - inL - inR - totalModeWidth) / 2;
 
         for (int j = 0; j < n; j++) {
           final i = shown[j];
@@ -933,7 +955,7 @@ class SpiritWorldGame extends FlameGame
               isSelected ? _modeButtonSizeSelected : _modeButtonSizeUnselected);
           btn.position = Vector2(
             modeStartX + j * spacing,
-            isSelected ? size.y - 88.0 : size.y - 80.0,
+            isSelected ? bottomY - 8.0 : bottomY,
           );
           btn.keyLabel = '${i + 1}';
         }
@@ -941,9 +963,9 @@ class SpiritWorldGame extends FlameGame
     } else {
       if (joystick.parent == null) camera.viewport.add(joystick);
       // Normal-world layout: interaction button bottom-right, toggle left of it.
-      actionButton.position = Vector2(size.x - 80, size.y - 80);
+      actionButton.position = Vector2(size.x - 80 - inR, bottomY);
       actionButton.keyLabel = 'E';
-      worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
+      worldToggleButton.position = Vector2(size.x - 170 - inR, bottomY);
       for (final btn in modeButtons) {
         btn.opacity = 0.0;
       }
@@ -1628,8 +1650,8 @@ class SpiritWorldGame extends FlameGame
   bool onTapDown(TapDownEvent event) {
     if (!isSpiritualWorld && isLoaded && joystick.parent != null) {
       final jCenter = Vector2(
-        _kJoystickMarginLeft + _kJoystickBgRadius,
-        camera.viewport.size.y - _kJoystickMarginBottom - _kJoystickBgRadius,
+        _kJoystickMarginLeft + safeInsets.left + _kJoystickBgRadius,
+        camera.viewport.size.y - _kJoystickMarginBottom - safeInsets.bottom - _kJoystickBgRadius,
       );
       // Sprint double-tap must happen on the center joystick knob, not on the
       // outer joystick ring.

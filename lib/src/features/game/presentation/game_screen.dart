@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:math' show atan2, pi, Random, sin;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
@@ -75,6 +76,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Full screen while playing: the system bars stay hidden until swiped
+    // in, so they cannot swallow taps on the HUD (#190).
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _game = SpiritWorldGame(
       difficulty: widget.difficulty,
       gameSave: widget.gameSave,
@@ -90,6 +94,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     GameAmbience.stop();
     super.dispose();
   }
@@ -135,8 +140,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Insets the HUD buttons keep clear of: system bars, notch and the
+  /// gesture zones (back swipe at the sides, home swipe at the bottom).
+  void _syncSafeInsets(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final v = mq.viewPadding, g = mq.systemGestureInsets;
+    final insets = EdgeInsets.fromLTRB(
+      v.left > g.left ? v.left : g.left,
+      0,
+      v.right > g.right ? v.right : g.right,
+      v.bottom > g.bottom ? v.bottom : g.bottom,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _game.setSafeInsets(insets));
+  }
+
   @override
   Widget build(BuildContext context) {
+    _syncSafeInsets(context);
     return PopScope(
       // There is nothing to pop – /game replaces the router stack – so the
       // Android/desktop back gesture must never be allowed to fall through
