@@ -24,6 +24,7 @@ import '../domain/models/npc_backstory.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/models/prayer_combat.dart';
+import '../domain/models/quarter.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../domain/services/tutorial_service.dart';
 import '../presentation/components/building_component.dart';

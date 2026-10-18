@@ -581,6 +581,7 @@ class _ResourceHud extends StatelessWidget {
                 label: AppStrings.get('resource.health'),
                 color: Colors.redAccent,
                 criticalThreshold: SpiritWorldGame.healthAlarmThreshold,
+                showValue: true,
               ),
               const SizedBox(height: 2),
               _AnimatedResourceBar(
@@ -601,6 +602,7 @@ class _ResourceHud extends StatelessWidget {
                 icon: '🙏',
                 label: AppStrings.get('resource.faith'),
                 color: Colors.purpleAccent,
+                showValue: true,
               ),
               const SizedBox(height: 2),
               _AnimatedResourceBar(
@@ -617,6 +619,8 @@ class _ResourceHud extends StatelessWidget {
               _InsightDisplay(progress: gameRef.progress),
               const SizedBox(height: 2),
               _ConversionCounter(gameRef: gameRef),
+              const SizedBox(height: 2),
+              _QuarterProgressBar(status: gameRef.quarterStatus),
             ],
           );
         },
@@ -752,6 +756,62 @@ class _ConversionCounterState extends State<_ConversionCounter> with SingleTicke
   }
 }
 
+/// Thin bar under ✝: how far the current neighbourhood is from an
+/// attackable 🏰 (playtest: replaces the old "🏘️ ✝️ 22/56" line). Fills
+/// blue, turns gold when the stronghold is open and orange 🔥 once awakened.
+class _QuarterProgressBar extends StatelessWidget {
+  final ValueNotifier<QuarterStatus?> status;
+  const _QuarterProgressBar({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<QuarterStatus?>(
+      valueListenable: status,
+      builder: (context, s, _) {
+        if (s == null) return const SizedBox.shrink();
+        final color = s.awakened
+            ? Colors.deepOrangeAccent
+            : s.strongholdOpen
+                ? Colors.amber
+                : const Color(0xFFB0C4FF);
+        final icon = s.awakened ? '🔥' : (s.strongholdOpen ? '⚔️' : '🏰');
+        return Semantics(
+          label: '${s.christians}/${s.people}',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🏘️', style: TextStyle(fontSize: 10)),
+              const SizedBox(width: 3),
+              Container(
+                width: 70,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: s.progress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 3),
+              Text(icon, style: const TextStyle(fontSize: 10)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// A single resource bar with a brief "+N" / "−N" delta text that fades out
 /// after each change.
 ///
@@ -783,7 +843,11 @@ class _AnimatedResourceBar extends StatefulWidget {
     required this.color,
     this.warnThreshold,
     this.criticalThreshold,
+    this.showValue = false,
   });
+
+  /// Shows the current value next to the bar (❤️ and 🙏, playtest).
+  final bool showValue;
 
   @override
   State<_AnimatedResourceBar> createState() => _AnimatedResourceBarState();
@@ -927,6 +991,14 @@ class _AnimatedResourceBarState extends State<_AnimatedResourceBar> with TickerP
               ],
             ),
           ),
+          if (widget.showValue)
+            SizedBox(
+              width: 30,
+              child: Text(
+                ' ${_compactInt(value.round())}',
+                style: TextStyle(color: effectiveColor, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ),
           // Delta – only shown while the fade is in progress.
           SizedBox(
             width: 26,
