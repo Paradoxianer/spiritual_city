@@ -17,8 +17,16 @@ class _UpgradePanelState extends State<_UpgradePanel> {
 
   void _buy(int level, VoidCallback apply) {
     setState(() {
+      final before = widget.game.combatAbilityTiers;
       if (_progress.spendInsight(upgradeInsightCost(level))) {
         apply();
+        // A new ability (#179) is announced, not just a bigger number.
+        final after = widget.game.combatAbilityTiers;
+        for (final m in PrayerMode.values) {
+          if ((after[m] ?? 0) > (before[m] ?? 0)) {
+            widget.game.announce('✨ ${CombatAbilities.emoji[m]![after[m]! - 1]}');
+          }
+        }
         // Daemons keep their strength for a few visits (#178 grace period).
         _progress.onUpgradeBought();
       }
@@ -86,9 +94,27 @@ class _UpgradePanelState extends State<_UpgradePanel> {
           insight: _progress.insight,
           onBuy: () => _buy(level, apply),
         );
+    final tier = CombatAbilities.tier(s);
+    final level = CombatAbilities.modeLevel(s);
     return _UpgradeGroup(
       icon: mode.icon,
       color: mode.color,
+      // Abilities: unlocked ones bright, the next with the level it needs.
+      footer: Wrap(
+        spacing: 10,
+        children: [
+          for (var i = 0; i < CombatAbilities.milestones.length; i++)
+            Opacity(
+              opacity: i < tier ? 1.0 : 0.45,
+              child: Text(
+                i < tier
+                    ? CombatAbilities.emoji[mode]![i]
+                    : '${CombatAbilities.emoji[mode]![i]} 🔒$level/${CombatAbilities.milestones[i]}',
+                style: const TextStyle(fontSize: 13, color: Colors.white),
+              ),
+            ),
+        ],
+      ),
       children: [
         tile('🎯', s.radiusLevel, s.radius, () => s.radiusLevel++),
         tile('⚡', s.strengthLevel, s.strength, () => s.strengthLevel++),
@@ -104,8 +130,14 @@ class _UpgradeGroup extends StatelessWidget {
   final String icon;
   final Color color;
   final List<Widget> children;
+  final Widget? footer;
 
-  const _UpgradeGroup({required this.icon, required this.color, required this.children});
+  const _UpgradeGroup({
+    required this.icon,
+    required this.color,
+    required this.children,
+    this.footer,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -117,11 +149,17 @@ class _UpgradeGroup extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 20)),
-          const SizedBox(width: 8),
-          Expanded(child: ActionBar(children: children)),
+          Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Expanded(child: ActionBar(children: children)),
+            ],
+          ),
+          if (footer != null) ...[const SizedBox(height: 6), footer!],
         ],
       ),
     );

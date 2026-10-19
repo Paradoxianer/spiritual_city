@@ -20,7 +20,11 @@ extension GameQuarters on SpiritWorldGame {
       final cy = (npc.homePosition.y / CellComponent.cellSize).floor();
       if (!q.containsCell(cx, cy)) continue;
       people++;
-      if (npc.isChristian) christians++;
+      if (npc.isChristian) {
+        christians++;
+        // Christians from before the church existed join it (old saves).
+        if (!progress.church.members.containsKey(npc.id)) progress.church.join(npc);
+      }
     }
     final status = QuarterStatus(
       quarter: q,
@@ -46,6 +50,7 @@ extension GameQuarters on SpiritWorldGame {
   /// The stronghold fell: the neighbourhood is awakened.
   void onStrongholdFallen(StrongholdComponent fort) {
     progress.awakenedQuarters.add(fort.quarter.key);
+    missionService.stage = progress.awakenedQuarters.length;
     progress.addInsight(Awakening.insightReward);
     _brightenspiritualAreaAroundPosition(fort.position, radius: 22, amount: 0.6);
     dayStats.awakenings++;

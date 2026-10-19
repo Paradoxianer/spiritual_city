@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../../domain/models/daemon_kind.dart';
 import '../../domain/models/daemon_model.dart';
+import '../../domain/services/combat_abilities.dart';
 import '../../domain/services/daemon_combat_rules.dart';
 import '../../domain/models/city_cell.dart';
 import '../../../menu/domain/models/difficulty.dart';
@@ -299,6 +300,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
       duration: duration,
       active: _activeEffects.keys.toSet(),
       initialEnergy: model.initialEnergy,
+      abilityTier: game.combatAbilityTiers,
     );
 
     if (hit.effectDuration > 0) {
@@ -342,7 +344,10 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   void _absorb() {
     model.dissolved = true;
     // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
-    final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0);
+    final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0) *
+        ((game.combatAbilityTiers[PrayerMode.drain] ?? 0) >= 1
+            ? CombatAbilities.drainKillFaith
+            : 1.0);
     game.gainFaith(faithGain);
     game.progress.addInsight(_killInsightReward);
     game.onDaemonKilled(model);
@@ -353,7 +358,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Liberates a 3-cell radius around the daemon's position, strongest at
   /// the centre. Shared by every player-caused kill, regardless of mode.
   void _cleanseAroundDeathPoint() {
-    const int radius = 3;
+    final int radius = (game.combatAbilityTiers[PrayerMode.liberation] ?? 0) >= 1
+        ? CombatAbilities.liberationCleanseRadius
+        : 3;
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
 

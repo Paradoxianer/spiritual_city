@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show Random;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -7,15 +8,18 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/utils/seed_manager.dart';
+import '../../../core/utils/stable_hash.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/models/daemon_model.dart';
+import '../domain/models/church.dart';
 import '../domain/models/day_stats.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
 import 'components/stronghold_component.dart';
 import '../domain/models/skills.dart';
+import '../domain/services/combat_abilities.dart';
 import '../domain/services/daemon_combat_rules.dart';
 import '../domain/services/learning_service.dart';
 import '../domain/actions/practice.dart';
@@ -257,6 +261,12 @@ class SpiritWorldGame extends FlameGame
 
   // ── Daemons (#178) ────────────────────────────────────────────────────────
 
+  /// Unlocked combat abilities per mode (0–2, #179).
+  Map<PrayerMode, int> get combatAbilityTiers => {
+        for (final m in PrayerMode.values)
+          m: CombatAbilities.tier(progress.combatProfile.getFor(m)),
+      };
+
   /// Tier of new spawns, fixed when entering the spirit world.
   int daemonTier = 1;
 
@@ -294,6 +304,21 @@ class SpiritWorldGame extends FlameGame
 
   // ── Neighbourhoods (§3.3) ─────────────────────────────────────────────────
 
+  /// ➖🍞 Fasting: prayer waves cost less until leaving the invisible world.
+  bool isFasting = false;
+  static const double fastingWaveCostFactor = 0.6;
+
+  /// 🙏🏠 Intercession today: knock chance bonus and NPC gain factor.
+  static const double intercessionAccessBonus = 0.3;
+  static const double intercessionGainFactor = 1.5;
+
+  /// ✨ Room find rewards (walkable interiors).
+  static const double roomFindInsight = 0.3;
+  static const double roomFindMaterials = 6.0;
+
+  /// 📢 Preaching radius in cells.
+  static const int preachRadiusCells = 8;
+
   /// Today's counters (day summary when sleeping).
   DayStats get dayStats => progress.dayStats;
 
@@ -303,8 +328,22 @@ class SpiritWorldGame extends FlameGame
   /// Sleeping in the pastor house ends the day: show the summary.
   void openDaySummary() {
     GameSound.play(Sfx.dayEnd);
+    // The church's daily yield (#181) arrives at the end of the day – no
+    // real-time ticking, nothing is lost while paused.
+    final y = progress.church.dailyYield();
+    if (y.faith > 0) gainFaith(y.faith);
+    if (y.materials > 0) gainMaterials(y.materials);
+    if (y.insight > 0) progress.addInsight(y.insight);
+    lastChurchYield = y;
     overlays.add('DaySummaryOverlay');
   }
+
+  /// What the church brought in at the last day's end (day summary).
+  ChurchYield lastChurchYield = const ChurchYield();
+
+  /// Church overview (pastor house ⛪👥).
+  void openChurchOverview() => overlays.add('ChurchOverlay');
+  void closeChurchOverview() => overlays.remove('ChurchOverlay');
 
   /// Starts the next day after the summary.
   void startNextDay() {
@@ -690,6 +729,7 @@ class SpiritWorldGame extends FlameGame
     if (isSpiritualWorld) {
       tutorialService.onEnteredSpiritWorld();
     } else if (wasInSpiritWorld) {
+      isFasting = false; // the fast ends with the battle
       tutorialService.onReturnedToCity();
     }
 

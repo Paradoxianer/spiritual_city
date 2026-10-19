@@ -1,4 +1,5 @@
 import '../../../menu/domain/models/difficulty.dart';
+import '../models/skills.dart';
 import 'practice.dart';
 import 'resource.dart';
 
@@ -53,6 +54,9 @@ enum ActionId {
 
   // ── Police / city hall / station / stadium ──────────────────────────────
   blessPolice,
+  intercede,
+  fast,
+  preach,
   mayorAudience,
   prayForPoliticians,
   travel,
@@ -129,6 +133,9 @@ class GameAction<T> {
   /// Spiritual discipline the action trains (see [Practice]), if any.
   final Discipline? discipline;
 
+  /// Only offered once this skill was learned (learning missions, §3.9).
+  final Skill? needsSkill;
+
   /// Shown at all for this subject? (e.g. 📦 only when the NPC wants a gift)
   final bool Function(T subject)? _visible;
 
@@ -144,6 +151,7 @@ class GameAction<T> {
     this.baseSeconds = 0,
     this.sessionPoints = 1,
     this.discipline,
+    this.needsSkill,
     bool Function(T subject)? visible,
     String? Function(T subject)? lockedBy,
   })  : _cost = cost,

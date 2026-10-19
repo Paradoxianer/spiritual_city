@@ -2,6 +2,7 @@ import '../../../menu/domain/models/difficulty.dart';
 import '../models/building_model.dart';
 import '../models/cell_object.dart';
 import '../services/building_interaction_service.dart';
+import '../models/skills.dart';
 import 'game_action.dart';
 import 'practice.dart';
 import 'resource.dart';
@@ -320,19 +321,64 @@ abstract final class BuildingActions {
     discipline: Discipline.service,
   );
 
+  // ── Learned abilities (M3, §3.9) ────────────────────────────────────────
+
+  /// 🙏🏠 Fürbitte für ein Haus (1 Tim 2:1): today the door opens more
+  /// easily and every conversation with its residents achieves more.
+  static const intercede = GameAction<BuildingModel>(
+    id: ActionId.intercede,
+    type: 'intercede',
+    emoji: '🙏🏠',
+    effect: '🚪✨',
+    cost: _intercedeCost,
+    discipline: Discipline.prayer,
+    needsSkill: Skill.intercession,
+  );
+  static ResourceCost _intercedeCost(Difficulty _) =>
+      const ResourceCost({Resource.faith: intercessionFaithCost});
+  static const double intercessionFaithCost = 30;
+
+  /// ➖🍞 Fasten (Matt 6:16–18): costs supplies now, makes prayer in the
+  /// invisible world cheaper until the pastor returns.
+  static const fast = GameAction<BuildingModel>(
+    id: ActionId.fast,
+    type: 'fast',
+    emoji: '➖🍞',
+    effect: '➖🙏⚔️',
+    cost: _fastCost,
+    discipline: Discipline.prayer,
+    needsSkill: Skill.fasting,
+  );
+  static ResourceCost _fastCost(Difficulty _) => const ResourceCost({Resource.hunger: 30});
+
+  /// 📢 Predigen (Rom 10:14): everyone nearby hears at once – broad but
+  /// flat; conversion still needs the personal relationship (#172).
+  static const preach = GameAction<BuildingModel>(
+    id: ActionId.preach,
+    type: 'preach',
+    emoji: '📢',
+    effect: '👥✝️',
+    cost: _preachCost,
+    baseSeconds: 6,
+    discipline: Discipline.bible,
+    needsSkill: Skill.preaching,
+  );
+  static ResourceCost _preachCost(Difficulty _) => const ResourceCost({Resource.faith: 30});
+
   /// Actions of a building type, in keyboard order (key 1 = first).
   static List<GameAction<BuildingModel>> forType(BuildingType type) =>
       switch (type) {
-        BuildingType.pastorHouse => [readBible, eat, sleep, homePray, missions],
-        BuildingType.house => [practicalHelp, housePray, houseVisit, discipleshipGroup],
+        BuildingType.pastorHouse => [readBible, eat, sleep, homePray, missions, fast],
+        BuildingType.house => [practicalHelp, housePray, houseVisit, discipleshipGroup, intercede],
         BuildingType.apartment => [
             practicalHelp,
             housePray,
             houseVisit,
             discipleshipGroup,
             blessHousehold,
+            intercede,
           ],
-        BuildingType.church || BuildingType.cathedral => [sundayService, worship],
+        BuildingType.church || BuildingType.cathedral => [sundayService, worship, preach],
         BuildingType.hospital => [medicalHelp, counseling, chapelService],
         BuildingType.school || BuildingType.university => [
             letterToManagement,

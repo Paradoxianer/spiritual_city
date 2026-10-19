@@ -108,7 +108,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
 
     if (data.building.isAlwaysOpen) {
       _accessGranted = true;
-      _actions = BuildingActions.forType(data.building.type);
+      _actions = _offered(data.building.type);
     }
     // For residential buildings we show a knock screen first.
   }
@@ -139,6 +139,12 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     _performAction(action.type);
   }
 
+  /// The building's actions without those that need an unlearned skill.
+  List<GameAction<BuildingModel>> _offered(BuildingType type) => [
+        for (final a in BuildingActions.forType(type))
+          if (a.needsSkill == null || widget.game.progress.skills.has(a.needsSkill!)) a,
+      ];
+
   void _attemptKnock() {
     final data = widget.game.activeBuildingData;
     if (data == null) return;
@@ -146,7 +152,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
     setState(() {
       _accessGranted = granted;
       _lastReaction = null;
-      if (granted) _actions = BuildingActions.forType(data.building.type);
+      if (granted) _actions = _offered(data.building.type);
     });
   }
 
@@ -380,7 +386,7 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.topCenter,
-                          child: _InteriorArtWidget(art: _interiorArt(building.type)),
+                          child: _buildRoom(building),
                         ),
                       ),
                       if (building.residents.isNotEmpty) ...[
@@ -405,6 +411,33 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Walkable room for emoji-grid interiors (§3.5); image interiors stay
+  /// static.
+  Widget _buildRoom(BuildingModel building) {
+    final art = _interiorArt(building.type);
+    if (art is! EmojiGridArt) return _InteriorArtWidget(art: art);
+    return _WalkableRoom(
+      cells: art.cells,
+      building: building,
+      actions: _actions,
+      game: widget.game,
+      busy: _isActionBusy,
+      onFind: (msg) => setState(() => _lastReaction = msg),
+      onAction: (type) {
+        final action = _actions.where((a) => a.type == type).firstOrNull;
+        if (action == null) return;
+        final av = action.availability(building, widget.game, widget.game.difficulty);
+        if (!av.isOk) {
+          GameSound.play(Sfx.denied, volume: 0.4);
+          setState(() => _lastReaction = av.reason);
+          return;
+        }
+        GameSound.play(Sfx.tap, volume: 0.4);
+        _performAction(type);
+      },
     );
   }
 
@@ -435,8 +468,12 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
             highlighted: missionEmoji != null && _actions[i].emoji.startsWith(missionEmoji),
             onTap: () => _performAction(_actions[i].type),
           ),
+        // ⛪👥 The church overview, from home.
+        if (building.isHomebase)
+          ActionButton(emoji: '⛪👥', onTap: g.openChurchOverview),
         // 🎓 A mentor here offers a lesson (learning missions, §3.9).
-        for (final lesson in Lessons.offeredAt(building.type, g.progress.skills))
+        for (final lesson in Lessons.offeredAt(building.type, g.progress.skills,
+            awakenings: g.progress.awakenedQuarters.length))
           ActionButton(
             emoji: '🎓${lesson.skill.emoji}',
             highlighted: true,

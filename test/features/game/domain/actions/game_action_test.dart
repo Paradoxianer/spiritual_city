@@ -86,7 +86,9 @@ void main() {
     test('registry costs match the deltas of BuildingInteractionService', () {
       for (final type in BuildingType.values) {
         for (final action in BuildingActions.forType(type)) {
-          if (action.type == 'missions') continue;
+          // Handled by the game, not the service: the mission board and
+          // learned abilities (🙏🏠 ➖🍞 📢, see GameBuildingActions).
+          if (action.type == 'missions' || action.needsSkill != null) continue;
           final christian = _npc('c_${type.name}')..isConverted = true;
           final b = BuildingModel(
             buildingId: 'b_${type.name}',

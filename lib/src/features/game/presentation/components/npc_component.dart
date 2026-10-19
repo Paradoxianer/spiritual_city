@@ -4,6 +4,7 @@ import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
 import '../../domain/actions/npc_actions.dart';
+import '../../domain/models/church.dart';
 import '../../domain/services/learning_service.dart';
 import 'daemon_component.dart';
 import '../../domain/models/building_model.dart';
@@ -35,6 +36,9 @@ class NPCComponent extends PositionComponent
   static const double npcSize = 20.0;
 
   final Random _random = Random();
+
+  /// Dialog type for a life-talk step carried by a 🩹 wounded healer.
+  static const String healerTalkType = 'healertalk';
 
   late final NpcInteractionService _interactions;
 
@@ -147,16 +151,26 @@ class NPCComponent extends PositionComponent
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
-    final discipline = NpcActions.byType(type)?.discipline;
+    // 🩹 A wounded healer from the church takes this life-talk step.
+    ChurchMember? healer;
+    if (type == healerTalkType) {
+      final ch = model.backstory.currentChallenge;
+      healer = ch == null ? null : game.progress.church
+          .healerFor(ch.event.id, game.dayStats.day, exceptNpcId: model.id);
+      if (healer == null) return '🚫🩹';
+    }
+    final discipline =
+        healer != null ? null : NpcActions.byType(type)?.discipline;
 
     final r = _interactions.perform(
-      type,
+      healer != null ? NpcActions.lifeTalk.type : type,
       model,
+      freeLifeTalk: healer != null,
       spiritualState: cell?.spiritualState ?? 0.0,
       playerFaith: game.faith,
       playerHealth: game.health,
       playerMaterials: game.materials,
-      practiceMultiplier: game.progress.practice.multiplier(discipline),
+      practiceMultiplier: game.progress.practice.multiplier(discipline) * _intercessionFactor,
     );
 
     if (r.playerFaithDelta != 0) game.gainFaith(r.playerFaithDelta);
@@ -166,9 +180,11 @@ class NPCComponent extends PositionComponent
     if (r.cellDelta != 0 && cell != null) {
       cell.spiritualState = (cell.spiritualState + r.cellDelta).clamp(-1.0, 1.0);
     }
+    if (healer != null && r.performed) healer.lastHelpDay = game.dayStats.day;
     if (r.conversationHeld) game.recordConversation();
     if (r.serviceCompleted) game.missionService.onServiceCompleted();
     if (r.converted) {
+      game.progress.church.join(model);
       game.recordConversion();
       _lightUpAround(gx, gy);
     }
@@ -177,9 +193,25 @@ class NPCComponent extends PositionComponent
       if (type == 'counsel') game.recordLessonTask(LessonTask.counsel);
       if (type == 'pray') game.recordLessonTask(LessonTask.pray);
       // A life-story challenge fully worked through (it pays insight).
-      if (type == 'lifetalk' && r.insightDelta > 0) game.dayStats.storiesHealed++;
+      if ((type == 'lifetalk' || healer != null) && r.insightDelta > 0) {
+        game.dayStats.storiesHealed++;
+        game.progress.church.recordHealed(model);
+      }
+    }
+    if (healer != null && r.performed) {
+      return '🩹${healer.name.split(' ').first} ${r.reaction}';
     }
     return r.reaction;
+  }
+
+  /// 🙏🏠 The pastor interceded for this person's home today.
+  double get _intercessionFactor {
+    final home = model.homeBuildingId;
+    if (home == null) return 1.0;
+    final b = game.chunkManager.getBuildingModel(home);
+    return b != null && b.intercededDay == game.dayStats.day
+        ? SpiritWorldGame.intercessionGainFactor
+        : 1.0;
   }
 
   /// Strong positive spiritual area effect on conversion (radius 5); cells

@@ -39,6 +39,12 @@ extension GameLearning on SpiritWorldGame {
     if (learned == Skill.spiritualWarfare) _updateHudVisibility();
   }
 
+  /// Short centred emoji message (e.g. a newly unlocked ability).
+  void announce(String msg) {
+    GameSound.play(Sfx.learned);
+    _toast(msg);
+  }
+
   void _toast(String msg) {
     missionCompleteMessage.value = msg;
     Future.delayed(const Duration(seconds: 3), () {

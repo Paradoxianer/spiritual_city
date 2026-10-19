@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
 import 'daemon_component.dart';
 import 'stronghold_component.dart';
+import '../../domain/services/combat_abilities.dart';
 import 'cell_component.dart';
 import '../../domain/models/prayer_combat.dart';
 
@@ -88,7 +89,11 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
             final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
             
             // Mode-specific cell impact (Issue #9) – see cellImpactFactor.
-            final modeMultiplier = cellImpactFactor(mode);
+            final modeMultiplier = cellImpactFactor(mode) *
+                (mode == PrayerMode.liberation &&
+                        (game.combatAbilityTiers[PrayerMode.liberation] ?? 0) >= 2
+                    ? CombatAbilities.liberationCellFactor
+                    : 1.0);
 
             final impact = (strength / 100.0) * falloff * modeMultiplier;
             cell.spiritualState = (cell.spiritualState + impact).clamp(-1.0, 1.0);
