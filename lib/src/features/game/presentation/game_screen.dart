@@ -234,10 +234,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
               if (!isReady) return const SizedBox.shrink();
+              // Same SafeArea as the pause button: on phones with a camera
+              // cutout a fixed offset slid the map over the button.
               return Positioned(
-                top: 68,
+                top: 12,
                 right: 12,
-                child: _Minimap(game: _game),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 56),
+                    child: _Minimap(game: _game),
+                  ),
+                ),
               );
             },
           ),
