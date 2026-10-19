@@ -96,11 +96,11 @@ class AppStrings {
 
       // Tutorial
       'tutorial.goHome.goal': 'Geh in dein Pastorenhaus 🏠',
-      'tutorial.goHome.detail': 'Dein Zuhause ist das Haus mit dem Kreuz ✝️ auf dem Dach. Folge 📍 (türkis auf der Minimap). Lauf einfach in die Tür 🚪 hinein – oder tippe vor dem Haus den leuchtenden 🖐️-Knopf (Taste E).',
+      'tutorial.goHome.detail': 'Dein Zuhause ist das Haus mit dem Kreuz ✝️ auf dem Dach. Der türkise Ring auf der Minimap oben rechts zeigt dir den Weg. Lauf einfach in die Tür 🚪 hinein – oder tippe vor dem Haus den leuchtenden 🖐️-Knopf (Taste E).',
       'tutorial.readBible.goal': 'Lies in der Bibel 📖',
       'tutorial.readBible.detail': 'Glaube 🙏 ist deine Kraft für alles, was du tust. Tippe das leuchtende Bücherregal 📖 an – der Pastor geht hin und liest. Das füllt deinen Glauben auf.',
       'tutorial.talk.goal': 'Sprich mit einem Menschen',
-      'tutorial.talk.detail': 'Geh durch die Tür 🚪 nach draußen zu einer Person (📍) und tippe den leuchtenden 🖐️-Knopf (Taste E). Im Gespräch 💬 lernst du sie kennen – jede Begegnung macht sie offener für Gott.',
+      'tutorial.talk.detail': 'Geh durch die Tür 🚪 nach draußen zu einer Person (türkis auf der Minimap) und tippe den leuchtenden 🖐️-Knopf (Taste E). Im Gespräch 💬 lernst du sie kennen – jede Begegnung macht sie offener für Gott.',
       'tutorial.prayPerson.goal': 'Bete mit einem Menschen',
       'tutorial.prayPerson.detail': 'Im Gespräch gibt es 🙏 Gebet. Ist ihr Glaubensbalken ✝️ hoch genug, kannst du sie einladen, Christ zu werden.',
       'tutorial.enterSpirit.goal': 'Wechsle in die unsichtbare Welt',
@@ -119,6 +119,7 @@ class AppStrings {
       'tutorial.completed.detail': 'Gott segne deinen Dienst in der Stadt. Neue Fähigkeiten lernst du bei Mentoren 🎓 – schau ins Missionsbrett.',
       'tutorial.skip': 'Tutorial überspringen',
       'tutorial.restart': 'Tutorial neu starten',
+      'tutorial.skipAsk': 'Tutorial beenden?',
       'loading.verse1': '„Der HERR ist mein Hirte“ – Psalm 23,1',
       'loading.verse2': '„Bittet, so wird euch gegeben“ – Mt 7,7',
       'loading.verse3': '„Die Wahrheit wird euch frei machen“ – Joh 8,32',
@@ -255,11 +256,11 @@ class AppStrings {
 
       // Tutorial
       'tutorial.goHome.goal': 'Go into your pastor house 🏠',
-      'tutorial.goHome.detail': 'Your home is the house with the cross ✝️ on its roof. Follow 📍 (cyan on the minimap). Just walk into the door 🚪 – or tap the glowing 🖐️ button in front of the house (or press E).',
+      'tutorial.goHome.detail': 'Your home is the house with the cross ✝️ on its roof. The cyan ring on the minimap top right shows you the way. Just walk into the door 🚪 – or tap the glowing 🖐️ button in front of the house (or press E).',
       'tutorial.readBible.goal': 'Read the Bible 📖',
       'tutorial.readBible.detail': 'Faith 🙏 is your strength for everything you do. Tap the glowing bookshelf 📖 – the pastor walks over and reads. It fills up your faith.',
       'tutorial.talk.goal': 'Talk to a person',
-      'tutorial.talk.detail': 'Go out through the door 🚪 to someone (📍) and tap the glowing 🖐️ button (or press E). Talking 💬 lets you get to know them – every visit makes them more open to God.',
+      'tutorial.talk.detail': 'Go out through the door 🚪 to someone (cyan on the minimap) and tap the glowing 🖐️ button (or press E). Talking 💬 lets you get to know them – every visit makes them more open to God.',
       'tutorial.prayPerson.goal': 'Pray with a person',
       'tutorial.prayPerson.detail': 'The conversation offers 🙏 prayer. Once their faith bar ✝️ is high enough, you can invite them to become a Christian.',
       'tutorial.enterSpirit.goal': 'Enter the invisible world',
@@ -278,6 +279,7 @@ class AppStrings {
       'tutorial.completed.detail': 'God bless your service in the city. Mentors 🎓 teach new skills – have a look at the mission board.',
       'tutorial.skip': 'Skip tutorial',
       'tutorial.restart': 'Restart tutorial',
+      'tutorial.skipAsk': 'End the tutorial?',
       'loading.verse1': '"The LORD is my shepherd" – Psalm 23:1',
       'loading.verse2': '"Ask, and it shall be given you" – Matthew 7:7',
       'loading.verse3': '"The truth shall make you free" – John 8:32',

@@ -319,6 +319,13 @@ class SpiritWorldGame extends FlameGame
     }
   }
 
+  /// Until the first daemon is beaten in the tutorial, the invisible world
+  /// holds just one weak daemon (see SpiritualDynamicsSystem).
+  bool get tutorialCalmSpirit => switch (tutorialService.currentStep) {
+        TutorialStep.enterSpirit || TutorialStep.liberate || TutorialStep.defeatDaemon => true,
+        _ => false,
+      };
+
   /// What to do right here for the tutorial (playtest: a new player did
   /// not know to walk to the house and press 🖐️): inside, the station or
   /// the door to go to; outside, 🖐️ once the target is in reach.
@@ -937,7 +944,11 @@ class SpiritWorldGame extends FlameGame
         Difficulty.normal => _entryDaemonsNormal,
         Difficulty.hard   => _entryDaemonsHard,
       };
-      spiritualDynamics.spawnDaemonsAroundPlayer(entryCount);
+      if (tutorialCalmSpirit) {
+        spiritualDynamics.spawnTutorialDaemon();
+      } else {
+        spiritualDynamics.spawnDaemonsAroundPlayer(entryCount);
+      }
     }
   }
 

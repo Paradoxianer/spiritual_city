@@ -14,6 +14,7 @@ class _TutorialChip extends StatefulWidget {
 
 class _TutorialChipState extends State<_TutorialChip> {
   bool _open = true;
+  bool _confirmSkip = false;
   TutorialStep? _shown;
 
   @override
@@ -29,6 +30,7 @@ class _TutorialChipState extends State<_TutorialChip> {
         if (step != _shown) {
           _shown = step;
           _open = true;
+          _confirmSkip = false;
           if (step != TutorialStep.values.first) GameSound.play(Sfx.learned, volume: 0.35);
         }
         final key = 'tutorial.${step.name}';
@@ -82,6 +84,30 @@ class _TutorialChipState extends State<_TutorialChip> {
                               ),
                           ],
                         ),
+                        if (_open)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: _confirmSkip
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(AppStrings.get('tutorial.skipAsk'),
+                                          style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                      TextButton(
+                                        onPressed: g.tutorialService.skipTutorial,
+                                        child: const Text('⏭️✅', style: TextStyle(fontSize: 16)),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => setState(() => _confirmSkip = false),
+                                        child: const Text('❌', style: TextStyle(fontSize: 16)),
+                                      ),
+                                    ],
+                                  )
+                                : TextButton(
+                                    onPressed: () => setState(() => _confirmSkip = true),
+                                    child: const Text('⏭️', style: TextStyle(fontSize: 16)),
+                                  ),
+                          ),
                         if (_open) ...[
                           const SizedBox(height: 4),
                           Text(
@@ -126,7 +152,7 @@ class _Arrow extends StatelessWidget {
         if (dx * dx + dy * dy < 48 * 48) return const SizedBox.shrink();
         return Padding(
           padding: const EdgeInsets.only(left: 8),
-          child: Text('📍${_directionArrow(atan2(dy, dx) * 180 / pi)}', style: _style),
+          child: Text(_directionArrow(atan2(dy, dx) * 180 / pi), style: _style.copyWith(fontSize: 20)),
         );
       },
     );
