@@ -125,6 +125,12 @@ extension GameBuildingActions on SpiritWorldGame {
     // triggers an auto-leave there.
     if (result.success) {
       data.building.currentSessionInteractions++;
+      if (action != null) {
+        data.building.interactionCount += BuildingModel.effortBonus(
+          faithCost: action.cost(difficulty).of(Resource.faith),
+          seconds: action.baseSeconds,
+        );
+      }
     }
     // Sleeping in the pastor house ends the day (§3.3).
     if (actionType == 'sleep' && result.success) endDay();
@@ -304,6 +310,7 @@ extension GameBuildingActions on SpiritWorldGame {
         spendFaith(BuildingActions.intercessionFaithCost);
         building.intercededDay = dayStats.day;
         building.applyInfluence(5.0);
+        building.interactionCount += 2;
         recordPractice(Discipline.prayer);
         recordLessonTask(LessonTask.pray);
         building.currentSessionInteractions++;
@@ -326,6 +333,7 @@ extension GameBuildingActions on SpiritWorldGame {
         spendFaith(30);
         building.preachedDay = dayStats.day;
         final reached = _preachAround(player.position);
+        building.interactionCount += 3;
         recordPractice(Discipline.bible);
         building.currentSessionInteractions++;
         return BuildingInteractionResult(

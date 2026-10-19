@@ -20,23 +20,42 @@ abstract final class CombatAbilities {
     return s == null || learned.has(s);
   }
 
-  /// Mastery lessons of [mode] (⭐, ⭐⭐).
-  static (Skill, Skill) mastery(PrayerMode mode) => switch (mode) {
-        PrayerMode.liberation => (Skill.liberationMastery1, Skill.liberationMastery2),
-        PrayerMode.rebuke => (Skill.rebukeMastery1, Skill.rebukeMastery2),
-        PrayerMode.slow => (Skill.slowMastery1, Skill.slowMastery2),
-        PrayerMode.drain => (Skill.drainMastery1, Skill.drainMastery2),
+  /// Mastery lessons of [mode] in order (⭐, ⭐⭐, …) – a small quest chain:
+  /// each one lifts the mode's upgrade cap one step.
+  static List<Skill> mastery(PrayerMode mode) => switch (mode) {
+        PrayerMode.liberation => const [
+            Skill.liberationMastery1,
+            Skill.liberationMastery2,
+            Skill.liberationMastery3,
+          ],
+        PrayerMode.rebuke => const [Skill.rebukeMastery1, Skill.rebukeMastery2],
+        PrayerMode.slow => const [Skill.slowMastery1, Skill.slowMastery2],
+        PrayerMode.drain => const [Skill.drainMastery1, Skill.drainMastery2],
       };
 
-  /// Highest mode level the pastor may buy (sum of the four upgrades):
-  /// 2 without a mentor, 5 after ⭐, 10 after ⭐⭐ (playtest 2026-10-18).
-  static const List<int> levelCaps = [2, 5, 10];
+  /// Highest mode level the pastor may buy (sum of the four upgrades)
+  /// without a mentor, after ⭐, after ⭐⭐ …: 🕊️ Liberation, the main
+  /// weapon, goes up to 15, the others to 10 (playtest 2026-10-19).
+  static List<int> levelCaps(PrayerMode mode) =>
+      mode == PrayerMode.liberation ? const [2, 5, 10, 15] : const [2, 5, 10];
+
+  static int maxCap(PrayerMode mode) => levelCaps(mode).last;
+
+  /// Next mastery lesson that lifts the cap, or null at the top.
+  static Skill? nextMastery(PrayerMode mode, LearnedSkills learned) {
+    for (final s in mastery(mode)) {
+      if (!learned.has(s)) return s;
+    }
+    return null;
+  }
 
   static int levelCap(PrayerMode mode, LearnedSkills learned) {
-    final (m1, m2) = mastery(mode);
-    if (learned.has(m2)) return levelCaps[2];
-    if (learned.has(m1)) return levelCaps[1];
-    return levelCaps[0];
+    var i = 0;
+    for (final s in mastery(mode)) {
+      if (!learned.has(s)) break;
+      i++;
+    }
+    return levelCaps(mode)[i];
   }
 
   /// Mode level = sum of its radius/strength/duration/speed upgrades.
