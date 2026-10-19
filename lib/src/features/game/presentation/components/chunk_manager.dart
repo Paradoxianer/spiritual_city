@@ -442,6 +442,22 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
   List<NPCModel> get allNPCModels =>
       List.unmodifiable(_allNPCs.map((c) => c.model));
 
+  /// The active NPC model with [id], or null if it is not loaded.
+  NPCModel? findNpcModel(String id) {
+    for (final c in _allNPCs) {
+      if (c.model.id == id) return c.model;
+    }
+    return null;
+  }
+
+  /// The active NPC component with [id], or null.
+  NPCComponent? findNpcComponent(String id) {
+    for (final c in _allNPCs) {
+      if (c.model.id == id) return c;
+    }
+    return null;
+  }
+
   /// Number of NPCs created so far.
   int get npcCount => _allNPCs.length;
 

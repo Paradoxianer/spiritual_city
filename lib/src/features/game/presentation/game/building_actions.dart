@@ -42,7 +42,18 @@ extension GameBuildingActions on SpiritWorldGame {
       result = result.withFaithDelta(
           (result.playerFaithDelta * progress.practice.multiplier(discipline)).roundToDouble());
     }
+    // Sunday is the day for the Sunday service (§3.3).
+    if (actionType == 'sundayService' && dayStats.isSunday && result.playerFaithDelta > 0) {
+      result = result.withFaithDelta(
+          (result.playerFaithDelta * DayStats.sundayServiceBonus).roundToDouble());
+    }
     if (discipline != null && result.success) recordPractice(discipline);
+    if (result.success) {
+      if (discipline == Discipline.prayer) recordLessonTask(LessonTask.pray);
+      if (actionType == 'sundayService' || actionType == 'chapelService') {
+        recordLessonTask(LessonTask.service);
+      }
+    }
 
     // Apply resource deltas immediately
     if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);
@@ -112,6 +123,8 @@ extension GameBuildingActions on SpiritWorldGame {
     if (result.success) {
       data.building.currentSessionInteractions++;
     }
+    // Sleeping in the pastor house ends the day (§3.3).
+    if (actionType == 'sleep' && result.success) openDaySummary();
     return result;
   }
 

@@ -12,16 +12,21 @@ class AppSettings {
   /// Stored globally so new saves don't re-show the tutorial.
   bool tutorialCompleted;
 
+  /// Sound effects on/off (pause menu 🔊/🔇).
+  bool soundOn;
+
   AppSettings({
     this.language = 'de',
     this.lastDifficulty = Difficulty.normal,
     this.tutorialCompleted = false,
+    this.soundOn = true,
   });
 
   Map<String, dynamic> toMap() => {
         'language': language,
         'lastDifficulty': lastDifficulty.index,
         'tutorialCompleted': tutorialCompleted,
+        'soundOn': soundOn,
       };
 
   factory AppSettings.fromMap(Map<dynamic, dynamic> map) => AppSettings(
@@ -29,6 +34,7 @@ class AppSettings {
         lastDifficulty:
             Difficulty.values[map['lastDifficulty'] as int? ?? 1],
         tutorialCompleted: map['tutorialCompleted'] as bool? ?? false,
+        soundOn: map['soundOn'] as bool? ?? true,
       );
 }
 

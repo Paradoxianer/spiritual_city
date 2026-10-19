@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../../../../core/audio/game_sound.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../../domain/actions/game_action.dart';
 import '../../domain/actions/practice.dart';
@@ -126,7 +127,14 @@ class ActionButton extends StatelessWidget {
                 shape: StadiumBorder(side: BorderSide(color: border)),
                 child: InkWell(
                   customBorder: const StadiumBorder(),
-                  onTap: active ? onTap : null,
+                  // Unavailable actions answer with the "denied" sound, so a
+                  // tap is never silent.
+                  onTap: active
+                      ? () {
+                          GameSound.play(Sfx.tap, volume: 0.4);
+                          onTap();
+                        }
+                      : (available ? null : () => GameSound.play(Sfx.denied, volume: 0.4)),
                   child: ConstrainedBox(
                     // ≥ 48 px touch target (mobile_ui.md).
                     constraints: const BoxConstraints(minWidth: 52, minHeight: 44),

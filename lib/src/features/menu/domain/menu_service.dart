@@ -3,6 +3,7 @@ import 'package:logging/logging.dart';
 import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../data/menu_repository.dart';
+import '../../../core/audio/game_sound.dart';
 import 'models/app_settings.dart';
 import 'models/difficulty.dart';
 import 'models/game_save.dart';
@@ -33,6 +34,7 @@ class MenuService {
     languageNotifier.setLanguage(settings.language);
     difficultyNotifier.value = settings.lastDifficulty;
     _isTutorialCompleted = settings.tutorialCompleted;
+    GameSound.enabled = settings.soundOn;
     _log.info('MenuService init: lang=${settings.language}, '
         'difficulty=${settings.lastDifficulty}, '
         'tutorialCompleted=$_isTutorialCompleted');
@@ -49,6 +51,15 @@ class MenuService {
   Future<void> markTutorialCompleted() async {
     if (_isTutorialCompleted) return; // already persisted
     _isTutorialCompleted = true;
+    await _persistSettings();
+  }
+
+  // --------------- Sound ----------------------------------------------------
+
+  bool get soundOn => GameSound.enabled;
+
+  Future<void> setSoundOn(bool on) async {
+    GameSound.enabled = on;
     await _persistSettings();
   }
 
@@ -125,6 +136,7 @@ class MenuService {
       language: AppStrings.currentLanguage,
       lastDifficulty: difficultyNotifier.value,
       tutorialCompleted: _isTutorialCompleted,
+      soundOn: GameSound.enabled,
     );
     await _repository.saveSettings(settings);
   }

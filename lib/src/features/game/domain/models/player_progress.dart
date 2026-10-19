@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import '../actions/practice.dart';
 import 'prayer_combat.dart';
+import 'day_stats.dart';
+import 'skills.dart';
+import '../services/learning_service.dart';
 
 /// Tracks the progression of a single resource (Faith, Materials, etc.).
 /// Issue #61
@@ -107,6 +110,53 @@ class PlayerProgress extends ChangeNotifier {
   // --- Practice ("Übung", release_roadmap.md §3.4) ---
   final Practice practice = Practice();
 
+  // --- Learned skills (learning missions, release_roadmap.md §3.9) ---
+  final LearnedSkills skills = LearnedSkills();
+  final LessonState lesson = LessonState();
+
+  // --- The current day and what happened in it (§3.3) ---
+  final DayStats dayStats = DayStats();
+
+  // --- Awakened neighbourhoods (Quarter keys "qx,qy", §3.3) ---
+  final Set<String> awakenedQuarters = {};
+
+  // --- Daemon scaling with grace period (#178, daemons_and_combat.md §5) ---
+
+  /// Player power the daemons currently scale with. Lags behind the real
+  /// [combatPower] for [graceVisits] spirit-world visits after an upgrade, so
+  /// an upgrade first feels like a win.
+  int daemonPower = 0;
+
+  /// Spirit-world visits left before [daemonPower] catches up.
+  int graceVisitsLeft = 0;
+
+  static const int graceVisits = 3;
+
+  /// Sum of all combat upgrade levels plus [extraPower] (e.g. awakened
+  /// districts).
+  int combatPower({int extraPower = 0}) {
+    var p = combatProfile.shieldLevel + combatProfile.helmLevel + extraPower;
+    for (final m in PrayerMode.values) {
+      final s = combatProfile.getFor(m);
+      p += s.radiusLevel + s.strengthLevel + s.durationLevel + s.speedLevel;
+    }
+    return p;
+  }
+
+  /// Call after buying an upgrade: the next [graceVisits] visits keep the
+  /// old daemon strength.
+  void onUpgradeBought() => graceVisitsLeft = graceVisits;
+
+  /// Call when entering the spirit world; returns the power to scale with.
+  int onSpiritWorldEntered({int extraPower = 0}) {
+    if (graceVisitsLeft > 0) {
+      graceVisitsLeft--;
+    } else {
+      daemonPower = combatPower(extraPower: extraPower);
+    }
+    return daemonPower;
+  }
+
   // --- Combat Upgrades (Issue #4 / #9) ---
   final CombatProfile combatProfile = CombatProfile();
 
@@ -141,6 +191,12 @@ class PlayerProgress extends ChangeNotifier {
     'pendingInsight': pendingInsight,
     'combatProfile': combatProfile.toJson(),
     'practice': practice.toJson(),
+    'daemonPower': daemonPower,
+    'skills': skills.toJson(),
+    'lesson': lesson.toJson(),
+    'awakened': awakenedQuarters.toList(),
+    'day': dayStats.toJson(),
+    'graceVisitsLeft': graceVisitsLeft,
     'stages': {
       'faith': faithStage.toJson(),
       'materials': materialsStage.toJson(),
@@ -159,6 +215,14 @@ class PlayerProgress extends ChangeNotifier {
     maxChristiansInOneCell = (json['maxChristians'] as num?)?.toInt() ?? 0;
     insight = (json['insight'] as num?)?.toInt() ?? 0;
     pendingInsight = (json['pendingInsight'] as num?)?.toDouble() ?? 0.0;
+    daemonPower = (json['daemonPower'] as num?)?.toInt() ?? 0;
+    skills.loadFromJson(json['skills']);
+    lesson.loadFromJson(json['lesson']);
+    dayStats.loadFromJson(json['day']);
+    awakenedQuarters
+      ..clear()
+      ..addAll([for (final k in (json['awakened'] as List?) ?? const []) '$k']);
+    graceVisitsLeft = (json['graceVisitsLeft'] as num?)?.toInt() ?? 0;
     final practiceRaw = json['practice'];
     practice.loadFromJson(
         practiceRaw is Map ? practiceRaw.cast<String, dynamic>() : const {});

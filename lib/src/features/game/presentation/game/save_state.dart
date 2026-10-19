@@ -116,6 +116,8 @@ extension GameSaveState on SpiritWorldGame {
     npc.faith             = ((saved['faith']   as num?)?.toDouble() ?? npc.faith).clamp(-100.0, 100.0);
     npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
+    if (saved['possessed'] is bool) npc.possessed = saved['possessed'] as bool;
+    npc.possessionWeakened = saved['possWeak'] as bool? ?? false;
     // NPC backstory (docs/game_design/npc_backstory.md): re-trigger in case
     // the save says converted but the fresh spawn roll didn't (idempotent –
     // a no-op if NPCRegistry already unlocked it for a pre-converted spawn).
@@ -209,6 +211,11 @@ extension GameSaveState on SpiritWorldGame {
           'faith': npc.faith.clamp(-100.0, 100.0),
           if (npc.interactionCount != 0) 'conv': npc.interactionCount,
           if (npc.isConverted)           'converted': true,
+          // Possession (#180): stored once decided, so a released person
+          // stays free even while still hostile.
+          if (npc.faith < NPCModel.possessionFaithThreshold || !npc.possessed)
+            'possessed': npc.possessed,
+          if (npc.possessionWeakened)    'possWeak': true,
           'posX': npcComp.position.x,
           'posY': npcComp.position.y,
           if (npc.activeMission != null) 'mission': npc.activeMission!.toJson(),

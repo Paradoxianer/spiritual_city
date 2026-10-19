@@ -63,6 +63,10 @@ Andere Reihenfolgen funktionieren, sind aber schwächer – so gibt es eine effe
 
 Erwartung: Das Gebet endet nur, wenn der Spieler loslässt oder Glauben bzw. Leben leer sind. Der Ist-Stand (Abbruch bei `faith < cost`, Aufladen bis `faith <= 1`, Skalierung mit `faith/100`) wird im Rahmen von #167 vereinheitlicht.
 
+## 7a. Umgesetzt (M2, `feat/m2-core`)
+
+Typen, Schwächen, Kombo-Kette, Stufen und Gnadenfrist wie oben beschrieben (`DaemonKind`, `DaemonCombatRules`, `PlayerProgress.onSpiritWorldEntered`). Abweichungen: Kettenblitz = 50 % der Start-Energie als Sofortschaden; Gegenüberstellung im Test ist "Kette gegen dieselben drei Modi ohne Kombo", denn wiederholtes Entziehen ist durch ×1.8 schon allein stark. Ohne 👁️ Unterscheidung der Geister sehen alle Dämonen gleich aus (nur die Größe zeigt die Stufe). Rebuke/Slow/Drain gibt es in neuen Spielständen erst nach der Lern-Mission ⚔️.
+
 ## 8. Akzeptanz
 
 Siehe #178. Kernpunkt: ≥ 3 Typen unterscheidbar, Schwäche je Typ, Kombo messbar stärker (Unit-Test), Tier sichtbar, Skalierung mit Gnadenfrist.

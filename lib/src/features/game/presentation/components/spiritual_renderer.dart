@@ -37,6 +37,31 @@ class SpiritualRenderer extends PositionComponent
     with HasGameReference<SpiritWorldGame> {
   static final _log = Logger('SpiritualRenderer');
 
+  // ── v4: "Wabern" fragment shader (release_roadmap.md §3.6) ──────────────
+  //
+  // When the shader loads, it replaces layers A+B and the per-chunk blur:
+  // one shader pass per chunk on the GPU, fed with a tiny 18×18 state
+  // texture (cells + neighbour border) rebuilt at ≤ 1 Hz. If it cannot load
+  // (old renderer), the v3 path below stays in use.
+
+  static FragmentProgram? _program;
+  static bool _programRequested = false;
+
+  static void _loadProgram() {
+    if (_programRequested) return;
+    _programRequested = true;
+    FragmentProgram.fromAsset('shaders/spirit_world.frag').then((p) {
+      _program = p;
+    }).catchError((Object e) {
+      _log.warning('Spirit-world shader unavailable, using blur fallback: $e');
+    });
+  }
+
+  FragmentShader? _shader;
+  Image? _stateImage;
+  final Paint _shaderPaint = Paint();
+  final Paint _statePaint = Paint();
+
   final CityChunk chunk;
   static const double cellSize = CellComponent.cellSize;
 
@@ -101,6 +126,43 @@ class SpiritualRenderer extends PositionComponent
   Future<void> onLoad() async {
     await super.onLoad();
     _initOrbs();
+    _loadProgram();
+  }
+
+  @override
+  void onRemove() {
+    _stateImage?.dispose();
+    _stateImage = null;
+    _shader?.dispose();
+    _shader = null;
+    super.onRemove();
+  }
+
+  /// Encodes the cells (plus a one-cell border from the neighbouring
+  /// chunks) as an 18×18 image: R = darkness, G = light.
+  void _buildStateImage() {
+    const n = CityChunk.chunkSize + 2;
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    final ox = chunk.chunkX * CityChunk.chunkSize;
+    final oy = chunk.chunkY * CityChunk.chunkSize;
+    for (int y = 0; y < n; y++) {
+      for (int x = 0; x < n; x++) {
+        final cell = game.grid.getCell(ox + x - 1, oy + y - 1);
+        final st = (cell?.spiritualState ?? 0.0).clamp(-1.0, 1.0);
+        _statePaint.color = Color.fromARGB(
+          255,
+          (st < 0 ? -st * 255 : 0).round(),
+          (st > 0 ? st * 255 : 0).round(),
+          0,
+        );
+        canvas.drawRect(Rect.fromLTWH(x.toDouble(), y.toDouble(), 1, 1), _statePaint);
+      }
+    }
+    final picture = recorder.endRecording();
+    _stateImage?.dispose();
+    _stateImage = picture.toImageSync(n, n);
+    picture.dispose();
   }
 
   // ── Initialisation ───────────────────────────────────────────────────────
@@ -143,9 +205,11 @@ class SpiritualRenderer extends PositionComponent
 
     _time += dt;
 
-    // Orbs: full frame rate → smooth sub-pixel movement.
-    for (final orb in _orbs) {
-      orb.update(dt, _chunkPx, _chunkPx);
+    // Orbs: full frame rate → smooth sub-pixel movement (fallback path only).
+    if (_program == null) {
+      for (final orb in _orbs) {
+        orb.update(dt, _chunkPx, _chunkPx);
+      }
     }
 
     // Particles: update at full rate for smooth flight.
@@ -164,6 +228,8 @@ class SpiritualRenderer extends PositionComponent
     if (_baseRebuildTimer >= _baseRebuildInterval) {
       _baseRebuildTimer = 0.0;
       _basePicture = null; // mark dirty; rebuilt in render()
+      _stateImage?.dispose();
+      _stateImage = null;
     }
 
     // Debug – log once per 10 s for the chunk nearest (0,0) only.
@@ -251,6 +317,24 @@ class SpiritualRenderer extends PositionComponent
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) return;
+
+    final program = _program;
+    if (program != null) {
+      if (_stateImage == null) _buildStateImage();
+      final shader = _shader ??= program.fragmentShader();
+      shader
+        ..setFloat(0, size.x)
+        ..setFloat(1, size.y)
+        ..setFloat(2, _time)
+        ..setFloat(3, position.x + (parent as PositionComponent).position.x)
+        ..setFloat(4, position.y + (parent as PositionComponent).position.y)
+        ..setFloat(5, CityChunk.chunkSize.toDouble())
+        ..setImageSampler(0, _stateImage!, filterQuality: FilterQuality.low);
+      _shaderPaint.shader = shader;
+      canvas.drawRect(size.toRect(), _shaderPaint);
+      _particleService.render(canvas);
+      return;
+    }
 
     // ── Blurred background layer ──────────────────────────────────────────
     // saveLayer + ImageFilter.blur = ONE GPU operation for the whole chunk.

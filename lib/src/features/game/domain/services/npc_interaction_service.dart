@@ -34,6 +34,9 @@ class NpcInteractionResult {
   /// The action really happened (its cost was paid) – used for practice.
   final bool performed;
 
+  /// This action loosened a possession: the possessor can now be fought.
+  final bool possessionWeakened;
+
   const NpcInteractionResult({
     required this.reaction,
     this.playerFaithDelta = 0,
@@ -45,6 +48,7 @@ class NpcInteractionResult {
     this.conversationHeld = false,
     this.serviceCompleted = false,
     this.performed = true,
+    this.possessionWeakened = false,
   });
 }
 
@@ -146,6 +150,15 @@ class NpcInteractionService {
         npc.interactionCount += 6;
         npc.currentSessionInteractions++; // 2 session points in total
         npc.lastNpcFaithDelta = g;
+        if (npc.possessed && !npc.possessionWeakened) {
+          npc.possessionWeakened = true;
+          return NpcInteractionResult(
+            reaction: '👂👁️💔',
+            playerFaithDelta: playerFaith0,
+            playerHealthDelta: -hpCost,
+            possessionWeakened: true,
+          );
+        }
         return NpcInteractionResult(
           reaction: ['👂💬', '👂🙏', '👂😊', '👂💛'][_random.nextInt(4)],
           playerFaithDelta: playerFaith0,
@@ -214,10 +227,15 @@ class NpcInteractionService {
           npc.lastNpcFaithDelta = boosted;
           playerFaith0 += 3.0;
           npc.lastPlayerFaithDelta = playerFaith0;
+          final weakens = npc.possessed && !npc.possessionWeakened;
+          if (weakens) npc.possessionWeakened = true;
           return NpcInteractionResult(
-            reaction: ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)],
+            reaction: weakens
+                ? '🙏👁️💔'
+                : ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)],
             playerFaithDelta: playerFaith0,
             cellDelta: _calc.calculatePrayerCellDelta(),
+            possessionWeakened: weakens,
           );
         }
         // A life shaped by processed hardship reacts steadier to rejection.

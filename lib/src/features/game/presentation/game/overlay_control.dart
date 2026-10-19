@@ -117,7 +117,9 @@ extension GameOverlayControl on SpiritWorldGame {
       final m = bld.activeMission!;
       entries.add(MissionEntry(
         targetEmoji: BuildingComponent.buildingEmoji(bld.type),
-        targetName: BuildingComponent.buildingName(bld.type),
+        // Buildings are named by their address (a proper name), not by a
+        // translated type name.
+        targetName: '',
         description: m.description,
         actionEmoji: m.actionEmoji,
         faithReward: m.rewardFaith.round(),
@@ -206,6 +208,7 @@ extension GameOverlayControl on SpiritWorldGame {
   /// Opens the building-interior overlay for [building].
   void openBuildingInterior(BuildingModel building) {
     building.resetSession();
+    GameSound.play(Sfx.door, volume: 0.5);
     activeBuildingData = GameBuildingData(
       building: building,
       address: _addressForPixelPos(player.position),
@@ -268,6 +271,8 @@ extension GameOverlayControl on SpiritWorldGame {
   bool handleEscape() {
     if (_pauseMenuOpen)              { closePauseMenu();         return true; }
     if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
+    if (activeLessonOffer != null)   { closeLesson();            return true; }
+    if (overlays.isActive('DaySummaryOverlay')) { startNextDay(); return true; }
     if (activeDialog != null)        { closeDialog();            return true; }
     if (activeBuildingData != null)  { closeBuildingInterior();  return true; }
     if (activeLookData != null)      { closeLookOverlay();       return true; }

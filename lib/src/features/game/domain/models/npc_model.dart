@@ -88,6 +88,22 @@ class NPCModel extends BaseInteractableEntity {
   /// [captureBackstoryProgress]/[restoreBackstoryProgress].
   late final NpcBackstory backstory = NpcBackstoryService.generate(id);
 
+  // ── Possession (#180, npc_influence.md §3) ────────────────────────────────
+
+  /// Very hostile people may be possessed (Startwert: faith < −60).
+  static const double possessionFaithThreshold = -60.0;
+
+  /// Possessed: a 👁️ possessor daemon lives at this person in the invisible
+  /// world. Decided once, deterministically from [id] (every second very
+  /// hostile person); persisted afterwards.
+  late bool possessed =
+      faith < possessionFaithThreshold && stableStringHash('$id#possessed').isEven;
+
+  /// Cared for in the real world (👂 counselling or 🙏 accepted prayer):
+  /// the possessor becomes beatable in the invisible world. Freedom needs
+  /// both – care *and* prayer (Mark 9:29).
+  bool possessionWeakened = false;
+
   /// Unlocks (but does not fill) this NPC's "Als Christ" chapter once
   /// [isConverted] is true. Safe to call unconditionally, as often as
   /// needed (idempotent, no-op before conversion) – called after every

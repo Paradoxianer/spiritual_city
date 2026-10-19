@@ -36,6 +36,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  shaders:
+    - shaders/spirit_world.frag
   assets:
     - assets/images/
     - assets/images/kenney/roguelike_modern_city/
