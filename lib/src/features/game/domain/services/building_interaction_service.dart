@@ -44,6 +44,18 @@ class BuildingInteractionResult {
     this.actionDurationSeconds = 0,
     this.playerInsightDelta = 0,
   });
+
+  /// Copy with a different [playerFaithDelta] (e.g. after the practice bonus).
+  BuildingInteractionResult withFaithDelta(double faith) => BuildingInteractionResult(
+        playerFaithDelta: faith,
+        playerMaterialsDelta: playerMaterialsDelta,
+        playerHungerDelta: playerHungerDelta,
+        playerHealthDelta: playerHealthDelta,
+        reactionEmoji: reactionEmoji,
+        success: success,
+        actionDurationSeconds: actionDurationSeconds,
+        playerInsightDelta: playerInsightDelta,
+      );
 }
 
 /// Encapsulates all building-interaction logic so that it can be tested

@@ -130,10 +130,14 @@ class AppStrings {
       'tutorial.npcTalk.title': 'Mit Personen interagieren',
       'tutorial.npcTalk.message':
           'Du bist jetzt im Gespräch!\n'
-          'Aktionen haben Auswirkungen in der realen Welt –\n'
-          'manchmal auch in der unsichtbaren.\n'
-          'Die unsichtbare Welt beeinflusst\n'
-          'den Erfolg deiner Aktionen.\n\n'
+          'Unter jedem Knopf steht, was er kostet\n'
+          'und bewirkt: −8❤️→✝️. Rot = dir fehlt etwas,\n'
+          '🔒3 = noch 3 Besuche nötig.\n\n'
+          '⭐ Übung: Was du oft tust, wirkt stärker.\n'
+          '♥ Beziehung: Wen du gut kennst, bei dem\n'
+          'wirkt alles stärker.\n'
+          '📜 Lebenslauf: Hier hilfst du der Person,\n'
+          'Schritt für Schritt ihre Geschichte zu heilen.\n\n'
           'Interagiere mit der Person und drücke\n'
           'dann unten „Weiter".',
       'tutorial.hudExplain.title': 'Deine Ressourcen',
@@ -144,7 +148,8 @@ class AppStrings {
           '📦 Materialien – für praktische Hilfe benötigt\n'
           '📖 Erkenntnis – durch Jüngerschaft & Studium\n'
           '✝ Bekehrungen – Menschen, die den Glauben gefunden haben\n\n'
-          'Tipp: Homebase aufsuchen, um Hunger & Gesundheit aufzufüllen!',
+          'Tipp: Im Pastorenhaus und in der Kirche\n'
+          'füllst du 🙏 Glauben am stärksten auf!',
       'tutorial.homebase.title': 'Deine Homebase',
       'tutorial.homebase.message':
           '🏠 Nutze den Kompass ▲ (oben links),\n'
@@ -292,10 +297,14 @@ class AppStrings {
       'tutorial.npcTalk.title': 'Interact with People',
       'tutorial.npcTalk.message':
           'You are now in a conversation!\n'
-          'Actions have effects in the real world –\n'
-          'and sometimes in the invisible world too.\n'
-          'The invisible world influences\n'
-          'the success of your actions.\n\n'
+          'Below each button: what it costs and\n'
+          'does: −8❤️→✝️. Red = you lack something,\n'
+          '🔒3 = 3 more visits needed.\n\n'
+          '⭐ Practice: what you do often gets stronger.\n'
+          '♥ Relationship: with people you know well,\n'
+          'everything works better.\n'
+          '📜 Life story: help the person heal\n'
+          'their story, step by step.\n\n'
           'Interact with the person and then\n'
           'press "Next" below.',
       'tutorial.hudExplain.title': 'Your Resources',
@@ -306,7 +315,8 @@ class AppStrings {
           '📦 Supplies – required for practical help\n'
           '📖 Insight – gained through discipleship & study\n'
           '✝ Conversions – people who have found faith\n\n'
-          'Tip: Visit your homebase to refill hunger & health!',
+          'Tip: The pastor\'s house and churches\n'
+          'refill 🙏 faith the most!',
       'tutorial.homebase.title': 'Your Homebase',
       'tutorial.homebase.message':
           '🏠 Use the compass ▲ (top left)\n'

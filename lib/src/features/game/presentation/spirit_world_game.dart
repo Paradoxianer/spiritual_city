@@ -8,6 +8,9 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
+import '../domain/actions/building_actions.dart';
+import '../domain/actions/practice.dart';
+import '../domain/actions/resource.dart';
 import '../domain/city_generator.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/city_chunk.dart';
@@ -17,6 +20,7 @@ import '../domain/models/mission_model.dart';
 import '../domain/models/modifier_manager.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/player_progress.dart';
+import '../domain/models/player_resources.dart';
 export '../domain/models/player_progress.dart';
 import '../domain/models/prayer_combat.dart';
 import '../domain/services/building_interaction_service.dart';
@@ -34,6 +38,10 @@ import 'components/prayer_hud_component.dart';
 import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
 
+part 'game/save_state.dart';
+part 'game/overlay_control.dart';
+part 'game/building_actions.dart';
+
 /// Whether keyboard shortcut hint badges should be shown on HUD buttons.
 /// True on desktop (Windows / Linux / macOS) and web; false on mobile.
 bool _shouldShowKeyHints() {
@@ -43,7 +51,9 @@ bool _shouldShowKeyHints() {
       defaultTargetPlatform == TargetPlatform.macOS;
 }
 
-class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks {
+class SpiritWorldGame extends FlameGame
+    with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks
+    implements ResourceWallet {
   final _log = Logger('SpiritWorldGame');
 
   // ── Spiritual-world button dock constants (Issue #174) ────────────────────
@@ -202,25 +212,35 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   late final PlayerProgress progress;
   late final ModifierManager modifiers;
 
-  // Ressourcen – backed by ValueNotifier so that Flutter overlay widgets (e.g.
-  // the resource HUD) can react to changes even while the Flame game loop is
-  // paused (e.g. while a building or dialog overlay is open).
-  final ValueNotifier<double> faithNotifier     = ValueNotifier(100.0);
-  final ValueNotifier<double> healthNotifier    = ValueNotifier(100.0);
-  final ValueNotifier<double> hungerNotifier    = ValueNotifier(80.0);
-  final ValueNotifier<double> materialsNotifier = ValueNotifier(40.0);
+  /// Faith, health, hunger, materials (PlayerResources). The getters below
+  /// keep the existing call sites short.
+  late final PlayerResources resources = PlayerResources(() => progress);
 
-  double get faith     => faithNotifier.value;
-  set faith(double v)  => faithNotifier.value = v;
+  ValueNotifier<double> get faithNotifier => resources.faithNotifier;
+  ValueNotifier<double> get healthNotifier => resources.healthNotifier;
+  ValueNotifier<double> get hungerNotifier => resources.hungerNotifier;
+  ValueNotifier<double> get materialsNotifier => resources.materialsNotifier;
 
-  double get health    => healthNotifier.value;
-  set health(double v) => healthNotifier.value = v;
+  double get faith => resources.faith;
+  set faith(double v) => resources.faith = v;
+  double get health => resources.health;
+  set health(double v) => resources.health = v;
+  double get hunger => resources.hunger;
+  set hunger(double v) => resources.hunger = v;
+  double get materials => resources.materials;
+  set materials(double v) => resources.materials = v;
 
-  double get hunger    => hungerNotifier.value;
-  set hunger(double v) => hungerNotifier.value = v;
+  @override
+  double amountOf(Resource r) => resources.amountOf(r);
 
-  double get materials    => materialsNotifier.value;
-  set materials(double v) => materialsNotifier.value = v;
+  void spendFaith(double amount) => resources.spendFaith(amount);
+  void spendHealth(double amount) => resources.spendHealth(amount);
+  void spendHunger(double amount) => resources.spendHunger(amount);
+  bool spendMaterials(double amount) => resources.spendMaterials(amount);
+  void gainFaith(double amount) => resources.gainFaith(amount);
+  void gainHealth(double amount) => resources.gainHealth(amount);
+  void gainHunger(double amount) => resources.gainHunger(amount);
+  void gainMaterials(double amount) => resources.gainMaterials(amount);
 
   static const double worldToggleCost = 10.0;
 
@@ -462,85 +482,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     }
   }
 
-
-
-  /// Upgrades a raw [state] map from any previous schema version to the
-  /// current [kSaveDataVersion] schema, returning the upgraded map.
-  ///
-  /// Migration steps are applied sequentially so a save can be upgraded
-  /// across multiple versions in a single load.  Add a new `if` block here
-  /// whenever [kSaveDataVersion] is bumped:
-  ///
-  /// ```dart
-  /// // v1 → v2: example – rename 'faith' to 'playerFaith'
-  /// if (version < 2) {
-  ///   state['playerFaith'] = state.remove('faith');
-  ///   version = 2;
-  /// }
-  /// ```
-  Map<String, dynamic> _migrateGameState(Map<String, dynamic> state) {
-    // A missing key means the save pre-dates versioning — treat as v0.
-    int version = (state['schemaVersion'] as int?) ?? 0;
-    final originalVersion = version;
-
-    // v0 → v1: initial schema (no structural changes needed, just stamp the
-    // version so the save is recognised as current on next load).
-    if (version < 1) {
-      version = 1;
-    }
-
-    // ── Add future migration blocks here, in order ─────────────────────────
-    // v1 → v2: merge separate 'pray' and 'counsel' NPC counters into 'conv'
-    // (unified interactionCount), then remove the now-obsolete keys.
-    if (version < 2) {
-      final npcs = state['npcs'] as Map?;
-      if (npcs != null) {
-        for (final npcState in npcs.values) {
-          if (npcState is Map) {
-            final conv    = (npcState['conv']    as num?)?.toInt() ?? 0;
-            final pray    = (npcState['pray']    as num?)?.toInt() ?? 0;
-            final counsel = (npcState['counsel'] as num?)?.toInt() ?? 0;
-            final merged  = conv + pray + counsel;
-            // Only write 'conv' when non-zero; absent key is equivalent to 0
-            // (consistent with how the original save code omits zero-value keys).
-            if (merged != 0) npcState['conv'] = merged;
-            npcState.remove('pray');
-            npcState.remove('counsel');
-          }
-        }
-      }
-      version = 2;
-    }
-
-    if (originalVersion != kSaveDataVersion) {
-      _log.info(
-        'Save schema migrated: v$originalVersion → v$kSaveDataVersion',
-      );
-    }
-
-    state['schemaVersion'] = kSaveDataVersion;
-    return state;
-  }
-
-  /// Applies player-resource fields from a previously serialised [state] map.
-  void _applyPlayerState(Map<String, dynamic> state) {
-    faith     = (state['faith']     as num?)?.toDouble() ?? faith;
-    health    = (state['health']    as num?)?.toDouble() ?? health;
-    hunger    = (state['hunger']    as num?)?.toDouble() ?? hunger;
-    materials = (state['materials'] as num?)?.toDouble() ?? materials;
-
-    if (state.containsKey('progress')) {
-      final progressData = state['progress'];
-      if (progressData is Map) {
-        progress.loadFromJson(progressData.cast<String, dynamic>());
-      }
-      _checkAndApplyModifiers(); // Sync modifiers with loaded progress
-    }
-
-    // Restore tutorial completion flag so the tutorial isn't shown again.
-    tutorialService.isTutorialCompleted = state['tutorialCompleted'] == true;
-  }
-
   /// Parses the `cells` sub-map from a serialised save into a flat lookup.
   Map<String, Map<String, dynamic>> _parseSavedCellStates(
       Map<String, dynamic> state) {
@@ -587,104 +528,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   // ── ChunkManager callbacks (called when a chunk / NPC is first generated) ─
 
-  /// Called by [ChunkManager] immediately after a chunk's cells are generated.
-  ///
-  /// Applies any saved spiritual-state overrides so the world looks exactly as
-  /// the player left it.
-  void applySavedCellStatesToChunk(CityChunk chunk) {
-    final overrides = _savedCellStates;
-    if (overrides == null || overrides.isEmpty) return;
-    for (final entry in chunk.cells.entries) {
-      final localKey = entry.key; // 'lx,ly'
-      final parts    = localKey.split(',');
-      final wx       = chunk.getWorldX(int.parse(parts[0]));
-      final wy       = chunk.getWorldY(int.parse(parts[1]));
-      final saved    = overrides['$wx,$wy'];
-      if (saved != null) {
-        final cell = entry.value;
-        cell.spiritualState =
-            (saved['s'] as num?)?.toDouble() ?? cell.spiritualState;
-        if (saved['r'] == true) cell.hasResiduum = true;
-      }
-    }
-  }
-
-  /// Called by [ChunkManager] for every [NPCModel] after generation.
-  ///
-  /// Restores faith, conversation counts, conversion status and last known
-  /// world-pixel position so NPC relationships and locations are preserved
-  /// across sessions.
-  void applySavedNPCState(NPCModel npc) {
-    final saved = _savedNPCStates?[npc.id];
-    if (saved == null) {
-      _log.fine('applySavedNPCState: no saved state for ${npc.id} '
-          '(faith=${npc.faith.toStringAsFixed(1)}, '
-          'isConverted=${npc.isConverted})');
-      return;
-    }
-    npc.faith             = ((saved['faith']   as num?)?.toDouble() ?? npc.faith).clamp(-100.0, 100.0);
-    npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
-    npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
-    // NPC backstory (docs/game_design/npc_backstory.md): re-trigger in case
-    // the save says converted but the fresh spawn roll didn't (idempotent –
-    // a no-op if NPCRegistry already unlocked it for a pre-converted spawn).
-    npc.unlockChristPhaseIfConverted();
-    if (saved['backstoryProgress'] is Map) {
-      npc.restoreBackstoryProgress(
-        (saved['backstoryProgress'] as Map).cast<String, dynamic>(),
-      );
-    }
-    final posX = (saved['posX'] as num?)?.toDouble();
-    final posY = (saved['posY'] as num?)?.toDouble();
-    if (posX != null && posY != null) {
-      npc.savedPosition = Vector2(posX, posY);
-    }
-    // Restore active mission if one was saved.
-    if (saved['mission'] is Map) {
-      npc.activeMission = MissionModel.fromJson(
-        (saved['mission'] as Map).cast<String, dynamic>(),
-      );
-      // Issue #163: a save written before this fix may still carry a
-      // gospel-share mission on an NPC that is (now) already converted –
-      // impossible to complete, since NPCComponent short-circuits 'convert'
-      // to a no-op for Christians.  Drop it; assignStartMissions() will hand
-      // the NPC a fresh, reachable mission.
-      if (npc.isConverted &&
-          npc.activeMission?.actionType == ActionType.npcGospelShare) {
-        _log.info(
-          'applySavedNPCState: dropping stale gospel-share mission on '
-          'already-converted ${npc.id}',
-        );
-        npc.activeMission = null;
-      }
-    }
-    _log.fine(
-      'applySavedNPCState: restored ${npc.id} '
-      '→ faith=${npc.faith.toStringAsFixed(1)}, '
-      'conv=${npc.interactionCount}, '
-      'isConverted=${npc.isConverted}',
-    );
-  }
-
-  /// Called by [ChunkManager] for every [BuildingModel] after generation.
-  ///
-  /// Restores faith and interaction count so that the player's relationship
-  /// with each building (access-chance bonus, spiritual state) is preserved
-  /// across sessions.  Falls back to defaults when the save predates building
-  /// persistence (backward-compatible with old save files).
-  void applySavedBuildingState(BuildingModel building) {
-    final saved = _savedBuildingStates?[building.buildingId];
-    if (saved == null) return;
-    building.faith            = (saved['faith'] as num?)?.toDouble() ?? building.faith;
-    building.interactionCount = (saved['conv']  as num?)?.toInt()    ?? building.interactionCount;
-    // Restore active mission if one was saved.
-    if (saved['mission'] is Map) {
-      building.activeMission = MissionModel.fromJson(
-        (saved['mission'] as Map).cast<String, dynamic>(),
-      );
-    }
-  }
-
   // ── Known Christian count (Issue #170) ─────────────────────────────────────
 
   /// Number of converted NPCs the game currently *knows about*: every
@@ -727,95 +570,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   }
 
   // ── State capture (called when the player saves and quits) ────────────────
-
-  /// Serialises the full game state into a [Map] suitable for storing in
-  /// [GameSave.gameState].
-  ///
-  /// Only cells and NPCs whose values differ from generated defaults are
-  /// included to keep the save file small.
-  Map<String, dynamic> captureGameState() {
-    // ── Cell states ──────────────────────────────────────────────────────────
-    final Map<String, Map<String, dynamic>> cellStates = {};
-    for (final chunk in grid.getLoadedChunks()) {
-      for (final entry in chunk.cells.entries) {
-        final cell = entry.value;
-        if (cell.spiritualState != 0.0 || cell.hasResiduum) {
-          final s = <String, dynamic>{'s': cell.spiritualState};
-          if (cell.hasResiduum) s['r'] = true;
-          cellStates['${cell.x},${cell.y}'] = s;
-        }
-      }
-    }
-
-    // ── NPC states ───────────────────────────────────────────────────────────
-    // Iterate over NPCComponent instances so we can capture the current
-    // world-pixel position (not just the fixed homePosition on the model).
-    final Map<String, Map<String, dynamic>> npcStates = {};
-    for (final npcComp in chunkManager.allActiveNPCs) {
-      final npc = npcComp.model;
-      if (npc.faith != 0.0 ||
-          npc.interactionCount != 0 ||
-          npc.isConverted) {
-        final backstoryProgress = npc.captureBackstoryProgress();
-        npcStates[npc.id] = {
-          'faith': npc.faith.clamp(-100.0, 100.0),
-          if (npc.interactionCount != 0) 'conv': npc.interactionCount,
-          if (npc.isConverted)           'converted': true,
-          'posX': npcComp.position.x,
-          'posY': npcComp.position.y,
-          if (npc.activeMission != null) 'mission': npc.activeMission!.toJson(),
-          // NPC backstory (docs/game_design/npc_backstory.md): only the
-          // player's processing progress on individual events, sparse –
-          // everything else about the backstory is re-derived from the id.
-          if (backstoryProgress.isNotEmpty) 'backstoryProgress': backstoryProgress,
-        };
-      }
-    }
-    // Preserve states for NPCs in chunks not visited during this session so
-    // their faith / interactionCount survive repeated save→load cycles.
-    _savedNPCStates?.forEach((id, saved) => npcStates.putIfAbsent(id, () => saved));
-    final convertedCount = npcStates.values.where((s) => s['converted'] == true).length;
-    _log.info(
-      'captureGameState: saving ${npcStates.length} NPC states '
-      '($convertedCount Christians)',
-    );
-
-    // ── Building states ──────────────────────────────────────────────────────
-    final Map<String, Map<String, dynamic>> buildingStates = {};
-    for (final comp in chunkManager.allActiveBuildings) {
-      final building = comp.buildingModel;
-      if (building.faith != 0.0 || building.interactionCount != 0 ||
-          building.activeMission != null) {
-        buildingStates[building.buildingId] = {
-          if (building.faith != 0.0)            'faith': building.faith,
-          if (building.interactionCount != 0)   'conv':  building.interactionCount,
-          if (building.activeMission != null)   'mission': building.activeMission!.toJson(),
-        };
-      }
-    }
-    // Preserve states for buildings in chunks not visited during this session.
-    _savedBuildingStates?.forEach(
-      (id, saved) => buildingStates.putIfAbsent(id, () => saved),
-    );
-
-    return {
-      'schemaVersion':      kSaveDataVersion,
-      'worldSeed':          seedManager.seed,
-      'faith':              faith,
-      'health':             health,
-      'hunger':             hunger,
-      'materials':          materials,
-      'playerX':            player.position.x,
-      'playerY':            player.position.y,
-      'isSpiritualWorld':   isSpiritualWorld,
-      'tutorialCompleted':  tutorialService.isTutorialCompleted,
-      'progress':           progress.toJson(),
-      'cells':              cellStates,
-      'npcs':               npcStates,
-      'buildings':          buildingStates,
-      'loot':               lootSystem.captureState(),
-    };
-  }
 
   void toggleWorld() {
     if (!isSpiritualWorld && faith < worldToggleCost) {
@@ -1031,13 +785,6 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     return result;
   }
 
-  void showDialog(String name, String emoji, NPCModel model) {
-    activeDialog = GameDialogData(npcName: name, npcEmoji: emoji, npcModel: model);
-    overlays.add('DialogOverlay');
-    paused = true;
-    tutorialService.onNpcDialogOpened();
-  }
-
   // ── Mission helpers ───────────────────────────────────────────────────────
 
   /// Called by [MissionService] when a mission is completed via
@@ -1075,553 +822,18 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
 
   // ── Look overlay ──────────────────────────────────────────────────────────
 
-  /// Opens the look overlay, describing nearby cells around the player.
-  void openLookOverlay() {
-    const cellSize = 32.0;
-    final px = (player.position.x / cellSize).floor();
-    final py = (player.position.y / cellSize).floor();
-
-    // Player's own spiritual state
-    final selfCell = grid.getCell(px, py);
-    final selfState = selfCell?.spiritualState ?? 0.0;
-
-    final infos = <LookCellInfo>[];
-    final seen = <String>{};
-
-    for (final d in const [
-      [0, -1], [1, 0], [0, 1], [-1, 0],
-      [-1, -1], [1, -1], [1, 1], [-1, 1],
-    ]) {
-      final cell = grid.getCell(px + d[0], py + d[1]);
-      if (cell == null) continue;
-      final data = cell.data;
-
-      String? label;
-      String? npcName;
-      String? streetName;
-
-      if (data is BuildingData) {
-        final name = BuildingComponent.buildingName(data.type);
-        final num  = data.houseNumber != null ? ' ${data.houseNumber}' : '';
-        label = '$name$num';
-        // Try to find a named road adjacent to this building cell.
-        for (final rd in const [
-          [0, -1], [1, 0], [0, 1], [-1, 0],
-        ]) {
-          final roadCell =
-              grid.getCell(px + d[0] + rd[0], py + d[1] + rd[1]);
-          if (roadCell?.data is RoadData) {
-            final rdata = roadCell!.data as RoadData;
-            if (rdata.streetName != null) {
-              streetName = rdata.streetName;
-              break;
-            }
-          }
-        }
-      } else if (data is RoadData) {
-        if (data.streetName != null) {
-          label = data.streetName!;
-          streetName = data.streetName;
-        }
-      }
-
-      if (label == null || !seen.add(label)) continue;
-
-      // Find an NPC in this cell
-      for (final npc in chunkManager.allActiveNPCs) {
-        final nx = (npc.interactionPosition.x / cellSize).floor();
-        final ny = (npc.interactionPosition.y / cellSize).floor();
-        if (nx == px + d[0] && ny == py + d[1]) {
-          npcName = npc.interactionLabel.split(' ').first;
-          break;
-        }
-      }
-
-      infos.add(LookCellInfo(
-        label: label,
-        spiritualState: cell.spiritualState,
-        npcName: npcName,
-        streetName: streetName,
-      ));
-    }
-
-    activeLookData = GameLookData(cells: infos, playerSpiritualState: selfState);
-    overlays.add('LookOverlay');
-    // Auto-close after 4 seconds – only if the overlay is still active.
-    Future.delayed(const Duration(seconds: 4), () {
-      if (activeLookData != null) closeLookOverlay();
-    });
-  }
-
-  void closeLookOverlay() {
-    activeLookData = null;
-    overlays.remove('LookOverlay');
-  }
-
   // ── Mission board ─────────────────────────────────────────────────────────
 
   /// Active data for the mission-board overlay (null when closed).
   MissionBoardData? activeMissionBoardData;
 
-  /// Opens the mission board showing all active missions with addresses.
-  void openMissionBoard() {
-    final entries = <MissionEntry>[];
-    for (final npcComp in chunkManager.allActiveNPCs) {
-      final npc = npcComp.model;
-      if (npc.activeMission == null) continue;
-      final m = npc.activeMission!;
-      entries.add(MissionEntry(
-        targetEmoji: npcComp.interactionEmoji,
-        targetName: npc.name,
-        description: m.description,
-        actionEmoji: m.actionEmoji,
-        faithReward: m.rewardFaith.round(),
-        materialsReward: m.rewardMaterials.round(),
-        insightReward: m.insightReward,
-        progress: m.progress,
-        targetCount: m.targetCount,
-        address: _addressForPixelPos(npcComp.position),
-      ));
-    }
-    for (final bldComp in chunkManager.allActiveBuildings) {
-      final bld = bldComp.buildingModel;
-      if (bld.activeMission == null) continue;
-      final m = bld.activeMission!;
-      entries.add(MissionEntry(
-        targetEmoji: BuildingComponent.buildingEmoji(bld.type),
-        targetName: BuildingComponent.buildingName(bld.type),
-        description: m.description,
-        actionEmoji: m.actionEmoji,
-        faithReward: m.rewardFaith.round(),
-        materialsReward: m.rewardMaterials.round(),
-        insightReward: m.insightReward,
-        progress: m.progress,
-        targetCount: m.targetCount,
-        address: _addressForPixelPos(bldComp.position),
-      ));
-    }
-    activeMissionBoardData = MissionBoardData(entries: entries);
-    overlays.add('MissionBoardOverlay');
-  }
-
-  /// Returns a formatted address string (e.g. "Lindenallee 14") for the cell
-  /// at the given pixel position.  Returns null if no relevant data is found.
-  String? _addressForPixelPos(Vector2 pixelPos) {
-    const cellSize = 32.0;
-    final gx = (pixelPos.x / cellSize).floor();
-    final gy = (pixelPos.y / cellSize).floor();
-
-    int? houseNumber;
-    String? streetName;
-
-    // Check the cell itself and its 4 cardinal neighbours for building/road data.
-    for (final offset in const [
-      [0, 0], [-1, 0], [1, 0], [0, -1], [0, 1],
-    ]) {
-      final c = grid.getCell(gx + offset[0], gy + offset[1]);
-      if (c == null) continue;
-      if (c.data is BuildingData && houseNumber == null) {
-        houseNumber = (c.data as BuildingData).houseNumber;
-      }
-      if (c.data is RoadData && streetName == null) {
-        final rn = (c.data as RoadData).streetName;
-        if (rn != null) streetName = rn;
-      }
-      if (houseNumber != null && streetName != null) break;
-    }
-
-    if (streetName != null && houseNumber != null) return '$streetName $houseNumber';
-    if (streetName != null) return streetName;
-    if (houseNumber != null) return 'Nr. $houseNumber';
-    return null;
-  }
-
-  void closeMissionBoard() {
-    activeMissionBoardData = null;
-    overlays.remove('MissionBoardOverlay');
-  }
-
-  void toggleMissionBoard() {
-    if (activeMissionBoardData != null) {
-      closeMissionBoard();
-    } else {
-      openMissionBoard();
-    }
-  }
-
-  String handleInteraction(String type) {
-    if (_nearestInteractable == null) return '❓';
-    final result = _nearestInteractable!.handleInteraction(type);
-
-    // ── ActionType mission advancement for NPC interactions (Issue #131) ──
-    final at = MissionService.npcActionToType(type);
-    if (at != null && _nearestInteractable is NPCComponent) {
-      final npc = (_nearestInteractable as NPCComponent).model;
-      missionService.advanceEntityMission(
-        at,
-        npc,
-        allNpcs: chunkManager.allActiveNPCs.map((c) => c.model).toList(),
-        allBuildings:
-            chunkManager.allActiveBuildings.map((c) => c.buildingModel).toList(),
-      );
-    }
-
-    return result;
-  }
-
-  void closeDialog() {
-    activeDialog = null;
-    overlays.remove('DialogOverlay');
-    paused = false;
-  }
-
   // ── Building interior ─────────────────────────────────────────────────────
-
-  /// Opens the building-interior overlay for [building].
-  void openBuildingInterior(BuildingModel building) {
-    building.resetSession();
-    activeBuildingData = GameBuildingData(building: building);
-    overlays.add('BuildingInteriorOverlay');
-    paused = true;
-    tutorialService.onBuildingInteracted();
-  }
-
-  /// Closes the building-interior overlay.
-  void closeBuildingInterior() {
-    activeBuildingData = null;
-    overlays.remove('BuildingInteriorOverlay');
-    // Also close the mission board if it was opened from inside the building.
-    if (activeMissionBoardData != null) closeMissionBoard();
-    paused = false;
-  }
-
-  /// Performs [actionType] in the currently open building and returns the
-  /// result.  The caller (overlay) is responsible for applying resource
-  /// deltas to the game via [gainFaith], [gainMaterials] etc.
-  BuildingInteractionResult handleBuildingAction(String actionType) {
-    final data = activeBuildingData;
-    if (data == null) {
-      return const BuildingInteractionResult(reactionEmoji: '❓', success: false);
-    }
-
-    // 'missions' is handled at the game layer – open the mission board inline.
-    if (actionType == 'missions') {
-      openMissionBoard();
-      return const BuildingInteractionResult(reactionEmoji: '📋', success: true);
-    }
-
-    final result = buildingInteractionService.performAction(
-      actionType,
-      data.building,
-      faith,
-    );
-
-    // Guard: refuse if the player cannot afford the material cost.
-    // materialCost is negative when playerMaterialsDelta > 0 (a gain), so the
-    // check `materialCost > 0` safely skips this guard for income actions.
-    final materialCost = -result.playerMaterialsDelta;
-    if (materialCost > 0 && materials < materialCost) {
-      return const BuildingInteractionResult(
-        reactionEmoji: '🚫💰',
-        success: false,
-      );
-    }
-    // Guard: refuse if the player does not have enough health for the action.
-    final healthCost = -result.playerHealthDelta;
-    if (healthCost > 0 && health < healthCost) {
-      return const BuildingInteractionResult(
-        reactionEmoji: '🚫❤️',
-        success: false,
-      );
-    }
-    // Guard: refuse if the player does not have enough hunger for the action.
-    final hungerCost = -result.playerHungerDelta;
-    if (hungerCost > 0 && hunger < hungerCost) {
-      return const BuildingInteractionResult(
-        reactionEmoji: '🚫🍞',
-        success: false,
-      );
-    }
-    // Apply resource deltas immediately
-    if (result.playerFaithDelta != 0) gainFaith(result.playerFaithDelta);
-    if (result.playerMaterialsDelta > 0) {
-      gainMaterials(result.playerMaterialsDelta);
-    } else if (result.playerMaterialsDelta < 0) {
-      spendMaterials(-result.playerMaterialsDelta);
-    }
-    if (result.playerHealthDelta > 0) {
-      gainHealth(result.playerHealthDelta);
-    } else if (result.playerHealthDelta < 0) {
-      spendHealth(-result.playerHealthDelta);
-    }
-    if (result.playerHungerDelta > 0) {
-      gainHunger(result.playerHungerDelta);
-    } else if (result.playerHungerDelta < 0) {
-      spendHunger(-result.playerHungerDelta);
-    }
-    // Geistliche Erkenntnis (Insight) from building actions.
-    if (result.playerInsightDelta > 0) {
-      progress.addInsight(result.playerInsightDelta);
-    }
-    // 'bless' and spiritual actions nudge the cell underneath the player.
-    if (actionType == 'bless' || actionType == 'blessPolice' ||
-        actionType == 'blessHousehold') {
-      _nudgeCellUnderPlayer(0.02);
-      missionService.onVisitPrayed();
-    }
-    // Pastor house prayer: massively brightens spiritual world in the area.
-    if (actionType == 'pray' &&
-        data.building.type == BuildingType.pastorHouse) {
-      _brightenspiritualAreaAroundPosition(
-        pastorhousePosition.value ?? player.position,
-        radius: 12,
-        amount: 0.12,
-      );
-    }
-    // ── AoE influence with duration/decay (Issue #59) ─────────────────────
-    // Applies a cell-level spiritual-state change in the visible world around
-    // the building.  Each action carries a named delta/radius/duration combo.
-    if (result.success) {
-      _applyBuildingAoEInfluence(actionType, data.building);
-    }
-    // ── ActionType mission advancement (Issue #131) ───────────────────────
-    // After a successful action, advance any matching active mission on this
-    // building.  The MissionService callback handles rewards + new assignment.
-    if (result.success) {
-      final at = MissionService.buildingActionToType(
-        actionType,
-        data.building.type,
-      );
-      if (at != null) {
-        missionService.advanceEntityMission(
-          at,
-          data.building,
-          allNpcs:
-              chunkManager.allActiveNPCs.map((c) => c.model).toList(),
-          allBuildings: chunkManager.allActiveBuildings
-              .map((c) => c.buildingModel)
-              .toList(),
-        );
-      }
-    }
-    // Increment session interaction counter for buildings (mirrors NPC dialog
-    // behaviour).  The homebase has an unlimited limit so this counter never
-    // triggers an auto-leave there.
-    if (result.success) {
-      data.building.currentSessionInteractions++;
-    }
-    return result;
-  }
-
-  /// Derives origin cell coordinates from the building's surrounding cells
-  /// and fires the appropriate [InfluenceService.applyAoE] call.
-  ///
-  /// Building-type multipliers from [BuildingInfluenceConstants] ensure that
-  /// larger/spiritual buildings have a proportionally stronger effect.
-  void _applyBuildingAoEInfluence(String actionType, BuildingModel building) {
-    // Resolve the building's rough world-cell position from the player's
-    // location (best we have without a dedicated building-cell lookup).
-    const cellSize = 32.0;
-    final gx = (player.position.x / cellSize).floor();
-    final gy = (player.position.y / cellSize).floor();
-
-    final multiplier = _buildingMultiplier(building.type);
-
-    switch (actionType) {
-      // ── Residential ──────────────────────────────────────────────────────
-      case 'practicalHelp':
-        influenceService.applyAoE(
-          grid: grid,
-          originX: gx, originY: gy,
-          delta: BuildingInfluenceConstants.deltaPracticalHelp,
-          radius: BuildingInfluenceConstants.radiusPracticalHelp,
-          durationType: InfluenceDurationType.temporary,
-          durationSeconds: BuildingInfluenceConstants.gameHourSeconds,
-          buildingMultiplier: multiplier,
-        );
-
-      case 'discipleshipGroup':
-        influenceService.applyAoE(
-          grid: grid,
-          originX: gx, originY: gy,
-          delta: BuildingInfluenceConstants.deltaDiscipleshipGroup,
-          radius: BuildingInfluenceConstants.radiusDiscipleshipGroup,
-          durationType: InfluenceDurationType.permanent,
-          buildingMultiplier: multiplier,
-        );
-
-      // ── Church ────────────────────────────────────────────────────────────
-      // Worship: permanent, positive faith boost in the surrounding area.
-      case 'worship':
-        influenceService.applyAoE(
-          grid: grid,
-          originX: gx, originY: gy,
-          delta: BuildingInfluenceConstants.deltaWorship,
-          radius: BuildingInfluenceConstants.radiusWorship,
-          durationType: InfluenceDurationType.permanent,
-          buildingMultiplier: multiplier,
-        );
-
-      // Sunday service: massive decaying AoE over half a game-day.
-      case 'sundayService':
-        influenceService.applyAoE(
-          grid: grid,
-          originX: gx, originY: gy,
-          delta: BuildingInfluenceConstants.deltaWorship,
-          radius: BuildingInfluenceConstants.radiusWorship,
-          durationType: InfluenceDurationType.decaying,
-          durationSeconds: BuildingInfluenceConstants.gameHalfDaySeconds,
-          buildingMultiplier: multiplier,
-        );
-
-      // ── Bless actions (shop / police / commercial / household) ────────────
-      case 'bless':
-      case 'blessPolice':
-      case 'blessHousehold':
-        influenceService.applyAoE(
-          grid: grid,
-          originX: gx, originY: gy,
-          delta: BuildingInfluenceConstants.deltaBless,
-          radius: BuildingInfluenceConstants.radiusBless,
-          durationType: InfluenceDurationType.temporary,
-          durationSeconds: BuildingInfluenceConstants.gameHourSeconds,
-          buildingMultiplier: multiplier,
-        );
-
-      // ── School prayer circle ──────────────────────────────────────────────
-      case 'prayerCircle':
-        influenceService.applyAoE(
-          grid: grid,
-          originX: gx, originY: gy,
-          delta: BuildingInfluenceConstants.deltaPrayerCircle,
-          radius: BuildingInfluenceConstants.radiusPrayerCircle,
-          durationType: InfluenceDurationType.temporary,
-          durationSeconds: BuildingInfluenceConstants.gameDaySeconds,
-          buildingMultiplier: multiplier,
-        );
-
-      // ── All other actions: small generic nudge ────────────────────────────
-      default:
-        if (actionType == 'pray' || actionType == 'houseVisit') {
-          influenceService.applyAoE(
-            grid: grid,
-            originX: gx, originY: gy,
-            delta: 0.03,
-            radius: 2.0,
-            durationType: InfluenceDurationType.temporary,
-            durationSeconds: BuildingInfluenceConstants.gameHourSeconds,
-            buildingMultiplier: multiplier,
-          );
-        }
-    }
-  }
-
-  /// Returns the named AoE power multiplier for [type].
-  ///
-  /// Reads from [BuildingInfluenceConstants] so no magic numbers are used here.
-  double _buildingMultiplier(BuildingType type) {
-    switch (type) {
-      // Issue #144: `church` was grouped with hospital/school/shop below
-      // (multiplierMedium, 1.5×) instead of with cathedral (multiplierSpiritual,
-      // 5×) – contradicting building_actions.md's own table, which places
-      // "Church, Cathedral" together in the "Spiritual" tier.  Church's AoE
-      // worship/service influence on the surrounding cells was 3.3× weaker
-      // than intended.
-      case BuildingType.church:
-      case BuildingType.cathedral:
-      case BuildingType.pastorHouse:
-        return BuildingInfluenceConstants.multiplierSpiritual;
-      case BuildingType.stadium:
-      case BuildingType.skyscraper:
-      case BuildingType.cityHall:
-        return BuildingInfluenceConstants.multiplierLarge;
-      case BuildingType.hospital:
-      case BuildingType.school:
-      case BuildingType.university:
-      case BuildingType.shop:
-      case BuildingType.supermarket:
-      case BuildingType.mall:
-      case BuildingType.office:
-      case BuildingType.policeStation:
-        return BuildingInfluenceConstants.multiplierMedium;
-      default:
-        return BuildingInfluenceConstants.multiplierSmall;
-    }
-  }
-
-  /// Attempts to access [building] on behalf of the player.
-  ///
-  /// Returns `true` if access is granted (always true for non-residential).
-  bool attemptBuildingAccess(BuildingModel building) {
-    return buildingInteractionService.attemptAccess(building, faith);
-  }
-
-  /// Applies [delta] spiritual influence to the city cell directly beneath
-  /// the player (used by 'prayBusiness').
-  ///
-  /// Positive [delta] increases the spiritual state towards +1.0 (green zone).
-  void _nudgeCellUnderPlayer(double delta) {
-    final gx = (player.position.x / 32).floor();
-    final gy = (player.position.y / 32).floor();
-    final cell = grid.getCell(gx, gy);
-    if (cell != null) {
-      cell.spiritualState = (cell.spiritualState + delta).clamp(-1.0, 1.0);
-    }
-  }
-
-  /// Brightens all cells within [radius] grid cells of [centre] by [amount].
-  ///
-  /// Used for the pastor-house prayer which should have a massive positive
-  /// effect on the surrounding area in the invisible world.
-  void _brightenspiritualAreaAroundPosition(
-    Vector2 centre, {
-    required int radius,
-    required double amount,
-  }) {
-    const cellSize = 32.0;
-    final gx = (centre.x / cellSize).floor();
-    final gy = (centre.y / cellSize).floor();
-    for (int dy = -radius; dy <= radius; dy++) {
-      for (int dx = -radius; dx <= radius; dx++) {
-        // Fade the effect linearly with distance (strongest at centre).
-        final dist = (dx * dx + dy * dy).toDouble();
-        final maxDist = (radius * radius).toDouble();
-        if (dist > maxDist) continue;
-        final fade = 1.0 - (dist / maxDist);
-        final cell = grid.getCell(gx + dx, gy + dy);
-        if (cell != null) {
-          cell.spiritualState =
-              (cell.spiritualState + amount * fade).clamp(-1.0, 1.0);
-        }
-      }
-    }
-  }
 
   void closeMenu() { _currentMenu?.removeFromParent(); _currentMenu = null; }
 
   // ── Keymap overlay ────────────────────────────────────────────────────────
 
   bool _keymapOpen = false;
-
-  void openKeymapOverlay() {
-    if (_keymapOpen) return;
-    _keymapOpen = true;
-    overlays.add('KeymapOverlay');
-  }
-
-  void closeKeymapOverlay() {
-    if (!_keymapOpen) return;
-    _keymapOpen = false;
-    overlays.remove('KeymapOverlay');
-  }
-
-  void toggleKeymapOverlay() {
-    if (_keymapOpen) {
-      closeKeymapOverlay();
-    } else {
-      openKeymapOverlay();
-    }
-  }
 
   // ── Pause menu (Issue #162) ───────────────────────────────────────────────
   //
@@ -1634,68 +846,11 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
   bool _pauseMenuOpen = false;
   bool get isPauseMenuOpen => _pauseMenuOpen;
 
-  void openPauseMenu() {
-    if (_pauseMenuOpen) return;
-    _pauseMenuOpen = true;
-    overlays.add('PauseMenuOverlay');
-    pauseEngine();
-  }
-
-  void closePauseMenu() {
-    if (!_pauseMenuOpen) return;
-    _pauseMenuOpen = false;
-    overlays.remove('PauseMenuOverlay');
-    resumeEngine();
-  }
-
   // ── Escape / close helper ─────────────────────────────────────────────────
-
-  /// Closes whichever overlay or menu is currently open, in priority order.
-  /// If nothing was open, opens the pause menu instead (so Escape / the
-  /// Android back gesture always has somewhere safe to go – see #162).
-  ///
-  /// Returns `true` if it closed something or opened the pause menu (i.e. the
-  /// caller should treat the back/escape action as handled), `false` only in
-  /// the case that nothing exists to act on yet (world not loaded).
-  bool handleEscape() {
-    if (_pauseMenuOpen)              { closePauseMenu();         return true; }
-    if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
-    if (activeDialog != null)        { closeDialog();            return true; }
-    if (activeBuildingData != null)  { closeBuildingInterior();  return true; }
-    if (activeLookData != null)      { closeLookOverlay();       return true; }
-    if (activeMissionBoardData != null) { closeMissionBoard();   return true; }
-    if (_currentMenu != null)        { closeMenu();              return true; }
-    if (!isWorldReady.value) return false;
-    openPauseMenu();
-    return true;
-  }
 
   // ── Radial-menu keyboard selection ────────────────────────────────────────
 
-  /// Selects the radial-menu action at [zeroBasedIndex] via keyboard (1–6).
-  void selectRadialMenuAction(int zeroBasedIndex) {
-    _currentMenu?.selectByIndex(zeroBasedIndex);
-    _currentMenu = null; // selectByIndex removes the component already
-  }
-
   // ── Dialog / building keyboard selection ──────────────────────────────────
-
-  /// Triggers the chat-dialog action at [zeroBasedIndex] via keyboard (1–6).
-  /// The [DialogOverlay] listens to [dialogActionIndex] and dispatches the
-  /// interaction that corresponds to the visible chip at that position.
-  void selectDialogAction(int zeroBasedIndex) {
-    _dialogActionIndex.value = zeroBasedIndex;
-    // Reset on the next microtask so the same index can fire multiple times.
-    Future.microtask(() => _dialogActionIndex.value = -1);
-  }
-
-  /// Triggers the building-interior action at [zeroBasedIndex] via keyboard.
-  /// The [BuildingInteriorOverlay] listens to [buildingActionIndex] and
-  /// dispatches the action row at that position.
-  void selectBuildingAction(int zeroBasedIndex) {
-    _buildingActionIndex.value = zeroBasedIndex;
-    Future.microtask(() => _buildingActionIndex.value = -1);
-  }
 
   @override
   void update(double dt) {
@@ -1909,73 +1064,9 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     return hungerPct < hungerCriticalThreshold ? 1.5 : 1.0;
   }
 
-  /// Spend resources (clamped to 0)
-  void spendFaith(double amount) {
-    if (progress.faithStage.add(amount)) {
-      progress.notifyLevelUp();
-    }
-    faith = (faith - amount).clamp(0.0, progress.maxFaith);
-  }
-
-  void spendHealth(double amount) {
-    if (progress.healthStage.add(amount)) {
-      progress.notifyLevelUp();
-    }
-    health = (health - amount).clamp(0.0, progress.maxHealth);
-  }
-
-  void spendHunger(double amount) {
-    if (progress.hungerStage.add(amount)) {
-      progress.notifyLevelUp();
-    }
-    hunger = (hunger - amount).clamp(0.0, progress.maxHunger);
-  }
-
-  /// Spend materials (returns false if not enough)
-  bool spendMaterials(double amount) {
-    if (materials < amount) return false;
-    if (progress.materialsStage.add(amount)) {
-      progress.notifyLevelUp();
-    }
-    materials = (materials - amount).clamp(0.0, progress.maxMaterials);
-    return true;
-  }
-
-  /// Gain resources (clamped to max)
-  void gainFaith(double amount) {
-    if (progress.faithStage.add(amount)) {
-      progress.notifyLevelUp();
-    }
-    faith = (faith + amount).clamp(0.0, progress.maxFaith);
-  }
-
-  void gainHealth(double amount) {
-    if (progress.healthStage.add(amount)) {
-      progress.notifyLevelUp();
-    }
-    health = (health + amount).clamp(0.0, progress.maxHealth);
-  }
-
-  void gainHunger(double amount) {
-    if (progress.hungerStage.add(amount)) {
-      progress.notifyLevelUp();
-    }
-    hunger = (hunger + amount).clamp(0.0, progress.maxHunger);
-  }
-
-  void gainMaterials(double amount) {
-    if (progress.materialsStage.add(amount)) {
-      progress.notifyLevelUp();
-    }
-    materials = (materials + amount).clamp(0.0, progress.maxMaterials);
-  }
-
   @override
   void onRemove() {
-    faithNotifier.dispose();
-    healthNotifier.dispose();
-    hungerNotifier.dispose();
-    materialsNotifier.dispose();
+    resources.dispose();
     missionCompleteMessage.dispose();
     conversionToastMessage.dispose();
     isFainting.dispose();
@@ -1991,6 +1082,17 @@ class SpiritWorldGame extends FlameGame with HasKeyboardHandlerComponents, HasCo
     missionService.onPrayerCombat();
     tutorialService.onPrayerPerformed();
     _checkAndApplyModifiers();
+  }
+
+  /// Record one use of a spiritual discipline ("Übung", §3.4). A new level
+  /// is announced with a short toast, e.g. `⭐ 🙏 2`.
+  void recordPractice(Discipline discipline) {
+    if (!progress.practice.record(discipline)) return;
+    missionCompleteMessage.value =
+        '⭐ ${discipline.emoji} ${progress.practice.level(discipline)}';
+    Future.delayed(const Duration(seconds: 3), () {
+      missionCompleteMessage.value = null;
+    });
   }
 
   /// Record a completed conversation

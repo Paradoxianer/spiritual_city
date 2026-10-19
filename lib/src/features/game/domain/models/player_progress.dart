@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../actions/practice.dart';
 import 'prayer_combat.dart';
 
 /// Tracks the progression of a single resource (Faith, Materials, etc.).
@@ -103,6 +104,9 @@ class PlayerProgress extends ChangeNotifier {
   double get maxHealth => 100.0 + (healthStage.stage - 1) * 10.0;
   double get maxHunger => 100.0 + (hungerStage.stage - 1) * 10.0;
 
+  // --- Practice ("Übung", release_roadmap.md §3.4) ---
+  final Practice practice = Practice();
+
   // --- Combat Upgrades (Issue #4 / #9) ---
   final CombatProfile combatProfile = CombatProfile();
 
@@ -136,6 +140,7 @@ class PlayerProgress extends ChangeNotifier {
     'insight': insight,
     'pendingInsight': pendingInsight,
     'combatProfile': combatProfile.toJson(),
+    'practice': practice.toJson(),
     'stages': {
       'faith': faithStage.toJson(),
       'materials': materialsStage.toJson(),
@@ -154,6 +159,9 @@ class PlayerProgress extends ChangeNotifier {
     maxChristiansInOneCell = (json['maxChristians'] as num?)?.toInt() ?? 0;
     insight = (json['insight'] as num?)?.toInt() ?? 0;
     pendingInsight = (json['pendingInsight'] as num?)?.toDouble() ?? 0.0;
+    final practiceRaw = json['practice'];
+    practice.loadFromJson(
+        practiceRaw is Map ? practiceRaw.cast<String, dynamic>() : const {});
     
     if (json.containsKey('stages')) {
       final stagesRaw = json['stages'];

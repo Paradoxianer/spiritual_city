@@ -3,13 +3,13 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/game_time.dart';
+import '../../domain/actions/npc_actions.dart';
 import '../../domain/models/building_model.dart';
 import '../../domain/models/npc_model.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
-import '../../domain/services/faith_calculator_service.dart';
 import '../../domain/services/influence_service.dart';
-import '../../domain/services/interaction_variance_service.dart';
+import '../../domain/services/npc_interaction_service.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
@@ -32,36 +32,10 @@ class NPCComponent extends PositionComponent
 
   static const double npcSize = 20.0;
 
-  /// Insight awarded to the pastor on a successful conversion. Noted as a
-  /// target in the #129 balancing issue (0.2) but never actually wired up;
-  /// raised a bit further on user feedback – conversion is a bigger, rarer
-  /// milestone than a single worked-through backstory event (0.2, see
-  /// `npc_backstory.md`), so it should read as clearly more rewarding.
-  static const double _conversionInsightReward = 0.5;
-
-  // ── Life talk ("🗣️" in the Lebenslauf tab, npc_backstory.md v5) ─────────
-  //
-  // A normal session interaction like talk/counsel/pray: it uses up one
-  // session point and works on the NPC's earliest unresolved challenge.
-
-  /// Mainly costs Faith (the central resource), only a little Health –
-  /// working through someone else's story draws on the pastor's spiritual
-  /// reserves more than on his body.
-  static const double lifeTalkHealthCost = 2.0;
-  static const double lifeTalkFaithCost = 5.0;
-
-  /// Insight for fully working through one challenge; extra when it also
-  /// grew the "Als Christ" chapter, and when it was the last open one.
-  static const double _lifeTalkInsightOnCompletion = 0.2;
-  static const double _lifeTalkInsightOnChristGrowth = 0.3;
-  static const double _lifeTalkInsightOnFullyResolved = 0.5;
-
-  /// NPC faith gained per severity point of a challenge once it is worked
-  /// through – healing opens people up.
-  static const double _lifeTalkFaithPerSeverity = 2.0;
   final Random _random = Random();
 
-  late final FaithCalculatorService _faithCalc;
+  late final NpcInteractionService _interactions;
+
 
   /// LOD level assigned by the NPC manager based on distance to the player.
   NPCDetailLevel detailLevel = NPCDetailLevel.high;
@@ -164,261 +138,62 @@ class NPCComponent extends PositionComponent
     game.showDialog(model.name, _getNPCEmoji(), model);
   }
 
+  /// Runs a dialog action through [NpcInteractionService] and applies
+  /// everything outside the NPC: player resources, cells, counters, practice.
   @override
   String handleInteraction(String type) {
-    model.currentSessionInteractions++;
-
     final gx = (position.x / CellComponent.cellSize).floor();
     final gy = (position.y / CellComponent.cellSize).floor();
     final cell = game.grid.getCell(gx, gy);
-    final spiritualState = cell?.spiritualState ?? 0.0;
+    final discipline = NpcActions.byType(type)?.discipline;
 
-    final interactionScore = model.faith + (spiritualState * 50);
+    final r = _interactions.perform(
+      type,
+      model,
+      spiritualState: cell?.spiritualState ?? 0.0,
+      playerFaith: game.faith,
+      playerHealth: game.health,
+      playerMaterials: game.materials,
+      practiceMultiplier: game.progress.practice.multiplier(discipline),
+    );
 
-    // Spiritual-world bonus: liberated cells amplify gains, dark cells reduce them.
-    // Range: 0.5× (fully dark) … 1.0× (neutral) … 1.5× (fully light).
-    final spiritualBonus = (1.0 + spiritualState * 0.5).clamp(0.5, 1.5);
-
-    final double resonanceExchange = (model.faith / 20.0).clamp(-5.0, 5.0);
-    game.gainFaith(resonanceExchange);
-
-    // Reset per-action deltas before computing new ones.
-    model.lastNpcFaithDelta = 0.0;
-    model.lastPlayerFaithDelta = resonanceExchange;
-    model.lastMaterialsDelta = 0.0;
-    model.lastPlayerHealthDelta = 0.0;
-
-    if (type == 'talk') {
-      // Issue #171: repeat-decay + variance + need multiplier, so "always
-      // talk" is no longer strictly optimal – see InteractionVarianceService.
-      final varianceMult =
-          InteractionVarianceService.multiplierFor(model, 'talk');
-      final gain = (_faithCalc.calculateConversationGain() *
-              spiritualBonus *
-              varianceMult)
-          .round();
-      model.applyInfluence(gain.toDouble());
-      model.recordAction('talk');
-      model.interactionCount++;
-      model.lastNpcFaithDelta = gain.toDouble();
-      game.recordConversation();
-      return _talkEmoji();
+    if (r.playerFaithDelta != 0) game.gainFaith(r.playerFaithDelta);
+    if (r.playerHealthDelta != 0) game.gainHealth(r.playerHealthDelta);
+    if (r.playerMaterialsDelta < 0) game.spendMaterials(-r.playerMaterialsDelta);
+    if (r.insightDelta > 0) game.progress.addInsight(r.insightDelta);
+    if (r.cellDelta != 0 && cell != null) {
+      cell.spiritualState = (cell.spiritualState + r.cellDelta).clamp(-1.0, 1.0);
     }
-
-    if (type == 'counsel') {
-      final hpCost = _faithCalc.calculateCounselingHpCost();
-      if (game.health <= hpCost) {
-        model.currentSessionInteractions--;
-        return '🚫❤️';
-      }
-      game.gainHealth(-hpCost.toDouble());
-      model.lastPlayerHealthDelta = -hpCost.toDouble();
-      final varianceMult =
-          InteractionVarianceService.multiplierFor(model, 'counsel');
-      final gain = (_faithCalc.calculateCounselingGain() *
-              spiritualBonus *
-              varianceMult)
-          .round();
-      model.applyInfluence(gain.toDouble());
-      model.recordAction('counsel');
-      // Counseling counts as 6 interactions so the session-dot bonus grows
-      // appropriately: 4× counsel → interactionCount 24 ≥ threshold 21 → 5 dots.
-      model.interactionCount += 6;
-      model.currentSessionInteractions++; // total = 2 for this action
-      model.lastNpcFaithDelta = gain.toDouble();
-      return ['👂💬', '👂🙏', '👂😊', '👂💛'][_random.nextInt(4)];
+    if (r.conversationHeld) game.recordConversation();
+    if (r.serviceCompleted) game.missionService.onServiceCompleted();
+    if (r.converted) {
+      game.recordConversion();
+      _lightUpAround(gx, gy);
     }
-
-    if (type == 'lifetalk') {
-      final challenge = model.backstory.currentChallenge;
-      if (challenge == null) {
-        model.currentSessionInteractions--;
-        return '🌱😊';
-      }
-      if (game.health <= lifeTalkHealthCost || game.faith < lifeTalkFaithCost) {
-        model.currentSessionInteractions--;
-        return game.health <= lifeTalkHealthCost ? '🚫❤️' : '🚫🙏';
-      }
-      game.gainHealth(-lifeTalkHealthCost);
-      game.gainFaith(-lifeTalkFaithCost);
-      model.lastPlayerHealthDelta = -lifeTalkHealthCost;
-      model.lastPlayerFaithDelta -= lifeTalkFaithCost;
-      model.recordAction('lifetalk');
-      model.interactionCount++;
-
-      final result = model.workOnCurrentChallenge();
-      if (!result.completed) return '${challenge.event.glyph}💭';
-
-      final gain =
-          (challenge.event.severity.abs() * _lifeTalkFaithPerSeverity * spiritualBonus)
-              .roundToDouble();
-      model.applyInfluence(gain);
-      model.lastNpcFaithDelta = gain;
-      game.progress.addInsight(
-        _lifeTalkInsightOnCompletion +
-            (result.christGrowth ? _lifeTalkInsightOnChristGrowth : 0.0) +
-            (model.backstory.fullyResolved ? _lifeTalkInsightOnFullyResolved : 0.0),
-      );
-      return '${challenge.event.glyph}🌱';
-    }
-
-    if (type == 'pray') {
-      model.interactionCount++;
-      final faithCost = _faithCalc.calculatePrayerFaithCost();
-      if (game.faith < faithCost) {
-        model.currentSessionInteractions--;
-        return '🚫🙏';
-      }
-      game.gainFaith(-faithCost.toDouble());
-      model.lastPlayerFaithDelta -= faithCost.toDouble();
-      // Recorded once the cost is actually paid – i.e. the action genuinely
-      // happened – regardless of whether the NPC ends up accepting below.
-      final varianceMult =
-          InteractionVarianceService.multiplierFor(model, 'pray');
-      model.recordAction('pray');
-      final prayerGain =
-          (_faithCalc.calculatePrayerGain() * spiritualBonus * varianceMult)
-              .round();
-      // Base 20% acceptance probability that scales with the NPC's own faith
-      // (0-100). A deeply believing NPC is far more likely to accept prayer
-      // (100% at full faith), while a faithless NPC barely reacts (20% floor).
-      // Additional bonus up to +25% based on total interactions with this NPC:
-      // the more the player has invested in the relationship, the more the NPC
-      // opens up to prayer even if they still have low faith.
-      final interactionBonus =
-          (model.interactionCount * 0.015).clamp(0.0, 0.25);
-      final acceptanceChance =
-          (model.faith / 100.0 * 0.6 + 0.2 + interactionBonus).clamp(0.0, 1.0);
-      if (_random.nextDouble() < acceptanceChance) {
-        // Interaction multiplier: the more the player has invested in the
-        // relationship, the stronger the positive prayer effect.
-        // 0 interactions = 1.0×, 6 = 1.3×, 20+ = 2.0× (capped).
-        final interactionMultiplier =
-            (1.0 + model.interactionCount / 20.0).clamp(1.0, 2.0);
-        final boostedGain = (prayerGain * interactionMultiplier).round();
-        model.applyInfluence(boostedGain.toDouble());
-        model.lastNpcFaithDelta = boostedGain.toDouble();
-        model.lastPlayerFaithDelta += 3.0;
-        game.gainFaith(3.0);
-        // Nudge the spiritual state of the cell toward the light.
-        final cellDelta = _faithCalc.calculatePrayerCellDelta();
-        if (cell != null) {
-          cell.spiritualState =
-              (cell.spiritualState + cellDelta).clamp(-1.0, 1.0);
-        }
-        return ['❤️🕊️', '🙏💛', '❤️🙌', '🙏❤️'][_random.nextInt(4)];
-      } else {
-        // NPC backstory (docs/game_design/npc_backstory.md): a life shaped by
-        // processed hardship reacts a little steadier to a new rejection,
-        // regardless of what that hardship was about.
-        final rejectionPenalty = -8.0 * (1.0 - model.backstory.resilienceDamping);
-        model.applyInfluence(rejectionPenalty);
-        model.lastNpcFaithDelta = rejectionPenalty;
-        return interactionScore < -20 ? '💀😬' : '😠💭';
-      }
-    }
-
-    if (type == 'bible') {
-      // Issue #171: Bible reading used to be strictly optimal (no cost, no
-      // failure chance, highest base gain) – the repeat-decay now makes
-      // spamming it alone measurably worse than a mixed rotation.
-      final varianceMult =
-          InteractionVarianceService.multiplierFor(model, 'bible');
-      final gain =
-          (_faithCalc.calculateBibleGain() * spiritualBonus * varianceMult)
-              .round();
-      model.applyInfluence(gain.toDouble());
-      model.recordAction('bible');
-      model.interactionCount++;
-      model.lastNpcFaithDelta = gain.toDouble();
-      model.lastPlayerFaithDelta += 2.0;
-      game.gainFaith(2.0);
-      return ['📖✝️', '📖😊', '📖🙏', '📖💛'][_random.nextInt(4)];
-    }
-
-    if (type == 'help') {
-      final varianceMult =
-          InteractionVarianceService.multiplierFor(model, 'help');
-      final giftGain =
-          (_faithCalc.calculateGiftGain() * spiritualBonus * varianceMult)
-              .round();
-      model.interactionCount++;
-      model.hadGiftThisSession = true;
-      model.wantsGift = false;
-      model.applyInfluence(giftGain.toDouble());
-      model.recordAction('help');
-      model.lastNpcFaithDelta = giftGain.toDouble();
-      model.lastPlayerFaithDelta += 5.0;
-      model.lastMaterialsDelta = -8.0;
-      game.gainFaith(5.0);
-      game.spendMaterials(8.0);
-      game.missionService.onServiceCompleted();
-      return ['📦🙏', '😊📦', '🙏😊'][_random.nextInt(3)];
-    }
-
-    if (type == 'convert') {
-      if (model.isChristian) return '✝️🙏';
-
-      // Conversion succeeds once interactionScore > 50.
-      // interactionScore = model.faith + spiritualState×50, so a liberated cell
-      // makes conversion easier even if the NPC's faith hasn't quite reached 50.
-      if (interactionScore > 50) {
-        model.isConverted = true;
-        // NPC backstory (docs/game_design/npc_backstory.md): a new "Als
-        // Christ" chapter begins now.
-        model.unlockChristPhaseIfConverted();
-        model.applyInfluence(100);
-        model.lastNpcFaithDelta = 100.0;
-        model.lastPlayerFaithDelta += 25.0;
-        game.gainFaith(25.0);
-        game.progress.addInsight(_conversionInsightReward);
-        game.recordConversion();
-        // Strong positive spiritual area effect on conversion (radius 5).
-        // Cells closer to the NPC are affected more strongly.
-        const conversionRadius = 5;
-        for (int dx = -conversionRadius; dx <= conversionRadius; dx++) {
-          for (int dy = -conversionRadius; dy <= conversionRadius; dy++) {
-            final distSq = dx * dx + dy * dy;
-            if (distSq <= conversionRadius * conversionRadius) {
-              final c = game.grid.getCell(gx + dx, gy + dy);
-              if (c != null) {
-                final distanceFactor =
-                    1.0 - distSq / (conversionRadius * conversionRadius);
-                c.spiritualState =
-                    (c.spiritualState + 0.35 * distanceFactor).clamp(-1.0, 1.0);
-              }
-            }
-          }
-        }
-        return '✝️🕊️';
-      } else {
-        // Rejection: people are annoyed by conversion attempts – stronger faith
-        // penalty than a simple prayer refusal.
-        final rejectPenalty = interactionScore < 0 ? -20.0 : -12.0;
-        model.applyInfluence(rejectPenalty);
-        model.lastNpcFaithDelta = rejectPenalty;
-        if (interactionScore < 0) return '🚫😤';
-        return '🙅💭';
-      }
-    }
-
-    return '❓💭';
+    if (r.performed && discipline != null) game.recordPractice(discipline);
+    return r.reaction;
   }
 
-  /// Returns a dynamic two-emoji response for a talk interaction based on
-  /// the NPC's current faith level.
-  String _talkEmoji() {
-    if (model.faith > 50) return ['😊✝️', '🙌💬', '😄🕊️'][_random.nextInt(3)];
-    if (model.faith > 20) return ['😊💬', '🙌😊', '💬😄'][_random.nextInt(3)];
-    if (model.faith > 0) return ['🤔💬', '💭😊', '👀💬'][_random.nextInt(3)];
-    if (model.faith > -30) return ['😐💬', '💭🤔', '😒💬'][_random.nextInt(3)];
-    return ['😠💬', '😤🙅', '😡💭'][_random.nextInt(3)];
+  /// Strong positive spiritual area effect on conversion (radius 5); cells
+  /// closer to the NPC are affected more strongly.
+  void _lightUpAround(int gx, int gy) {
+    const radius = 5;
+    for (int dx = -radius; dx <= radius; dx++) {
+      for (int dy = -radius; dy <= radius; dy++) {
+        final distSq = dx * dx + dy * dy;
+        if (distSq > radius * radius) continue;
+        final c = game.grid.getCell(gx + dx, gy + dy);
+        if (c == null) continue;
+        final distanceFactor = 1.0 - distSq / (radius * radius);
+        c.spiritualState = (c.spiritualState + 0.35 * distanceFactor).clamp(-1.0, 1.0);
+      }
+    }
   }
 
   @override
   Future<void> onLoad() async {
-    _faithCalc =
-        FaithCalculatorService(difficulty: game.difficulty, rng: _random);
+    _interactions =
+        NpcInteractionService(difficulty: game.difficulty, rng: _random);
     add(CircleHitbox());
   }
 
