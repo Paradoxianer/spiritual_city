@@ -72,6 +72,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late final SpiritWorldGame _game;
   bool _isSaving = false;
 
+  /// Autosave (playtest 2026-10-19: closing the app or an update lost
+  /// everything since the last manual 💾): every minute and whenever the
+  /// app leaves the foreground.
+  Timer? _autosaveTimer;
+  bool _autoSaving = false;
+  static const _autosaveInterval = Duration(seconds: 60);
+
   @override
   void initState() {
     super.initState();
@@ -89,11 +96,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (getIt<MenuService>().isTutorialCompleted) {
       _game.tutorialService.isTutorialCompleted = true;
     }
+    _autosaveTimer = Timer.periodic(_autosaveInterval, (_) => _autoSave());
+  }
+
+  /// Saves quietly in the background; skipped until the world is loaded
+  /// (an empty world must never overwrite a real save).
+  Future<void> _autoSave() async {
+    final save = _game.gameSave;
+    if (save == null || _autoSaving || _isSaving || !_game.isWorldReady.value) return;
+    _autoSaving = true;
+    try {
+      await getIt<MenuService>().updateSaveState(save.id, _game.captureGameState());
+    } catch (_) {
+      // Next tick tries again; a manual 💾 still works.
+    } finally {
+      _autoSaving = false;
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _autosaveTimer?.cancel();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     GameAmbience.stop();
     super.dispose();
@@ -104,6 +128,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) GameAmbience.stop();
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _autoSave();
+    }
   }
 
   /// Captures the current game state, persists it to Hive and returns to the
