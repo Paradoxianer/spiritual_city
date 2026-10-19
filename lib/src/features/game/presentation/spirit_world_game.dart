@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:math' show Random;
+import 'dart:ui' as ui;
+import 'dart:math' show Random, min;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show compute, ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/audio/game_sound.dart';
@@ -12,11 +13,20 @@ import '../../../core/utils/stable_hash.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
+import '../domain/actions/game_action.dart';
+import '../domain/actions/npc_actions.dart';
+import '../domain/interior/interior_layout.dart';
+import '../domain/city_generation/city_overview.dart';
+import '../domain/services/faith_calculator_service.dart';
 import '../domain/models/daemon_model.dart';
-import '../domain/models/church.dart';
 import '../domain/models/day_stats.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
+import 'components/daemon_component.dart';
+import 'components/character_sprites.dart';
+import 'components/kenney_city_renderer.dart';
+import 'components/interior/interior_renderer.dart';
+import 'components/interior/interior_world.dart';
 import 'components/stronghold_component.dart';
 import '../domain/models/skills.dart';
 import '../domain/services/combat_abilities.dart';
@@ -56,6 +66,8 @@ part 'game/quarters.dart';
 part 'game/save_state.dart';
 part 'game/overlay_control.dart';
 part 'game/building_actions.dart';
+part 'game/interior_control.dart';
+part 'game/mission_tracking.dart';
 
 /// Whether keyboard shortcut hint badges should be shown on HUD buttons.
 /// True on desktop (Windows / Linux / macOS) and web; false on mobile.
@@ -128,7 +140,7 @@ class SpiritWorldGame extends FlameGame
   ///   • version 1 → version 2: NPC counters unified into interactionCount
   ///     ('conv' key); separate 'pray' and 'counsel' keys removed.
   ///   • version 2 → version 3: Added PlayerProgress and CombatProfile persistence.
-  static const int kSaveDataVersion = 3;
+  static const int kSaveDataVersion = 4;
 
   /// Difficulty level selected in the main menu.
   final Difficulty difficulty;
@@ -215,12 +227,194 @@ class SpiritWorldGame extends FlameGame
 
   int _lastStreetCellX = -999999;
   int _lastStreetCellY = -999999;
-  /// True after [_updateStreetLabel] has run once (sets the spawn-position
-  /// baseline).  Prevents firing the tutorial movement hook on the very first
-  /// cell-position detection (which is not a real player movement).
-  bool _streetLabelInitialized = false;
   RadialMenu? _currentMenu;
   bool isSpiritualWorld = false;
+
+  /// System bars, notch and gesture zones (#190): HUD buttons and the
+  /// joystick stay clear of them. Set by the GameScreen from MediaQuery.
+  EdgeInsets safeInsets = EdgeInsets.zero;
+
+  void setSafeInsets(EdgeInsets insets) {
+    if (insets == safeInsets) return;
+    safeInsets = insets;
+    if (!isLoaded || !isWorldReady.value) return;
+    joystick.margin = EdgeInsets.only(
+      left: _kJoystickMarginLeft + insets.left,
+      bottom: _kJoystickMarginBottom + insets.bottom,
+    );
+    if (joystick.isMounted) joystick.onGameResize(size);
+    _updateHudVisibility();
+  }
+
+  /// The building the pastor is inside right now (third layer), if any.
+  InteriorWorld? interior;
+
+  /// True while inside a building (drives the Flutter interior bar).
+  final ValueNotifier<bool> interiorActive = ValueNotifier(false);
+  double _cityZoom = 1.0;
+  String _interiorButtonEmoji = '';
+  double _ambienceTimer = 0;
+  double _daemonCryTimer = 2;
+  final Random _cryRandom = Random();
+
+  /// A daemon close by cries now and then – louder the nearer it is.
+  void _daemonCry(double dt) {
+    _daemonCryTimer -= dt;
+    if (_daemonCryTimer > 0) return;
+    _daemonCryTimer = 3 + _cryRandom.nextDouble() * 4;
+    const reach = 9 * CellComponent.cellSize;
+    var best = reach;
+    for (final d in world.children.whereType<DaemonComponent>()) {
+      final dist = d.position.distanceTo(player.position);
+      if (dist < best) best = dist;
+    }
+    if (best >= reach) return;
+    GameSound.play(Sfx.daemonNear, volume: 0.15 + 0.45 * (1 - best / reach));
+  }
+
+  // ── City map (whole city, playtest 2026-10-18) ────────────────────────────
+
+  CityOverview? cityOverview;
+  final ValueNotifier<ui.Image?> cityMapImage = ValueNotifier(null);
+  bool _cityMapLoading = false;
+
+  /// Computes the city plan once per game, off the UI thread.
+  Future<void> loadCityMap() async {
+    if (_cityMapLoading || cityMapImage.value != null) return;
+    _cityMapLoading = true;
+    try {
+      final o = await compute(CityOverview.build, seedManager.seed);
+      cityOverview = o;
+      ui.decodeImageFromPixels(o.pixels, CityOverview.size, CityOverview.size,
+          ui.PixelFormat.rgba8888, (img) => cityMapImage.value = img);
+    } catch (e) {
+      _log.warning('City map failed: $e');
+      _cityMapLoading = false;
+    }
+  }
+
+  /// Tutorial step from the save (resumed instead of starting over).
+  TutorialStep? _savedTutorialStep;
+
+  /// Where the current tutorial step wants the pastor to go, if anywhere:
+  /// the pastor house, or the nearest person not yet a Christian.
+  Vector2? get tutorialTargetPosition {
+    switch (tutorialService.currentStep) {
+      case TutorialStep.goHome || TutorialStep.readBible || TutorialStep.mission:
+        return pastorhousePosition.value;
+      case TutorialStep.talk || TutorialStep.prayPerson:
+        Vector2? best;
+        var bestD = double.infinity;
+        for (final n in chunkManager.allActiveNPCs) {
+          if (n.model.isChristian) continue;
+          final d = n.position.distanceToSquared(player.position);
+          if (d < bestD) {
+            bestD = d;
+            best = n.position;
+          }
+        }
+        return best;
+      default:
+        return null;
+    }
+  }
+
+  /// Until the first daemon is beaten in the tutorial, the invisible world
+  /// holds just one weak daemon (see SpiritualDynamicsSystem).
+  bool get tutorialCalmSpirit => switch (tutorialService.currentStep) {
+        TutorialStep.enterSpirit || TutorialStep.liberate || TutorialStep.defeatDaemon => true,
+        _ => false,
+      };
+
+  /// What to do right here for the tutorial (playtest: a new player did
+  /// not know to walk to the house and press 🖐️): inside, the station or
+  /// the door to go to; outside, 🖐️ once the target is in reach.
+  String? get tutorialHint {
+    final step = tutorialService.currentStep;
+    if (step == null || step.isInfo) return null;
+    final room = interior;
+    if (room != null) {
+      final g = room.guide;
+      if (g == null) return null;
+      return g == InteriorWorld.guideDoor ? '🚪' : room.stationEmoji[g];
+    }
+    return _tutorialPressHere ? '🖐️' : null;
+  }
+
+  /// The pastor stands where the step's action button press is due.
+  bool get _tutorialPressHere {
+    final near = _nearestInteractable;
+    switch (tutorialService.currentStep) {
+      case TutorialStep.goHome || TutorialStep.readBible || TutorialStep.mission:
+        return near is BuildingComponent && near.buildingModel.isHomebase && !isSpiritualWorld;
+      case TutorialStep.talk || TutorialStep.prayPerson:
+        return near is NPCComponent && !isSpiritualWorld;
+      default:
+        return false;
+    }
+  }
+
+  /// The button the current tutorial step is about pulses golden; inside
+  /// a building the station (or the door) to go to pulses cyan.
+  void _updateTutorialHighlights() {
+    final step = tutorialService.currentStep;
+    final room = interior;
+    if (room != null) {
+      room.guide = switch (step) {
+        null || TutorialStep.quarter || TutorialStep.completed => null,
+        TutorialStep.readBible when room.building.isHomebase => 'readBible',
+        TutorialStep.mission when room.building.isHomebase => 'missions',
+        (TutorialStep.talk || TutorialStep.prayPerson) when room.residents.isNotEmpty &&
+            !room.building.isHomebase => null,
+        _ => InteriorWorld.guideDoor,
+      };
+      final t = room.target;
+      actionButton.highlight = room.guide != null &&
+          switch (t) {
+            StationTarget() => t.action == room.guide,
+            DoorTarget() => room.guide == InteriorWorld.guideDoor,
+            _ => false,
+          };
+      worldToggleButton.highlight = false;
+      return;
+    }
+    actionButton.highlight = _tutorialPressHere ||
+        isSpiritualWorld && (step == TutorialStep.liberate || step == TutorialStep.defeatDaemon);
+    worldToggleButton.highlight = (step == TutorialStep.enterSpirit && !isSpiritualWorld) ||
+        (step == TutorialStep.returnCity && isSpiritualWorld);
+  }
+
+  /// 📍 Accepted mission target (see GameMissionTracking).
+  final ValueNotifier<String?> trackedMission = ValueNotifier(null);
+
+  /// The city map sits above the HUD (not a Flame overlay), so nothing
+  /// covers its close button.
+  final ValueNotifier<bool> cityMapOpen = ValueNotifier(false);
+
+  void openCityMap() {
+    if (cityMapOpen.value) return;
+    cityMapOpen.value = true;
+    paused = true;
+  }
+
+  void closeCityMap() {
+    if (!cityMapOpen.value) return;
+    cityMapOpen.value = false;
+    paused = false;
+  }
+
+  /// Background sound for where the pastor is.
+  Ambience _ambienceHere() {
+    final inside = interior;
+    if (inside != null) {
+      return switch (inside.building.type) {
+        BuildingType.house || BuildingType.apartment || BuildingType.pastorHouse => Ambience.home,
+        BuildingType.church || BuildingType.cathedral || BuildingType.cemetery => Ambience.church,
+        _ => Ambience.hall,
+      };
+    }
+    return isSpiritualWorld ? Ambience.spirit : Ambience.city;
+  }
   final ValueNotifier<bool> isWorldReady = ValueNotifier<bool>(false);
 
   // Progress & Modifiers
@@ -319,40 +513,28 @@ class SpiritWorldGame extends FlameGame
   /// 📢 Preaching radius in cells.
   static const int preachRadiusCells = 8;
 
-  /// Today's counters (day summary when sleeping).
+  /// Internal day counter: sleeping starts a new one. Not shown in the UI
+  /// (playtest: visible days added too much complexity) – it only paces
+  /// once-per-sleep actions (🙏🏠, 📢, 🩹) and the church yield.
   DayStats get dayStats => progress.dayStats;
 
-  /// Bumped when the day changes (HUD day chip listens).
-  final ValueNotifier<int> dayNotifier = ValueNotifier(0);
-
-  /// Sleeping in the pastor house ends the day: show the summary.
-  void openDaySummary() {
-    GameSound.play(Sfx.dayEnd);
-    // The church's daily yield (#181) arrives at the end of the day – no
-    // real-time ticking, nothing is lost while paused.
+  /// Sleeping in the pastor house: the church's yield (#181) arrives, then a
+  /// new day starts – no real-time ticking, nothing is lost while paused.
+  void endDay() {
+    // The 😴 lullaby (Sfx.sleep) is played by the sleep action itself.
     final y = progress.church.dailyYield();
     if (y.faith > 0) gainFaith(y.faith);
     if (y.materials > 0) gainMaterials(y.materials);
     if (y.insight > 0) progress.addInsight(y.insight);
-    lastChurchYield = y;
-    overlays.add('DaySummaryOverlay');
+    dayStats.nextDay();
+    lootPickupMessage.value = y.isEmpty ? '😴 → ☀️' : '😴 → ☀️  ⛪ ${y.label}';
   }
-
-  /// What the church brought in at the last day's end (day summary).
-  ChurchYield lastChurchYield = const ChurchYield();
 
   /// Church overview (pastor house ⛪👥).
   void openChurchOverview() => overlays.add('ChurchOverlay');
   void closeChurchOverview() => overlays.remove('ChurchOverlay');
 
-  /// Starts the next day after the summary.
-  void startNextDay() {
-    dayStats.nextDay();
-    dayNotifier.value++;
-    overlays.remove('DaySummaryOverlay');
-  }
-
-  /// Status of the neighbourhood the pastor is in (HUD chip).
+  /// Status of the neighbourhood the pastor is in.
   final ValueNotifier<QuarterStatus?> quarterStatus = ValueNotifier(null);
   double _quarterTimer = 0.0;
 
@@ -371,10 +553,12 @@ class SpiritWorldGame extends FlameGame
   }
 
   /// A daemon was defeated by prayer (not dissolved on its own).
-  void onDaemonKilled(DaemonModel daemon) {
+  void onDaemonKilled(DaemonModel daemon, {PrayerMode? mode}) {
     dayStats.daemonsDefeated++;
+    tutorialService.onDaemonKilled();
     GameSound.play(Sfx.daemonDefeated, volume: 0.4);
     recordLessonTask(LessonTask.defeatDaemons);
+    if (mode != null) recordLessonTask(LessonTask.defeatWith(mode));
     if (daemon.hostNpcId != null) {
       final npc = chunkManager.findNpcModel(daemon.hostNpcId!);
       if (npc != null && npc.possessionWeakened) _releaseFromPossession(npc);
@@ -479,6 +663,9 @@ class SpiritWorldGame extends FlameGame
   @override
   Future<void> onLoad() async {
     GameSound.preload();
+    await CharacterSprites.load(images);
+    await KenneyCityRenderer.load(images);
+    await InteriorRenderer.load(images);
     try {
       _log.info('--- INITIALIZING GAME ---');
       // ── Restore save state ──────────────────────────────────────────────────
@@ -598,7 +785,11 @@ class SpiritWorldGame extends FlameGame
         _updateButtonStyles();
       }
       isWorldReady.value = true;
+      final pending = safeInsets;
+      safeInsets = EdgeInsets.zero;
+      setSafeInsets(pending);
       _sessionStartTime = DateTime.now();
+      loadCityMap(); // ready before the first tap on the minimap
       _log.info(
         '--- GAME READY --- '
         'pastorhousePos=${pastorhousePosition.value} '
@@ -608,7 +799,8 @@ class SpiritWorldGame extends FlameGame
       // Start tutorial for new players (or players who haven't finished it yet).
       if (!tutorialService.isTutorialCompleted) {
         // Short delay so the loading overlay has faded before the tutorial appears.
-        Future.delayed(const Duration(milliseconds: 600), () => tutorialService.startTutorial());
+        Future.delayed(const Duration(milliseconds: 600),
+            () => tutorialService.startTutorial(at: _savedTutorialStep));
       }
 
       // Assign starting missions to NPCs / buildings in the spawn chunk.
@@ -710,8 +902,11 @@ class SpiritWorldGame extends FlameGame
   // ── State capture (called when the player saves and quits) ────────────────
 
   void toggleWorld() {
+    if (interior != null) return; // no world switch inside a building
     if (!isSpiritualWorld && faith < worldToggleCost) {
-      _log.warning('Not enough faith to enter spiritual world');
+      // Say why nothing happens: entering costs faith (playtest).
+      GameSound.play(Sfx.denied, volume: 0.5);
+      _toast('🙏 ${faith.floor()}/${worldToggleCost.round()} ❌');
       return;
     }
     
@@ -749,7 +944,11 @@ class SpiritWorldGame extends FlameGame
         Difficulty.normal => _entryDaemonsNormal,
         Difficulty.hard   => _entryDaemonsHard,
       };
-      spiritualDynamics.spawnDaemonsAroundPlayer(entryCount);
+      if (tutorialCalmSpirit) {
+        spiritualDynamics.spawnTutorialDaemon();
+      } else {
+        spiritualDynamics.spawnDaemonsAroundPlayer(entryCount);
+      }
     }
   }
 
@@ -760,6 +959,10 @@ class SpiritWorldGame extends FlameGame
   }
 
   void handleActionUp() {
+    if (interior != null && activeDialog == null) {
+      interiorInteract();
+      return;
+    }
     if (isSpiritualWorld) {
       player.releasePrayer();
     } else {
@@ -783,6 +986,19 @@ class SpiritWorldGame extends FlameGame
   }
 
   void _updateHudVisibility() {
+    // Keep every button out of the system bars and gesture zones (#190).
+    final inL = safeInsets.left, inR = safeInsets.right, inB = safeInsets.bottom;
+    final bottomY = size.y - 80 - inB;
+    if (interior != null) {
+      if (joystick.parent == null) camera.viewport.add(joystick);
+      actionButton.position = Vector2(size.x - 80 - inR, bottomY);
+      actionButton.keyLabel = 'E';
+      worldToggleButton.position = Vector2(-1000, -1000);
+      for (final btn in modeButtons) {
+        btn.opacity = 0.0;
+      }
+      return;
+    }
     if (isSpiritualWorld) {
       if (joystick.parent != null) joystick.removeFromParent();
 
@@ -797,11 +1013,11 @@ class SpiritWorldGame extends FlameGame
       // *selected* mode button can never reach the side buttons (see the
       // constant's doc comment for why the old fixed 90 px wasn't enough).
 
-      actionButton.position = Vector2(_sideButtonCenterOffset, size.y - 80);
+      actionButton.position = Vector2(_sideButtonCenterOffset + inL, bottomY);
       actionButton.keyLabel = 'Space';
 
       worldToggleButton.position =
-          Vector2(size.x - _sideButtonCenterOffset, size.y - 80);
+          Vector2(size.x - _sideButtonCenterOffset - inR, bottomY);
 
       // Only learned modes are shown (⚔️ lesson unlocks all but Liberation).
       final shown = [
@@ -820,10 +1036,10 @@ class SpiritWorldGame extends FlameGame
         // screens; on screens narrower than the row genuinely needs, spacing
         // bottoms out at _minModeButtonSpacing and the row may symmetrically
         // spill past the margin rather than overlap on one side only.
-        final available = size.x - _modeRowMargin * 2;
+        final available = size.x - _modeRowMargin * 2 - inL - inR;
         final spacing = n > 1 ? (available / (n - 1)).clamp(_minModeButtonSpacing, _maxModeButtonSpacing) : 0.0;
         final totalModeWidth = (n - 1) * spacing;
-        final modeStartX = (size.x - totalModeWidth) / 2;
+        final modeStartX = inL + (size.x - inL - inR - totalModeWidth) / 2;
 
         for (int j = 0; j < n; j++) {
           final i = shown[j];
@@ -834,7 +1050,7 @@ class SpiritWorldGame extends FlameGame
               isSelected ? _modeButtonSizeSelected : _modeButtonSizeUnselected);
           btn.position = Vector2(
             modeStartX + j * spacing,
-            isSelected ? size.y - 88.0 : size.y - 80.0,
+            isSelected ? bottomY - 8.0 : bottomY,
           );
           btn.keyLabel = '${i + 1}';
         }
@@ -842,9 +1058,9 @@ class SpiritWorldGame extends FlameGame
     } else {
       if (joystick.parent == null) camera.viewport.add(joystick);
       // Normal-world layout: interaction button bottom-right, toggle left of it.
-      actionButton.position = Vector2(size.x - 80, size.y - 80);
+      actionButton.position = Vector2(size.x - 80 - inR, bottomY);
       actionButton.keyLabel = 'E';
-      worldToggleButton.position = Vector2(size.x - 170, size.y - 80);
+      worldToggleButton.position = Vector2(size.x - 170 - inR, bottomY);
       for (final btn in modeButtons) {
         btn.opacity = 0.0;
       }
@@ -857,7 +1073,6 @@ class SpiritWorldGame extends FlameGame
         label: '👀',
         icon: Icons.search,
         onSelect: () {
-          tutorialService.onRadialMenuActionSelected();
           openLookOverlay();
         },
       ),
@@ -887,7 +1102,6 @@ class SpiritWorldGame extends FlameGame
         sublabel: target.interactionLabel.split(' ').first,
         icon: Icons.chat_bubble,
         onSelect: () {
-          tutorialService.onRadialMenuActionSelected();
           _nearestInteractable = target;
           target.onInteract();
         },
@@ -901,10 +1115,10 @@ class SpiritWorldGame extends FlameGame
       if (!offeredBuildingIds.add(model.buildingId)) continue; // already offered
       actions.add(RadialAction(
         label: BuildingComponent.buildingEmoji(model.type),
-        sublabel: BuildingComponent.buildingName(model.type).split(' ').first,
+        // No translated type name – the emoji says what it is.
+        sublabel: '',
         icon: Icons.meeting_room,
         onSelect: () {
-          tutorialService.onRadialMenuActionSelected();
           openBuildingInterior(model);
         },
       ));
@@ -1003,6 +1217,9 @@ class SpiritWorldGame extends FlameGame
   // of closing the app (see GameScreen's PopScope).
 
   bool _pauseMenuOpen = false;
+
+  /// Re-armed once the pastor stops pushing into a door.
+  bool _doorArmed = true;
   bool get isPauseMenuOpen => _pauseMenuOpen;
 
   // ── Escape / close helper ─────────────────────────────────────────────────
@@ -1015,8 +1232,12 @@ class SpiritWorldGame extends FlameGame
   void update(double dt) {
     super.update(dt);
     if (_currentMenu != null) _currentMenu!.position = player.position;
-    if (isWorldReady.value && !paused) {
+    if (isWorldReady.value && !paused && interior != null) {
+      _updateInteriorCamera();
+      _updatePassiveResources(dt);
+    } else if (isWorldReady.value && !paused) {
       _updateCamera(dt);
+      _checkDoorStep();
       _updateNearestInteractable();
       _updatePassiveResources(dt);
       _updateStreetLabel();
@@ -1029,12 +1250,22 @@ class SpiritWorldGame extends FlameGame
       if (_quarterTimer >= 1.0) {
         _quarterTimer = 0.0;
         _updateQuarter();
+        _checkTrackedMission();
       }
       _winCheckTimer += dt;
       if (_winCheckTimer >= _winCheckInterval) {
         _winCheckTimer = 0.0;
         _checkWinCondition();
       }
+    }
+    if (isWorldReady.value) {
+      _updateTutorialHighlights();
+      _ambienceTimer += dt;
+      if (_ambienceTimer >= 0.5) {
+        _ambienceTimer = 0;
+        GameAmbience.set(_ambienceHere());
+      }
+      if (isSpiritualWorld && interior == null) _daemonCry(dt);
     }
     // Always push player position so the Flutter HUD compass stays live.
     playerWorldPosition.value = player.position.clone();
@@ -1046,14 +1277,11 @@ class SpiritWorldGame extends FlameGame
     final cx = (player.position.x / cellSize).floor();
     final cy = (player.position.y / cellSize).floor();
     if (cx == _lastStreetCellX && cy == _lastStreetCellY) return;
-    final wasInitialized = _streetLabelInitialized;
-    _streetLabelInitialized = true;
     _lastStreetCellX = cx;
     _lastStreetCellY = cy;
 
     // Fire tutorial movement hook only after the initial position has been
     // established (first call sets the spawn-cell baseline, not real movement).
-    if (wasInitialized) { tutorialService.onPlayerMoved(); }
 
     // Try the player's own cell first, then the 4 cardinal neighbours.
     // Accept ANY road cell (named or unnamed) for address lookup so the
@@ -1134,6 +1362,7 @@ class SpiritWorldGame extends FlameGame
   /// 3. Resets resources and applies a spiritual setback around the faint location.
   /// 4. Shows the wakeup message.
   Future<void> _triggerFaint() async {
+    leaveInterior();
     final faintPosition = player.position.clone();
     isFainting.value = true;
 
@@ -1441,13 +1670,21 @@ class SpiritWorldGame extends FlameGame
     if (viewportSize.x <= 0) return;
 
     final camPos = camera.viewfinder.position;
-    final pPos = player.position;
+    final portrait = viewportSize.y > viewportSize.x;
 
-    final limitX = viewportSize.x * 0.375; 
-    final limitY = viewportSize.y * 0.375;
+    // Playtest: in portrait the pastor could walk under the resource HUD
+    // and the minimap, and so far to the edge that the action ring stuck
+    // out of the screen. Keep him near the middle – a little below it,
+    // because the HUD sits at the top.
+    final target = Vector2(
+      player.position.x,
+      player.position.y - (portrait ? viewportSize.y * 0.08 : 0),
+    );
+    final limitX = viewportSize.x * (portrait ? 0.12 : 0.3);
+    final limitY = viewportSize.y * (portrait ? 0.1 : 0.25);
 
-    final dx = pPos.x - camPos.x;
-    final dy = pPos.y - camPos.y;
+    final dx = target.x - camPos.x;
+    final dy = target.y - camPos.y;
 
     double pushX = 0;
     double pushY = 0;
@@ -1515,8 +1752,8 @@ class SpiritWorldGame extends FlameGame
   bool onTapDown(TapDownEvent event) {
     if (!isSpiritualWorld && isLoaded && joystick.parent != null) {
       final jCenter = Vector2(
-        _kJoystickMarginLeft + _kJoystickBgRadius,
-        camera.viewport.size.y - _kJoystickMarginBottom - _kJoystickBgRadius,
+        _kJoystickMarginLeft + safeInsets.left + _kJoystickBgRadius,
+        camera.viewport.size.y - _kJoystickMarginBottom - safeInsets.bottom - _kJoystickBgRadius,
       );
       // Sprint double-tap must happen on the center joystick knob, not on the
       // outer joystick ring.
@@ -1536,6 +1773,9 @@ class HudButton extends PositionComponent with TapCallbacks {
   Color color;
   double opacity = 1.0;
   bool plain = false;
+
+  /// Pulsing golden ring: the tutorial points at this button.
+  bool highlight = false;
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
   String? keyLabel;
   
@@ -1563,6 +1803,18 @@ class HudButton extends PositionComponent with TapCallbacks {
     final center = Offset(size.x / 2, size.y / 2);
     final radius = size.x / 2;
     final selected = isActive?.call() ?? false;
+
+    if (highlight) {
+      final t = (DateTime.now().millisecondsSinceEpoch % 1000) / 1000.0;
+      canvas.drawCircle(
+        center,
+        radius + 6 + 8 * t,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..color = const Color(0xFFFFD54F).withValues(alpha: (1 - t) * opacity),
+      );
+    }
 
     if (!plain) {
       // 1. Schwarzer Rand / Schatten

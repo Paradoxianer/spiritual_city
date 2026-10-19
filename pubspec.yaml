@@ -42,7 +42,11 @@ flutter:
     - assets/images/
     - assets/images/kenney/roguelike_modern_city/
     - assets/images/kenney/rpg_urban_pack/
+    - assets/images/kenney/roguelike_indoors/
+    - assets/images/kenney/roguelike_rpg/
     - assets/audio/
+    - assets/audio/ambience/
+    - assets/audio/actions/
     - assets/audio/kenney/interface_sounds/
     - assets/audio/kenney/ui_audio/
     - assets/audio/kenney/impact_sounds/

@@ -5,7 +5,6 @@ extension GameOverlayControl on SpiritWorldGame {
     activeDialog = GameDialogData(npcName: name, npcEmoji: emoji, npcModel: model);
     overlays.add('DialogOverlay');
     paused = true;
-    tutorialService.onNpcDialogOpened();
   }
 
   /// Opens the look overlay, describing nearby cells around the player.
@@ -34,7 +33,7 @@ extension GameOverlayControl on SpiritWorldGame {
       String? streetName;
 
       if (data is BuildingData) {
-        final name = BuildingComponent.buildingName(data.type);
+        final name = BuildingComponent.buildingEmoji(data.type);
         final num  = data.houseNumber != null ? ' ${data.houseNumber}' : '';
         label = '$name$num';
         // Try to find a named road adjacent to this building cell.
@@ -109,6 +108,7 @@ extension GameOverlayControl on SpiritWorldGame {
         progress: m.progress,
         targetCount: m.targetCount,
         address: _addressForPixelPos(npcComp.position),
+        trackKey: GameMissionTracking.npcKey(npc.id),
       ));
     }
     for (final bldComp in chunkManager.allActiveBuildings) {
@@ -128,6 +128,7 @@ extension GameOverlayControl on SpiritWorldGame {
         progress: m.progress,
         targetCount: m.targetCount,
         address: _addressForPixelPos(bldComp.position),
+        trackKey: GameMissionTracking.buildingKey(bld.buildingId),
       ));
     }
     activeMissionBoardData = MissionBoardData(entries: entries);
@@ -182,6 +183,8 @@ extension GameOverlayControl on SpiritWorldGame {
   String handleInteraction(String type) {
     if (_nearestInteractable == null) return '❓';
     final result = _nearestInteractable!.handleInteraction(type);
+    GameSound.playAction(type, NpcActions.byType(type)?.discipline?.name);
+    tutorialService.onNpcAction(type);
 
     // ── ActionType mission advancement for NPC interactions (Issue #131) ──
     final at = MissionService.npcActionToType(type);
@@ -206,21 +209,55 @@ extension GameOverlayControl on SpiritWorldGame {
   }
 
   /// Opens the building-interior overlay for [building].
+  /// Always-open buildings are entered straight away (walkable room); homes
+  /// show the door to knock first.
   void openBuildingInterior(BuildingModel building) {
+    if (interior != null) return;
     building.resetSession();
     GameSound.play(Sfx.door, volume: 0.5);
     activeBuildingData = GameBuildingData(
       building: building,
       address: _addressForPixelPos(player.position),
     );
+    if (building.isAlwaysOpen) {
+      enterInterior(building);
+      return;
+    }
     overlays.add('BuildingInteriorOverlay');
     paused = true;
-    tutorialService.onBuildingInteracted();
   }
 
-  /// Closes the building-interior overlay.
+  /// Walking up into a door enters the building or knocks (playtest
+  /// 2026-10-18) – the same as 🖐️ in front of it. Fires once per push.
+  void _checkDoorStep() {
+    if (isSpiritualWorld || _currentMenu != null || activeBuildingData != null) return;
+    const cs = CellComponent.cellSize;
+    final p = player.position;
+    final px = (p.x / cs).floor(), py = (p.y / cs).floor();
+    final input = player.moveInput;
+    final pushing = input.y < -0.5 && input.y.abs() > input.x.abs();
+    final atDoor = p.y - py * cs < cs * 0.6 && KenneyCityRenderer.isDoor(grid.getCell, px, py - 1);
+    if (!pushing || !atDoor) {
+      _doorArmed = true;
+      return;
+    }
+    if (!_doorArmed) return;
+    _doorArmed = false;
+    final id = (grid.getCell(px, py - 1)!.data as BuildingData).buildingId;
+    chunkManager.allActiveBuildings
+        .where((b) => b.buildingModel.buildingId == id)
+        .firstOrNull
+        ?.onInteract();
+  }
+
+  /// Leaves the building (inside) or closes its door overlay.
   void closeBuildingInterior() {
+    if (interior != null) {
+      leaveInterior();
+      return;
+    }
     activeBuildingData = null;
+    _doorArmed = false; // still pushing against the door: stay outside
     overlays.remove('BuildingInteriorOverlay');
     // Also close the mission board if it was opened from inside the building.
     if (activeMissionBoardData != null) closeMissionBoard();
@@ -271,9 +308,10 @@ extension GameOverlayControl on SpiritWorldGame {
   bool handleEscape() {
     if (_pauseMenuOpen)              { closePauseMenu();         return true; }
     if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
+    if (cityMapOpen.value)           { closeCityMap();           return true; }
     if (activeLessonOffer != null)   { closeLesson();            return true; }
-    if (overlays.isActive('DaySummaryOverlay')) { startNextDay(); return true; }
     if (overlays.isActive('ChurchOverlay')) { closeChurchOverview(); return true; }
+    if (overlays.isActive('UpgradeOverlay')) { overlays.remove('UpgradeOverlay'); return true; }
     if (activeDialog != null)        { closeDialog();            return true; }
     if (activeBuildingData != null)  { closeBuildingInterior();  return true; }
     if (activeLookData != null)      { closeLookOverlay();       return true; }

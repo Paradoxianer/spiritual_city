@@ -1,10 +1,43 @@
 import '../models/prayer_combat.dart';
+import '../models/skills.dart';
 
 /// Abilities per prayer mode (#179, progression_and_unlocks.md §2): instead
 /// of only +10 % per upgrade, a mode's level (sum of its four upgrades)
 /// unlocks a new ability at [milestones]. Shown as emoji in the ⚔️ panel.
 abstract final class CombatAbilities {
   static const List<int> milestones = [3, 6];
+
+  /// Skill that makes [mode] usable (🕊️ Liberation is always there).
+  static Skill? modeSkill(PrayerMode mode) => switch (mode) {
+        PrayerMode.liberation => null,
+        PrayerMode.rebuke => Skill.spiritualWarfare,
+        PrayerMode.slow => Skill.binding,
+        PrayerMode.drain => Skill.disarming,
+      };
+
+  static bool canUse(PrayerMode mode, LearnedSkills learned) {
+    final s = modeSkill(mode);
+    return s == null || learned.has(s);
+  }
+
+  /// Mastery lessons of [mode] (⭐, ⭐⭐).
+  static (Skill, Skill) mastery(PrayerMode mode) => switch (mode) {
+        PrayerMode.liberation => (Skill.liberationMastery1, Skill.liberationMastery2),
+        PrayerMode.rebuke => (Skill.rebukeMastery1, Skill.rebukeMastery2),
+        PrayerMode.slow => (Skill.slowMastery1, Skill.slowMastery2),
+        PrayerMode.drain => (Skill.drainMastery1, Skill.drainMastery2),
+      };
+
+  /// Highest mode level the pastor may buy (sum of the four upgrades):
+  /// 2 without a mentor, 5 after ⭐, 10 after ⭐⭐ (playtest 2026-10-18).
+  static const List<int> levelCaps = [2, 5, 10];
+
+  static int levelCap(PrayerMode mode, LearnedSkills learned) {
+    final (m1, m2) = mastery(mode);
+    if (learned.has(m2)) return levelCaps[2];
+    if (learned.has(m1)) return levelCaps[1];
+    return levelCaps[0];
+  }
 
   /// Mode level = sum of its radius/strength/duration/speed upgrades.
   static int modeLevel(CombatModifierSet s) =>

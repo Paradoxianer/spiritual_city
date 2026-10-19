@@ -1,25 +1,32 @@
 import 'package:flutter/foundation.dart';
 
-/// All interactive tutorial steps shown to new players.
+/// "First steps" along the core loop (playtest 2026-10-18): faith from the
+/// Bible, people come to faith through talk and prayer, prayer liberates
+/// the city in the invisible world, daemons, the neighbourhood, missions.
+///
+/// Shown as a slim goal chip that never covers the game; 📍 on the map and
+/// a pulsing button show where to go and what to press. Each step ends
+/// when the player does the thing (info steps end with ✓).
 enum TutorialStep {
-  welcome,       // Step 1:  Welcome dialog (manual advance)
-  movement,      // Step 2:  Move around (auto-advance on cell change)
-  spiritWorld,   // Step 3:  Enter spiritual world (auto-advance)
-  prayer,        // Step 4:  Pray / combat in spirit world (auto-advance)
-  returnToCity,  // Step 5:  Return to city (auto-advance)
-  radialMenu,    // Step 6:  Use radial menu near an NPC (auto-advance)
-  npcTalk,       // Step 7:  Open NPC dialog and interact (auto-advance)
-  hudExplain,    // Step 8:  HUD / resource explanation (manual advance)
-  homebase,      // Step 9:  Pastor house / homebase – auto-advances + skips firstMission on building entry
-  firstMission,  // Step 10: First mission – only reached if homebase was already done separately (auto-advance)
-  completed,     // Step 11: Tutorial completed (manual dismiss)
+  goHome('🏠🚪'),
+  readBible('📖'),
+  talk('👤💬'),
+  prayPerson('👤🙏'),
+  enterSpirit('🙏🌐'),
+  liberate('✝️🟩'),
+  defeatDaemon('👹'),
+  returnCity('🏙️'),
+  quarter('🏘️🏰'),
+  mission('📋📍'),
+  completed('🎉');
+
+  final String emoji;
+  const TutorialStep(this.emoji);
+
+  /// Steps that only explain something: the player confirms with ✓.
+  bool get isInfo => this == quarter || this == completed;
 }
 
-/// Manages the interactive tutorial for new players.
-///
-/// Call [startTutorial] once on a fresh game session to begin the tutorial.
-/// Hook the event methods ([onPlayerMoved], [onNpcDialogOpened] etc.) into the
-/// appropriate game-logic callsites so steps advance automatically.
 class TutorialService {
   /// Current active tutorial step.  `null` while the tutorial is inactive.
   final ValueNotifier<TutorialStep?> currentStepNotifier =
@@ -32,22 +39,10 @@ class TutorialService {
 
   bool get isActive => currentStepNotifier.value != null;
 
-  /// Whether the skip button should be shown for the current step.
-  ///
-  /// Skip is allowed from the very first step so that returning players are not
-  /// forced through the tutorial again.
-  bool get canSkip {
-    final step = currentStepNotifier.value;
-    if (step == null) return false;
-    return step != TutorialStep.completed;
-  }
-
-  /// Starts the tutorial from the welcome step.
-  ///
-  /// Does nothing when the tutorial has already been completed.
-  void startTutorial() {
+  /// Starts the tutorial (at [at] when resuming a save).
+  void startTutorial({TutorialStep? at}) {
     if (isTutorialCompleted) return;
-    currentStepNotifier.value = TutorialStep.welcome;
+    currentStepNotifier.value = at ?? TutorialStep.values.first;
   }
 
   /// Advances to the next tutorial step.
@@ -66,61 +61,61 @@ class TutorialService {
     currentStepNotifier.value = null;
   }
 
-  /// Skips the tutorial entirely (available from step 4 onward).
-  void skipTutorial() {
-    isTutorialCompleted = true;
-    currentStepNotifier.value = null;
+  /// Skips the tutorial entirely (pause menu).
+  void skipTutorial() => completeTutorial();
+
+  /// Starts over from the first step (pause menu).
+  void restartTutorial() {
+    isTutorialCompleted = false;
+    currentStepNotifier.value = TutorialStep.values.first;
   }
 
   void dispose() => currentStepNotifier.dispose();
 
+  void _done(TutorialStep step) {
+    if (currentStep == step) nextStep();
+  }
+
   // ── Event hooks ──────────────────────────────────────────────────────────
 
-  /// Call when the player moves to a new grid cell.
-  void onPlayerMoved() {
-    if (currentStep == TutorialStep.movement) nextStep();
+  /// The pastor stepped into a building.
+  void onEnteredBuilding({required bool isHomebase}) {
+    if (isHomebase) _done(TutorialStep.goHome);
   }
 
-  /// Call when an NPC dialog overlay opens.
-  ///
-  /// No longer auto-advances the tutorial; [TutorialStep.npcTalk] is a
-  /// manual-advance step so the player can read the info and press "Weiter".
-  void onNpcDialogOpened() {
-    // npcTalk is now a manual-advance step – nothing to do here.
+  /// A building action succeeded ([type] as in BuildingActions).
+  void onBuildingAction(String type) {
+    if (type == 'readBible') {
+      _done(TutorialStep.goHome); // read without the step being noticed
+      _done(TutorialStep.readBible);
+    }
   }
 
-  /// Call when the player selects any action from the radial menu.
-  void onRadialMenuActionSelected() {
-    if (currentStep == TutorialStep.radialMenu) nextStep();
+  /// An action in the dialog with a person ([type] as in NpcActions).
+  void onNpcAction(String type) {
+    if (type == 'talk') _done(TutorialStep.talk);
+    if (type == 'pray') _done(TutorialStep.prayPerson);
   }
 
-  /// Call when the player enters the spiritual world.
-  void onEnteredSpiritWorld() {
-    if (currentStep == TutorialStep.spiritWorld) nextStep();
-  }
+  void onEnteredSpiritWorld() => _done(TutorialStep.enterSpirit);
 
-  /// Call when the player performs a prayer / combat action in the spiritual
-  /// world (i.e. releases a prayer charge).
-  void onPrayerPerformed() {
-    if (currentStep == TutorialStep.prayer) nextStep();
-  }
+  /// A prayer wave was released in the invisible world.
+  void onPrayerPerformed() => _done(TutorialStep.liberate);
 
-  /// Call when the player returns to the visible (city) world.
-  void onReturnedToCity() {
-    if (currentStep == TutorialStep.returnToCity) nextStep();
-  }
+  void onDaemonKilled() => _done(TutorialStep.defeatDaemon);
 
-  /// Call when the player opens a building interior.
-  ///
-  /// Advances [TutorialStep.homebase] and [TutorialStep.firstMission] in one
-  /// go: entering the pastor house (or any building while the homebase step is
-  /// active) satisfies both steps so the player is not asked to enter a second
-  /// building separately.
-  void onBuildingInteracted() {
-    if (currentStep == TutorialStep.homebase) {
-      nextStep(); // homebase → firstMission
-      nextStep(); // firstMission → completed
-    } else if (currentStep == TutorialStep.firstMission) {
+  void onReturnedToCity() => _done(TutorialStep.returnCity);
+
+  /// A mission or lesson was accepted with 📍.
+  void onMissionTracked() => _done(TutorialStep.mission);
+
+  /// ✓ on an info step.
+  void confirmInfo() {
+    final step = currentStep;
+    if (step == null || !step.isInfo) return;
+    if (step == TutorialStep.completed) {
+      completeTutorial();
+    } else {
       nextStep();
     }
   }

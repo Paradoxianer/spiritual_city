@@ -1,23 +1,21 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'dart:math' show atan2, pi, Random, sin;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../core/utils/stable_hash.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
-import '../domain/actions/building_actions.dart';
 import '../domain/services/combat_abilities.dart';
-import '../domain/services/learning_service.dart';
-import '../domain/models/quarter.dart';
 import '../domain/models/skills.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
 import '../domain/actions/practice.dart';
-import '../domain/actions/resource.dart';
 import '../domain/models/base_interactable_entity.dart';
+import '../domain/city_generation/city_overview.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
 import '../domain/models/game_keymap.dart';
@@ -25,24 +23,29 @@ import '../domain/models/npc_backstory.dart';
 import '../domain/models/npc_model.dart';
 import '../domain/models/npc_reaction.dart';
 import '../domain/models/prayer_combat.dart';
+import '../domain/models/quarter.dart';
 import '../domain/services/faith_calculator_service.dart';
+import '../domain/services/learning_service.dart';
 import '../domain/services/tutorial_service.dart';
 import '../presentation/components/building_component.dart';
+import 'components/cell_component.dart';
+import 'components/daemon_component.dart';
 import 'components/npc_component.dart';
+import 'components/stronghold_component.dart';
 import 'spirit_world_game.dart';
 import 'widgets/action_button.dart';
 import 'widgets/overlay_shell.dart';
 
 part 'hud/hud.dart';
+part 'hud/minimap.dart';
 part 'overlays/building_interior.dart';
 part 'overlays/church.dart';
-part 'overlays/day_summary.dart';
+part 'overlays/city_map.dart';
 part 'overlays/lesson.dart';
 part 'overlays/look.dart';
 part 'overlays/missions.dart';
 part 'overlays/npc_dialog.dart';
 part 'overlays/pause.dart';
-part 'overlays/room.dart';
 part 'overlays/shared.dart';
 part 'overlays/tutorial.dart';
 part 'overlays/upgrades.dart';
@@ -65,13 +68,17 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late final SpiritWorldGame _game;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Full screen while playing: the system bars stay hidden until swiped
+    // in, so they cannot swallow taps on the HUD (#190).
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _game = SpiritWorldGame(
       difficulty: widget.difficulty,
       gameSave: widget.gameSave,
@@ -82,6 +89,21 @@ class _GameScreenState extends State<GameScreen> {
     if (getIt<MenuService>().isTutorialCompleted) {
       _game.tutorialService.isTutorialCompleted = true;
     }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    GameAmbience.stop();
+    super.dispose();
+  }
+
+  /// No background sound while the app is not in front; the game sets it
+  /// again on its next tick.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) GameAmbience.stop();
   }
 
   /// Captures the current game state, persists it to Hive and returns to the
@@ -118,8 +140,23 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  /// Insets the HUD buttons keep clear of: system bars, notch and the
+  /// gesture zones (back swipe at the sides, home swipe at the bottom).
+  void _syncSafeInsets(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final v = mq.viewPadding, g = mq.systemGestureInsets;
+    final insets = EdgeInsets.fromLTRB(
+      v.left > g.left ? v.left : g.left,
+      0,
+      v.right > g.right ? v.right : g.right,
+      v.bottom > g.bottom ? v.bottom : g.bottom,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _game.setSafeInsets(insets));
+  }
+
   @override
   Widget build(BuildContext context) {
+    _syncSafeInsets(context);
     return PopScope(
       // There is nothing to pop – /game replaces the router stack – so the
       // Android/desktop back gesture must never be allowed to fall through
@@ -140,11 +177,11 @@ class _GameScreenState extends State<GameScreen> {
               'DialogOverlay': (context, game) => DialogOverlay(game: _game),
               'BuildingInteriorOverlay': (context, game) =>
                   BuildingInteriorOverlay(game: _game),
+              'UpgradeOverlay': (context, game) => UpgradeOverlay(game: _game),
               'LookOverlay': (context, game) => LookOverlay(game: _game),
               'MissionBoardOverlay': (context, game) =>
                   MissionBoardOverlay(game: _game),
               'LessonOverlay': (context, game) => LessonOverlay(game: _game),
-              'DaySummaryOverlay': (context, game) => DaySummaryOverlay(game: _game),
               'ChurchOverlay': (context, game) => ChurchOverlay(game: _game),
               'KeymapOverlay': (context, game) =>
                   KeymapOverlay(game: _game),
@@ -192,6 +229,18 @@ class _GameScreenState extends State<GameScreen> {
               );
             },
           ),
+          // Minimap – top right, below the pause button.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) {
+              if (!isReady) return const SizedBox.shrink();
+              return Positioned(
+                top: 68,
+                right: 12,
+                child: _Minimap(game: _game),
+              );
+            },
+          ),
           // Resource HUD + Pastorhouse compass – combined in a single Positioned
           // column so the compass is always rendered directly below the resource
           // bars, regardless of how tall the bar panel happens to be.
@@ -211,7 +260,7 @@ class _GameScreenState extends State<GameScreen> {
                       children: [
                         _ResourceHud(gameRef: _game),
                         _PastorhouseHud(game: _game),
-                        _DayQuarterChips(game: _game),
+                        _TrackedMissionHud(game: _game),
                         _LessonChip(game: _game),
                       ],
                     ),
@@ -286,12 +335,24 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
+          // Inside a building: its bar above the HUD.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.interiorActive,
+            builder: (context, inside, _) =>
+                inside ? InteriorHud(game: _game) : const SizedBox.shrink(),
+          ),
+          // City map – above the HUD so nothing covers it.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.cityMapOpen,
+            builder: (context, open, _) =>
+                open ? CityMapOverlay(game: _game) : const SizedBox.shrink(),
+          ),
           // Tutorial overlay – shown for new players until tutorial is complete.
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
               if (!isReady) return const SizedBox.shrink();
-              return _TutorialOverlay(game: _game);
+              return _TutorialChip(game: _game);
             },
           ),
           // Win screen – shown when the player has converted all NPCs and
@@ -322,13 +383,10 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
-  static const _verses = [
-    '"Der Herr ist mein Hirte" – Psalm 23,1',
-    '"Bittet, so wird euch gegeben" – Mt 7,7',
-    '"Die Wahrheit wird euch frei machen" – Joh 8,32',
-    '"Ich kann alles durch Christus" – Phil 4,13',
-    '"Gott ist Liebe" – 1 Joh 4,8',
-  ];
+  /// Loading verses (localised: Luther 1912 / KJV wording).
+  static List<String> get _verses => [
+        for (var i = 1; i <= 5; i++) AppStrings.get('loading.verse$i'),
+      ];
 
   int _verseIndex = 0;
   Timer? _verseTimer;
@@ -397,7 +455,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Die Stadt erwacht...',
+                  '🏙️ … ☀️',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 13,

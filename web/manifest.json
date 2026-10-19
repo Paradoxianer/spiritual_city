@@ -1,11 +1,11 @@
 {
-    "name": "spiritual_city",
-    "short_name": "spiritual_city",
+    "name": "SpiritWorld City",
+    "short_name": "SpiritWorld",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0D1B2A",
+    "theme_color": "#0D1B2A",
+    "description": "SpiritWorld City – a game about a pastor who helps and prays for the people of his city.",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [

@@ -18,9 +18,12 @@ class LotGenerator {
   final SpecialBuildingRegistry _registry;
   final PerlinNoise _spiritNoise;
 
+  final int _lotSeed;
+
   LotGenerator({required int seed, required SpecialBuildingRegistry registry})
       : _registry = registry,
-        _spiritNoise = PerlinNoise(seed: seed + 99);
+        _lotSeed = seed * 2654435761,
+        _spiritNoise = PerlinNoise(seed: seed + 99, frequency: 1);
 
   CellData? generateLotContent(
       int wx, int wy, DistrictType district, Random rand) {
@@ -63,18 +66,36 @@ class LotGenerator {
       return _buildingData(lotSpecial, wx, wy, grid, modX, modY, district, rand);
     }
 
-    // ---- 3. Chance to leave lot unpaved (nature / gap) ------------------
-    final double buildChance = _buildChance(district);
-    if (rand.nextDouble() > buildChance) {
+    // ---- 3. One decision per lot (#18 playtest) ---------------------------
+    // Built or not, building type and footprint are decided once per lot,
+    // so a lot shows one coherent building instead of a patchwork of
+    // random cells.
+    final lotRand = Random(_lotSeed ^ (rootX * 73856093) ^ (rootY * 19349663));
+    if (lotRand.nextDouble() > _buildChance(district)) {
       return _generateNature(district, rand);
     }
 
     // ---- 4. Ordinary building type from district rules ------------------
     final double sVal =
-        (_spiritNoise.getNoise2(wx * 0.1, wy * 0.1) + 1) / 2;
+        (_spiritNoise.getNoise2(rootX * 0.1, rootY * 0.1) + 1) / 2;
     final BuildingType bType =
-        _ordinaryBuildingType(district, rand, sVal);
+        _ordinaryBuildingType(district, lotRand, sVal);
+
+    // Low-rise buildings stand in a garden: one ring of green inside the lot.
+    final int inset = _gardenInset(bType, district);
+    if (modX <= inset || modY <= inset || modX >= grid - inset || modY >= grid - inset) {
+      return NatureData(type: rand.nextDouble() < 0.2 ? NatureType.tree : NatureType.park);
+    }
     return _buildingData(bType, wx, wy, grid, modX, modY, district, rand);
+  }
+
+  int _gardenInset(BuildingType type, DistrictType district) {
+    if (district == DistrictType.slums) return 0;
+    return switch (type) {
+      BuildingType.house || BuildingType.shop => 1,
+      BuildingType.apartment when district != DistrictType.downtown => 1,
+      _ => 0,
+    };
   }
 
   // ---- Building data factory -------------------------------------------
@@ -200,11 +221,10 @@ class LotGenerator {
   }
 
   CellData _generateNature(DistrictType district, Random rand) {
-    if (district == DistrictType.park) {
-      return NatureData(
-          type: rand.nextDouble() > 0.4 ? NatureType.tree : NatureType.park);
-    }
-    return NatureData(type: NatureType.tree);
+    // Mostly lawn with some trees: open green instead of a solid forest.
+    final treeChance = district == DistrictType.park ? 0.35 : 0.25;
+    return NatureData(
+        type: rand.nextDouble() < treeChance ? NatureType.tree : NatureType.park);
   }
 
   int _floorCount(BuildingType type, DistrictType district, Random rand) {

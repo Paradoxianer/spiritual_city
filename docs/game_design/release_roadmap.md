@@ -198,7 +198,7 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | **M1 – Einfach & konsistent** | Redesign §2 (Aktions-Modell, `ActionButton`, `OverlayShell`, Dateien aufteilen), Übung & Beziehung §3.4, Tutorial anpassen | #185 #83 #126 #92 |
 | **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Stadtteil-Erweckung + Bollwerk, Tag + Tagesbilanz §3.3, wabernde unsichtbare Welt (Shader) §3.6, erste Sounds §3.7, Lern-Missionen-Rahmen + "Unterscheidung der Geister" §3.9 | #178 #180 #125 #169 #143 |
 | **M3 – Gemeinde & Erkunden** | Rollen, verwundeter Heiler §3.2, Gemeinde-Übersicht, Predigen, Fähigkeiten pro Stufe, weitere Lern-Missionen §3.9, begehbare Innenräume §3.5 | #181 #172 #179 #173 |
-| **M4 – Release 1.0** | Grafik (Kenney-Sprites §3.7, Distrikt-Identität), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 |
+| **M4 – Release 1.0** | Grafik (Kenney-Sprites §3.7, Distrikt-Identität), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits, Vollbild/Insets auf Android | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 #190 |
 | **Nach 1.0** | Cloud-Speicher, reale Städte (OSM), dezente Werbung, Minimap | #165 #166 #128 #164 #146 |
 
 **Warum diese Reihenfolge:** M1 vor M2, weil jedes neue Feature sonst noch eine sechste UI-Variante und noch mehr String-Aktionen erzeugt. M2 vor M3, weil die Gemeinde erst Sinn ergibt, wenn es Etappen gibt, in denen sie hilft. Grafik und Audio kommen bewusst spät: Sie verstärken den Spaß, ersetzen aber keinen fehlenden Kern.
@@ -244,6 +244,25 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | Fähigkeiten pro Stufe (#179) | ✅ Je Modus zwei Fähigkeiten ab Modus-Stufe 3 und 6 (Summe der vier Upgrades), im ⚔️-Panel mit 🔒 und Ansage beim Freischalten. | |
 | Missions-Tiers (#173) | ✅ Teil: Belohnung × (1 + 0,5 × erweckte Viertel); die Erweckung selbst ist das Tier-3-Ziel mit qualitativer Belohnung (Predigen). Offen: Quest-Ketten (Tier 2). | |
 | Begehbare Innenräume (§3.5) | ✅ Vereinfacht im Raster des Raums: tippen zum Laufen, Möbel lösen Aktionen aus, ✨ Fundstück je Gebäude (einmalig), Bewohner stehen im Raum. Keine eigene Flame-Welt. | |
+
+### 4.4 Stand M4 (Branch `feat/m4-release`, gestapelt auf M3)
+
+| Punkt | Stand |
+| :--- | :--- |
+| Recht (#93, #150) | ✅ Datenschutz, Nutzungsbedingungen, Impressum in den Einstellungen (de/en); `web/privacy.html` als Store-URL. ⚠️ Impressum hat Platzhalter ⟨…⟩, die der Herausgeber ausfüllen muss. |
+| Eltern-Hinweis (#153) | ✅ beim ersten Start, versioniert; „Verlassen“ schließt die App. |
+| Credits (#151) | ✅ Kenney CC0, Bibelübersetzungen (gemeinfrei), Bibliotheks-Lizenzen über `showLicensePage`. |
+| i18n-Audit (#152) | ✅ Spielbildschirme textfrei bzw. de/en; Sprachwahl wird gespeichert. |
+| Grafik (#13/#18/#182) | ✅ Kenney-Figuren mit Laufanimation für Pastor und Menschen; Farbtönung je Distrikttyp. ✅ Stadt aus Kenney-Kacheln: ein Gebäude pro Grundstück mit Dach, Fassade, Tür, Garten (Playtest 2026-10-18). |
+| Innenräume (§3.5, #182) | ✅ Dritte Ebene: begehbare Räume, prozedural je Gebäude (stabil aus der Gebäude-ID), Kenney Roguelike Indoors/RPG. Möbel sind Stationen der Gebäude-Aktionen; Bewohner, 🎓 Mentor, ✨. Alle Sondergebäude eigen eingerichtet. Anklopfen bleibt Tür-Dialog. |
+| Minimap & Stadtkarte | ✅ Oben rechts: Stadt (Straßen, Häuser, Sondergebäude, 📋-Ziele) bzw. unsichtbare Welt (Zellzustand, Dämonen, 🏰); Tippen vergrößert, Doppeltippen öffnet die Karte der ganzen Stadt (aus dem Generator berechnet, 🎓 Mentoren, erweckte Viertel). |
+| Missionen annehmen | ✅ 📍 im Missionsbrett: Ziel auf Minimap/Karte, Pfeil im HUD, gespeichert. ✅ Zweiter Reiter 🎓 Lern-Pfad: alle Fähigkeiten (✅ gelernt, Fortschritt, 🎓 Mentor-Gebäude, 🔒 Voraussetzungen, was sie freischalten); 📍 führt zum nächsten Mentor. Offen: Missions-Ketten, die zu neuen Fähigkeiten führen (Idee, siehe Lern-Missionen §3.9). |
+| Audio (#10) | ✅ Effekte (M2). ✅ Umgebungsgeräusche (Stadt, Wohnung, Halle, Kirche, unsichtbare Welt – sphärisch mit fernen Dämonenstimmen) und Klänge für 💬, 🙏, 😴 und die vier Gebetswellen (🕊️ 🫸 ⏳ 🪫), synthetisch erzeugt (`tools/gen_ambience.py`). Offen: Musik / echte Aufnahmen (Pixabay-Audio-Zugang fehlt). |
+| Kampf-Fortschritt (Playtest 2026-10-18) | ✅ Kampfarten einzeln über Mentoren: ⚔️🫸 (⛪, 8 👹) → ⏳ Binden (🏛️/📚, 15 👹, Mt 18,18) → 🪫 Entwaffnen (🏛️, 25 👹, ab 1 erwecktem Viertel, Kol 2,15). Meisterschaft je Kampfart: ⭐ (10 👹 mit dieser Art) hebt die Stufen-Grenze 2 → 5, ⭐⭐ (20 👹, ab 2 Vierteln) → 10; damit kommen auch die zwei Spezialfähigkeiten. Alte Spielstände mit ⚔️ müssen ⏳/🪫 neu lernen. |
+| Aktionen in Zweckgebäuden (Playtest 2026-10-18) | ✅ Statt überall 🙏💬📦 mit Glaubensgewinn: 🚒 Feuerwehr 🚒🙏 Fahrzeugsegnung (kostet 🙏), 👂🚒 Einsatz-Seelsorge (kostet ❤️🍞, gibt 📖), 🍲 Essen bringen; 📮 Post ✉️💌 Ermutigungskarten; 📚 Bibliothek 📚 Studieren (📖), 📖👥 Lesekreis; 🏛️ Museum 🖼️⛪ Kirchengeschichte (📖); 🏭 Fabrik/Lager/Kraftwerk 🛠️ Mitarbeiten (gibt 📦, kostet ❤️🍞), 🙏👷 Gebet für die Arbeiter. Nur Gebet gibt dem Pastor etwas 🙏 zurück. |
+| Tutorial neu (Playtest 2026-10-18) | ✅ „Erste Schritte“ statt verdeckender Karten: schmaler Ziel-Chip oben (antippen = Erklärung), 📍-Ziel auf der Minimap (türkis) und Pfeil, pulsierender Knopf. Schritte entlang des Kern-Kreislaufs: 🏠📖 → 👤💬 → 👤🙏 → 🙏🌐 → ✝️🟩 → 👹 → 🏙️ → 🏘️🏰 (✓) → 📋📍 → 🎉. Fortschritt wird gespeichert, Überspringen im Pause-Menü. |
+| Android-Navigationsleiste (#190) | ✅ Im Spiel Vollbild (immersiveSticky); Joystick, Aktions-/Weltwechsel-Knopf und Modusleiste halten Abstand zu Systemleisten, Notch und Gestenzonen. Wartet auf Test auf dem Pixel 9a. |
+| Store (#94/#95) | ✅ App-Name, vorläufiges Icon, Store-Texte de/en, Checkliste. ⚠️ App-ID, Signatur, Konten, IARC, Screenshots: Herausgeber, siehe `docs/release/release_checklist.md`. |
 
 ---
 

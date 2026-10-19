@@ -67,7 +67,7 @@ void main() {
 
     test('entries list contains the world-toggle shortcut', () {
       final hasWorldToggle = GameKeymap.entries.any(
-        (e) => e.keys.contains('Tab'),
+        (e) => e.keys.contains('Q'),
       );
       expect(hasWorldToggle, isTrue);
     });

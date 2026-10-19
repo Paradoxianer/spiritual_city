@@ -138,7 +138,11 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
         _continuousSpawnTimer = 0.0;
         _nextSpawnInterval = _continuousSpawnMin +
             _rng.nextDouble() * (_continuousSpawnMax - _continuousSpawnMin);
-        _maybeContinuousSpawn();
+        if (game.tutorialCalmSpirit) {
+          _keepTutorialDaemon();
+        } else {
+          _maybeContinuousSpawn();
+        }
       }
     }
   }
@@ -254,7 +258,7 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     _log.fine('Spiritual tick: $updates cells updated');
 
     // Spawn daemons in strongly negative regions
-    _maybeSpawnDaemons(chunks);
+    if (!game.tutorialCalmSpirit) _maybeSpawnDaemons(chunks);
   }
 
   void _maybeSpawnDaemons(List<CityChunk> chunks) {
@@ -382,6 +386,26 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       tier: tier,
       hostNpcId: host,
     );
+  }
+
+  /// The first fight in the tutorial (playtest 2026-10-19): one slow 🪨
+  /// with little energy instead of a swarm, so a new player can learn to
+  /// hold ✝️ and hit it.
+  void spawnTutorialDaemon() {
+    final p = game.player.position;
+    final a = _rng.nextDouble() * math.pi * 2;
+    final pos = Vector2(p.x + math.cos(a) * 170, p.y + math.sin(a) * 170);
+    game.world.add(DaemonComponent(DaemonModel(
+      id: 'daemon_tutorial_${_daemonIdCounter++}',
+      position: pos,
+      energy: _initialEnergy() * 0.3,
+      kind: DaemonKind.brute,
+    )));
+  }
+
+  /// While the tutorial fight is due, a new one appears if it got away.
+  void _keepTutorialDaemon() {
+    if (game.world.children.whereType<DaemonComponent>().isEmpty) spawnTutorialDaemon();
   }
 
   /// Spawns a stronghold guard of [kind] at [position] (#125).

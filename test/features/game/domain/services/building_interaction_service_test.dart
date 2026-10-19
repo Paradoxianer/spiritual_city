@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiritual_city/src/features/game/domain/actions/practice.dart';
+import 'package:spiritual_city/src/features/game/domain/actions/building_actions.dart';
 import 'package:spiritual_city/src/features/game/domain/models/building_model.dart';
 import 'package:spiritual_city/src/features/game/domain/models/cell_object.dart';
 import 'package:spiritual_city/src/features/game/domain/models/npc_model.dart';
@@ -644,33 +646,70 @@ void main() {
     });
 
     group('performAction – generic (factory, civic, etc.)', () {
-      test('pray: +8 faith, residents +2 faith', () {
+      test('pray: a little faith (+3), residents +2 faith', () {
         final resident = npc();
         final b = factory(residents: [resident]);
         final result = BuildingInteractionService().performAction('pray', b, 0.0);
-        expect(result.playerFaithDelta, 8.0);
+        expect(result.playerFaithDelta, 3.0);
         expect(resident.faith, 2.0);
       });
 
-      test('witness: +10 faith, residents +4 faith', () {
+      test('witness: no faith for the pastor, residents +4 faith', () {
         final resident = npc();
         final b = factory(residents: [resident]);
         final result = BuildingInteractionService().performAction('witness', b, 0.0);
-        expect(result.playerFaithDelta, 10.0);
+        expect(result.playerFaithDelta, 0.0);
         expect(resident.faith, 4.0);
       });
 
-      test('distribute: -8 materials, +12 faith, residents +3 faith', () {
+      test('distribute: -8 materials, no faith, residents +3 faith', () {
         final resident = npc();
         final b = factory(residents: [resident]);
         final result = BuildingInteractionService().performAction('distribute', b, 0.0);
-        expect(result.playerFaithDelta, 12.0);
+        expect(result.playerFaithDelta, 0.0);
         expect(result.playerMaterialsDelta, -8.0);
         expect(resident.faith, 3.0);
       });
 
       test('unknown action returns failure', () {
         expect(BuildingInteractionService().performAction('unknown', factory(), 0.0).success, isFalse);
+      });
+
+      test('civic & work places: only prayer gives the pastor faith (playtest)', () {
+        for (final type in [
+          BuildingType.fireStation,
+          BuildingType.postOffice,
+          BuildingType.library,
+          BuildingType.museum,
+          BuildingType.factory,
+          BuildingType.warehouse,
+          BuildingType.powerPlant,
+        ]) {
+          for (final a in BuildingActions.forType(type)) {
+            final b = BuildingModel(buildingId: 'x', type: type);
+            final r = BuildingInteractionService().performAction(a.type, b, 0.0);
+            expect(r.success, isTrue, reason: '$type ${a.type}');
+            if (a.discipline != Discipline.prayer) {
+              expect(r.playerFaithDelta, lessThanOrEqualTo(0), reason: '$type ${a.type}');
+            }
+          }
+        }
+      });
+
+      test('fire station: blessing costs faith, chaplaincy costs strength and teaches', () {
+        final b = BuildingModel(buildingId: 'f', type: BuildingType.fireStation);
+        final bless = BuildingInteractionService().performAction('blessVehicles', b, 0.0);
+        expect(bless.playerFaithDelta, lessThan(0));
+        final care = BuildingInteractionService().performAction('chaplaincy', b, 0.0);
+        expect(care.playerHealthDelta, lessThan(0));
+        expect(care.playerInsightDelta, greaterThan(0));
+      });
+
+      test('work shift earns supplies', () {
+        final b = factory();
+        final r = BuildingInteractionService().performAction('workShift', b, 0.0);
+        expect(r.playerMaterialsDelta, greaterThan(0));
+        expect(r.playerHealthDelta, lessThan(0));
       });
     });
 

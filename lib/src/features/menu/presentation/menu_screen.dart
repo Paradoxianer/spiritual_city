@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/i18n/app_strings.dart';
+import '../domain/legal_texts.dart';
 import '../domain/menu_service.dart';
 import 'widgets/language_toggle.dart';
 import 'widgets/menu_button.dart';
@@ -20,6 +21,50 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // First start (or a new privacy notice): short notice for kids and
+    // parents (#153).
+    if (widget.menuService.needsConsent) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showConsent());
+    }
+  }
+
+  Future<void> _showConsent() async {
+    if (!mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A2A3A),
+        title: Text(LegalTexts.get('consent.title'), style: const TextStyle(color: Colors.white)),
+        content: SingleChildScrollView(
+          child: Text(LegalTexts.get('consent.body'),
+              style: TextStyle(color: Colors.blueGrey.shade100, height: 1.4)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(LegalTexts.get('consent.leave')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(LegalTexts.get('consent.accept')),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.menuService.acceptConsent();
+    } else {
+      // Leaving: close the app (on the web there is nothing to close – show
+      // the notice again).
+      await SystemNavigator.pop();
+      if (mounted) _showConsent();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Rebuild when the language changes so button labels update.
@@ -69,6 +114,7 @@ class _MenuScreenState extends State<MenuScreen> {
                           LanguageToggle(
                             languageNotifier:
                                 widget.menuService.languageNotifier,
+                            onChanged: widget.menuService.setLanguage,
                           ),
                           const SizedBox(height: 8),
                         ],
@@ -131,8 +177,7 @@ class _MenuScreenState extends State<MenuScreen> {
         MenuButton(
           icon: Icons.settings,
           label: AppStrings.get('menu.settings'),
-          onPressed: () => _showSettingsPlaceholder(context),
-          color: Colors.blueGrey.shade500,
+          onPressed: () => context.go('/settings'),
         ),
         MenuButton(
           icon: Icons.exit_to_app,
@@ -141,32 +186,6 @@ class _MenuScreenState extends State<MenuScreen> {
           color: Colors.redAccent.shade100,
         ),
       ],
-    );
-  }
-
-  void _showSettingsPlaceholder(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A2A3A),
-        title: Text(
-          AppStrings.get('settings.title'),
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: Text(
-          AppStrings.get('settings.placeholder'),
-          style: TextStyle(color: Colors.blueGrey.shade300),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              AppStrings.get('settings.back'),
-              style: const TextStyle(color: Colors.blueGrey),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

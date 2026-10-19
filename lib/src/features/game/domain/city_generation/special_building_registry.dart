@@ -193,6 +193,59 @@ class SpecialBuildingRegistry {
     return null;
   }
 
+  /// Global landmark cells (some only become a landmark in the right
+  /// district – [all] checks that via [getSpecialBuilding]).
+  static const List<(int, int)> _globalCells = [
+    (_pastorHouseX, _pastorHouseY),
+    (_cityHallX, _cityHallY),
+    (_cathedralOffX, _cathedralOffY),
+    (_trainStOffX, _trainStOffY),
+    (_stadiumOffX, _stadiumOffY),
+    (_universityOffX, _universityOffY),
+    (_centralLibOffX, _centralLibOffY),
+    (_museumOffX, _museumOffY),
+    (_powerPlantOffX, _powerPlantOffY),
+  ];
+
+  static const List<(int, int)> _zones = [
+    (_hospitalZone, 0),
+    (_policeZone, 1),
+    (_fireZone, 2),
+    (_schoolZone, 3),
+    (_churchZone, 4),
+    (_libraryZone, 5),
+    (_mallZone, 6),
+    (_supermarketZone, 7),
+    (_postOfficeZone, 8),
+    (_cemeteryZone, 9),
+  ];
+
+  /// Every special building within [radius] cells of the city centre, for
+  /// the city map – without generating any chunk.
+  List<(int, int, BuildingType)> all(int radius, DistrictType Function(int wx, int wy) districtAt) {
+    final out = <(int, int, BuildingType)>[];
+    final seen = <(int, int)>{};
+    void check(int x, int y) {
+      if (x.abs() > radius || y.abs() > radius || !seen.add((x, y))) return;
+      final t = getSpecialBuilding(x, y, districtAt(x, y));
+      if (t != null) out.add((x, y, t));
+    }
+
+    for (final (x, y) in _globalCells) {
+      check(x, y);
+    }
+    for (final (size, salt) in _zones) {
+      final lo = _floorDiv(-radius, size), hi = _floorDiv(radius, size);
+      for (int zy = lo; zy <= hi; zy++) {
+        for (int zx = lo; zx <= hi; zx++) {
+          check(zx * size + _zoneHash(zx, zy, salt).abs() % size,
+              zy * size + _zoneHash(zx, zy, salt + 100).abs() % size);
+        }
+      }
+    }
+    return out;
+  }
+
   /// Returns true when ([wx], [wy]) is the deterministic "centre cell" of the
   /// zone that ([wx], [wy]) belongs to, given [zoneSize] and a [salt] that
   /// differentiates zone types from each other.

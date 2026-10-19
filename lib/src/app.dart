@@ -6,6 +6,7 @@ import 'features/menu/domain/menu_service.dart';
 import 'features/menu/presentation/difficulty_selector.dart';
 import 'features/menu/presentation/load_game_screen.dart';
 import 'features/menu/presentation/menu_screen.dart';
+import 'features/menu/presentation/settings_screen.dart';
 
 class SpiritWorldCityApp extends StatelessWidget {
   const SpiritWorldCityApp({super.key});
@@ -38,6 +39,14 @@ final _router = GoRouter(
       builder: (context, state) => DifficultySelector(
         menuService: getIt<MenuService>(),
       ),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => SettingsScreen(menuService: getIt<MenuService>()),
+    ),
+    GoRoute(
+      path: '/info/:page',
+      builder: (context, state) => InfoScreen(page: state.pathParameters['page'] ?? 'privacy'),
     ),
     GoRoute(
       path: '/load',

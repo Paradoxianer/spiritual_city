@@ -46,12 +46,11 @@ extension GameBuildingActions on SpiritWorldGame {
       result = result.withFaithDelta(
           (result.playerFaithDelta * progress.practice.multiplier(discipline)).roundToDouble());
     }
-    // Sunday is the day for the Sunday service (§3.3).
-    if (actionType == 'sundayService' && dayStats.isSunday && result.playerFaithDelta > 0) {
-      result = result.withFaithDelta(
-          (result.playerFaithDelta * DayStats.sundayServiceBonus).roundToDouble());
-    }
     if (discipline != null && result.success) recordPractice(discipline);
+    if (result.success) {
+      GameSound.playAction(actionType, discipline?.name);
+      tutorialService.onBuildingAction(actionType);
+    }
     if (result.success) {
       if (discipline == Discipline.prayer) recordLessonTask(LessonTask.pray);
       if (actionType == 'sundayService' || actionType == 'chapelService') {
@@ -128,7 +127,7 @@ extension GameBuildingActions on SpiritWorldGame {
       data.building.currentSessionInteractions++;
     }
     // Sleeping in the pastor house ends the day (§3.3).
-    if (actionType == 'sleep' && result.success) openDaySummary();
+    if (actionType == 'sleep' && result.success) endDay();
     return result;
   }
 
@@ -292,7 +291,7 @@ extension GameBuildingActions on SpiritWorldGame {
       gainMaterials(SpiritWorldGame.roomFindMaterials);
     }
     GameSound.play(Sfx.learned, volume: 0.5);
-    return insight ? '✨ +$SpiritWorldGame.roomFindInsight📖' : '✨ +${SpiritWorldGame.roomFindMaterials.round()}📦';
+    return insight ? '✨ +${SpiritWorldGame.roomFindInsight}📖' : '✨ +${SpiritWorldGame.roomFindMaterials.round()}📦';
   }
 
   /// 🙏🏠 / ➖🍞 / 📢 – effects of learned abilities.

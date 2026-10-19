@@ -35,8 +35,8 @@ extension GameLearning on SpiritWorldGame {
     dayStats.lessonsLearned++;
     GameSound.play(Sfx.learned);
     _toast('🎓✨ ${learned.emoji}');
-    // ⚔️ shows the new prayer modes right away.
-    if (learned == Skill.spiritualWarfare) _updateHudVisibility();
+    // A new prayer mode shows up in the dock right away.
+    _updateHudVisibility();
   }
 
   /// Short centred emoji message (e.g. a newly unlocked ability).

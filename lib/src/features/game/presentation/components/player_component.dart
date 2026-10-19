@@ -1,14 +1,16 @@
 import 'package:flame/components.dart';
+import '../../../../core/audio/game_sound.dart';
+import '../../domain/services/combat_abilities.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../../domain/models/game_keymap.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
+import 'character_sprites.dart';
 import 'prayer_zone_component.dart';
 import 'shockwave_component.dart';
 import '../../domain/models/prayer_combat.dart';
-import '../../domain/models/skills.dart';
 
 class PlayerComponent extends PositionComponent 
     with HasGameReference<SpiritWorldGame>, KeyboardHandler {
@@ -78,9 +80,7 @@ class PlayerComponent extends PositionComponent
 
   /// Rebuke, Slow and Drain need the ⚔️ spiritual-warfare lesson
   /// (learning missions, release_roadmap.md §3.9).
-  bool canUseMode(PrayerMode mode) =>
-      mode == PrayerMode.liberation ||
-      game.progress.skills.has(Skill.spiritualWarfare);
+  bool canUseMode(PrayerMode mode) => CombatAbilities.canUse(mode, game.progress.skills);
 
   void setMode(PrayerMode mode) {
     if (!canUseMode(mode)) return;
@@ -138,6 +138,12 @@ class PlayerComponent extends PositionComponent
       canvas.drawCircle((size / 2).toOffset(), SpiritWorldGame.interactionRange * pulse, auraPaint);
     }
 
+    // Real world: the pastor as a Kenney figure (falls back to the drawn
+    // shape if the sheet is not loaded). Invisible world: a light.
+    if (!game.isSpiritualWorld &&
+        CharacterSprites.render(canvas, CharacterSprites.pastor, _anim, size)) {
+      return;
+    }
     final paint = Paint()..color = game.isSpiritualWorld ? Colors.amberAccent : Colors.blueAccent;
     canvas.drawCircle((size / 2).toOffset(), size.x / 2, paint);
     
@@ -148,6 +154,9 @@ class PlayerComponent extends PositionComponent
   }
 
   final Vector2 _keyboardDirection = Vector2.zero();
+
+  /// Facing and walk frame for the sprite.
+  final CharacterAnimator _anim = CharacterAnimator();
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
@@ -300,6 +309,7 @@ class PlayerComponent extends PositionComponent
     }
     game.faith -= cost;
 
+    GameSound.playWave(_currentMode.id);
     game.world.add(ShockwaveComponent(
       position: position.clone(),
       maxRadius: stats.radius,
@@ -313,6 +323,7 @@ class PlayerComponent extends PositionComponent
 
   @override
   void update(double dt) {
+    _anim.update(dt, position);
     super.update(dt);
     if (game.isSpiritualWorld) {
       _updatePrayerMechanics(dt);
@@ -321,7 +332,14 @@ class PlayerComponent extends PositionComponent
     }
   }
 
+  /// Current walking input (joystick first, then keys); also drives the
+  /// pastor inside buildings.
+  Vector2 get moveInput =>
+      joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
+
   void _updateMovement(double dt) {
+    // Inside a building the interior pastor walks, not this one.
+    if (game.interior != null) return;
     if (_keyboardDirection.isZero() && joystick.delta.isZero()) return;
     final moveDir = joystick.delta.isZero() ? _keyboardDirection : joystick.relativeDelta;
     // Track the last non-zero direction for particle rendering.

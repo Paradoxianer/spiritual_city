@@ -22,7 +22,7 @@ class PrayerHudComponent extends PositionComponent with HasGameReference<SpiritW
 
     _drawBar(
       canvas, x + 20, y + 15, hudWidth - 40, 12,
-      'PRAYER ENERGY', game.faith / game.progress.maxFaith,
+      '🙏', game.faith / game.progress.maxFaith,
       Colors.amberAccent,
     );
   }

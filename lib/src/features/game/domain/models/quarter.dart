@@ -82,6 +82,14 @@ class QuarterStatus {
 
   int get missing => Awakening.christiansMissing(christians: christians, people: people);
 
+  /// 0..1 on the way to an attackable stronghold (HUD mini bar); 1 once
+  /// open or awakened.
+  double get progress {
+    if (awakened || strongholdOpen) return 1.0;
+    final needed = christians + missing;
+    return needed == 0 ? 0.0 : (christians / needed).clamp(0.0, 1.0);
+  }
+
   /// `🏘️ ✝️ 3/20 🏰🔒2` · `🏰⚔️` · `🔥✝️`
   String get label {
     if (awakened) return '🏘️ 🔥✝️';

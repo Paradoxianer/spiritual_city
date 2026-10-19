@@ -761,20 +761,21 @@ class BuildingInteractionService {
   ) {
     building.interactionCount++;
     switch (actionType) {
+      // Prayer is the one thing that also refreshes the pastor a little.
       case 'pray':
         building.applyInfluence(5.0);
         building.influenceResidents(2.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: 8.0,
+          playerFaithDelta: 3.0,
           reactionEmoji: '🙏🏗️',
         );
+      // Talking about faith costs a little and gives nothing to the pastor.
       case 'witness':
         building.applyInfluence(5.0);
         for (final npc in building.residents) {
           npc.applyInfluence(4.0);
         }
         return const BuildingInteractionResult(
-          playerFaithDelta: 10.0,
           playerMaterialsDelta: -3.0,
           reactionEmoji: '💬✝️',
         );
@@ -782,9 +783,77 @@ class BuildingInteractionService {
         building.applyInfluence(6.0);
         building.influenceResidents(3.0);
         return const BuildingInteractionResult(
-          playerFaithDelta: 12.0,
           playerMaterialsDelta: -8.0,
           reactionEmoji: '📦✝️',
+        );
+      // 🚒 Fire station.
+      case 'blessVehicles':
+        building.applyInfluence(10.0);
+        building.influenceResidents(5.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: -15.0,
+          reactionEmoji: '🚒🙏✨',
+        );
+      case 'chaplaincy':
+        building.applyInfluence(8.0);
+        building.influenceResidents(8.0);
+        return const BuildingInteractionResult(
+          playerHealthDelta: -10.0,
+          playerHungerDelta: -8.0,
+          playerInsightDelta: 0.3,
+          reactionEmoji: '👂🚒🫂',
+        );
+      case 'bringMeal':
+        building.applyInfluence(6.0);
+        building.influenceResidents(4.0);
+        return const BuildingInteractionResult(
+          playerMaterialsDelta: -10.0,
+          reactionEmoji: '🍲🚒😊',
+        );
+      // 📮 Post office.
+      case 'sendCards':
+        building.applyInfluence(4.0);
+        building.influenceResidents(3.0);
+        return const BuildingInteractionResult(
+          playerMaterialsDelta: -5.0,
+          reactionEmoji: '✉️💌😊',
+        );
+      // 📚 Library / 🏛️ museum: insight, not faith.
+      case 'study':
+        return const BuildingInteractionResult(
+          playerHungerDelta: -6.0,
+          playerInsightDelta: 0.3,
+          reactionEmoji: '📚💡',
+        );
+      case 'bookCircle':
+        building.applyInfluence(6.0);
+        building.influenceResidents(5.0);
+        return const BuildingInteractionResult(
+          playerMaterialsDelta: -3.0,
+          reactionEmoji: '📖👥💬',
+        );
+      case 'churchHistory':
+        return const BuildingInteractionResult(
+          playerHungerDelta: -4.0,
+          playerInsightDelta: 0.2,
+          reactionEmoji: '🖼️⛪💡',
+        );
+      // 🏭 Work places: earn supplies by working along.
+      case 'workShift':
+        building.applyInfluence(3.0);
+        building.influenceResidents(2.0);
+        return const BuildingInteractionResult(
+          playerHealthDelta: -12.0,
+          playerHungerDelta: -12.0,
+          playerMaterialsDelta: 12.0,
+          reactionEmoji: '🛠️💪📦',
+        );
+      case 'prayWorkers':
+        building.applyInfluence(6.0);
+        building.influenceResidents(3.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: 3.0,
+          reactionEmoji: '🙏👷✨',
         );
       default:
         return const BuildingInteractionResult(

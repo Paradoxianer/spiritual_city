@@ -1,3 +1,4 @@
+import '../city_generation/district_selector.dart';
 import 'cell_object.dart';
 
 class CityCell {
@@ -13,6 +14,10 @@ class CityCell {
   
   // Spiritual world values (-1.0 to 1.0)
   double spiritualState;
+
+  /// District the cell belongs to (district identity, #182); null for
+  /// water and cells created outside the generator.
+  final DistrictType? district;
 
   /// True after a daemon naturally dissolves here, leaving an "ash" imprint.
   bool hasResiduum = false;
@@ -38,5 +43,6 @@ class CityCell {
     this.crime = 0.0,
     this.density = 0.0,
     this.spiritualState = 0.0,
+    this.district,
   });
 }

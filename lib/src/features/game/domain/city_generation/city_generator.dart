@@ -24,8 +24,8 @@ class CityGenerator {
           seed: seedManager.seed,
           registry: SpecialBuildingRegistry(seed: seedManager.seed),
         ),
-        _detailNoise = PerlinNoise(seed: seedManager.seed + 3),
-        _spiritualNoise = PerlinNoise(seed: seedManager.seed + 77);
+        _detailNoise = PerlinNoise(seed: seedManager.seed + 3, frequency: 1),
+        _spiritualNoise = PerlinNoise(seed: seedManager.seed + 77, frequency: 1);
 
   void generateChunk(CityChunk chunk) {
     for (int y = 0; y < CityChunk.chunkSize; y++) {
@@ -63,6 +63,7 @@ class CityGenerator {
       density: density,
       crime: _calculateCrime(district, detail),
       spiritualState: _calculateInitialSpiritualState(wx, wy, data, district),
+      district: district,
     );
   }
 

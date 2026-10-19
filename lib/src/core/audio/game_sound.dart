@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame_audio/flame_audio.dart';
 import 'package:logging/logging.dart';
 
@@ -13,7 +15,17 @@ enum Sfx {
   chain('kenney/impact_sounds/impactGlass_heavy_002.ogg'),
   awakening('kenney/impact_sounds/impactBell_heavy_003.ogg'),
   learned('kenney/interface_sounds/confirmation_002.ogg'),
-  dayEnd('kenney/interface_sounds/confirmation_004.ogg');
+  dayEnd('kenney/interface_sounds/confirmation_004.ogg'),
+  // Synthesised by tools/gen_ambience.py (playtest 2026-10-18).
+  talk('actions/talk.ogg'),
+  pray('actions/pray.ogg'),
+  sleep('actions/sleep.ogg'),
+  // Prayer waves, one per mode (🕊️ 🫸 ⏳ 🪫).
+  waveLiberation('actions/wave_liberation.ogg'),
+  waveRebuke('actions/wave_rebuke.ogg'),
+  waveSlow('actions/wave_slow.ogg'),
+  waveDrain('actions/wave_drain.ogg'),
+  daemonNear('actions/daemon_near.ogg');
 
   /// Path below assets/audio/.
   final String file;
@@ -41,6 +53,31 @@ abstract final class GameSound {
     }
   }
 
+  /// The sound of a finished action: 😴 sleeping, 🙏 prayer and worship,
+  /// 💬 talking and 👂 listening, 📖 reading.
+  static void playAction(String actionType, String? disciplineName) {
+    if (actionType == 'sleep') return play(Sfx.sleep, volume: 0.6);
+    switch (disciplineName) {
+      case 'prayer' || 'worship':
+        play(Sfx.pray, volume: 0.5);
+      case 'conversation' || 'counsel':
+        play(Sfx.talk, volume: 0.6);
+      case 'bible':
+        play(Sfx.book, volume: 0.6);
+    }
+  }
+
+  /// Sound of a prayer wave of mode [modeId] (PrayerMode.id).
+  static void playWave(String modeId) {
+    final sfx = switch (modeId) {
+      'rebuke' => Sfx.waveRebuke,
+      'slow' => Sfx.waveSlow,
+      'drain' => Sfx.waveDrain,
+      _ => Sfx.waveLiberation,
+    };
+    play(sfx, volume: 0.55);
+  }
+
   static void play(Sfx sfx, {double volume = 0.6}) {
     if (!enabled || _failed) return;
     _play(sfx, volume);
@@ -52,5 +89,75 @@ abstract final class GameSound {
     } catch (e) {
       _log.fine('Sound ${sfx.name} failed: $e');
     }
+  }
+}
+
+/// Looping background sound per place (playtest 2026-10-18). Synthesised by
+/// tools/gen_ambience.py, except the church chant (Pixabay, assets/LICENSES.md).
+enum Ambience {
+  none('', 0),
+  city('ambience/city.ogg', 0.2),
+  home('ambience/home.ogg', 0.55),
+  hall('ambience/hall.ogg', 0.4),
+  church('ambience/church.ogg', 0.45),
+  spirit('ambience/spirit.ogg', 0.3);
+
+  final String file;
+  final double volume;
+  const Ambience(this.file, this.volume);
+}
+
+/// Plays one [Ambience] at a time and cross-fades on change.
+abstract final class GameAmbience {
+  static final _log = Logger('GameAmbience');
+  static Ambience _current = Ambience.none;
+  static AudioPlayer? _player;
+  static int _generation = 0;
+  static bool _failed = false;
+
+  static const Duration _fade = Duration(milliseconds: 1200);
+
+  /// Switches to [a] (cheap no-op when it is already playing).
+  static Future<void> set(Ambience a) async {
+    if (!GameSound.enabled || _failed) a = Ambience.none;
+    if (a == _current) return;
+    final from = _current;
+    _current = a;
+    final gen = ++_generation;
+    final old = _player;
+    _player = null;
+    if (old != null) _ramp(old, from.volume, 0, stopAfter: true);
+    if (a == Ambience.none) return;
+    try {
+      final p = await FlameAudio.loop(a.file, volume: 0);
+      if (gen != _generation) {
+        await p.dispose();
+        return;
+      }
+      _player = p;
+      _ramp(p, 0, a.volume);
+    } catch (e) {
+      _failed = true;
+      _log.warning('Ambience failed, off: $e');
+    }
+  }
+
+  static void stop() => set(Ambience.none);
+
+  static void _ramp(AudioPlayer p, double from, double to, {bool stopAfter = false}) {
+    const steps = 20;
+    var i = 0;
+    Timer.periodic(_fade ~/ steps, (timer) async {
+      i++;
+      try {
+        await p.setVolume(from + (to - from) * (i / steps));
+        if (i >= steps) {
+          timer.cancel();
+          if (stopAfter) await p.dispose();
+        }
+      } catch (_) {
+        timer.cancel();
+      }
+    });
   }
 }

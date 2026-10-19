@@ -1,59 +1,5 @@
 part of '../game_screen.dart';
 
-/// Paints simple colored circles falling across the screen to celebrate
-/// tutorial completion.  [progress] is a 0..1 animation value.
-class _ConfettiPainter extends CustomPainter {
-  final double progress;
-
-  static final List<_ConfettiParticle> _particles = _generateParticles();
-
-  static List<_ConfettiParticle> _generateParticles() {
-    final rng = Random(42);
-    return List.generate(
-        60,
-        (_) => _ConfettiParticle(
-              x: rng.nextDouble(),
-              startY: -rng.nextDouble() * 0.3,
-              size: 5.0 + rng.nextDouble() * 7.0,
-              speed: 0.5 + rng.nextDouble() * 0.8,
-              wobble: rng.nextDouble() * 2 * pi,
-              wobbleFreq: 2.0 + rng.nextDouble() * 4.0,
-              color: _confettiColors[rng.nextInt(_confettiColors.length)],
-            ));
-  }
-
-  static const _confettiColors = [
-    Color(0xFFFFD700),
-    Color(0xFF00E676),
-    Color(0xFF40C4FF),
-    Color(0xFFFF4081),
-    Color(0xFFFFAB40),
-    Color(0xFFE040FB),
-    Color(0xFFFFFFFF),
-  ];
-
-  const _ConfettiPainter(this.progress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final p in _particles) {
-      final t = ((progress * p.speed) % 1.0).clamp(0.0, 1.0);
-      final y = (p.startY + t) * size.height;
-      if (y < 0 || y > size.height) continue;
-      final wobbleX = sin(t * p.wobbleFreq * pi + p.wobble) * 30.0;
-      final x = p.x * size.width + wobbleX;
-      final alpha = (1.0 - t * 0.8).clamp(0.0, 1.0);
-      final paint = Paint()
-        ..color = p.color.withValues(alpha: alpha)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(x, y), p.size * (1.0 - t * 0.4), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ConfettiPainter old) => old.progress != progress;
-}
-
 class _ConfettiParticle {
   final double x;
   final double startY;
@@ -217,8 +163,9 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                     const Text('✝️', style: TextStyle(fontSize: 72)),
                     const SizedBox(height: 12),
                     // Main heading
+                    // Emoji only (no text to translate).
                     const Text(
-                      'Die Stadt gehört Gott! 🙌',
+                      '🏙️✝️🙌',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.amber,
@@ -235,12 +182,9 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '🙌 Ihr habt es geschafft! 🙌',
+                      '🕊️ 🎉 🕊️',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFFB0D4FF),
-                        fontSize: 18,
-                      ),
+                      style: TextStyle(fontSize: 26),
                     ),
                     const SizedBox(height: 32),
                     // Stats card
@@ -262,25 +206,25 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                         children: [
                           _WinStatRow(
                             emoji: '✝️',
-                            label: 'Bekehrte Menschen',
+                            label: '',
                             value: '$convertedCount / $totalNpcs',
                           ),
                           const SizedBox(height: 10),
                           _WinStatRow(
                             emoji: '🟢',
-                            label: 'Befreite Bereiche',
+                            label: '',
                             value: '$positiveCells / $totalCells',
                           ),
                           const SizedBox(height: 10),
                           _WinStatRow(
                             emoji: '⏱️',
-                            label: 'Gespielte Zeit',
+                            label: '',
                             value: playTime,
                           ),
                           const SizedBox(height: 10),
                           _WinStatRow(
                             emoji: '✨',
-                            label: 'Gesammelter Glaube',
+                            label: '',
                             value: '$faithCollected',
                           ),
                         ],
@@ -293,7 +237,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                       child: ElevatedButton.icon(
                         onPressed: () => _startNewGame(context),
                         icon: const Text('🔄', style: TextStyle(fontSize: 18)),
-                        label: const Text('Nochmal spielen'),
+                        label: const Text('▶️'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1B5E20),
                           foregroundColor: Colors.white,
@@ -314,7 +258,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                       child: OutlinedButton.icon(
                         onPressed: () => context.go('/menu'),
                         icon: const Text('🏠', style: TextStyle(fontSize: 18)),
-                        label: const Text('Hauptmenü'),
+                        label: const Text('☰'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white70,
                           side: BorderSide(
@@ -380,7 +324,7 @@ class _WinStatRow extends StatelessWidget {
 }
 
 /// Confetti painter for the win screen.  Uses a different seed and more
-/// "divine" color palette than the tutorial confetti to differentiate the two.
+/// "divine" color palette for the celebration.
 class _WinConfettiPainter extends CustomPainter {
   final double progress;
 

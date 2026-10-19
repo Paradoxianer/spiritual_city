@@ -1,4 +1,5 @@
 import '../models/cell_object.dart';
+import '../models/prayer_combat.dart';
 import '../models/skills.dart';
 
 /// What has to be done to finish a lesson.
@@ -13,7 +14,21 @@ enum LessonTask {
   pray('🙏'),
 
   /// ⛪ services held in a church.
-  service('⛪');
+  service('⛪'),
+
+  /// 👹 defeated with one particular prayer mode (mastery lessons).
+  defeatLiberation('🕊️👹'),
+  defeatRebuke('🫸👹'),
+  defeatSlow('⏳👹'),
+  defeatDrain('🪫👹');
+
+  /// The mastery task of [mode].
+  static LessonTask defeatWith(PrayerMode mode) => switch (mode) {
+        PrayerMode.liberation => defeatLiberation,
+        PrayerMode.rebuke => defeatRebuke,
+        PrayerMode.slow => defeatSlow,
+        PrayerMode.drain => defeatDrain,
+      };
 
   final String emoji;
   const LessonTask(this.emoji);
@@ -34,9 +49,12 @@ class Lesson {
   /// Skills that must be learned first.
   final Set<Skill> requires;
 
-  /// Only offered after the first awakened neighbourhood (preaching is
+  /// Only offered after this many awakened neighbourhoods (preaching is
   /// the reward of the first stage goal, #172/#173).
-  final bool requiresAwakening;
+  final int minAwakenings;
+
+  /// AppStrings key of the Bible verse (several mastery lessons share one).
+  final String? verse;
 
   /// Bible reference shown with the lesson (the verse text is localised –
   /// the only real text of a lesson; everything else is emoji).
@@ -53,8 +71,15 @@ class Lesson {
     required this.reference,
     required this.unlocks,
     this.requires = const {},
-    this.requiresAwakening = false,
+    this.minAwakenings = 0,
+    this.verse,
   });
+
+  String get verseKey => verse ?? 'lesson.${skill.name}.verse';
+
+  /// Can be taken now (not learned, prerequisites met).
+  bool isOpen(LearnedSkills learned, int awakenings) =>
+      !learned.has(skill) && requires.every(learned.has) && awakenings >= minAwakenings;
 
   /// `🎓⚔️ 1/3 👹`
   String progressLabel(int progress) =>
@@ -77,9 +102,28 @@ abstract final class Lessons {
       skill: Skill.spiritualWarfare,
       mentorAt: {BuildingType.church, BuildingType.cathedral},
       task: LessonTask.defeatDaemons,
-      count: 3,
+      count: 8,
       reference: 'Eph 6,12',
-      unlocks: '⚔️ ➡️ 🫸 ⏳ 🪫',
+      unlocks: '⚔️ ➡️ 🫸',
+    ),
+    Lesson(
+      skill: Skill.binding,
+      mentorAt: {BuildingType.cathedral, BuildingType.library},
+      task: LessonTask.defeatDaemons,
+      count: 15,
+      reference: 'Mt 18,18',
+      unlocks: '⏳ ➡️ 👹🐢',
+      requires: {Skill.spiritualWarfare},
+    ),
+    Lesson(
+      skill: Skill.disarming,
+      mentorAt: {BuildingType.cathedral},
+      task: LessonTask.defeatDaemons,
+      count: 25,
+      reference: 'Kol 2,15',
+      unlocks: '🪫 ➡️ 👹➡️🙏',
+      requires: {Skill.binding},
+      minAwakenings: 1,
     ),
     Lesson(
       skill: Skill.discernment,
@@ -113,9 +157,93 @@ abstract final class Lessons {
       task: LessonTask.service,
       count: 1,
       reference: 'Röm 10,14',
-      requiresAwakening: true,
+      minAwakenings: 1,
       unlocks: '📢⛪ ➡️ 👥✝️',
       requires: {Skill.spiritualWarfare},
+    ),
+    // ── Mastery per prayer mode: lifts the upgrade cap (2 → 5 → 10) ──
+    Lesson(
+      skill: Skill.liberationMastery1,
+      mentorAt: {BuildingType.church, BuildingType.cemetery},
+      task: LessonTask.defeatLiberation,
+      count: 10,
+      reference: 'Joh 8,36',
+      verse: 'lesson.mastery.liberation.verse',
+      unlocks: '🕊️⭐ ➡️ 🔓5 🕊️💥',
+    ),
+    Lesson(
+      skill: Skill.liberationMastery2,
+      mentorAt: {BuildingType.cathedral},
+      task: LessonTask.defeatLiberation,
+      count: 20,
+      reference: 'Joh 8,36',
+      verse: 'lesson.mastery.liberation.verse',
+      unlocks: '🕊️⭐⭐ ➡️ 🔓10 🕊️✨',
+      requires: {Skill.liberationMastery1},
+      minAwakenings: 2,
+    ),
+    Lesson(
+      skill: Skill.rebukeMastery1,
+      mentorAt: {BuildingType.church, BuildingType.cathedral},
+      task: LessonTask.defeatRebuke,
+      count: 10,
+      reference: 'Jak 4,7',
+      verse: 'lesson.mastery.rebuke.verse',
+      unlocks: '🫸⭐ ➡️ 🔓5 🫸💪',
+      requires: {Skill.spiritualWarfare},
+    ),
+    Lesson(
+      skill: Skill.rebukeMastery2,
+      mentorAt: {BuildingType.cathedral},
+      task: LessonTask.defeatRebuke,
+      count: 20,
+      reference: 'Jak 4,7',
+      verse: 'lesson.mastery.rebuke.verse',
+      unlocks: '🫸⭐⭐ ➡️ 🔓10 🫸⚡',
+      requires: {Skill.rebukeMastery1},
+      minAwakenings: 2,
+    ),
+    Lesson(
+      skill: Skill.slowMastery1,
+      mentorAt: {BuildingType.library, BuildingType.cathedral},
+      task: LessonTask.defeatSlow,
+      count: 10,
+      reference: 'Mk 3,27',
+      verse: 'lesson.mastery.slow.verse',
+      unlocks: '⏳⭐ ➡️ 🔓5 ⏳⏳',
+      requires: {Skill.binding},
+    ),
+    Lesson(
+      skill: Skill.slowMastery2,
+      mentorAt: {BuildingType.cathedral},
+      task: LessonTask.defeatSlow,
+      count: 20,
+      reference: 'Mk 3,27',
+      verse: 'lesson.mastery.slow.verse',
+      unlocks: '⏳⭐⭐ ➡️ 🔓10 ⏳💥',
+      requires: {Skill.slowMastery1},
+      minAwakenings: 2,
+    ),
+    Lesson(
+      skill: Skill.drainMastery1,
+      mentorAt: {BuildingType.cathedral, BuildingType.cemetery},
+      task: LessonTask.defeatDrain,
+      count: 10,
+      reference: 'Lk 10,19',
+      verse: 'lesson.mastery.drain.verse',
+      unlocks: '🪫⭐ ➡️ 🔓5 🪫🙏',
+      requires: {Skill.disarming},
+    ),
+    Lesson(
+      skill: Skill.drainMastery2,
+      mentorAt: {BuildingType.cathedral},
+      task: LessonTask.defeatDrain,
+      count: 20,
+      reference: 'Lk 10,19',
+      verse: 'lesson.mastery.drain.verse',
+      unlocks: '🪫⭐⭐ ➡️ 🔓10 🪫⚡',
+      requires: {Skill.drainMastery1},
+      minAwakenings: 2,
     ),
   ];
 
@@ -125,11 +253,7 @@ abstract final class Lessons {
   /// not yet learned, prerequisites met.
   static List<Lesson> offeredAt(BuildingType type, LearnedSkills learned, {int awakenings = 0}) => [
         for (final l in all)
-          if (l.mentorAt.contains(type) &&
-              !learned.has(l.skill) &&
-              l.requires.every(learned.has) &&
-              (!l.requiresAwakening || awakenings > 0))
-            l,
+          if (l.mentorAt.contains(type) && l.isOpen(learned, awakenings)) l,
       ];
 }
 

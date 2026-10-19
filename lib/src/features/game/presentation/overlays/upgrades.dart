@@ -59,9 +59,11 @@ class _UpgradePanelState extends State<_UpgradePanel> {
               _UpgradeGroup(
                 icon: '🛡️',
                 color: Colors.white70,
+                title: '',
                 children: [
                   _UpgradeTile(
                     emoji: '🛡️',
+                    label: AppStrings.get('upgrade.shield'),
                     level: _profile.shieldLevel,
                     effect: '−${(_profile.shieldDamageReduction * 100).toStringAsFixed(0)}%🙏',
                     insight: _progress.insight,
@@ -69,6 +71,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                   ),
                   _UpgradeTile(
                     emoji: '⛑️',
+                    label: AppStrings.get('upgrade.helm'),
                     level: _profile.helmLevel,
                     effect: '−${(_profile.helmHungerReduction * 100).toStringAsFixed(0)}%🍞',
                     insight: _progress.insight,
@@ -87,18 +90,33 @@ class _UpgradePanelState extends State<_UpgradePanel> {
 
   Widget _buildModeGroup(PrayerMode mode) {
     final s = _profile.getFor(mode);
-    _UpgradeTile tile(String emoji, int level, double value, VoidCallback apply) => _UpgradeTile(
+    final skills = _progress.skills;
+    final tier = CombatAbilities.tier(s);
+    final level = CombatAbilities.modeLevel(s);
+    // Not learned yet, or at the mentor cap: the next step is a 🎓 lesson.
+    final modeSkill = CombatAbilities.modeSkill(mode);
+    final cap = CombatAbilities.levelCap(mode, skills);
+    final (m1, m2) = CombatAbilities.mastery(mode);
+    final Availability? lock = !CombatAbilities.canUse(mode, skills)
+        ? Locked('🎓${modeSkill!.emoji}')
+        : level >= cap
+            ? (cap >= CombatAbilities.levelCaps.last ? const Locked('✅') : Locked('🎓${(skills.has(m1) ? m2 : m1).emoji}'))
+            : null;
+    _UpgradeTile tile(String emoji, String key, int level, double value, VoidCallback apply) =>
+        _UpgradeTile(
           emoji: emoji,
+          label: AppStrings.get('upgrade.$key'),
           level: level,
           effect: _pct(value),
           insight: _progress.insight,
+          lock: lock,
           onBuy: () => _buy(level, apply),
         );
-    final tier = CombatAbilities.tier(s);
-    final level = CombatAbilities.modeLevel(s);
     return _UpgradeGroup(
       icon: mode.icon,
       color: mode.color,
+      title: AppStrings.get('mode.${mode.id}'),
+      badge: '$level/$cap',
       // Abilities: unlocked ones bright, the next with the level it needs.
       footer: Wrap(
         spacing: 10,
@@ -116,33 +134,38 @@ class _UpgradePanelState extends State<_UpgradePanel> {
         ],
       ),
       children: [
-        tile('🎯', s.radiusLevel, s.radius, () => s.radiusLevel++),
-        tile('⚡', s.strengthLevel, s.strength, () => s.strengthLevel++),
-        tile('⏱️', s.durationLevel, s.duration, () => s.durationLevel++),
-        tile('💨', s.speedLevel, s.speed, () => s.speedLevel++),
+        tile('🎯', 'radius', s.radiusLevel, s.radius, () => s.radiusLevel++),
+        tile('⚡', 'strength', s.strengthLevel, s.strength, () => s.strengthLevel++),
+        tile('⏱️', 'duration', s.durationLevel, s.duration, () => s.durationLevel++),
+        tile('💨', 'speed', s.speedLevel, s.speed, () => s.speedLevel++),
       ],
     );
   }
 }
 
-/// A row of upgrades under a leading emoji (🛡️ or a prayer mode).
+/// A section like the original panel: a header (icon, name, level/cap)
+/// and the upgrades as equal tiles side by side.
 class _UpgradeGroup extends StatelessWidget {
   final String icon;
   final Color color;
+  final String title;
+  final String? badge;
   final List<Widget> children;
   final Widget? footer;
 
   const _UpgradeGroup({
     required this.icon,
     required this.color,
+    required this.title,
     required this.children,
+    this.badge,
     this.footer,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 8),
+      margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
@@ -154,9 +177,36 @@ class _UpgradeGroup extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(icon, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
-              Expanded(child: ActionBar(children: children)),
+              Text(icon, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 6),
+              if (title.isNotEmpty)
+                Text(title,
+                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+              const Spacer(),
+              if (badge != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text('Lv $badge', style: const TextStyle(color: Colors.amber, fontSize: 10)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0) const SizedBox(width: 4),
+                Expanded(child: children[i]),
+              ],
+              // Defence has two upgrades: keep tiles as wide as attack ones.
+              for (var i = children.length; i < 4; i++) ...[
+                const SizedBox(width: 4),
+                const Expanded(child: SizedBox.shrink()),
+              ],
             ],
           ),
           if (footer != null) ...[const SizedBox(height: 6), footer!],
@@ -166,42 +216,90 @@ class _UpgradeGroup extends StatelessWidget {
   }
 }
 
-/// One upgrade: [ActionButton] (cost `−N📖`) plus `level · effect` below.
+/// One upgrade as in the original panel: icon, name, `Lv n`, effect and a
+/// 📖 cost button (🔒🎓 when a mentor has to teach the next step).
 class _UpgradeTile extends StatelessWidget {
   final String emoji;
+  final String label;
   final int level;
   final String effect;
   final int insight;
   final VoidCallback onBuy;
 
+  /// Set when a mentor has to teach the next step first.
+  final Availability? lock;
+
   const _UpgradeTile({
     required this.emoji,
+    required this.label,
     required this.level,
     required this.effect,
     required this.insight,
     required this.onBuy,
+    this.lock,
   });
 
   @override
   Widget build(BuildContext context) {
     final cost = upgradeInsightCost(level);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ActionButton(
-          emoji: emoji,
-          hint: '−$cost📖',
-          availability: insight >= cost
-              ? const AvailableNow()
-              : const CannotAfford(Resource.insight),
-          onTap: onBuy,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          '$level · $effect',
-          style: const TextStyle(color: Colors.greenAccent, fontSize: 10),
-        ),
-      ],
+    final canAfford = insight >= cost;
+    final locked = lock;
+    final active = locked == null && canAfford;
+    final buyLabel = locked is Locked ? locked.emoji : '📖 $cost';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 18)),
+          const SizedBox(height: 2),
+          Text(label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 10)),
+          const SizedBox(height: 2),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text('Lv $level', style: const TextStyle(color: Colors.amber, fontSize: 9)),
+          ),
+          const SizedBox(height: 2),
+          Text(effect,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.greenAccent, fontSize: 10)),
+          const SizedBox(height: 4),
+          GestureDetector(
+            onTap: active ? onBuy : null,
+            child: Opacity(
+              opacity: active ? 1.0 : 0.45,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: active ? Colors.amber.withValues(alpha: 0.25) : Colors.white10,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: active ? Colors.amber.withValues(alpha: 0.7) : Colors.white24,
+                  ),
+                ),
+                child: Text(buyLabel,
+                    style: TextStyle(
+                      color: active ? Colors.amber : Colors.white60,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    )),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

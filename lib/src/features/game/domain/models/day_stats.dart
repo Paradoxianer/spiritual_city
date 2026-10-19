@@ -1,8 +1,9 @@
-/// The day as the session unit (release_roadmap.md §3.3, decision 2026-10-17):
-/// sleeping in the pastor house ends the day and shows what happened.
-/// No real-time pressure – a day lasts as long as the player wants.
+/// Internal day counter (release_roadmap.md §3.3): sleeping in the pastor
+/// house starts the next day. Not shown in the UI since the playtest of
+/// 2026-10-18 (visible days and a day summary were too much) – it only paces
+/// once-per-sleep actions. No real-time pressure.
 class DayStats {
-  /// Day number, starting at 1. Every 7th day is Sunday.
+  /// Day number, starting at 1.
   int day = 1;
 
   int conversions = 0;
@@ -12,24 +13,9 @@ class DayStats {
   int missionsCompleted = 0;
   int lessonsLearned = 0;
 
-  bool get isSunday => day % 7 == 0;
-
-  /// Faith factor of a Sunday service on Sundays ("Sonntag = Gottesdienst-Tag").
-  static const double sundayServiceBonus = 1.5;
-
   bool get isEmpty =>
       conversions + storiesHealed + daemonsDefeated + awakenings + missionsCompleted + lessonsLearned ==
       0;
-
-  /// Emoji rows for the day summary: (emoji, count), only non-zero ones.
-  List<(String, int)> get rows => [
-        if (conversions > 0) ('✝️', conversions),
-        if (storiesHealed > 0) ('🌱', storiesHealed),
-        if (daemonsDefeated > 0) ('👹', daemonsDefeated),
-        if (awakenings > 0) ('🔥🏘️', awakenings),
-        if (missionsCompleted > 0) ('📋', missionsCompleted),
-        if (lessonsLearned > 0) ('🎓', lessonsLearned),
-      ];
 
   /// Starts the next day with empty counters.
   void nextDay() {

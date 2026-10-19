@@ -1,11 +1,13 @@
 import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart' hide Image;
+import '../../domain/models/cell_object.dart';
 import '../../domain/models/city_chunk.dart';
 import '../../domain/services/influence_service.dart' show kCellGlowDuration;
 import 'cell_component.dart';
 import '../spirit_world_game.dart';
 import 'city_tile_renderer.dart';
+import 'kenney_city_renderer.dart';
 import 'spiritual_renderer.dart';
 
 class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorldGame> {
@@ -38,12 +40,29 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
         final cell = chunk.cells['$x,$y'];
         if (cell == null) continue;
         final rect = Rect.fromLTWH(x * cellSize, y * cellSize, cellSize, cellSize);
-        CityTileRenderer.renderCell(canvas, rect, cell.data);
-        canvas.drawRect(rect, _borderPaint);
+        if (KenneyCityRenderer.ready) {
+          KenneyCityRenderer.renderCell(
+            canvas,
+            rect,
+            cell,
+            chunk.getWorldX(x),
+            chunk.getWorldY(y),
+            game.chunkManager.grid.getCell,
+            _buildingType,
+          );
+        } else {
+          CityTileRenderer.renderCell(canvas, rect, cell.data);
+          canvas.drawRect(rect, _borderPaint);
+        }
+        CityTileRenderer.renderDistrictTint(canvas, rect, cell.district, cell.data);
       }
     }
     _cachedPicture = recorder.endRecording();
   }
+
+  /// One type per lot, as the game uses it (the cells of a lot may differ).
+  BuildingType _buildingType(BuildingData data) =>
+      game.chunkManager.getBuildingModel(data.buildingId)?.type ?? data.type;
 
   // ── Glow timer decay ──────────────────────────────────────────────────────
 
