@@ -13,6 +13,9 @@ class DayStats {
   int missionsCompleted = 0;
   int lessonsLearned = 0;
 
+  /// 📢🎺 An open-air meeting was held today (one a day).
+  bool openAirHeld = false;
+
   bool get isEmpty =>
       conversions + storiesHealed + daemonsDefeated + awakenings + missionsCompleted + lessonsLearned ==
       0;
@@ -26,6 +29,7 @@ class DayStats {
     awakenings = 0;
     missionsCompleted = 0;
     lessonsLearned = 0;
+    openAirHeld = false;
   }
 
   Map<String, dynamic> toJson() => {
@@ -36,6 +40,7 @@ class DayStats {
         'awake': awakenings,
         'missions': missionsCompleted,
         'lessons': lessonsLearned,
+        'openAir': openAirHeld,
       };
 
   void loadFromJson(Object? raw) {
@@ -48,5 +53,6 @@ class DayStats {
     awakenings = v('awake');
     missionsCompleted = v('missions');
     lessonsLearned = v('lessons');
+    openAirHeld = raw['openAir'] == true;
   }
 }

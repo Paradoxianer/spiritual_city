@@ -81,6 +81,13 @@ abstract final class HelpContent {
       ),
     ),
     (
+      '📢🎺',
+      Tr(
+        'Freiversammlung (nach 📢 Predigen, Kreismenü 🖐️ auf der Straße): braucht Mut – mindestens 70 % 🙏, kostet die Hälfte deines ❤️ und viel 🍞. Erreicht sehr viele Menschen, danach ist dein Glaube voll. Einmal pro Tag.',
+        'Open-air meeting (after 📢 preaching, circle menu 🖐️ in the street): takes courage – at least 70 % 🙏, costs half your ❤️ and much 🍞. Reaches very many people, afterwards your faith is full. Once a day.',
+      ),
+    ),
+    (
       '🏰 ⚔️ 🔥',
       Tr('Bollwerk: zu → angreifbar (⚔️) → besiegt, der Stadtteil ist erweckt (🔥). Erweckte Viertel öffnen neue Lektionen.',
           'Stronghold: closed → attackable (⚔️) → defeated, the neighbourhood is awakened (🔥). Awakened quarters open new lessons.')
@@ -249,7 +256,10 @@ abstract final class HelpContent {
         Tr('Unterscheidung der Geister: Du erkennst die Dämonenarten.', 'Discernment: you see the kinds of demons.'),
     Skill.intercession: Tr('Fürbitte: 🙏🏠 in Wohnhäusern.', 'Intercession: 🙏🏠 in homes.'),
     Skill.fasting: Tr('Fasten: ➖🍞 im Pastorenhaus.', 'Fasting: ➖🍞 in the pastor house.'),
-    Skill.preaching: Tr('Predigen: 📢 in Kirchen.', 'Preaching: 📢 in churches.'),
+    Skill.preaching: Tr(
+      'Predigen: 📢 in Kirchen – und 📢🎺 Freiversammlung auf der Straße (Kreismenü 🖐️).',
+      'Preaching: 📢 in churches – and 📢🎺 open-air meetings in the street (circle menu 🖐️).',
+    ),
     Skill.liberationMastery1: Tr('🕊️ Befreiung bis Stufe 5.', '🕊️ liberation up to level 5.'),
     Skill.liberationMastery2: Tr('🕊️ Befreiung bis Stufe 10.', '🕊️ liberation up to level 10.'),
     Skill.liberationMastery3: Tr('🕊️ Befreiung bis Stufe 15.', '🕊️ liberation up to level 15.'),
@@ -285,7 +295,7 @@ abstract final class HelpContent {
   static const Map<BuildingType, Tr> buildings = {
     BuildingType.house: Tr('Wohnhaus', 'House'),
     BuildingType.apartment: Tr('Wohnblock', 'Apartment block'),
-    BuildingType.pastorHouse: Tr('Pastorenhaus (dein Zuhause)', 'Pastor house (your home)'),
+    BuildingType.pastorHouse: Tr('Pastorenhaus / Korps 🛡️ (dein Zuhause)', 'Pastor house / corps 🛡️ (your home)'),
     BuildingType.shop: Tr('Laden', 'Shop'),
     BuildingType.supermarket: Tr('Supermarkt', 'Supermarket'),
     BuildingType.mall: Tr('Einkaufszentrum', 'Mall'),

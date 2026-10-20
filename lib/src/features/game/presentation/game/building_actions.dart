@@ -348,9 +348,9 @@ extension GameBuildingActions on SpiritWorldGame {
   /// broad but flat. Liberated ground amplifies (×0.5 … ×1.5), every
   /// Christian nearby adds 10 %, very hostile people turn away (−5).
   /// Returns how many people were reached.
-  int _preachAround(Vector2 at) {
+  int _preachAround(Vector2 at, {int radiusCells = SpiritWorldGame.preachRadiusCells, double strength = 1.0}) {
     const cell = CellComponent.cellSize;
-    final reach = SpiritWorldGame.preachRadiusCells * cell;
+    final reach = radiusCells * cell;
     final rng = Random();
     final near = chunkManager.allActiveNPCs
         .where((c) => c.position.distanceTo(at) <= reach)
@@ -370,9 +370,53 @@ extension GameBuildingActions on SpiritWorldGame {
           0.0;
       final cellFactor = (1.0 + st * 0.5).clamp(0.5, 1.5);
       final falloff = 1.0 - (c.position.distanceTo(at) / reach) * 0.5;
-      npc.applyInfluence(((2 + rng.nextInt(3)) * cellFactor * community * falloff).roundToDouble());
+      npc.applyInfluence(((2 + rng.nextInt(3)) * cellFactor * community * falloff * strength).roundToDouble());
     }
     return near.length;
+  }
+
+  // ── 📢🎺 Open-air meeting (Freiversammlung) ─────────────────────────────
+  //
+  // The Salvation Army's street preaching (playtest 2026-10-20): in reality
+  // it takes a great deal of courage. Only with a strong faith (≥ 70 %), it
+  // costs much strength and food – and afterwards faith is full, because
+  // God honours the courage (Acts 4:31). Far wider reach than preaching in
+  // a church. Once a day, after learning 📢.
+
+  static const double openAirMinFaithShare = 0.7;
+  static const double openAirHealthShare = 0.5;
+  static const double openAirHungerShare = 0.3;
+  static const int openAirRadiusCells = 20;
+  static const double openAirStrength = 1.5;
+
+  /// Shown in the 🖐️ circle menu outside once 📢 is learned.
+  bool get openAirOffered => interior == null && !isSpiritualWorld && progress.skills.has(Skill.preaching);
+
+  /// Why an open-air meeting cannot be held now (emoji), or null.
+  String? get openAirBlocker {
+    if (dayStats.openAirHeld) return '📢🎺✅';
+    if (faith < progress.maxFaith * openAirMinFaithShare) return '🚫🙏 ${(openAirMinFaithShare * 100).round()}%';
+    if (health <= progress.maxHealth * openAirHealthShare) return '🚫❤️';
+    if (hunger < progress.maxHunger * openAirHungerShare) return '🚫🍞';
+    return null;
+  }
+
+  void holdOpenAirMeeting() {
+    final blocker = openAirBlocker;
+    if (blocker != null) {
+      GameSound.play(Sfx.denied, volume: 0.5);
+      _toast(blocker);
+      return;
+    }
+    dayStats.openAirHeld = true;
+    spendHealth(progress.maxHealth * openAirHealthShare);
+    spendHunger(progress.maxHunger * openAirHungerShare);
+    final reached = _preachAround(player.position, radiusCells: openAirRadiusCells, strength: openAirStrength);
+    _brightenspiritualAreaAroundPosition(player.position, radius: 10, amount: 0.15);
+    gainFaith(progress.maxFaith - faith);
+    recordPractice(Discipline.bible);
+    GameSound.playAction('preach', Discipline.bible.name);
+    _toast('📢🎺👥 $reached  🙏💯');
   }
 
   /// Applies [delta] spiritual influence to the city cell directly beneath

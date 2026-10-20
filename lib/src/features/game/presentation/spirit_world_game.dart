@@ -1130,6 +1130,16 @@ class SpiritWorldGame extends FlameGame
       ));
     }
 
+    // 📢🎺 Open-air meeting on the street (Salvation Army, once 📢 is learned).
+    if (openAirOffered) {
+      actions.add(RadialAction(
+        label: '📢🎺',
+        sublabel: openAirBlocker ?? '',
+        icon: Icons.campaign,
+        onSelect: holdOpenAirMeeting,
+      ));
+    }
+
     _currentMenu = RadialMenu(actions: actions, position: player.position);
     world.add(_currentMenu!);
   }

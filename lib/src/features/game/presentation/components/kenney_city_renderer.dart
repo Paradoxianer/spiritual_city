@@ -279,8 +279,33 @@ abstract final class KenneyCityRenderer {
       canvas.drawRect(hz, p);
     }
 
+    // The Salvation Army's red shield (the game's home is a corps, used with
+    // permission): white rim, red field, two white lines for the lettering.
+    void redShield() {
+      Path shield(double s) {
+        final c = r.center;
+        final w = 7 * u * s, top = -6.5 * u * s, waist = 1.5 * u * s, tip = 7.8 * u * s;
+        return Path()
+          ..moveTo(c.dx - w, c.dy + top)
+          ..quadraticBezierTo(c.dx, c.dy + top - 1.5 * u * s, c.dx + w, c.dy + top)
+          ..lineTo(c.dx + w, c.dy + waist)
+          ..quadraticBezierTo(c.dx + w, c.dy + tip * 0.75, c.dx, c.dy + tip)
+          ..quadraticBezierTo(c.dx - w, c.dy + tip * 0.75, c.dx - w, c.dy + waist)
+          ..close();
+      }
+
+      canvas.drawPath(shield(1).shift(Offset(u, u)), _symbolShadow);
+      canvas.drawPath(shield(1), _symbolWhite);
+      canvas.drawPath(shield(0.8), _symbolRed);
+      for (final (dy, w) in [(-2.2, 8.0), (0.6, 6.5)]) {
+        canvas.drawRect(
+            Rect.fromCenter(center: r.center.translate(0, dy * u), width: w * u, height: 1.1 * u), _symbolWhite);
+      }
+    }
+
     switch (type) {
       case BuildingType.pastorHouse:
+        redShield();
       case BuildingType.church:
       case BuildingType.cathedral:
         cross(_symbolGold, tall: type == BuildingType.cathedral ? 16 : 14);
