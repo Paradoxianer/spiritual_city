@@ -44,6 +44,38 @@ extension GameQuarters on SpiritWorldGame {
     }
 
     if (isSpiritualWorld) _ensureStronghold(status);
+    _updateCityProgress(q);
+  }
+
+  /// Liberated ground of [q] and of every known chunk – generated ones
+  /// live, the rest from the save – plus all known people.
+  void _updateCityProgress(Quarter q) {
+    final saved = _savedChunkTallies ??= Liberation.savedByChunk(_savedCellStates ?? const {});
+    var quarter = Tally.zero;
+    var city = Tally.zero;
+    final generated = <String>{};
+    for (final chunk in grid.getLoadedChunks()) {
+      if (chunk.cells.isEmpty) continue;
+      generated.add('${chunk.chunkX},${chunk.chunkY}');
+      final t = Liberation.ofStates(chunk.cells.values.map((c) => c.spiritualState));
+      city += t;
+      if (Liberation.quarterOfChunk(chunk.chunkX, chunk.chunkY) == q) quarter += t;
+    }
+    for (final e in saved.entries) {
+      if (generated.contains(e.key)) continue;
+      city += e.value;
+      final comma = e.key.indexOf(',');
+      final cx = int.parse(e.key.substring(0, comma));
+      final cy = int.parse(e.key.substring(comma + 1));
+      if (Liberation.quarterOfChunk(cx, cy) == q) quarter += e.value;
+    }
+    final people = knownNpcCounts;
+    cityProgress.value = CityProgress(
+      quarterCells: quarter,
+      cityCells: city,
+      cityPeople: Tally(people.converted, people.total),
+      spiritWorld: isSpiritualWorld,
+    );
   }
 
   void _ensureStronghold(QuarterStatus status) {

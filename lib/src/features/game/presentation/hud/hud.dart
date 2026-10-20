@@ -660,7 +660,7 @@ class _ResourceHud extends StatelessWidget {
               const SizedBox(height: 2),
               _ConversionCounter(gameRef: gameRef),
               const SizedBox(height: 2),
-              _QuarterProgressBar(status: gameRef.quarterStatus),
+              _QuarterProgressBar(game: gameRef),
             ],
           );
         },
@@ -796,58 +796,119 @@ class _ConversionCounterState extends State<_ConversionCounter> with SingleTicke
   }
 }
 
-/// Thin bar under ✝: how far the current neighbourhood is from an
-/// attackable 🏰 (playtest: replaces the old "🏘️ ✝️ 22/56" line). Fills
-/// blue, turns gold when the stronghold is open and orange 🔥 once awakened.
+/// Two thin bars under ✝ (playtest 2026-10-20: "wie weit bin ich
+/// insgesamt?"):
+///  * 🏘️ this neighbourhood – in the city how far it is from an attackable
+///    🏰 (blue, gold when open, orange 🔥 once awakened); in the invisible
+///    world how much of it is prayed free (green, %), with the 🏰 state;
+///  * 🏙️ the whole known city – Christians among all known people, in the
+///    invisible world the prayed-free ground (%).
 class _QuarterProgressBar extends StatelessWidget {
-  final ValueNotifier<QuarterStatus?> status;
-  const _QuarterProgressBar({required this.status});
+  final SpiritWorldGame game;
+  const _QuarterProgressBar({required this.game});
+
+  static const _free = Color(0xFF66BB6A);
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<QuarterStatus?>(
-      valueListenable: status,
-      builder: (context, s, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([game.quarterStatus, game.cityProgress]),
+      builder: (context, _) {
+        final s = game.quarterStatus.value;
+        final city = game.cityProgress.value;
         if (s == null) return const SizedBox.shrink();
-        final color = s.awakened
-            ? Colors.deepOrangeAccent
-            : s.strongholdOpen
-                ? Colors.amber
-                : const Color(0xFFB0C4FF);
-        final icon = s.awakened ? '🔥' : (s.strongholdOpen ? '⚔️' : '🏰');
-        return Semantics(
-          label: '${s.christians}/${s.people}',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🏘️', style: TextStyle(fontSize: 10)),
-              const SizedBox(width: 3),
-              Container(
-                width: 70,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: s.progress,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+        final spirit = city?.spiritWorld ?? false;
+        final fort = s.awakened ? '🔥' : (s.strongholdOpen ? '⚔️' : '🏰');
+        final quarterCells = city?.quarterCells;
+        final cityTally = spirit ? city?.cityCells : city?.cityPeople;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (spirit && quarterCells != null)
+              _ProgressLine(
+                icon: '🏘️',
+                value: quarterCells.share,
+                color: _free,
+                trailing: '${quarterCells.percent}% $fort',
+                semantics: '${quarterCells.free}/${quarterCells.total}',
+              )
+            else
+              _ProgressLine(
+                icon: '🏘️',
+                value: s.progress,
+                color: s.awakened
+                    ? Colors.deepOrangeAccent
+                    : s.strongholdOpen
+                        ? Colors.amber
+                        : const Color(0xFFB0C4FF),
+                trailing: fort,
+                semantics: '${s.christians}/${s.people}',
+              ),
+            if (cityTally != null) ...[
+              const SizedBox(height: 2),
+              _ProgressLine(
+                icon: '🏙️',
+                value: cityTally.share,
+                color: spirit ? _free : const Color(0xFFB0C4FF),
+                trailing: '${cityTally.percent}%${spirit ? '' : ' ✝'}',
+                semantics: '${cityTally.free}/${cityTally.total}',
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProgressLine extends StatelessWidget {
+  final String icon;
+  final double value;
+  final Color color;
+  final String trailing;
+  final String semantics;
+  const _ProgressLine({
+    required this.icon,
+    required this.value,
+    required this.color,
+    required this.trailing,
+    required this.semantics,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: semantics,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 10)),
+          const SizedBox(width: 3),
+          Container(
+            width: 70,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.white12,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: value.clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              const SizedBox(width: 3),
-              Text(icon, style: const TextStyle(fontSize: 10)),
-            ],
+            ),
           ),
-        );
-      },
+          const SizedBox(width: 3),
+          Text(trailing, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 }

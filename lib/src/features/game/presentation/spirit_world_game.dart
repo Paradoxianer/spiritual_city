@@ -538,6 +538,12 @@ class SpiritWorldGame extends FlameGame
   final ValueNotifier<QuarterStatus?> quarterStatus = ValueNotifier(null);
   double _quarterTimer = 0.0;
 
+  /// Overall progress for the second HUD bar (🌐 prayed free / 🏙️ ✝️).
+  final ValueNotifier<CityProgress?> cityProgress = ValueNotifier(null);
+
+  /// [_savedCellStates] per chunk, counted once (see [Liberation.savedByChunk]).
+  Map<String, Tally>? _savedChunkTallies;
+
   // ── Learning missions (§3.9) ──────────────────────────────────────────────
 
   /// Lesson card currently shown (LessonOverlay), if any.

@@ -74,6 +74,13 @@ abstract final class HelpContent {
           'Your neighbourhood bar: once enough people are Christians, the stronghold 🏰 opens.')
     ),
     (
+      '🏙️',
+      Tr(
+        'Balken der ganzen Stadt: in der Stadt der Anteil der Christen, in der unsichtbaren Welt wie viel schon freigebetet ist (grün). Dort zeigt auch 🏘️ den freigebeteten Anteil des Viertels.',
+        'Whole-city bar: in the city the share of Christians, in the invisible world how much is already prayed free (green). There 🏘️ shows the prayed-free share of the quarter too.',
+      ),
+    ),
+    (
       '🏰 ⚔️ 🔥',
       Tr('Bollwerk: zu → angreifbar (⚔️) → besiegt, der Stadtteil ist erweckt (🔥). Erweckte Viertel öffnen neue Lektionen.',
           'Stronghold: closed → attackable (⚔️) → defeated, the neighbourhood is awakened (🔥). Awakened quarters open new lessons.')

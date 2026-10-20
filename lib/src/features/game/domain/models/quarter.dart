@@ -108,3 +108,93 @@ class QuarterStatus {
   @override
   int get hashCode => Object.hash(quarter, christians, people, awakened);
 }
+
+/// `free` of `total` – liberated cells or Christians.
+class Tally {
+  final int free;
+  final int total;
+  const Tally(this.free, this.total);
+
+  static const zero = Tally(0, 0);
+
+  double get share => total == 0 ? 0.0 : free / total;
+
+  /// Whole percent, never 100 before everything is done.
+  int get percent => free >= total ? (total == 0 ? 0 : 100) : (share * 100).floor();
+
+  Tally operator +(Tally o) => Tally(free + o.free, total + o.total);
+
+  @override
+  bool operator ==(Object other) => other is Tally && other.free == free && other.total == total;
+
+  @override
+  int get hashCode => Object.hash(free, total);
+}
+
+/// The overall progress under the 🏘️ bar (playtest 2026-10-20): how much
+/// of this neighbourhood and of the whole known city is prayed free 🌐, and
+/// how many of all known people are Christians 🏙️.
+class CityProgress {
+  final Tally quarterCells;
+  final Tally cityCells;
+  final Tally cityPeople;
+
+  /// Shown for the invisible world (🌐 bars) or the city (✝️ bars).
+  final bool spiritWorld;
+
+  const CityProgress({
+    required this.quarterCells,
+    required this.cityCells,
+    required this.cityPeople,
+    this.spiritWorld = false,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      other is CityProgress &&
+      other.quarterCells == quarterCells &&
+      other.cityCells == cityCells &&
+      other.cityPeople == cityPeople &&
+      other.spiritWorld == spiritWorld;
+
+  @override
+  int get hashCode => Object.hash(quarterCells, cityCells, cityPeople, spiritWorld);
+}
+
+/// Counting liberated ground. A cell counts as prayed free while its
+/// spiritual state is above zero (the same rule as the win screen).
+abstract final class Liberation {
+  static bool isFree(double spiritualState) => spiritualState > 0;
+
+  static Tally ofStates(Iterable<double> states) {
+    var free = 0, total = 0;
+    for (final s in states) {
+      total++;
+      if (isFree(s)) free++;
+    }
+    return Tally(free, total);
+  }
+
+  /// Saved cell states (`'wx,wy' → {s: …}`) summed up per chunk
+  /// (`'cx,cy'`), so chunks not generated yet this session still count
+  /// without regenerating them.
+  static Map<String, Tally> savedByChunk(Map<String, Map<String, dynamic>> saved) {
+    final free = <String, int>{};
+    final total = <String, int>{};
+    for (final e in saved.entries) {
+      final comma = e.key.indexOf(',');
+      if (comma < 0) continue;
+      final wx = int.tryParse(e.key.substring(0, comma));
+      final wy = int.tryParse(e.key.substring(comma + 1));
+      if (wx == null || wy == null) continue;
+      final key = '${(wx / CityChunk.chunkSize).floor()},${(wy / CityChunk.chunkSize).floor()}';
+      total[key] = (total[key] ?? 0) + 1;
+      if (isFree((e.value['s'] as num?)?.toDouble() ?? 0)) free[key] = (free[key] ?? 0) + 1;
+    }
+    return {for (final k in total.keys) k: Tally(free[k] ?? 0, total[k]!)};
+  }
+
+  /// The neighbourhood a chunk belongs to.
+  static Quarter quarterOfChunk(int cx, int cy) =>
+      Quarter((cx / Quarter.chunksPerSide).floor(), (cy / Quarter.chunksPerSide).floor());
+}
