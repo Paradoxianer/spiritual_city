@@ -4,7 +4,7 @@ import 'package:spiritual_city/src/features/game/domain/models/quarter.dart';
 void main() {
   test('a cell counts as free above zero', () {
     final t = Liberation.ofStates([-0.5, 0.0, 0.01, 1.0]);
-    expect(t, const Tally(2, 4));
+    expect(t, const Tally(2, 4, 1)); // −0.5 deep red, 0.0 grey
     expect(t.percent, 50);
   });
 
@@ -17,12 +17,12 @@ void main() {
   test('saved cells are summed per chunk, also at negative coordinates', () {
     final byChunk = Liberation.savedByChunk({
       '0,0': {'s': 0.5},
-      '15,15': {'s': -0.2},
+      '15,15': {'s': -0.6},
       '16,0': {'s': 0.1},
       '-1,-1': {'s': 0.3},
       'broken': {'s': 1.0},
     });
-    expect(byChunk['0,0'], const Tally(1, 2));
+    expect(byChunk['0,0'], const Tally(1, 2, 1));
     expect(byChunk['1,0'], const Tally(1, 1));
     expect(byChunk['-1,-1'], const Tally(1, 1));
     expect(byChunk.length, 3);

@@ -109,26 +109,30 @@ class QuarterStatus {
   int get hashCode => Object.hash(quarter, christians, people, awakened);
 }
 
-/// `free` of `total` – liberated cells or Christians.
+/// `free` of `total` – liberated cells or Christians. For cells also how
+/// many are still deeply dark ([dark]); the rest is grey, in between.
 class Tally {
   final int free;
   final int total;
-  const Tally(this.free, this.total);
+  final int dark;
+  const Tally(this.free, this.total, [this.dark = 0]);
 
   static const zero = Tally(0, 0);
 
   double get share => total == 0 ? 0.0 : free / total;
+  double get darkShare => total == 0 ? 0.0 : dark / total;
 
   /// Whole percent, never 100 before everything is done.
   int get percent => free >= total ? (total == 0 ? 0 : 100) : (share * 100).floor();
 
-  Tally operator +(Tally o) => Tally(free + o.free, total + o.total);
+  Tally operator +(Tally o) => Tally(free + o.free, total + o.total, dark + o.dark);
 
   @override
-  bool operator ==(Object other) => other is Tally && other.free == free && other.total == total;
+  bool operator ==(Object other) =>
+      other is Tally && other.free == free && other.total == total && other.dark == dark;
 
   @override
-  int get hashCode => Object.hash(free, total);
+  int get hashCode => Object.hash(free, total, dark);
 }
 
 /// The overall progress under the 🏘️ bar (playtest 2026-10-20): how much
@@ -166,13 +170,21 @@ class CityProgress {
 abstract final class Liberation {
   static bool isFree(double spiritualState) => spiritualState > 0;
 
+  /// Still deeply dark (deep red in the invisible world).
+  static bool isDark(double spiritualState) => spiritualState < darkBelow;
+  static const double darkBelow = -0.3;
+
   static Tally ofStates(Iterable<double> states) {
-    var free = 0, total = 0;
+    var free = 0, total = 0, dark = 0;
     for (final s in states) {
       total++;
-      if (isFree(s)) free++;
+      if (isFree(s)) {
+        free++;
+      } else if (isDark(s)) {
+        dark++;
+      }
     }
-    return Tally(free, total);
+    return Tally(free, total, dark);
   }
 
   /// Saved cell states (`'wx,wy' → {s: …}`) summed up per chunk
@@ -181,6 +193,7 @@ abstract final class Liberation {
   static Map<String, Tally> savedByChunk(Map<String, Map<String, dynamic>> saved) {
     final free = <String, int>{};
     final total = <String, int>{};
+    final dark = <String, int>{};
     for (final e in saved.entries) {
       final comma = e.key.indexOf(',');
       if (comma < 0) continue;
@@ -189,9 +202,14 @@ abstract final class Liberation {
       if (wx == null || wy == null) continue;
       final key = '${(wx / CityChunk.chunkSize).floor()},${(wy / CityChunk.chunkSize).floor()}';
       total[key] = (total[key] ?? 0) + 1;
-      if (isFree((e.value['s'] as num?)?.toDouble() ?? 0)) free[key] = (free[key] ?? 0) + 1;
+      final st = (e.value['s'] as num?)?.toDouble() ?? 0;
+      if (isFree(st)) {
+        free[key] = (free[key] ?? 0) + 1;
+      } else if (isDark(st)) {
+        dark[key] = (dark[key] ?? 0) + 1;
+      }
     }
-    return {for (final k in total.keys) k: Tally(free[k] ?? 0, total[k]!)};
+    return {for (final k in total.keys) k: Tally(free[k] ?? 0, total[k]!, dark[k] ?? 0)};
   }
 
   /// The neighbourhood a chunk belongs to.

@@ -69,15 +69,10 @@ abstract final class HelpContent {
           'In the invisible world: hold to charge a prayer wave. On people: how close they are to faith.')
     ),
     (
-      '🏘️',
-      Tr('Balken deines Stadtteils: Werden genug Menschen Christen, öffnet sich das Bollwerk 🏰.',
-          'Your neighbourhood bar: once enough people are Christians, the stronghold 🏰 opens.')
-    ),
-    (
-      '🏙️',
+      '🏙️ / 🌐',
       Tr(
-        'Balken der ganzen Stadt: in der Stadt der Anteil der Christen, in der unsichtbaren Welt wie viel schon freigebetet ist (grün). Dort zeigt auch 🏘️ den freigebeteten Anteil des Viertels.',
-        'Whole-city bar: in the city the share of Christians, in the invisible world how much is already prayed free (green). There 🏘️ shows the prayed-free share of the quarter too.',
+        'Zwei dünne Linien unter ✝: oben dein Stadtteil, unten die ganze Stadt. In der Stadt (🏙️) blau: oben der Weg bis zum Bollwerk 🏰, unten der Anteil der Christen. In der unsichtbaren Welt (🌐) wie das Land steht: tiefrot = finster, grau = dazwischen, grün = freigebetet. ⚔️ = Bollwerk angreifbar, 🔥 = Stadtteil erweckt.',
+        'Two thin lines under ✝: top your neighbourhood, bottom the whole city. In the city (🏙️) blue: top the way to the stronghold 🏰, bottom the share of Christians. In the invisible world (🌐) how the ground stands: deep red = dark, grey = in between, green = prayed free. ⚔️ = stronghold open, 🔥 = neighbourhood awakened.',
       ),
     ),
     (

@@ -280,27 +280,34 @@ abstract final class KenneyCityRenderer {
     }
 
     // The Salvation Army's red shield (the game's home is a corps, used with
-    // permission): white rim, red field, two white lines for the lettering.
+    // permission): the heraldic outline – pointed top corners with a small
+    // notch below, slightly concave top, rounded taper to the point – red,
+    // with the thin white inner rim, no lettering at this size.
     void redShield() {
       Path shield(double s) {
         final c = r.center;
-        final w = 7 * u * s, top = -6.5 * u * s, waist = 1.5 * u * s, tip = 7.8 * u * s;
+        Offset p(double x, double y) => Offset(c.dx + x * u * s, c.dy + y * u * s);
         return Path()
-          ..moveTo(c.dx - w, c.dy + top)
-          ..quadraticBezierTo(c.dx, c.dy + top - 1.5 * u * s, c.dx + w, c.dy + top)
-          ..lineTo(c.dx + w, c.dy + waist)
-          ..quadraticBezierTo(c.dx + w, c.dy + tip * 0.75, c.dx, c.dy + tip)
-          ..quadraticBezierTo(c.dx - w, c.dy + tip * 0.75, c.dx - w, c.dy + waist)
+          ..moveTo(p(-6.6, -7.2).dx, p(-6.6, -7.2).dy)
+          ..quadraticBezierTo(p(0, -5.6).dx, p(0, -5.6).dy, p(6.6, -7.2).dx, p(6.6, -7.2).dy)
+          ..quadraticBezierTo(p(5.5, -5.9).dx, p(5.5, -5.9).dy, p(6.3, -4.2).dx, p(6.3, -4.2).dy)
+          ..quadraticBezierTo(p(7.0, -1.5).dx, p(7.0, -1.5).dy, p(6.4, 1.6).dx, p(6.4, 1.6).dy)
+          ..quadraticBezierTo(p(5.6, 6.2).dx, p(5.6, 6.2).dy, p(0, 8.0).dx, p(0, 8.0).dy)
+          ..quadraticBezierTo(p(-5.6, 6.2).dx, p(-5.6, 6.2).dy, p(-6.4, 1.6).dx, p(-6.4, 1.6).dy)
+          ..quadraticBezierTo(p(-7.0, -1.5).dx, p(-7.0, -1.5).dy, p(-6.3, -4.2).dx, p(-6.3, -4.2).dy)
+          ..quadraticBezierTo(p(-5.5, -5.9).dx, p(-5.5, -5.9).dy, p(-6.6, -7.2).dx, p(-6.6, -7.2).dy)
           ..close();
       }
 
       canvas.drawPath(shield(1).shift(Offset(u, u)), _symbolShadow);
-      canvas.drawPath(shield(1), _symbolWhite);
-      canvas.drawPath(shield(0.8), _symbolRed);
-      for (final (dy, w) in [(-2.2, 8.0), (0.6, 6.5)]) {
-        canvas.drawRect(
-            Rect.fromCenter(center: r.center.translate(0, dy * u), width: w * u, height: 1.1 * u), _symbolWhite);
-      }
+      canvas.drawPath(shield(1), _symbolRed);
+      canvas.drawPath(
+        shield(0.84),
+        Paint()
+          ..color = const Color(0xFFFFFFFF)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.7 * u,
+      );
     }
 
     switch (type) {
