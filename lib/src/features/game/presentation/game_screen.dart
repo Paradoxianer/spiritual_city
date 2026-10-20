@@ -11,13 +11,17 @@ import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/services/combat_abilities.dart';
 import '../domain/models/skills.dart';
+import '../domain/actions/building_actions.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
 import '../domain/actions/practice.dart';
+import '../domain/actions/resource.dart';
+import '../domain/help/help_content.dart';
 import '../domain/models/base_interactable_entity.dart';
 import '../domain/city_generation/city_overview.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
+import '../domain/models/daemon_kind.dart';
 import '../domain/models/game_keymap.dart';
 import '../domain/models/npc_backstory.dart';
 import '../domain/models/npc_model.dart';
@@ -40,6 +44,7 @@ part 'hud/hud.dart';
 part 'hud/minimap.dart';
 part 'overlays/building_interior.dart';
 part 'overlays/church.dart';
+part 'overlays/help.dart';
 part 'overlays/city_map.dart';
 part 'overlays/lesson.dart';
 part 'overlays/look.dart';
@@ -211,8 +216,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   MissionBoardOverlay(game: _game),
               'LessonOverlay': (context, game) => LessonOverlay(game: _game),
               'ChurchOverlay': (context, game) => ChurchOverlay(game: _game),
-              'KeymapOverlay': (context, game) =>
-                  KeymapOverlay(game: _game),
               'PauseMenuOverlay': (context, game) => PauseMenuOverlay(
                     game: _game,
                     isSaving: _isSaving,
@@ -398,6 +401,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               if (!isReady) return const SizedBox.shrink();
               return _WinScreenOverlay(game: _game);
             },
+          ),
+          // ❓ Help – topmost, so no HUD element covers it.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.helpOpen,
+            builder: (context, open, _) => open ? HelpOverlay(game: _game) : const SizedBox.shrink(),
           ),
         ],
         ),

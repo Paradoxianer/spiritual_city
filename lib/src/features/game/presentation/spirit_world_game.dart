@@ -1204,9 +1204,17 @@ class SpiritWorldGame extends FlameGame
 
   void closeMenu() { _currentMenu?.removeFromParent(); _currentMenu = null; }
 
-  // ── Keymap overlay ────────────────────────────────────────────────────────
+  // ── ❓ Help overlay ───────────────────────────────────────────────────────
 
-  bool _keymapOpen = false;
+  /// Shown above the whole HUD (not as a Flame overlay, which lies below
+  /// the tutorial chip and the resource bars).
+  final ValueNotifier<bool> helpOpen = ValueNotifier(false);
+
+  /// Back to the pause menu when the help closes (it was opened from there).
+  bool _helpFromPause = false;
+
+  /// Tab the help opens on (0 = 🎓 my tasks … 3 = ⌨️ keys).
+  int helpTab = 0;
 
   // ── Pause menu (Issue #162) ───────────────────────────────────────────────
   //

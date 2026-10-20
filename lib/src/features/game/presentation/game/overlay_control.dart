@@ -264,23 +264,31 @@ extension GameOverlayControl on SpiritWorldGame {
     paused = false;
   }
 
-  void openKeymapOverlay() {
-    if (_keymapOpen) return;
-    _keymapOpen = true;
-    overlays.add('KeymapOverlay');
+  /// Opens the ❓ help on [tab]. The game stands still while it is open.
+  void openHelp({int tab = 0, bool fromPause = false}) {
+    if (helpOpen.value) return;
+    _helpFromPause = fromPause;
+    helpTab = tab;
+    helpOpen.value = true;
+    pauseEngine();
   }
 
-  void closeKeymapOverlay() {
-    if (!_keymapOpen) return;
-    _keymapOpen = false;
-    overlays.remove('KeymapOverlay');
-  }
-
-  void toggleKeymapOverlay() {
-    if (_keymapOpen) {
-      closeKeymapOverlay();
+  void closeHelp() {
+    if (!helpOpen.value) return;
+    helpOpen.value = false;
+    if (_helpFromPause) {
+      openPauseMenu();
     } else {
-      openKeymapOverlay();
+      resumeEngine();
+    }
+  }
+
+  /// F1 / ? – opens on the ⌨️ keys.
+  void toggleHelp() {
+    if (helpOpen.value) {
+      closeHelp();
+    } else {
+      openHelp(tab: 3);
     }
   }
 
@@ -307,7 +315,7 @@ extension GameOverlayControl on SpiritWorldGame {
   /// the case that nothing exists to act on yet (world not loaded).
   bool handleEscape() {
     if (_pauseMenuOpen)              { closePauseMenu();         return true; }
-    if (_keymapOpen)                 { closeKeymapOverlay();     return true; }
+    if (helpOpen.value)              { closeHelp();              return true; }
     if (cityMapOpen.value)           { closeCityMap();           return true; }
     if (activeLessonOffer != null)   { closeLesson();            return true; }
     if (overlays.isActive('ChurchOverlay')) { closeChurchOverview(); return true; }

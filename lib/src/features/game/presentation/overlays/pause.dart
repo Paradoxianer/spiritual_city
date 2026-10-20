@@ -83,7 +83,7 @@ class PauseMenuOverlay extends StatelessWidget {
                         label: AppStrings.get('game.pause.help'),
                         onPressed: () {
                           game.closePauseMenu();
-                          game.openKeymapOverlay();
+                          game.openHelp(fromPause: true);
                         },
                       ),
                       const SizedBox(height: 12),
@@ -175,107 +175,6 @@ class _PauseMenuButton extends StatelessWidget {
       child: filled
           ? FilledButton(onPressed: onPressed, style: style, child: child)
           : OutlinedButton(onPressed: onPressed, style: style, child: child),
-    );
-  }
-}
-
-// ── Keymap Overlay ─────────────────────────────────────────────────────────────
-
-/// Full-screen overlay that displays all keyboard shortcuts grouped by
-/// category.  Toggle with F1 or ? at any time during gameplay.
-class KeymapOverlay extends StatelessWidget {
-  final SpiritWorldGame game;
-  const KeymapOverlay({super.key, required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    // Group entries by category
-    final categories = <String, List<KeymapEntry>>{};
-    for (final entry in GameKeymap.entries) {
-      categories.putIfAbsent(entry.category, () => []).add(entry);
-    }
-
-    return Positioned.fill(
-      child: Material(
-        type: MaterialType.transparency,
-        child: Container(
-          color: Colors.black.withValues(alpha: 0.88),
-          child: SafeArea(
-            child: Column(
-              children: [
-                // ── Header ────────────────────────────────────────────────────
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Row(
-                    children: [
-                      const Text('⌨️', style: TextStyle(fontSize: 22)),
-                      const SizedBox(width: 10),
-                      Text(
-                        AppStrings.get('keymap.title'),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        tooltip: 'F1 / ?',
-                        onPressed: game.closeKeymapOverlay,
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(color: Colors.white24, height: 1),
-
-                // ── Key-binding table ──────────────────────────────────────────
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: categories.entries.map((cat) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                (cat.value.first.localizedCategory).toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.amber,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              ...cat.value.map((e) => _KeyRow(entry: e)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-
-                // ── Footer hint ────────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'F1 / ?  ✕',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.35),
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
