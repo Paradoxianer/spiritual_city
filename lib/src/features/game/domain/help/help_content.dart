@@ -71,8 +71,8 @@ abstract final class HelpContent {
     (
       '🏙️ / 🌐',
       Tr(
-        'Zwei dünne Linien unter ✝: oben dein Stadtteil, unten die ganze Stadt. In der Stadt (🏙️) blau: oben der Weg bis zum Bollwerk 🏰, unten der Anteil der Christen. In der unsichtbaren Welt (🌐) wie das Land steht: tiefrot = finster, grau = dazwischen, grün = freigebetet. ⚔️ = Bollwerk angreifbar, 🔥 = Stadtteil erweckt.',
-        'Two thin lines under ✝: top your neighbourhood, bottom the whole city. In the city (🏙️) blue: top the way to the stronghold 🏰, bottom the share of Christians. In the invisible world (🌐) how the ground stands: deep red = dark, grey = in between, green = prayed free. ⚔️ = stronghold open, 🔥 = neighbourhood awakened.',
+        'Zwei dünne Linien unter ✝: oben dein Stadtteil, unten die ganze Stadt. In der Stadt (🏙️): oben blau der Weg bis zum Bollwerk 🏰, unten gold der Anteil der Christen. In der unsichtbaren Welt (🌐) wie das Land steht – Stadtteil: tiefrot = finster, grau = dazwischen, grün = freigebetet; ganze Stadt: violett = finster, grau, gold = freigebetet. ⚔️ = Bollwerk angreifbar, 🔥 = Stadtteil erweckt.',
+        'Two thin lines under ✝: top your neighbourhood, bottom the whole city. In the city (🏙️): top in blue the way to the stronghold 🏰, bottom in gold the share of Christians. In the invisible world (🌐) how the ground stands – neighbourhood: deep red = dark, grey = in between, green = prayed free; whole city: violet = dark, grey, gold = prayed free. ⚔️ = stronghold open, 🔥 = neighbourhood awakened.',
       ),
     ),
     (

@@ -801,8 +801,8 @@ class _ConversionCounterState extends State<_ConversionCounter> with SingleTicke
 ///  * top – this neighbourhood: in the city how far it is from an
 ///    attackable 🏰 (blue, gold when open, orange once awakened); in the
 ///    invisible world its ground as a deep red → grey → green blend;
-///  * bottom – the whole known city: Christians among all known people,
-///    in the invisible world again red → grey → green.
+///  * bottom – the whole known city, in its own colours: Christians among
+///    all known people (gold), in the invisible world violet → grey → gold.
 /// ⚔️ / 🔥 behind them when the neighbourhood's stronghold is open / fallen.
 class _QuarterProgressBar extends StatelessWidget {
   final SpiritWorldGame game;
@@ -813,6 +813,8 @@ class _QuarterProgressBar extends StatelessWidget {
   static const _grey = Color(0xFF6B6B6B);
   static const _green = Color(0xFF66BB6A);
   static const _blue = Color(0xFFB0C4FF);
+  static const _darkViolet = Color(0xFF4A148C);
+  static const _gold = Color(0xFFFFD54F);
 
   @override
   Widget build(BuildContext context) {
@@ -825,10 +827,11 @@ class _QuarterProgressBar extends StatelessWidget {
         final spirit = city?.spiritWorld ?? false;
         final fort = s.awakened ? '🔥' : (s.strongholdOpen ? '⚔️' : '');
 
-        Widget ground(Tally t) => _ShareLine(width: _width, segments: [
-              (t.darkShare, _darkRed),
+        // The city line has its own colours so the two never look alike.
+        Widget ground(Tally t, {bool city = false}) => _ShareLine(width: _width, segments: [
+              (t.darkShare, city ? _darkViolet : _darkRed),
               (1 - t.darkShare - t.share, _grey),
-              (t.share, _green),
+              (t.share, city ? _gold : _green),
             ]);
         Widget fill(double v, Color c) => _ShareLine(width: _width, segments: [(v, c)]);
 
@@ -852,9 +855,9 @@ class _QuarterProgressBar extends StatelessWidget {
                   spirit && city != null ? ground(city.quarterCells) : fill(s.progress, quarterColor),
                   const SizedBox(height: 2),
                   if (city != null)
-                    spirit ? ground(city.cityCells) : fill(city.cityPeople.share, _blue)
+                    spirit ? ground(city.cityCells, city: true) : fill(city.cityPeople.share, _gold)
                   else
-                    fill(0, _blue),
+                    fill(0, _gold),
                 ],
               ),
               if (fort.isNotEmpty) ...[
