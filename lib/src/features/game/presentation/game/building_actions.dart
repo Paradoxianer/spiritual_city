@@ -378,16 +378,20 @@ extension GameBuildingActions on SpiritWorldGame {
   // ── 📢🎺 Open-air meeting (Freiversammlung) ─────────────────────────────
   //
   // The Salvation Army's street preaching (playtest 2026-10-20): in reality
-  // it takes a great deal of courage. Only with a strong faith (≥ 70 %), it
-  // costs much strength and food – and afterwards faith is full, because
-  // God honours the courage (Acts 4:31). Far wider reach than preaching in
-  // a church. Once a day, after learning 📢.
+  // it takes an enormous step of faith – it costs 70 🙏 up front, plus much
+  // strength and food. And because at open-air meetings God so often does
+  // astonishing things, a few seconds later faith is filled up completely
+  // (Acts 4:31). Far wider reach than preaching in a church. Once a day,
+  // after learning 📢.
 
-  static const double openAirMinFaithShare = 0.7;
+  static const double openAirFaithCost = 70;
   static const double openAirHealthShare = 0.5;
   static const double openAirHungerShare = 0.3;
   static const int openAirRadiusCells = 20;
   static const double openAirStrength = 1.5;
+
+  /// Seconds until faith is filled up after the meeting.
+  static const double openAirRefillDelay = 3;
 
   /// Shown in the 🖐️ circle menu outside once 📢 is learned.
   bool get openAirOffered => interior == null && !isSpiritualWorld && progress.skills.has(Skill.preaching);
@@ -395,7 +399,7 @@ extension GameBuildingActions on SpiritWorldGame {
   /// Why an open-air meeting cannot be held now (emoji), or null.
   String? get openAirBlocker {
     if (dayStats.openAirHeld) return '📢🎺✅';
-    if (faith < progress.maxFaith * openAirMinFaithShare) return '🚫🙏 ${(openAirMinFaithShare * 100).round()}%';
+    if (faith < openAirFaithCost) return '🚫🙏 ${openAirFaithCost.round()}';
     if (health <= progress.maxHealth * openAirHealthShare) return '🚫❤️';
     if (hunger < progress.maxHunger * openAirHungerShare) return '🚫🍞';
     return null;
@@ -409,14 +413,24 @@ extension GameBuildingActions on SpiritWorldGame {
       return;
     }
     dayStats.openAirHeld = true;
+    spendFaith(openAirFaithCost);
     spendHealth(progress.maxHealth * openAirHealthShare);
     spendHunger(progress.maxHunger * openAirHungerShare);
     final reached = _preachAround(player.position, radiusCells: openAirRadiusCells, strength: openAirStrength);
     _brightenspiritualAreaAroundPosition(player.position, radius: 10, amount: 0.15);
-    gainFaith(progress.maxFaith - faith);
     recordPractice(Discipline.bible);
     GameSound.playAction('preach', Discipline.bible.name);
-    _toast('📢🎺👥 $reached  🙏💯');
+    _toast('📢🎺👥 $reached  −${openAirFaithCost.round()}🙏');
+    // …and then God fills up what was given.
+    add(TimerComponent(
+      period: openAirRefillDelay,
+      removeOnFinish: true,
+      onTick: () {
+        gainFaith(progress.maxFaith - faith);
+        GameSound.play(Sfx.learned, volume: 0.7);
+        _toast('✨🙏💯');
+      },
+    ));
   }
 
   /// Applies [delta] spiritual influence to the city cell directly beneath

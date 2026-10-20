@@ -78,8 +78,8 @@ abstract final class HelpContent {
     (
       '📢🎺',
       Tr(
-        'Freiversammlung (nach 📢 Predigen, Kreismenü 🖐️ auf der Straße): braucht Mut – mindestens 70 % 🙏, kostet die Hälfte deines ❤️ und viel 🍞. Erreicht sehr viele Menschen, danach ist dein Glaube voll. Einmal pro Tag.',
-        'Open-air meeting (after 📢 preaching, circle menu 🖐️ in the street): takes courage – at least 70 % 🙏, costs half your ❤️ and much 🍞. Reaches very many people, afterwards your faith is full. Once a day.',
+        'Freiversammlung (nach 📢 Predigen, Kreismenü 🖐️ auf der Straße): ein großer Glaubensschritt – kostet 70 🙏, die Hälfte deines ❤️ und viel 🍞. Erreicht sehr viele Menschen – und kurz danach füllt Gott deinen Glauben ganz auf ✨🙏💯. Einmal pro Tag.',
+        'Open-air meeting (after 📢 preaching, circle menu 🖐️ in the street): a big step of faith – costs 70 🙏, half your ❤️ and much 🍞. Reaches very many people – and shortly after God fills your faith up completely ✨🙏💯. Once a day.',
       ),
     ),
     (
