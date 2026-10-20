@@ -381,8 +381,9 @@ extension GameBuildingActions on SpiritWorldGame {
   // it takes an enormous step of faith – it costs 70 🙏 up front, plus much
   // strength and food. And because at open-air meetings God so often does
   // astonishing things, a few seconds later faith is filled up completely
-  // (Acts 4:31). Far wider reach than preaching in a church. Once a day,
-  // after learning 📢.
+  // (Acts 4:31). Far wider reach than preaching in a church. After learning
+  // 📢. No daily limit (playtest): needing more than half the ❤️ already
+  // means recovering (😴 🏥 ☕ 🛒) before the next one.
 
   static const double openAirFaithCost = 70;
   static const double openAirHealthShare = 0.5;
@@ -398,7 +399,6 @@ extension GameBuildingActions on SpiritWorldGame {
 
   /// Why an open-air meeting cannot be held now (emoji), or null.
   String? get openAirBlocker {
-    if (dayStats.openAirHeld) return '📢🎺✅';
     if (faith < openAirFaithCost) return '🚫🙏 ${openAirFaithCost.round()}';
     if (health <= progress.maxHealth * openAirHealthShare) return '🚫❤️';
     if (hunger < progress.maxHunger * openAirHungerShare) return '🚫🍞';
@@ -412,7 +412,6 @@ extension GameBuildingActions on SpiritWorldGame {
       _toast(blocker);
       return;
     }
-    dayStats.openAirHeld = true;
     spendFaith(openAirFaithCost);
     spendHealth(progress.maxHealth * openAirHealthShare);
     spendHunger(progress.maxHunger * openAirHungerShare);

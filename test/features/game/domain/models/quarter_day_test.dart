@@ -55,14 +55,5 @@ void main() {
       expect(r.dayStats.day, 4);
       expect(r.dayStats.storiesHealed, 1);
     });
-
-    test('📢🎺 once a day: saved, and open again the next day', () {
-      final p = PlayerProgress();
-      p.dayStats.openAirHeld = true;
-      final r = PlayerProgress()..loadFromJson(p.toJson());
-      expect(r.dayStats.openAirHeld, isTrue);
-      r.dayStats.nextDay();
-      expect(r.dayStats.openAirHeld, isFalse);
-    });
   });
 }
