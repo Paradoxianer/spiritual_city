@@ -279,8 +279,40 @@ abstract final class KenneyCityRenderer {
       canvas.drawRect(hz, p);
     }
 
+    // The Salvation Army's red shield (the game's home is a corps, used with
+    // permission): the heraldic outline – pointed top corners with a small
+    // notch below, slightly concave top, rounded taper to the point – red,
+    // with the thin white inner rim, no lettering at this size.
+    void redShield() {
+      Path shield(double s) {
+        final c = r.center;
+        Offset p(double x, double y) => Offset(c.dx + x * u * s, c.dy + y * u * s);
+        return Path()
+          ..moveTo(p(-6.6, -7.2).dx, p(-6.6, -7.2).dy)
+          ..quadraticBezierTo(p(0, -5.6).dx, p(0, -5.6).dy, p(6.6, -7.2).dx, p(6.6, -7.2).dy)
+          ..quadraticBezierTo(p(5.5, -5.9).dx, p(5.5, -5.9).dy, p(6.3, -4.2).dx, p(6.3, -4.2).dy)
+          ..quadraticBezierTo(p(7.0, -1.5).dx, p(7.0, -1.5).dy, p(6.4, 1.6).dx, p(6.4, 1.6).dy)
+          ..quadraticBezierTo(p(5.6, 6.2).dx, p(5.6, 6.2).dy, p(0, 8.0).dx, p(0, 8.0).dy)
+          ..quadraticBezierTo(p(-5.6, 6.2).dx, p(-5.6, 6.2).dy, p(-6.4, 1.6).dx, p(-6.4, 1.6).dy)
+          ..quadraticBezierTo(p(-7.0, -1.5).dx, p(-7.0, -1.5).dy, p(-6.3, -4.2).dx, p(-6.3, -4.2).dy)
+          ..quadraticBezierTo(p(-5.5, -5.9).dx, p(-5.5, -5.9).dy, p(-6.6, -7.2).dx, p(-6.6, -7.2).dy)
+          ..close();
+      }
+
+      canvas.drawPath(shield(1).shift(Offset(u, u)), _symbolShadow);
+      canvas.drawPath(shield(1), _symbolRed);
+      canvas.drawPath(
+        shield(0.84),
+        Paint()
+          ..color = const Color(0xFFFFFFFF)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.7 * u,
+      );
+    }
+
     switch (type) {
       case BuildingType.pastorHouse:
+        redShield();
       case BuildingType.church:
       case BuildingType.cathedral:
         cross(_symbolGold, tall: type == BuildingType.cathedral ? 16 : 14);

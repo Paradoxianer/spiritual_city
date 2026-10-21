@@ -232,7 +232,7 @@ class PlayerComponent extends PositionComponent
     if (event is KeyUpEvent &&
         (event.logicalKey == GameKeymap.keymapOverlay ||
             event.logicalKey == GameKeymap.keymapOverlayAlt)) {
-      game.toggleKeymapOverlay();
+      game.toggleHelp();
     }
 
     // ── Mission board (M) ─────────────────────────────────────────────────────

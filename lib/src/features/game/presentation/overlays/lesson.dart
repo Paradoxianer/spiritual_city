@@ -99,7 +99,11 @@ class _LessonChip extends StatelessWidget {
       builder: (context, _, __) {
         final l = game.progress.lesson.lesson;
         if (l == null) return const SizedBox.shrink();
-        return Container(
+        // Tap → ❓ help on "my tasks": how this lesson is done (playtest
+        // 2026-10-20, stuck on 🎓📢).
+        return GestureDetector(
+          onTap: () => game.openHelp(),
+          child: Container(
           margin: const EdgeInsets.only(top: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
@@ -108,8 +112,9 @@ class _LessonChip extends StatelessWidget {
             border: Border.all(color: const Color(0x88FFD54F)),
           ),
           child: Text(
-            l.progressLabel(game.progress.lesson.progress),
+            '${l.progressLabel(game.progress.lesson.progress)}  ❓',
             style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 12),
+          ),
           ),
         );
       },

@@ -161,7 +161,7 @@ abstract final class Lessons {
       unlocks: '📢⛪ ➡️ 👥✝️',
       requires: {Skill.spiritualWarfare},
     ),
-    // ── Mastery per prayer mode: lifts the upgrade cap (2 → 5 → 10) ──
+    // ── Mastery per prayer mode: lifts the upgrade cap (2 → 5 → 10, 🕊️ → 15) ──
     Lesson(
       skill: Skill.liberationMastery1,
       mentorAt: {BuildingType.church, BuildingType.cemetery},
@@ -180,7 +180,17 @@ abstract final class Lessons {
       verse: 'lesson.mastery.liberation.verse',
       unlocks: '🕊️⭐⭐ ➡️ 🔓10 🕊️✨',
       requires: {Skill.liberationMastery1},
-      minAwakenings: 2,
+    ),
+    Lesson(
+      skill: Skill.liberationMastery3,
+      mentorAt: {BuildingType.cathedral},
+      task: LessonTask.defeatLiberation,
+      count: 30,
+      reference: 'Joh 8,36',
+      verse: 'lesson.mastery.liberation.verse',
+      unlocks: '🕊️⭐⭐⭐ ➡️ 🔓15',
+      requires: {Skill.liberationMastery2},
+      minAwakenings: 1,
     ),
     Lesson(
       skill: Skill.rebukeMastery1,
@@ -201,7 +211,7 @@ abstract final class Lessons {
       verse: 'lesson.mastery.rebuke.verse',
       unlocks: '🫸⭐⭐ ➡️ 🔓10 🫸⚡',
       requires: {Skill.rebukeMastery1},
-      minAwakenings: 2,
+      minAwakenings: 1,
     ),
     Lesson(
       skill: Skill.slowMastery1,
@@ -222,7 +232,7 @@ abstract final class Lessons {
       verse: 'lesson.mastery.slow.verse',
       unlocks: '⏳⭐⭐ ➡️ 🔓10 ⏳💥',
       requires: {Skill.slowMastery1},
-      minAwakenings: 2,
+      minAwakenings: 1,
     ),
     Lesson(
       skill: Skill.drainMastery1,
@@ -243,7 +253,7 @@ abstract final class Lessons {
       verse: 'lesson.mastery.drain.verse',
       unlocks: '🪫⭐⭐ ➡️ 🔓10 🪫⚡',
       requires: {Skill.drainMastery1},
-      minAwakenings: 2,
+      minAwakenings: 1,
     ),
   ];
 

@@ -232,9 +232,18 @@ class _SaveTile extends StatelessWidget {
           save.name,
           style: const TextStyle(color: Colors.white),
         ),
-        subtitle: Text(
-          '$diffLabel · ${AppStrings.get('loadGame.lastPlayed')}: $dateStr',
-          style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$diffLabel · ${AppStrings.get('loadGame.lastPlayed')}: $dateStr',
+              style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 12),
+            ),
+            if (hasState)
+              Text(saveSummary(save.gameState),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -254,4 +263,17 @@ class _SaveTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// What a save holds, as emoji: resource levels, insight, day and
+/// conversions – so a player sees before loading what was stored
+/// (playtest 2026-10-19).
+String saveSummary(Map<String, dynamic> state) {
+  final p = state['progress'] is Map ? state['progress'] as Map : const {};
+  final stages = p['stages'] is Map ? p['stages'] as Map : const {};
+  int lv(String k) => ((stages[k] is Map ? (stages[k] as Map)['stage'] : null) as num?)?.toInt() ?? 1;
+  int n(Object? v) => (v as num?)?.toInt() ?? 0;
+  final day = p['day'] is Map ? n((p['day'] as Map)['day']) : 0;
+  return '🙏${n(state['faith'])} Lv${lv('faith')} · 📦${n(state['materials'])} Lv${lv('materials')} · '
+      '📖${n(p['insight'])} · ✝️${n(p['npcsConverted'])}${day > 0 ? ' · 📅$day' : ''}';
 }

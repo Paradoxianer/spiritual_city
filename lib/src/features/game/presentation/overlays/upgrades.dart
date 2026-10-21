@@ -96,12 +96,15 @@ class _UpgradePanelState extends State<_UpgradePanel> {
     // Not learned yet, or at the mentor cap: the next step is a 🎓 lesson.
     final modeSkill = CombatAbilities.modeSkill(mode);
     final cap = CombatAbilities.levelCap(mode, skills);
-    final (m1, m2) = CombatAbilities.mastery(mode);
+    final next = CombatAbilities.nextMastery(mode, skills);
     final Availability? lock = !CombatAbilities.canUse(mode, skills)
         ? Locked('🎓${modeSkill!.emoji}')
         : level >= cap
-            ? (cap >= CombatAbilities.levelCaps.last ? const Locked('✅') : Locked('🎓${(skills.has(m1) ? m2 : m1).emoji}'))
+            ? (next == null ? const Locked('✅') : const Locked('🔒'))
             : null;
+    // At the cap the next mentor step is shown with what it still needs and
+    // a 📍 to follow it (playtest 2026-10-19: the way on was not visible).
+    final teach = !CombatAbilities.canUse(mode, skills) ? modeSkill : (level >= cap ? next : null);
     _UpgradeTile tile(String emoji, String key, int level, double value, VoidCallback apply) =>
         _UpgradeTile(
           emoji: emoji,
@@ -120,7 +123,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
       // Abilities: unlocked ones bright, the next with the level it needs.
       footer: Wrap(
         spacing: 10,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
+          if (teach != null) _NextLesson(game: widget.game, skill: teach),
           for (var i = 0; i < CombatAbilities.milestones.length; i++)
             Opacity(
               opacity: i < tier ? 1.0 : 0.45,
@@ -139,6 +145,60 @@ class _UpgradePanelState extends State<_UpgradePanel> {
         tile('⏱️', 'duration', s.durationLevel, s.duration, () => s.durationLevel++),
         tile('💨', 'speed', s.speedLevel, s.speed, () => s.speedLevel++),
       ],
+    );
+  }
+}
+
+/// The mentor step that opens the next upgrades: `🎓🕊️⭐⭐ ⛪ 📍`, or what
+/// is still missing (`🔒 🏰🔥 0/1`), or the running count (`7/20 👹`).
+class _NextLesson extends StatelessWidget {
+  final SpiritWorldGame game;
+  final Skill skill;
+  const _NextLesson({required this.game, required this.skill});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = game.progress;
+    final l = Lessons.of(skill);
+    final awakenings = p.awakenedQuarters.length;
+    final key = GameMissionTracking.lessonKey(skill);
+    final String status;
+    if (p.lesson.active == skill) {
+      status = '${p.lesson.progress}/${l.count} ${l.task.emoji}';
+    } else if (l.isOpen(p.skills, awakenings)) {
+      status = l.mentorAt.map(BuildingComponent.buildingEmoji).join(' ');
+    } else {
+      status = '🔒 ${[
+        for (final r in l.requires)
+          if (!p.skills.has(r)) r.emoji,
+        if (awakenings < l.minAwakenings) '🏰🔥 $awakenings/${l.minAwakenings}',
+      ].join(' ')}';
+    }
+    return ValueListenableBuilder<String?>(
+      valueListenable: game.trackedMission,
+      builder: (context, tracked, _) => Container(
+        padding: const EdgeInsets.fromLTRB(8, 2, 2, 2),
+        decoration: BoxDecoration(
+          color: Colors.amber.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('🎓${skill.emoji}  $status',
+                style: const TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+            TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(36, 30),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+              onPressed: () => game.toggleTrackedMission(key),
+              child: Text(tracked == key ? '📍✅' : '📍', style: const TextStyle(fontSize: 15)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

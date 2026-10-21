@@ -200,6 +200,20 @@ class BuildingModel extends BaseInteractableEntity {
   double get combinedFaith =>
       faith + residents.fold(0.0, (sum, npc) => sum + npc.faith);
 
+  /// Holiness of the house as shown (✝️ bar) and felt at the door: its own
+  /// faith plus half the residents' average – converting or strengthening
+  /// a resident makes the house noticeably "brighter" (#168).
+  double get holiness {
+    if (residents.isEmpty) return faith;
+    final avg = residents.fold(0.0, (sum, npc) => sum + npc.faith) / residents.length;
+    return (faith + avg * 0.5).clamp(-100.0, 100.0);
+  }
+
+  /// Extra interactions for actions of greater effort (#168): every
+  /// successful action counts at least +1, a long or costly one more.
+  static int effortBonus({required double faithCost, required int seconds}) =>
+      (faithCost >= 50 || seconds >= 10) ? 2 : ((faithCost >= 25 || seconds >= 6) ? 1 : 0);
+
   // ── Influence radius ──────────────────────────────────────────────────────
 
   /// The radius (in cells) within which this building's faith influences the
@@ -225,6 +239,13 @@ class BuildingModel extends BaseInteractableEntity {
   }
 
   /// Non-residential buildings are always accessible without knocking.
+  /// The pastor knows their own home: its ✝️ holiness is always shown
+  /// exactly, not as "?" until three visits (playtest 2026-10-21).
+  @override
+  bool get isFaithVague => isHomebase || super.isFaithVague;
+  @override
+  bool get isFaithRevealed => isHomebase || super.isFaithRevealed;
+
   bool get isAlwaysOpen => category == BuildingCategory.other;
 
   // ── Access logic (building_actions.md §"Zugang & Interaktion") ───────────
@@ -250,7 +271,8 @@ class BuildingModel extends BaseInteractableEntity {
       base = 0.15;
     }
 
-    return (base + interactionCount * 0.02).clamp(0.0, 1.0);
+    // A holy house opens more easily, a dark one less (±20 %, #168).
+    return (base + interactionCount * 0.02 + holiness * 0.002).clamp(0.0, 1.0);
   }
 
   // ── NPC group influence ───────────────────────────────────────────────────

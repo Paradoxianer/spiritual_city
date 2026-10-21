@@ -660,7 +660,7 @@ class _ResourceHud extends StatelessWidget {
               const SizedBox(height: 2),
               _ConversionCounter(gameRef: gameRef),
               const SizedBox(height: 2),
-              _QuarterProgressBar(status: gameRef.quarterStatus),
+              _QuarterProgressBar(game: gameRef),
             ],
           );
         },
@@ -796,58 +796,131 @@ class _ConversionCounterState extends State<_ConversionCounter> with SingleTicke
   }
 }
 
-/// Thin bar under ✝: how far the current neighbourhood is from an
-/// attackable 🏰 (playtest: replaces the old "🏘️ ✝️ 22/56" line). Fills
-/// blue, turns gold when the stronghold is open and orange 🔥 once awakened.
+/// Two thin lines under ✝, one icon in front like the resource bars
+/// (playtest 2026-10-20: compact, the ❓ help explains them):
+///  * top – this neighbourhood: in the city how far it is from an
+///    attackable 🏰 (blue, gold when open, orange once awakened); in the
+///    invisible world its ground as a deep red → grey → green blend;
+///  * bottom – the whole known city, in its own colours: Christians among
+///    all known people (gold), in the invisible world violet → grey → gold.
+/// ⚔️ / 🔥 behind them when the neighbourhood's stronghold is open / fallen.
 class _QuarterProgressBar extends StatelessWidget {
-  final ValueNotifier<QuarterStatus?> status;
-  const _QuarterProgressBar({required this.status});
+  final SpiritWorldGame game;
+  const _QuarterProgressBar({required this.game});
+
+  static const _width = 90.0;
+  static const _darkRed = Color(0xFF8B0000);
+  static const _grey = Color(0xFF6B6B6B);
+  static const _green = Color(0xFF66BB6A);
+  static const _blue = Color(0xFFB0C4FF);
+  static const _darkViolet = Color(0xFF4A148C);
+  static const _gold = Color(0xFFFFD54F);
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<QuarterStatus?>(
-      valueListenable: status,
-      builder: (context, s, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([game.quarterStatus, game.cityProgress]),
+      builder: (context, _) {
+        final s = game.quarterStatus.value;
+        final city = game.cityProgress.value;
         if (s == null) return const SizedBox.shrink();
-        final color = s.awakened
+        final spirit = city?.spiritWorld ?? false;
+        final fort = s.awakened ? '🔥' : (s.strongholdOpen ? '⚔️' : '');
+
+        // The city line has its own colours so the two never look alike.
+        Widget ground(Tally t, {bool city = false}) => _ShareLine(width: _width, segments: [
+              (t.darkShare, city ? _darkViolet : _darkRed),
+              (1 - t.darkShare - t.share, _grey),
+              (t.share, city ? _gold : _green),
+            ]);
+        Widget fill(double v, Color c) => _ShareLine(width: _width, segments: [(v, c)]);
+
+        final quarterColor = s.awakened
             ? Colors.deepOrangeAccent
             : s.strongholdOpen
                 ? Colors.amber
-                : const Color(0xFFB0C4FF);
-        final icon = s.awakened ? '🔥' : (s.strongholdOpen ? '⚔️' : '🏰');
+                : _blue;
         return Semantics(
-          label: '${s.christians}/${s.people}',
+          label: spirit
+              ? '${city?.quarterCells.percent}% · ${city?.cityCells.percent}%'
+              : '${s.christians}/${s.people} · ${city?.cityPeople.free}/${city?.cityPeople.total}',
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🏘️', style: TextStyle(fontSize: 10)),
-              const SizedBox(width: 3),
-              Container(
-                width: 70,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: s.progress,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                ),
+              SizedBox(width: 18, child: Text(spirit ? '🌐' : '🏙️', style: const TextStyle(fontSize: 12))),
+              const SizedBox(width: 2),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  spirit && city != null ? ground(city.quarterCells) : fill(s.progress, quarterColor),
+                  const SizedBox(height: 2),
+                  if (city != null)
+                    spirit ? ground(city.cityCells, city: true) : fill(city.cityPeople.share, _gold)
+                  else
+                    fill(0, _gold),
+                ],
               ),
-              const SizedBox(width: 3),
-              Text(icon, style: const TextStyle(fontSize: 10)),
+              if (fort.isNotEmpty) ...[
+                const SizedBox(width: 3),
+                Text(fort, style: const TextStyle(fontSize: 9)),
+              ],
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// A 3 px line split into coloured shares that blend softly into each
+/// other (shares are fractions of the full width; the rest stays empty).
+class _ShareLine extends StatelessWidget {
+  final double width;
+  final List<(double, Color)> segments;
+  const _ShareLine({required this.width, required this.segments});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = <Color>[];
+    final stops = <double>[];
+    var at = 0.0;
+    const blend = 0.03;
+    for (final (share, color) in segments) {
+      final v = share.clamp(0.0, 1.0 - at);
+      if (v <= 0) continue;
+      // Soft edges: each colour starts a little after and ends a little
+      // before its boundary, the gradient blends the gap.
+      final start = (at + (at > 0 ? blend : 0)).clamp(0.0, 1.0);
+      final end = (at + v - blend).clamp(start, 1.0);
+      colors..add(color)..add(color);
+      stops..add(start)..add(end);
+      at += v;
+    }
+    final filled = at;
+    return Container(
+      width: width,
+      height: 3,
+      decoration: BoxDecoration(
+        color: Colors.white12,
+        borderRadius: BorderRadius.circular(1.5),
+      ),
+      child: colors.isEmpty
+          ? null
+          : Align(
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: filled,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(1.5),
+                    gradient: colors.length == 2
+                        ? null
+                        : LinearGradient(colors: colors, stops: [for (final x in stops) x / filled]),
+                    color: colors.length == 2 ? colors.first : null,
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

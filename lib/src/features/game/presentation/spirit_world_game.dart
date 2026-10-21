@@ -17,6 +17,7 @@ import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
 import '../domain/interior/interior_layout.dart';
 import '../domain/city_generation/city_overview.dart';
+import '../domain/city_generation/special_building_registry.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../domain/models/daemon_model.dart';
 import '../domain/models/day_stats.dart';
@@ -208,9 +209,16 @@ class SpiritWorldGame extends FlameGame
   /// Influence system – manages AoE spiritual-state effects with duration/decay.
   final InfluenceService influenceService = InfluenceService();
 
-  /// World-pixel position of the pastor house once its chunk is first loaded.
-  /// `null` until the first chunk containing the pastor house is generated.
-  final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(null);
+  /// World-pixel position of the pastor house. The house always stands on
+  /// [SpecialBuildingRegistry.pastorHouseCell], so it starts there (the
+  /// 🏠 compass and fainting home also work after loading a save far away,
+  /// playtest 2026-10-21); once its chunk is generated, [ChunkManager]
+  /// moves it to the exact door.
+  final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(Vector2(
+    (SpecialBuildingRegistry.pastorHouseCell.$1 + 0.5) * CellComponent.cellSize,
+    (SpecialBuildingRegistry.pastorHouseCell.$2 + 1.5) * CellComponent.cellSize,
+  ));
+  bool pastorhouseDoorKnown = false;
 
   /// Current street / address label displayed top-center.
   /// Updated in [update()] every ~0.5 s when the player moves cells.
@@ -537,6 +545,17 @@ class SpiritWorldGame extends FlameGame
   /// Status of the neighbourhood the pastor is in.
   final ValueNotifier<QuarterStatus?> quarterStatus = ValueNotifier(null);
   double _quarterTimer = 0.0;
+
+  /// Overall progress for the second HUD bar (🌐 prayed free / 🏙️ ✝️).
+  final ValueNotifier<CityProgress?> cityProgress = ValueNotifier(null);
+
+  /// Liberated ground per chunk ('cx,cy'): seeded once from
+  /// [_savedCellStates] (see [Liberation.savedByChunk]), then refreshed a
+  /// few generated chunks at a time – summing every cell each second made
+  /// walking stutter once much of the city was explored (playtest).
+  Map<String, Tally>? _chunkTallies;
+  final Set<String> _liveTallied = {};
+  int _tallyCursor = 0;
 
   // ── Learning missions (§3.9) ──────────────────────────────────────────────
 
@@ -1124,6 +1143,16 @@ class SpiritWorldGame extends FlameGame
       ));
     }
 
+    // 📢🎺 Open-air meeting on the street (Salvation Army, once 📢 is learned).
+    if (openAirOffered) {
+      actions.add(RadialAction(
+        label: '📢🎺',
+        sublabel: openAirBlocker ?? '',
+        icon: Icons.campaign,
+        onSelect: holdOpenAirMeeting,
+      ));
+    }
+
     _currentMenu = RadialMenu(actions: actions, position: player.position);
     world.add(_currentMenu!);
   }
@@ -1204,9 +1233,17 @@ class SpiritWorldGame extends FlameGame
 
   void closeMenu() { _currentMenu?.removeFromParent(); _currentMenu = null; }
 
-  // ── Keymap overlay ────────────────────────────────────────────────────────
+  // ── ❓ Help overlay ───────────────────────────────────────────────────────
 
-  bool _keymapOpen = false;
+  /// Shown above the whole HUD (not as a Flame overlay, which lies below
+  /// the tutorial chip and the resource bars).
+  final ValueNotifier<bool> helpOpen = ValueNotifier(false);
+
+  /// Back to the pause menu when the help closes (it was opened from there).
+  bool _helpFromPause = false;
+
+  /// Tab the help opens on (0 = 🎓 my tasks … 3 = ⌨️ keys).
+  int helpTab = 0;
 
   // ── Pause menu (Issue #162) ───────────────────────────────────────────────
   //

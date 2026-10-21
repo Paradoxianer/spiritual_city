@@ -488,7 +488,7 @@ abstract final class BuildingActions {
         BuildingType.cemetery => [funeral, comfort],
         BuildingType.policeStation => [blessPolice, genericPray, witness],
         BuildingType.cityHall => [mayorAudience, prayForPoliticians],
-        BuildingType.trainStation => [travel],
+        BuildingType.trainStation => [travel, genericPray],
         BuildingType.stadium => [majorEvent],
         BuildingType.shop ||
         BuildingType.supermarket ||

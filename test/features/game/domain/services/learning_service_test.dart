@@ -67,12 +67,30 @@ void main() {
       expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 2);
       s.learn(Skill.rebukeMastery1);
       expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 5);
-      expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 1), isFalse);
-      expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 2), isTrue);
+      expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 0), isFalse);
+      expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 1), isTrue);
       s.learn(Skill.rebukeMastery2);
       expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 10);
       // The abilities stay reachable under the caps.
       expect(CombatAbilities.milestones.every((m) => m <= 10), isTrue);
+    });
+
+    test('🕊️ Liberation, the main weapon, climbs to 15 in a chain of three', () {
+      final s = LearnedSkills();
+      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 2);
+      expect(CombatAbilities.nextMastery(PrayerMode.liberation, s), Skill.liberationMastery1);
+      s.learn(Skill.liberationMastery1);
+      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 5);
+      expect(Lessons.of(Skill.liberationMastery2).isOpen(s, 0), isTrue,
+          reason: 'no awakened quarter needed for 🕊️⭐⭐');
+      s.learn(Skill.liberationMastery2);
+      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 10);
+      expect(Lessons.of(Skill.liberationMastery3).isOpen(s, 0), isFalse);
+      expect(Lessons.of(Skill.liberationMastery3).isOpen(s, 1), isTrue);
+      s.learn(Skill.liberationMastery3);
+      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 15);
+      expect(CombatAbilities.nextMastery(PrayerMode.liberation, s), isNull);
+      expect(CombatAbilities.maxCap(PrayerMode.rebuke), 10);
     });
 
     test('mastery lessons count kills of their own mode only', () {
