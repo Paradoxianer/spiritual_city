@@ -239,6 +239,13 @@ class BuildingModel extends BaseInteractableEntity {
   }
 
   /// Non-residential buildings are always accessible without knocking.
+  /// The pastor knows their own home: its ✝️ holiness is always shown
+  /// exactly, not as "?" until three visits (playtest 2026-10-21).
+  @override
+  bool get isFaithVague => isHomebase || super.isFaithVague;
+  @override
+  bool get isFaithRevealed => isHomebase || super.isFaithRevealed;
+
   bool get isAlwaysOpen => category == BuildingCategory.other;
 
   // ── Access logic (building_actions.md §"Zugang & Interaktion") ───────────
