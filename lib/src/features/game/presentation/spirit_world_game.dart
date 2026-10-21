@@ -541,8 +541,13 @@ class SpiritWorldGame extends FlameGame
   /// Overall progress for the second HUD bar (🌐 prayed free / 🏙️ ✝️).
   final ValueNotifier<CityProgress?> cityProgress = ValueNotifier(null);
 
-  /// [_savedCellStates] per chunk, counted once (see [Liberation.savedByChunk]).
-  Map<String, Tally>? _savedChunkTallies;
+  /// Liberated ground per chunk ('cx,cy'): seeded once from
+  /// [_savedCellStates] (see [Liberation.savedByChunk]), then refreshed a
+  /// few generated chunks at a time – summing every cell each second made
+  /// walking stutter once much of the city was explored (playtest).
+  Map<String, Tally>? _chunkTallies;
+  final Set<String> _liveTallied = {};
+  int _tallyCursor = 0;
 
   // ── Learning missions (§3.9) ──────────────────────────────────────────────
 

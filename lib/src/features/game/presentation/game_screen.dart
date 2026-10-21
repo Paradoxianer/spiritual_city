@@ -79,10 +79,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   /// Autosave (playtest 2026-10-19: closing the app or an update lost
   /// everything since the last manual 💾): every minute and whenever the
-  /// app leaves the foreground.
+  /// app leaves the foreground. Writing the save takes a moment, so the
+  /// minute's save waits until the player stands still (walking stuttered,
+  /// playtest 2026-10-21) – at the latest after three minutes.
   Timer? _autosaveTimer;
   bool _autoSaving = false;
+  final Stopwatch _sinceAutosave = Stopwatch()..start();
+  static const _autosaveCheck = Duration(seconds: 5);
   static const _autosaveInterval = Duration(seconds: 60);
+  static const _autosaveLatest = Duration(minutes: 3);
+
+  void _maybeAutoSave() {
+    final due = _sinceAutosave.elapsed;
+    if (due < _autosaveInterval) return;
+    final walking = _game.isWorldReady.value && !_game.player.moveInput.isZero();
+    if (walking && due < _autosaveLatest) return;
+    _autoSave();
+  }
 
   @override
   void initState() {
@@ -101,7 +114,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (getIt<MenuService>().isTutorialCompleted) {
       _game.tutorialService.isTutorialCompleted = true;
     }
-    _autosaveTimer = Timer.periodic(_autosaveInterval, (_) => _autoSave());
+    _autosaveTimer = Timer.periodic(_autosaveCheck, (_) => _maybeAutoSave());
   }
 
   /// Saves quietly in the background; skipped until the world is loaded
@@ -110,6 +123,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final save = _game.gameSave;
     if (save == null || _autoSaving || _isSaving || !_game.isWorldReady.value) return;
     _autoSaving = true;
+    _sinceAutosave.reset();
     try {
       await getIt<MenuService>().updateSaveState(save.id, _game.captureGameState());
     } catch (_) {

@@ -48,26 +48,41 @@ extension GameQuarters on SpiritWorldGame {
   }
 
   /// Liberated ground of [q] and of every known chunk – generated ones
-  /// live, the rest from the save – plus all known people.
+  /// live, the rest from the save – plus all known people. Only the
+  /// chunks of [q], new ones and a rotating few others are counted again
+  /// per call; the rest keep their last tally.
   void _updateCityProgress(Quarter q) {
-    final saved = _savedChunkTallies ??= Liberation.savedByChunk(_savedCellStates ?? const {});
+    final tallies = _chunkTallies ??= Liberation.savedByChunk(_savedCellStates ?? const {});
+    final chunks = grid.getLoadedChunks();
+    void count(CityChunk chunk) {
+      if (chunk.cells.isEmpty) return;
+      final key = chunk.id;
+      tallies[key] = Liberation.ofStates(chunk.cells.values.map((c) => c.spiritualState));
+      _liveTallied.add(key);
+    }
+
+    for (final chunk in chunks) {
+      if (!_liveTallied.contains(chunk.id) ||
+          Liberation.quarterOfChunk(chunk.chunkX, chunk.chunkY) == q) {
+        count(chunk);
+      }
+    }
+    if (chunks.isNotEmpty) {
+      for (var i = 0; i < _tallyRefreshPerCall; i++) {
+        count(chunks[_tallyCursor++ % chunks.length]);
+      }
+    }
+
     var quarter = Tally.zero;
     var city = Tally.zero;
-    final generated = <String>{};
-    for (final chunk in grid.getLoadedChunks()) {
-      if (chunk.cells.isEmpty) continue;
-      generated.add('${chunk.chunkX},${chunk.chunkY}');
-      final t = Liberation.ofStates(chunk.cells.values.map((c) => c.spiritualState));
+    for (final t in tallies.values) {
       city += t;
-      if (Liberation.quarterOfChunk(chunk.chunkX, chunk.chunkY) == q) quarter += t;
     }
-    for (final e in saved.entries) {
-      if (generated.contains(e.key)) continue;
-      city += e.value;
-      final comma = e.key.indexOf(',');
-      final cx = int.parse(e.key.substring(0, comma));
-      final cy = int.parse(e.key.substring(comma + 1));
-      if (Liberation.quarterOfChunk(cx, cy) == q) quarter += e.value;
+    const side = Quarter.chunksPerSide;
+    for (var dy = 0; dy < side; dy++) {
+      for (var dx = 0; dx < side; dx++) {
+        quarter += tallies['${q.qx * side + dx},${q.qy * side + dy}'] ?? Tally.zero;
+      }
     }
     final people = knownNpcCounts;
     cityProgress.value = CityProgress(
@@ -77,6 +92,10 @@ extension GameQuarters on SpiritWorldGame {
       spiritWorld: isSpiritualWorld,
     );
   }
+
+  /// Generated chunks outside the current neighbourhood counted again per
+  /// call – the whole city line catches up within a minute or so.
+  static const int _tallyRefreshPerCall = 12;
 
   void _ensureStronghold(QuarterStatus status) {
     final forts = world.children.whereType<StrongholdComponent>().toList();
