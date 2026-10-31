@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import '../../../../core/utils/stable_hash.dart';
 import 'base_interactable_entity.dart';
 import 'npc_backstory.dart';
+import 'prayer_combat.dart';
 
 enum NPCType {
   citizen,
@@ -103,6 +104,15 @@ class NPCModel extends BaseInteractableEntity {
   /// the possessor becomes beatable in the invisible world. Freedom needs
   /// both – care *and* prayer (Mark 9:29).
   bool possessionWeakened = false;
+
+  /// 🌱 The prayer gift the pastor taught this Christian, and how deep
+  /// (see Discipleship).
+  PrayerMode? discipleGift;
+  int discipleLevel = 0;
+
+  /// Game day of the last teaching step (one per day).
+  int? discipleTaughtDay;
+  bool get isDisciple => discipleGift != null && discipleLevel > 0;
 
   /// Unlocks (but does not fill) this NPC's "Als Christ" chapter once
   /// [isConverted] is true. Safe to call unconditionally, as often as

@@ -83,6 +83,13 @@ abstract final class HelpContent {
       ),
     ),
     (
+      '🌱 ⭐⭐⭐',
+      Tr(
+        'Jüngerschaft (Gespräch mit einem Christen, Tab 🌱): Du lehrst ihn eine Gebetsart, die du selbst kannst – mit 📖 (5 / 10 / 20 📖 für ⭐ / ⭐⭐ / ⭐⭐⭐), ein Schritt pro Tag. In der unsichtbaren Welt betet er dann in deiner Nähe mit: alle paar Sekunden eine kleine Welle seiner Gabe. Erkennbar am farbigen Ring. Je mehr Jünger in einem Viertel wohnen, desto stärker betet es mit (2 Tim 2,2).',
+        'Discipleship (talk with a Christian, tab 🌱): teach them a kind of prayer you know yourself – with 📖 (5 / 10 / 20 📖 for ⭐ / ⭐⭐ / ⭐⭐⭐), one step per day. In the invisible world they then pray along near you: a small wave of their gift every few seconds. You can tell them by the coloured ring. The more disciples live in a quarter, the more it prays along (2 Tim 2:2).',
+      ),
+    ),
+    (
       '🏰 ⚔️ 🔥',
       Tr('Bollwerk: zu → angreifbar (⚔️) → besiegt, der Stadtteil ist erweckt (🔥). Erweckte Viertel öffnen neue Lektionen.',
           'Stronghold: closed → attackable (⚔️) → defeated, the neighbourhood is awakened (🔥). Awakened quarters open new lessons.')
@@ -345,8 +352,8 @@ abstract final class HelpContent {
     (
       '⛪👥',
       Tr('Baue Gemeinde', 'Build a church'),
-      Tr('Bekehrte Menschen gehören zu deiner Gemeinde. Besuche sie, gründe Hauskreise 📖👥 und halte Gottesdienste ⛪ – so wächst der Glaube im ganzen Viertel.',
-          'Converted people belong to your church. Visit them, start home groups 📖👥 and hold services ⛪ – that is how faith grows in the whole quarter.')
+      Tr('Bekehrte Menschen gehören zu deiner Gemeinde. Besuche sie, gründe Hauskreise 📖👥 und halte Gottesdienste ⛪ – so wächst der Glaube im ganzen Viertel. Mach sie zu Jüngern 🌱: Gib deine 📖 Weisheit weiter, dann beten sie in der unsichtbaren Welt mit.',
+          'Converted people belong to your church. Visit them, start home groups 📖👥 and hold services ⛪ – that is how faith grows in the whole quarter. Make them disciples 🌱: pass on your 📖 insight and they pray along in the invisible world.')
     ),
   ];
 

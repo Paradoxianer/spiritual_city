@@ -584,6 +584,16 @@ class NPCComponent extends PositionComponent
         .withValues(alpha: 0.3 + (faithFactor * 0.4));
     canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, _auraPaint);
 
+    // 🌱 A disciple: a ring in the colour of their prayer gift, thicker
+    // the deeper it is (#193).
+    final gift = model.discipleGift;
+    if (gift != null && model.discipleLevel > 0) {
+      _discipleRing
+        ..color = gift.color.withValues(alpha: 0.85)
+        ..strokeWidth = 1.0 + model.discipleLevel;
+      canvas.drawCircle((size / 2).toOffset(), size.x * 0.95, _discipleRing);
+    }
+
     // Possessed: a dark ring; with 👁️ discernment also the possessor's sign.
     if (model.possessed) {
       canvas.drawCircle((size / 2).toOffset(), size.x * 0.75, _possessedPaint);
@@ -592,6 +602,8 @@ class NPCComponent extends PositionComponent
       }
     }
   }
+
+  final Paint _discipleRing = Paint()..style = PaintingStyle.stroke;
 
   final Paint _possessedPaint = Paint()
     ..style = PaintingStyle.stroke

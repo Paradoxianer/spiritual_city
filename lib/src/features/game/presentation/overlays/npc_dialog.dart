@@ -56,7 +56,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
   /// optional action is hidden. Hidden or unavailable actions are skipped.
   void _onDialogKey() {
     final idx = widget.game.dialogActionIndex.value;
-    if (idx < 0 || _showLifeTab) return;
+    if (idx < 0 || _tab != _DialogTab.chat) return;
     final model = widget.game.activeDialog?.npcModel;
     if (model == null || idx >= NpcActions.chat.length) return;
     final action = NpcActions.chat[idx];
@@ -84,8 +84,9 @@ class _DialogOverlayState extends State<DialogOverlay> {
     _scrollToBottom();
   }
 
-  /// Which tab of the dialog is shown: the chat (💬) or the life story (📜).
-  bool _showLifeTab = false;
+  /// Which tab of the dialog is shown: the chat (💬), the life story (📜)
+  /// or, with Christians, discipleship (🌱).
+  _DialogTab _tab = _DialogTab.chat;
 
   void _handleInteraction(String type, String emoji) {
     if (_isWaiting || _isSessionOver || _isReadingBible) return;
@@ -294,15 +295,18 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _DialogTabBar(
-                    showLifeTab: _showLifeTab,
+                    tab: _tab,
                     lifeLocked: !widget.game.progress.skills.has(Skill.pastoralCare),
-                    onSelect: (life) => setState(() => _showLifeTab = life),
+                    showGrow: model.isChristian,
+                    onSelect: (t) => setState(() => _tab = t),
                   ),
                   const SizedBox(height: 6),
                   Expanded(
-                    child: _showLifeTab
+                    child: _tab == _DialogTab.life
                         ? _NpcLifeTimeline(model: model)
-                        : Scrollbar(
+                        : _tab == _DialogTab.grow
+                            ? _DiscipleTab(model: model, game: widget.game)
+                            : Scrollbar(
                             controller: _scrollController,
                             thumbVisibility: true,
                             child: ListView.builder(
@@ -315,7 +319,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   ),
                   // The chat is hidden in the life tab, so its last reaction
                   // stays visible there.
-                  if (_showLifeTab && _messages.isNotEmpty) _ChatBubble(message: _messages.last),
+                  if (_tab != _DialogTab.chat && _messages.isNotEmpty) _ChatBubble(message: _messages.last),
                 ],
               ),
             ),
@@ -335,7 +339,26 @@ class _DialogOverlayState extends State<DialogOverlay> {
     if (_isReadingBible) {
       return _Countdown(emoji: NpcActions.bible.emoji, seconds: _bibleSecondsLeft);
     }
-    if (_showLifeTab) {
+    if (_tab == _DialogTab.grow) {
+      return _DiscipleActions(
+        model: model,
+        game: widget.game,
+        enabled: !_isWaiting,
+        onTeach: (mode) {
+          _addMessage('🌱${mode.icon}', true);
+          final reaction = widget.game.teachDisciple(model, mode);
+          _addMessage(reaction, false);
+          setState(() {});
+          if (model.isReadyToLeave) {
+            setState(() => _isSessionOver = true);
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              if (mounted) widget.game.closeDialog();
+            });
+          }
+        },
+      );
+    }
+    if (_tab == _DialogTab.life) {
       return _LifeTalkButton(
         model: model,
         game: widget.game,
@@ -410,25 +433,31 @@ class GameDialogData {
 
 /// Two-tab switch at the top of the NPC dialog: 💬 (chat + actions) and 📜
 /// (life story with the single 🗣️ life-talk action).
+enum _DialogTab { chat, life, grow }
+
 class _DialogTabBar extends StatelessWidget {
-  final bool showLifeTab;
+  final _DialogTab tab;
 
   /// 📜 needs the 🫂 pastoral-care lesson (mentor in a 🏥 hospital).
   final bool lifeLocked;
-  final void Function(bool life) onSelect;
+
+  /// 🌱 discipleship – only with Christians.
+  final bool showGrow;
+  final void Function(_DialogTab tab) onSelect;
 
   const _DialogTabBar({
-    required this.showLifeTab,
+    required this.tab,
     required this.lifeLocked,
+    required this.showGrow,
     required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
-    Widget tab(String emoji, bool life) {
-      final selected = showLifeTab == life;
+    Widget button(String emoji, _DialogTab t) {
+      final selected = tab == t;
       return GestureDetector(
-        onTap: () => onSelect(life),
+        onTap: () => onSelect(t),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           decoration: BoxDecoration(
@@ -442,7 +471,7 @@ class _DialogTabBar extends StatelessWidget {
 
     return Row(
       children: [
-        tab('💬', false),
+        button('💬', _DialogTab.chat),
         const SizedBox(width: 6),
         if (lifeLocked)
           // Locked: shows where to learn it instead of opening.
@@ -459,7 +488,11 @@ class _DialogTabBar extends StatelessWidget {
             ),
           )
         else
-          tab('📜', true),
+          button('📜', _DialogTab.life),
+        if (showGrow) ...[
+          const SizedBox(width: 6),
+          button('🌱', _DialogTab.grow),
+        ],
       ],
     );
   }

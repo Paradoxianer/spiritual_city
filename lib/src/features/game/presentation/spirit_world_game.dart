@@ -21,6 +21,7 @@ import '../domain/city_generation/special_building_registry.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../domain/models/daemon_model.dart';
 import '../domain/models/day_stats.dart';
+import '../domain/models/discipleship.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
 import 'components/daemon_component.dart';
@@ -56,6 +57,7 @@ import 'components/building_component.dart';
 import 'components/chunk_manager.dart';
 import 'components/loot_system.dart';
 import 'components/npc_component.dart';
+import 'components/shockwave_component.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
 import 'components/prayer_hud_component.dart';
@@ -63,6 +65,7 @@ import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
 
 part 'game/learning_control.dart';
+part 'game/discipleship_control.dart';
 part 'game/quarters.dart';
 part 'game/save_state.dart';
 part 'game/overlay_control.dart';
@@ -753,6 +756,7 @@ class SpiritWorldGame extends FlameGame
 
       // System already initialized, now add to world
       await world.add(spiritualDynamics);
+      await world.add(DisciplePrayer());
 
       // Wire modifier values to the dynamics system
       spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;

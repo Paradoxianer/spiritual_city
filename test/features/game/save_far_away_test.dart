@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:spiritual_city/src/features/game/domain/models/cell_object.dart';
+import 'package:spiritual_city/src/features/game/domain/models/prayer_combat.dart';
 import 'package:spiritual_city/src/features/game/presentation/spirit_world_game.dart';
 import 'package:spiritual_city/src/features/menu/data/menu_repository.dart';
 import 'package:spiritual_city/src/features/menu/domain/models/difficulty.dart';
@@ -63,6 +64,12 @@ void main() {
       b.faith = 80;
     }
     final shop = worked.first;
+    // 🌱 A disciple keeps their gift too.
+    final disciple = g1.chunkManager.allNPCModels.first
+      ..isConverted = true
+      ..discipleGift = PrayerMode.rebuke
+      ..discipleLevel = 2
+      ..discipleTaughtDay = 4;
     walkTo(g1, far);
     final s1 = await save(g1);
 
@@ -71,6 +78,10 @@ void main() {
     final s2 = await save(g2); // saving again far away
     final g3 = await load(s2);
     walkTo(g3, home);
+    final d = g3.chunkManager.allNPCModels.firstWhere((n) => n.id == disciple.id);
+    expect(d.discipleGift, PrayerMode.rebuke);
+    expect(d.discipleLevel, 2);
+    expect(d.discipleTaughtDay, 4);
     for (final b in worked) {
       final back = g3.chunkManager.getBuildingModel(b.buildingId);
       expect(back?.interactionCount, 7, reason: '${b.buildingId} ${b.type}');
