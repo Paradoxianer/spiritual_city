@@ -178,6 +178,14 @@ abstract final class HelpContent {
     'practiceUp': Tr('Übung macht stark: Diese Disziplin ist eine Stufe gewachsen.', 'Practice makes strong: this discipline grew a level.', es: 'La práctica fortalece: esta disciplina subió un nivel.', fr: 'La pratique rend fort : cette discipline a gagné un niveau.', pt: 'A prática fortalece: esta disciplina subiu um nível.'),
   };
 
+  /// Short labels for things that are no action (texts on).
+  static const Map<String, Tr> labels = {
+    'look': Tr('Umschauen', 'Look around', es: 'Mirar', fr: 'Regarder', pt: 'Olhar'),
+    'openAir': Tr('Freiversammlung', 'Open-air meeting', es: 'Reunión al aire libre', fr: 'Réunion en plein air', pt: 'Reunião ao ar livre'),
+    'churchOverview': Tr('Gemeinde', 'Church', es: 'Iglesia', fr: 'Église', pt: 'Igreja'),
+    'upgrades': Tr('Ausrüstung', 'Equipment', es: 'Equipo', fr: 'Équipement', pt: 'Equipamento'),
+  };
+
   /// Short names of the actions – captions under the buttons when texts
   /// are on (TextMode).
   static const Map<ActionId, Tr> actionNames = {

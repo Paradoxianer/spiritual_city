@@ -39,6 +39,11 @@ extension GameInterior on SpiritWorldGame {
         InteriorLayout.churchOverview: '⛪👥',
         InteriorLayout.upgrades: '⚔️',
       },
+      stationLabel: {
+        for (final a in offered) a.type: HelpContent.actionNames[a.id]?.text ?? '',
+        InteriorLayout.churchOverview: HelpContent.labels['churchOverview']!.text,
+        InteriorLayout.upgrades: HelpContent.labels['upgrades']!.text,
+      },
       lesson: lessons.isEmpty ? null : lessons.first,
     );
     interior = room;

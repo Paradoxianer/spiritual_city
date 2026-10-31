@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart' show VoidCallback, Colors, TextPainter, TextSpan, TextStyle, FontWeight;
 
+import '../../../../../core/i18n/app_language.dart';
 import '../../../../../core/utils/stable_hash.dart';
 import '../../../domain/interior/interior_layout.dart';
 import '../../../domain/models/building_model.dart';
@@ -49,6 +50,9 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
   /// Emoji per station action (from the building's actions).
   final Map<String, String> stationEmoji;
 
+  /// Station names, shown above the bubbles when texts are on.
+  final Map<String, String> stationLabel;
+
   /// A mentor stands in the room when this building offers a lesson.
   final Lesson? lesson;
 
@@ -56,6 +60,7 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
     required this.building,
     required this.layout,
     required this.stationEmoji,
+    this.stationLabel = const {},
     this.lesson,
   });
 
@@ -384,6 +389,10 @@ class _StationMarker extends PositionComponent with TapCallbacks {
           .withValues(alpha: active ? 0.75 : (wanted ? 0.55 : 0.35));
     canvas.drawCircle(c, active ? 15 : 10, bg);
     _emoji(canvas, emoji, c, active ? 18 : 11, bob: active, alpha: active ? 1 : 0.85);
+    final label = room.stationLabel[f.action];
+    if (TextMode.on && label != null && label.isNotEmpty) {
+      _emoji(canvas, label, Offset(cx, c.dy - (active ? 26 : 19)), active ? 11 : 9, shadow: true);
+    }
   }
 }
 

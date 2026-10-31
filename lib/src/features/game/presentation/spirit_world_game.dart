@@ -7,6 +7,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart' show compute, ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import '../../../core/i18n/app_language.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../core/utils/stable_hash.dart';
@@ -1112,6 +1113,7 @@ class SpiritWorldGame extends FlameGame
     final actions = <RadialAction>[
       RadialAction(
         label: '👀',
+        sublabel: TextMode.on ? HelpContent.labels['look']!.text : null,
         icon: Icons.search,
         onSelect: () {
           openLookOverlay();
@@ -1156,8 +1158,8 @@ class SpiritWorldGame extends FlameGame
       if (!offeredBuildingIds.add(model.buildingId)) continue; // already offered
       actions.add(RadialAction(
         label: BuildingComponent.buildingEmoji(model.type),
-        // No translated type name – the emoji says what it is.
-        sublabel: '',
+        // The emoji says what it is; with texts on also its name.
+        sublabel: TextMode.on ? HelpContent.buildings[model.type]?.text.split(' (').first ?? '' : '',
         icon: Icons.meeting_room,
         onSelect: () {
           openBuildingInterior(model);
@@ -1169,7 +1171,7 @@ class SpiritWorldGame extends FlameGame
     if (openAirOffered) {
       actions.add(RadialAction(
         label: '📢🎺',
-        sublabel: openAirBlocker ?? '',
+        sublabel: openAirBlocker ?? (TextMode.on ? HelpContent.labels['openAir']!.text : ''),
         icon: Icons.campaign,
         onSelect: holdOpenAirMeeting,
       ));
