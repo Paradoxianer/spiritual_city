@@ -85,7 +85,6 @@ Technik
       'settings.language': 'Sprache',
       'settings.texts': 'Erzähler',
       'settings.texts.hint': 'Eine Sprechblase erklärt, was du siehst und tust – aus: nur Emojis',
-      'settings.explanations.reset': 'Erklärungen wieder zeigen',
       'settings.info': 'Info',
     },
     'en': {
@@ -152,7 +151,6 @@ Technology
       'settings.language': 'Language',
       'settings.texts': 'Narrator',
       'settings.texts.hint': 'A speech bubble explains what you see and do – off: emoji only',
-      'settings.explanations.reset': 'Show explanations again',
       'settings.info': 'Info',
     },
     'es': {
@@ -219,7 +217,6 @@ Tecnología
       'settings.language': 'Idioma',
       'settings.texts': 'Narrador',
       'settings.texts.hint': 'Un bocadillo explica lo que ves y haces – desactivado: solo emojis',
-      'settings.explanations.reset': 'Volver a mostrar las explicaciones',
       'settings.info': 'Información',
     },
     'fr': {
@@ -286,7 +283,6 @@ Technique
       'settings.language': 'Langue',
       'settings.texts': 'Narrateur',
       'settings.texts.hint': 'Une bulle explique ce que tu vois et fais – désactivé : emojis seulement',
-      'settings.explanations.reset': 'Réafficher les explications',
       'settings.info': 'Infos',
     },
     'pt': {
@@ -353,7 +349,6 @@ Tecnologia
       'settings.language': 'Idioma',
       'settings.texts': 'Narrador',
       'settings.texts.hint': 'Um balão explica o que você vê e faz – desligado: só emojis',
-      'settings.explanations.reset': 'Mostrar explicações de novo',
       'settings.info': 'Informações',
     },
   };

@@ -9,6 +9,7 @@ import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/i18n/bible_ref.dart';
 import '../../../core/i18n/narrator.dart';
+import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/services/combat_abilities.dart';
@@ -427,11 +428,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             },
           ),
           // The narrator's speech bubble – the only text in the game screen.
-          ValueListenableBuilder<NarratorLine?>(
-            valueListenable: Narrator.current,
-            builder: (context, line, _) => line == null
-                ? const SizedBox.shrink()
-                : _NarratorBubble(key: ValueKey(line.key), line: line),
+          ValueListenableBuilder<bool>(
+            valueListenable: TextMode.enabled,
+            builder: (context, on, _) => !on
+                ? ValueListenableBuilder<bool>(
+                    // The handle only in the game itself, not over the loading screen.
+                    valueListenable: _game.isWorldReady,
+                    builder: (context, ready, _) => ready ? const _NarratorHandle() : const SizedBox.shrink(),
+                  )
+                : ValueListenableBuilder<NarratorLine?>(
+                    valueListenable: Narrator.current,
+                    builder: (context, line, _) => line == null
+                        ? const SizedBox.shrink()
+                        : _NarratorBubble(key: ValueKey(line.key), line: line),
+                  ),
           ),
           // ❓ Help – topmost, so no HUD element covers it.
           ValueListenableBuilder<bool>(

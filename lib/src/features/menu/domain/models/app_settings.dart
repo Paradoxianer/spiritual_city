@@ -21,9 +21,6 @@ class AppSettings {
   /// Texts besides the emoji (see TextMode).
   bool showTexts;
 
-  /// Explanations the player muted (see Narrator).
-  List<String> mutedExplanations;
-
   AppSettings({
     this.language = 'de',
     this.lastDifficulty = Difficulty.normal,
@@ -31,7 +28,6 @@ class AppSettings {
     this.soundOn = true,
     this.consentVersion = 0,
     this.showTexts = true,
-    this.mutedExplanations = const [],
   });
 
   Map<String, dynamic> toMap() => {
@@ -41,7 +37,6 @@ class AppSettings {
         'soundOn': soundOn,
         'consentVersion': consentVersion,
         'showTexts': showTexts,
-        'mutedExplanations': mutedExplanations,
       };
 
   factory AppSettings.fromMap(Map<dynamic, dynamic> map) => AppSettings(
@@ -52,7 +47,6 @@ class AppSettings {
         soundOn: map['soundOn'] as bool? ?? true,
         consentVersion: map['consentVersion'] as int? ?? 0,
         showTexts: map['showTexts'] as bool? ?? true,
-        mutedExplanations: [for (final k in (map['mutedExplanations'] as List?) ?? const []) '$k'],
       );
 }
 

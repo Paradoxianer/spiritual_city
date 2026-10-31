@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/i18n/narrator.dart';
 import '../../../core/audio/game_sound.dart';
 import '../domain/legal_texts.dart';
 import '../domain/menu_service.dart';
@@ -56,12 +55,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       setState(() {});
                     },
                   ),
-                  if (Narrator.muted.isNotEmpty)
-                    ListTile(
-                      leading: const Text('🔔', style: TextStyle(fontSize: 24)),
-                      title: Text(LegalTexts.get('settings.explanations.reset')),
-                      onTap: () => setState(Narrator.resetMuted),
-                    ),
                   ListTile(
                     leading: const Text('🌐', style: TextStyle(fontSize: 24)),
                     title: Text(LegalTexts.get('settings.language')),

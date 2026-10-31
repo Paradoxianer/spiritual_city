@@ -39,9 +39,6 @@ class MenuService {
     GameSound.enabled = settings.soundOn;
     _consentVersion = settings.consentVersion;
     TextMode.enabled.value = settings.showTexts;
-    Narrator.muted
-      ..clear()
-      ..addAll(settings.mutedExplanations);
     Narrator.persist = () => _persistSettings();
     _log.info('MenuService init: lang=${settings.language}, '
         'difficulty=${settings.lastDifficulty}, '
@@ -169,7 +166,6 @@ class MenuService {
       soundOn: GameSound.enabled,
       consentVersion: _consentVersion,
       showTexts: TextMode.on,
-      mutedExplanations: Narrator.muted.toList(),
     );
     await _repository.saveSettings(settings);
   }

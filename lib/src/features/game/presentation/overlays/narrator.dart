@@ -2,7 +2,8 @@ part of '../game_screen.dart';
 
 /// The narrator's speech bubble at the bottom: the text types out letter
 /// by letter (a tap shows it whole) and fades out once there was time to
-/// read it; swiped down by the handle it never comes again ([Narrator]).
+/// read it. ✕ closes it; swiped down by the handle the narrator is off
+/// ([Narrator], [_NarratorHandle] brings it back).
 class _NarratorBubble extends StatefulWidget {
   final NarratorLine line;
   const _NarratorBubble({super.key, required this.line});
@@ -65,11 +66,11 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
             child: ConstrainedBox(
               // Between the joystick and the buttons on a phone.
               constraints: BoxConstraints(maxWidth: (box.maxWidth - 340).clamp(260.0, 560.0)),
-              // Swiped down by the handle: never again.
+              // Swiped down by the handle: the narrator is off.
               child: Dismissible(
                 key: ValueKey('narrator-${line.key}'),
                 direction: DismissDirection.down,
-                onDismissed: (_) => Narrator.dismiss(),
+                onDismissed: (_) => Narrator.turnOff(),
                 child: GestureDetector(
                 onTap: _showAll,
                 child: Container(
@@ -114,7 +115,14 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      // ✕: just this bubble (e.g. to chat on quickly).
+                      GestureDetector(
+                        onTap: Narrator.close,
+                        child: const Padding(
+                          padding: EdgeInsets.fromLTRB(8, 0, 6, 6),
+                          child: Icon(Icons.close, size: 20, color: Color(0xFF6D4C41)),
+                        ),
+                      ),
                     ],
                   ),
                     ],
@@ -122,6 +130,45 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
                 ),
               ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// With the narrator off, a small handle stays at the bottom: swipe it up
+/// (or tap it) and the narrator is on again.
+class _NarratorHandle extends StatelessWidget {
+  const _NarratorHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: Narrator.turnOn,
+          onVerticalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) < -50) Narrator.turnOn();
+          },
+          child: Container(
+            width: 72,
+            height: 26,
+            margin: const EdgeInsets.only(bottom: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xCCFFF8E1),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              border: Border.all(color: const Color(0xFF8D6E63)),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.keyboard_arrow_up, size: 14, color: Color(0xFF6D4C41)),
+                Text('💬', style: TextStyle(fontSize: 10, height: 1)),
+              ],
             ),
           ),
         ),

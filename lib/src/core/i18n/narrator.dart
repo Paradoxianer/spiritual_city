@@ -13,48 +13,44 @@ class NarratorLine {
 
 /// The narrator (playtests 2026-10-31): the only text in the game screen –
 /// a speech bubble at the bottom that types out what something is or does
-/// when the pastor comes near it or taps it. It fades out by itself after
-/// a while and comes again next time – until the player swipes it down by
-/// its handle; then that explanation never comes again. Off with the
-/// "narrator" switch in the settings (TextMode).
+/// when the pastor comes near it or taps it, and fades out after a while.
+/// ✕ closes just this bubble (e.g. to chat on quickly); swiping it down
+/// turns the narrator off for good – a small handle stays, and swiping it
+/// up (or tapping it) turns the narrator on again. The same switch as
+/// "narrator" in the settings ([TextMode]).
 abstract final class Narrator {
-  /// Explanations the player closed (keys like 'action.talk'), saved in
-  /// the app settings.
-  static final Set<String> muted = {};
-
   static final ValueNotifier<NarratorLine?> current = ValueNotifier(null);
 
-  /// Saves [muted] (set by the menu service).
+  /// Saves the on/off state (set by the menu service).
   static void Function()? persist;
 
-  /// Explains [key] with [text] – unless the narrator is off, [text] is
-  /// missing, or the player closed this explanation before ([force]: the
-  /// player asked for it by tapping, so it comes anyway). A new line
-  /// replaces the one shown.
+  /// Explains [key] with [text] while the narrator is on. A new line
+  /// replaces the one shown. ([force] is kept for callers that react to an
+  /// explicit tap; every explanation comes while the narrator is on.)
   static void say(String key, String emoji, String title, String? text, {bool force = false}) {
     if (!TextMode.on || text == null || text.isEmpty) return;
-    if (!force && muted.contains(key)) return;
     if (current.value?.key == key && current.value?.text == text) return;
     current.value = NarratorLine(key, emoji, title, text);
   }
 
-  /// Read: fades out, but comes again next time.
+  /// Read: fades out.
   static void hide(String key) {
     if (current.value?.key == key) current.value = null;
   }
 
-  /// Swiped down: this explanation does not come again.
-  static void dismiss() {
-    final line = current.value;
-    if (line == null) return;
+  /// ✕: close this bubble – the narrator stays on.
+  static void close() => current.value = null;
+
+  /// Swiped down: the narrator is off (a handle stays to bring it back).
+  static void turnOff() {
     current.value = null;
-    muted.add(line.key);
+    TextMode.enabled.value = false;
     persist?.call();
   }
 
-  /// Settings: all explanations come again.
-  static void resetMuted() {
-    muted.clear();
+  /// Handle swiped up / tapped: the narrator is on again.
+  static void turnOn() {
+    TextMode.enabled.value = true;
     persist?.call();
   }
 }
