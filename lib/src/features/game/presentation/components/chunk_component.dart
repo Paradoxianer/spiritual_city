@@ -57,6 +57,23 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
         CityTileRenderer.renderDistrictTint(canvas, rect, cell.district, cell.data);
       }
     }
+    // Roof symbols last, so no neighbouring cell covers them.
+    if (KenneyCityRenderer.ready) {
+      for (int y = 0; y < CityChunk.chunkSize; y++) {
+        for (int x = 0; x < CityChunk.chunkSize; x++) {
+          final cell = chunk.at(x, y);
+          if (cell == null) continue;
+          KenneyCityRenderer.renderLandmark(
+            canvas,
+            Rect.fromLTWH(x * cellSize, y * cellSize, cellSize, cellSize),
+            cell,
+            chunk.getWorldX(x),
+            chunk.getWorldY(y),
+            _buildingType,
+          );
+        }
+      }
+    }
     _cachedPicture = recorder.endRecording();
   }
 

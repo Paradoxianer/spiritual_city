@@ -266,9 +266,27 @@ abstract final class KenneyCityRenderer {
       if (right) canvas.drawLine(g.topRight, g.bottomRight, _goldRim);
     }
 
-    // One landmark symbol in the middle of the roof.
+    // The landmark symbol is drawn afterwards ([renderLandmark]): a later
+    // cell would cover the part that reaches beyond this one.
+  }
+
+  /// Second pass after all cells of a chunk: the symbol in the middle of a
+  /// landmark's roof (cross, red shield …) on top of the neighbouring cells
+  /// (playtest 2026-10-31: the bigger shield's tip was cut off).
+  static void renderLandmark(
+    Canvas canvas,
+    Rect r,
+    CityCell cell,
+    int wx,
+    int wy,
+    BuildingType Function(BuildingData data) typeOf,
+  ) {
+    final data = cell.data;
+    if (data is! BuildingData) return;
+    final pitch = _lotPitch(cell.district);
+    final (rootX, rootY) = _lotRoot(data.buildingId, wx, wy, pitch);
     if (wx - rootX == pitch ~/ 2 && wy - rootY == (pitch - 1) ~/ 2) {
-      _landmark(canvas, r, type);
+      _landmark(canvas, r, typeOf(data));
     }
   }
 
