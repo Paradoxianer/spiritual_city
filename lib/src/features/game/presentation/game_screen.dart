@@ -9,6 +9,7 @@ import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/bible_ref.dart';
+import '../../../core/i18n/explanations.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/services/combat_abilities.dart';
@@ -57,6 +58,7 @@ part 'overlays/look.dart';
 part 'overlays/missions.dart';
 part 'overlays/npc_dialog.dart';
 part 'overlays/disciple.dart';
+part 'overlays/explanation.dart';
 part 'overlays/pause.dart';
 part 'overlays/shared.dart';
 part 'overlays/tutorial.dart';
@@ -422,6 +424,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               if (!isReady) return const SizedBox.shrink();
               return _WinScreenOverlay(game: _game);
             },
+          ),
+          // Explanation box: what an action will do, before it happens.
+          ValueListenableBuilder<PendingExplanation?>(
+            valueListenable: Explanations.pending,
+            builder: (context, e, _) => e == null ? const SizedBox.shrink() : _ExplanationBox(e: e),
           ),
           // ❓ Help – topmost, so no HUD element covers it.
           ValueListenableBuilder<bool>(

@@ -85,6 +85,7 @@ Technik
       'settings.language': 'Sprache',
       'settings.texts': 'Texte anzeigen',
       'settings.texts.hint': 'Beschriftungen und Erklärungen zu den Emojis – aus: nur Emojis',
+      'settings.explanations.reset': 'Erklärungen wieder zeigen',
       'settings.info': 'Info',
     },
     'en': {
@@ -151,6 +152,7 @@ Technology
       'settings.language': 'Language',
       'settings.texts': 'Show texts',
       'settings.texts.hint': 'Captions and explanations for the emoji – off: emoji only',
+      'settings.explanations.reset': 'Show explanations again',
       'settings.info': 'Info',
     },
     'es': {
@@ -217,6 +219,7 @@ Tecnología
       'settings.language': 'Idioma',
       'settings.texts': 'Mostrar textos',
       'settings.texts.hint': 'Rótulos y explicaciones para los emojis – desactivado: solo emojis',
+      'settings.explanations.reset': 'Volver a mostrar las explicaciones',
       'settings.info': 'Información',
     },
     'fr': {
@@ -283,6 +286,7 @@ Technique
       'settings.language': 'Langue',
       'settings.texts': 'Afficher les textes',
       'settings.texts.hint': 'Légendes et explications des emojis – désactivé : emojis seulement',
+      'settings.explanations.reset': 'Réafficher les explications',
       'settings.info': 'Infos',
     },
     'pt': {
@@ -349,6 +353,7 @@ Tecnologia
       'settings.language': 'Idioma',
       'settings.texts': 'Mostrar textos',
       'settings.texts.hint': 'Legendas e explicações para os emojis – desligado: só emojis',
+      'settings.explanations.reset': 'Mostrar explicações de novo',
       'settings.info': 'Informações',
     },
   };

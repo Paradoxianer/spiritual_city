@@ -39,6 +39,12 @@ extension GameInterior on SpiritWorldGame {
         InteriorLayout.churchOverview: '⛪👥',
         InteriorLayout.upgrades: '⚔️',
       },
+      explain: (type, go) {
+        final a = offered.where((a) => a.type == type).firstOrNull;
+        if (a == null) return go();
+        Explanations.gate('action.${a.id.name}', a.emoji, HelpContent.actionNames[a.id]?.text,
+            HelpContent.explanations[a.id]?.text, go);
+      },
       stationLabel: {
         for (final a in offered) a.type: HelpContent.actionNames[a.id]?.text ?? '',
         InteriorLayout.churchOverview: HelpContent.labels['churchOverview']!.text,

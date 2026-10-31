@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/audio/game_sound.dart';
 import '../../../../core/i18n/app_language.dart';
+import '../../../../core/i18n/explanations.dart';
 import '../../domain/help/help_content.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../../domain/actions/game_action.dart';
@@ -84,17 +85,27 @@ class ActionButton extends StatelessWidget {
     String? emoji,
   }) {
     final d = action.discipline;
+    final shown = emoji ?? action.emoji;
+    final caption = HelpContent.actionNames[action.id]?.text;
     return ActionButton(
       key: key,
-      emoji: emoji ?? action.emoji,
+      emoji: shown,
       hint: action.hint(difficulty),
       availability: action.availability(subject, wallet, difficulty),
       enabled: enabled,
       keyIndex: keyIndex,
       practiceLevel: d == null ? 0 : practice.level(d),
       highlighted: highlighted,
-      onTap: onTap,
-      caption: HelpContent.actionNames[action.id]?.text,
+      // With texts on, the first tap explains what the action will do
+      // (until muted) – see [Explanations].
+      onTap: () => Explanations.gate(
+        'action.${action.id.name}',
+        shown,
+        caption,
+        HelpContent.explanations[action.id]?.text,
+        onTap,
+      ),
+      caption: caption,
       explanation: HelpContent.actions[action.id]?.text,
     );
   }

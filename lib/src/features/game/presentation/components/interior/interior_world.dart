@@ -53,6 +53,10 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
   /// Station names, shown above the bubbles when texts are on.
   final Map<String, String> stationLabel;
 
+  /// Lets a tap on a station first explain its action (Explanations);
+  /// [go] walks there and acts.
+  final void Function(String action, void Function() go)? explain;
+
   /// A mentor stands in the room when this building offers a lesson.
   final Lesson? lesson;
 
@@ -61,6 +65,7 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
     required this.layout,
     required this.stationEmoji,
     this.stationLabel = const {},
+    this.explain,
     this.lesson,
   });
 
@@ -373,7 +378,12 @@ class _StationMarker extends PositionComponent with TapCallbacks {
         );
 
   @override
-  void onTapUp(TapUpEvent event) => room.goAndAct(StationTarget(f));
+  void onTapUp(TapUpEvent event) {
+    void go() => room.goAndAct(StationTarget(f));
+    final explain = room.explain;
+    final action = f.action;
+    explain == null || action == null ? go() : explain(action, go);
+  }
 
   @override
   void render(Canvas canvas) {

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-import 'dart:math' show Random, min;
+import 'dart:math' show Random, min, pi;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show compute, ValueListenable, ValueNot
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../../../core/i18n/app_language.dart';
+import '../../../core/i18n/explanations.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../core/utils/stable_hash.dart';
@@ -63,7 +64,6 @@ import 'components/npc_component.dart';
 import 'components/shockwave_component.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
-import 'components/prayer_hud_component.dart';
 import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
 
@@ -171,7 +171,6 @@ class SpiritWorldGame extends FlameGame
   late final HudButton actionButton;
   late final HudButton worldToggleButton;
   late final List<HudButton> modeButtons;
-  late final PrayerHudComponent prayerHud;
   late final LootSystem lootSystem;
 
   /// Mission system – wired to all interaction hooks.
@@ -804,8 +803,7 @@ class SpiritWorldGame extends FlameGame
         await camera.viewport.add(btn);
       }
       
-      prayerHud = PrayerHudComponent();
-      await camera.viewport.add(prayerHud);
+      // The faith for prayer waves is a ring around ✝️ (HudButton.ring).
 
       lootSystem = LootSystem(seed: seedManager.seed);
       await world.add(lootSystem);
@@ -1769,7 +1767,9 @@ class SpiritWorldGame extends FlameGame
       onUp: handleActionUp, 
       keyLabel: 'E',
       position: Vector2(size.x - 80, size.y - 80)
-    );
+    )
+      // In the invisible world ✝️ shows the faith left for prayer waves.
+      ..ring = (() => isSpiritualWorld ? faith / progress.maxFaith : null);
     await camera.viewport.add(actionButton);
 
     worldToggleButton = HudButton(
@@ -1829,6 +1829,12 @@ class HudButton extends PositionComponent with TapCallbacks {
 
   /// Pulsing golden ring: the tutorial points at this button.
   bool highlight = false;
+
+  /// A ring around the button filled to this share (0–1), e.g. the faith
+  /// left for prayer waves on ✝️ (playtest 2026-10-31: the bar above the
+  /// prayer modes covered them on phones). Null = no ring.
+  double? Function()? ring;
+  Color ringColor = const Color(0xFFFFD740);
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
   String? keyLabel;
   
@@ -1886,6 +1892,23 @@ class HudButton extends PositionComponent with TapCallbacks {
           ..color = Colors.white.withValues(alpha: 0.7 * opacity)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3);
+      }
+
+      // 2b. Ring: how much is left (e.g. 🙏 for prayer waves).
+      final share = ring?.call();
+      if (share != null) {
+        final rect = Rect.fromCircle(center: center, radius: radius + 6);
+        canvas.drawCircle(center, radius + 6, Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 6
+          ..color = Colors.black.withValues(alpha: 0.45 * opacity));
+        if (share > 0.005) {
+          canvas.drawArc(rect, -pi / 2, 2 * pi * share.clamp(0.0, 1.0), false, Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 5
+            ..strokeCap = StrokeCap.round
+            ..color = (share < 0.2 ? Colors.redAccent : ringColor).withValues(alpha: opacity));
+        }
       }
 
       // 3. Glanz-Effekt oben
