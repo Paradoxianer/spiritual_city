@@ -59,4 +59,24 @@ void main() {
       expect(t.de.contains('{n}') || !t.de.contains('×'), isTrue, reason: a.name);
     }
   });
+
+  test('every help text has es, fr and pt', () {
+    final all = <Tr>[
+      ...HelpContent.resources.values,
+      for (final (_, t) in HelpContent.symbols) t,
+      ...HelpContent.toasts.values,
+      ...HelpContent.labels.values,
+      ...HelpContent.actions.values,
+      ...HelpContent.prayerModes.values,
+      ...HelpContent.daemons.values,
+      ...HelpContent.skills.values,
+      ...HelpContent.taskHowTo.values,
+      ...HelpContent.buildings.values,
+      for (final (_, a, b) in HelpContent.nextSteps) ...[a, b],
+      ...HelpContent.sectionTitles.values,
+    ];
+    for (final t in all) {
+      expect([t.es, t.fr, t.pt], everyElement(isNotNull), reason: t.en);
+    }
+  });
 }
