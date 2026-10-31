@@ -310,6 +310,7 @@ class PlayerComponent extends PositionComponent
     game.faith -= cost;
 
     GameSound.playWave(_currentMode.id);
+    game.disciplePrayer.joinPastorWave();
     game.world.add(ShockwaveComponent(
       position: position.clone(),
       maxRadius: stats.radius,

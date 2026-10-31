@@ -47,4 +47,16 @@ void main() {
     expect(Discipleship.radius(s), lessThan(140 * s.radius));
     expect(Discipleship.strength(s), lessThan(25 * s.strength * 0.3));
   });
+
+  test('a disciple prays the one mode the teacher built up most', () {
+    final p = CombatProfile();
+    expect(Discipleship.strongest(p), isNull);
+    p.getFor(PrayerMode.liberation).radiusLevel = 1;
+    p.getFor(PrayerMode.drain)
+      ..strengthLevel = 1
+      ..speedLevel = 1;
+    expect(Discipleship.strongest(p), PrayerMode.drain);
+    p.getFor(PrayerMode.liberation).strengthLevel = 1;
+    expect(Discipleship.strongest(p), PrayerMode.liberation, reason: 'ties: the earlier mode');
+  });
 }

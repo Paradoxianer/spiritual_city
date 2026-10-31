@@ -78,15 +78,15 @@ abstract final class HelpContent {
     (
       '📢🎺',
       Tr(
-        'Freiversammlung (nach 📢 Predigen, Kreismenü 🖐️ auf der Straße): ein großer Glaubensschritt – kostet 70 🙏, die Hälfte deines ❤️ und viel 🍞. Erreicht sehr viele Menschen – und kurz danach füllt Gott deinen Glauben ganz auf ✨🙏💯. Danach brauchst du erst wieder Kraft (❤️ über die Hälfte).',
-        'Open-air meeting (after 📢 preaching, circle menu 🖐️ in the street): a big step of faith – costs 70 🙏, half your ❤️ and much 🍞. Reaches very many people – and shortly after God fills your faith up completely ✨🙏💯. Then you need strength again first (❤️ above half).',
+        'Freiversammlung (nach 📢 Predigen, Kreismenü 🖐️ auf der Straße): ein großer Glaubensschritt – kostet 70 🙏, die Hälfte deines ❤️ und viel 🍞. Erreicht sehr viele Menschen – und kurz danach füllt Gott deinen Glauben ganz auf ✨🙏💯. Danach brauchst du erst wieder Kraft (❤️ über die Hälfte). Deine Jünger 🌱 in der Umgebung kommen dazu und beten eine Weile mit dir zusammen.',
+        'Open-air meeting (after 📢 preaching, circle menu 🖐️ in the street): a big step of faith – costs 70 🙏, half your ❤️ and much 🍞. Reaches very many people – and shortly after God fills your faith up completely ✨🙏💯. Then you need strength again first (❤️ above half). Your disciples 🌱 nearby join you and pray together with you for a while.',
       ),
     ),
     (
       '🌱 🔒⚔️',
       Tr(
-        'Jüngerschaft (Gespräch mit einem Christen, Tab 🌱): Dasselbe ⚔️-Menü wie im Pastorenhaus – nur für diesen Menschen. Du gibst weiter, was du selbst gelernt hast, mit 📖 und nie weiter als deine eigene Stufe (🔒⚔️ = erst selbst verbessern). In der unsichtbaren Welt betet er dann in deiner Nähe mit: alle paar Sekunden eine kleine Welle, abwechselnd in den Gebetsarten, die er kann. Erkennbar am farbigen Ring. Je mehr Jünger in einem Viertel wohnen, desto stärker betet es mit (2 Tim 2,2).',
-        'Discipleship (talk with a Christian, tab 🌱): the same ⚔️ menu as in the pastor house – for this person. You pass on what you have learned yourself, with 📖 and never beyond your own level (🔒⚔️ = improve yourself first). In the invisible world they then pray along near you: a small wave every few seconds, taking turns with the kinds of prayer they know. You can tell them by the coloured ring. The more disciples live in a quarter, the more it prays along (2 Tim 2:2).',
+        'Jüngerschaft (Gespräch mit einem Christen, Tab 🌱): Dasselbe ⚔️-Menü wie im Pastorenhaus – nur für diesen Menschen. Du gibst weiter, was du selbst gelernt hast, mit 📖 und nie weiter als deine eigene Stufe (🔒⚔️ = erst selbst verbessern). In der unsichtbaren Welt betet er dann in deiner Nähe mit: alle paar Sekunden eine kleine Welle – immer in der Gebetsart, die du bei ihm am meisten ausgebaut hast. So legst du fest, wofür er da ist: einer für 🫸, einer für ⏳, viele für 🕊️ … Erkennbar am Ring in dieser Farbe. Eine Freiversammlung 📢🎺 ruft die Jünger in der Umgebung zusammen: Sie kommen zu dir und beten eine Weile mit jeder deiner Wellen mit. Je mehr Jünger in einem Viertel wohnen, desto stärker betet es mit (2 Tim 2,2).',
+        'Discipleship (talk with a Christian, tab 🌱): the same ⚔️ menu as in the pastor house – for this person. You pass on what you have learned yourself, with 📖 and never beyond your own level (🔒⚔️ = improve yourself first). In the invisible world they then pray along near you: a small wave every few seconds – always in the kind of prayer you built up most in them. That is how you decide what they are for: one for 🫸, one for ⏳, many for 🕊️ … You can tell them by the ring in that colour. An open-air meeting 📢🎺 calls the disciples around together: they come to you and for a while pray with each of your waves. The more disciples live in a quarter, the more it prays along (2 Tim 2:2).',
       ),
     ),
     (

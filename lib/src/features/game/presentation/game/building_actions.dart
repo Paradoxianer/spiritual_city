@@ -419,7 +419,9 @@ extension GameBuildingActions on SpiritWorldGame {
     _brightenspiritualAreaAroundPosition(player.position, radius: 10, amount: 0.15);
     recordPractice(Discipline.bible);
     GameSound.playAction('preach', Discipline.bible.name);
-    _toast('📢🎺👥 $reached  −${openAirFaithCost.round()}🙏');
+    // The disciples nearby come together as a prayer circle.
+    final gathered = gatherDisciples(player.position);
+    _toast('📢🎺👥 $reached  −${openAirFaithCost.round()}🙏${gathered > 0 ? '  🌱🙏 $gathered' : ''}');
     // …and then God fills up what was given.
     add(TimerComponent(
       period: openAirRefillDelay,

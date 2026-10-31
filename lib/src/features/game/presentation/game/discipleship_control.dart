@@ -7,6 +7,20 @@ extension GameDiscipleship on SpiritWorldGame {
       Discipleship.blocker(npc, mode, stat,
           pastor: progress.combatProfile, learned: progress.skills, insight: progress.insight);
 
+  /// 📢🎺 An open-air meeting calls the disciples around [at] together:
+  /// they come and stay with the pastor as a prayer circle. Returns how
+  /// many came.
+  int gatherDisciples(Vector2 at) {
+    const r2 = Discipleship.gatherRadius * Discipleship.gatherRadius;
+    var n = 0;
+    for (final c in chunkManager.allActiveNPCs) {
+      if (!c.model.isDisciple || c.position.distanceToSquared(at) > r2) continue;
+      c.gatherLeft = Discipleship.gatherSeconds;
+      n++;
+    }
+    return n;
+  }
+
   /// Teaches [npc] one level of [stat] in [mode]; false when not possible.
   bool teachDisciple(NPCModel npc, PrayerMode mode, CombatStat stat) {
     if (discipleBlocker(npc, mode, stat) != null) {
@@ -21,15 +35,17 @@ extension GameDiscipleship on SpiritWorldGame {
   }
 }
 
-/// Lets disciples near the pastor pray along in the invisible world: each
-/// sends a small wave every few seconds, taking turns with the prayer
-/// modes they know.
+/// Lets disciples near the pastor pray along in the invisible world, each
+/// with the one mode the pastor built up most in them. On their own every
+/// few seconds; gathered by an open-air meeting, together with each of the
+/// pastor's waves.
 class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
   final Map<String, double> _timers = {};
-  final Map<String, int> _turn = {};
+  final Map<String, double> _lastChorus = {};
   final Random _rng = Random();
   List<NPCComponent> _praying = const [];
   double _scan = 0;
+  double _clock = 0;
 
   /// Seconds between two looks for the nearest disciples.
   static const double _scanInterval = 0.5;
@@ -37,6 +53,7 @@ class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
   @override
   void update(double dt) {
     super.update(dt);
+    _clock += dt;
     if (!game.isSpiritualWorld || game.interior != null) return;
     _scan -= dt;
     if (_scan <= 0) {
@@ -44,6 +61,7 @@ class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
       _praying = _nearest();
     }
     for (final c in _praying) {
+      if (c.isGathered) continue; // they pray with the pastor
       final id = c.model.id;
       // Start out of step, so they do not all pray at the same moment.
       var t = (_timers[id] ?? _rng.nextDouble() * Discipleship.interval) + dt;
@@ -55,27 +73,36 @@ class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
     }
   }
 
+  /// The pastor just sent a wave: the gathered disciples pray with it.
+  void joinPastorWave() {
+    for (final c in game.chunkManager.allActiveNPCs) {
+      if (!c.isGathered || !c.model.isDisciple) continue;
+      final last = _lastChorus[c.model.id] ?? -999;
+      if (_clock - last < Discipleship.chorusInterval) continue;
+      _lastChorus[c.model.id] = _clock;
+      _wave(c, factor: Discipleship.chorusFactor);
+    }
+  }
+
+  /// Gathered disciples, then the nearest others up to the limit.
   List<NPCComponent> _nearest() {
     final me = game.player.position;
     const r2 = Discipleship.prayRange * Discipleship.prayRange;
     final near = [
       for (final c in game.chunkManager.allActiveNPCs)
-        if (c.model.isDisciple && c.position.distanceToSquared(me) <= r2) c,
+        if (c.model.isDisciple && !c.isGathered && c.position.distanceToSquared(me) <= r2) c,
     ]..sort((a, b) => a.position.distanceToSquared(me).compareTo(b.position.distanceToSquared(me)));
     return near.take(Discipleship.maxPraying).toList();
   }
 
-  void _wave(NPCComponent c) {
-    final modes = Discipleship.praying(c.model.discipleProfile);
-    if (modes.isEmpty) return;
-    final i = (_turn[c.model.id] ?? 0) % modes.length;
-    _turn[c.model.id] = i + 1;
-    final mode = modes[i];
+  void _wave(NPCComponent c, {double factor = 1.0}) {
+    final mode = Discipleship.strongest(c.model.discipleProfile);
+    if (mode == null) return;
     final s = c.model.discipleProfile.getFor(mode);
     game.world.add(ShockwaveComponent(
       position: c.position.clone(),
       maxRadius: Discipleship.radius(s),
-      strength: Discipleship.strength(s),
+      strength: Discipleship.strength(s) * factor,
       duration: Discipleship.duration(s),
       speed: Discipleship.speed(s),
       color: mode.color.withValues(alpha: 0.7),

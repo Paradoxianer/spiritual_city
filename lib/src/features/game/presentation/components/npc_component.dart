@@ -12,7 +12,6 @@ import 'daemon_component.dart';
 import '../../domain/models/building_model.dart';
 import '../../domain/models/npc_model.dart';
 import '../../domain/models/discipleship.dart';
-import '../../domain/services/combat_abilities.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
 import '../../domain/services/influence_service.dart';
@@ -58,6 +57,15 @@ class NPCComponent extends PositionComponent
 
   double _currentSpeed = 40.0;
   Vector2? _targetPosition;
+
+  /// 📢🎺 Seconds left in the prayer circle around the pastor after an
+  /// open-air meeting (disciples only, see Discipleship.gatherSeconds).
+  double gatherLeft = 0;
+  bool get isGathered => gatherLeft > 0;
+
+  /// Their place in the circle: a fixed angle per person.
+  late final double _circleAngle = (stableStringHash(model.id) % 360) * pi / 180;
+  static const double _circleRadius = 52;
   double _aiUpdateTimer = 0;
   static const double _aiUpdateInterval = 2.0;
   // If no wander target can be found for this long, we treat the NPC as
@@ -252,6 +260,11 @@ class NPCComponent extends PositionComponent
     _anim.update(dt, position);
     if (game.paused) return;
 
+    if (isGathered) {
+      _followPastor(dt);
+      return;
+    }
+
     // ── Spiritual world: cheap movement-only pass ─────────────────────────
     // NPCs keep gliding toward their last waypoint so they still visibly
     // wander, but all expensive operations (pathfinding, grid lookups,
@@ -431,6 +444,22 @@ class NPCComponent extends PositionComponent
     return null;
   }
 
+  /// Walks to their place in the circle around the pastor and stays there.
+  void _followPastor(double dt) {
+    gatherLeft -= dt;
+    final spot = game.player.position + Vector2(cos(_circleAngle), sin(_circleAngle)) * _circleRadius;
+    final diff = spot - position;
+    final d = diff.length;
+    if (d < 3) return;
+    // Hurry from far away, step along once close.
+    final speed = d > 200 ? 160.0 : 90.0;
+    position.add(diff.normalized() * min(d, speed * dt));
+    if (!isGathered) {
+      _targetPosition = null;
+      _aiUpdateTimer = 0;
+    }
+  }
+
   void _moveTowardsTarget(double dt) {
     final diff = _targetPosition! - position;
     if (diff.length < _currentSpeed * dt) {
@@ -586,15 +615,13 @@ class NPCComponent extends PositionComponent
         .withValues(alpha: 0.3 + (faithFactor * 0.4));
     canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, _auraPaint);
 
-    // 🌱 A disciple: a ring in the colour of what they pray most, thicker
-    // the more they have been taught (#193).
-    if (model.isDisciple) {
+    // 🌱 A disciple: a ring in the colour of what they pray, thicker the
+    // more they have been taught (#193).
+    final gift = Discipleship.strongest(model.discipleProfile);
+    if (gift != null) {
       final p = model.discipleProfile;
-      final modes = Discipleship.praying(p)
-        ..sort((a, b) => CombatAbilities.modeLevel(p.getFor(b))
-            .compareTo(CombatAbilities.modeLevel(p.getFor(a))));
       _discipleRing
-        ..color = modes.first.color.withValues(alpha: 0.85)
+        ..color = gift.color.withValues(alpha: 0.85)
         ..strokeWidth = (1.0 + Discipleship.totalLevel(p) / 2).clamp(1.0, 5.0);
       canvas.drawCircle((size / 2).toOffset(), size.x * 0.95, _discipleRing);
     }

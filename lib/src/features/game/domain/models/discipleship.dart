@@ -50,6 +50,22 @@ abstract final class Discipleship {
   static List<PrayerMode> praying(CombatProfile p) =>
       [for (final m in PrayerMode.values) if (CombatAbilities.modeLevel(p.getFor(m)) > 0) m];
 
+  /// The one mode a disciple prays: the one the pastor built up most in
+  /// them (playtest 2026-10-31: the teacher decides – one disciple for 🫸,
+  /// one for ⏳, many for 🕊️ …). Ties go to the earlier mode.
+  static PrayerMode? strongest(CombatProfile p) {
+    PrayerMode? best;
+    var bestLevel = 0;
+    for (final m in PrayerMode.values) {
+      final l = CombatAbilities.modeLevel(p.getFor(m));
+      if (l > bestLevel) {
+        best = m;
+        bestLevel = l;
+      }
+    }
+    return best;
+  }
+
   /// Total of all upgrades (ring thickness).
   static int totalLevel(CombatProfile p) =>
       PrayerMode.values.fold(0, (sum, m) => sum + CombatAbilities.modeLevel(p.getFor(m)));
@@ -80,8 +96,23 @@ abstract final class Discipleship {
   /// At most this many disciples pray at once (the nearest).
   static const int maxPraying = 8;
 
-  /// Seconds between two waves of one disciple (modes take turns).
+  /// Seconds between two waves of one disciple.
   static const double interval = 5;
+
+  // ── 📢🎺 Gathered by an open-air meeting ─────────────────────────────────
+
+  /// Disciples this close come to an open-air meeting (40 cells).
+  static const double gatherRadius = 40 * 32;
+
+  /// How long they stay with the pastor as a prayer circle (Acts 4:24, 31).
+  static const double gatherSeconds = 90;
+
+  /// While gathered they pray with each of the pastor's waves – at most
+  /// once per this many seconds each.
+  static const double chorusInterval = 1.0;
+
+  /// Their waves are a little stronger together ("with one accord").
+  static const double chorusFactor = 1.5;
 
   /// A disciple's wave compared with the pastor's (radius 140, strength
   /// 25 at full faith, speed 90, all × the upgrades).

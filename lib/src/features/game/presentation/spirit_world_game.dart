@@ -552,6 +552,9 @@ class SpiritWorldGame extends FlameGame
   /// Overall progress for the second HUD bar (🌐 prayed free / 🏙️ ✝️).
   final ValueNotifier<CityProgress?> cityProgress = ValueNotifier(null);
 
+  /// 🌱 Disciples praying along (#193).
+  final DisciplePrayer disciplePrayer = DisciplePrayer();
+
   /// Liberated ground per chunk ('cx,cy'): seeded once from
   /// [_savedCellStates] (see [Liberation.savedByChunk]), then refreshed a
   /// few generated chunks at a time – summing every cell each second made
@@ -756,7 +759,7 @@ class SpiritWorldGame extends FlameGame
 
       // System already initialized, now add to world
       await world.add(spiritualDynamics);
-      await world.add(DisciplePrayer());
+      await world.add(disciplePrayer);
 
       // Wire modifier values to the dynamics system
       spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
