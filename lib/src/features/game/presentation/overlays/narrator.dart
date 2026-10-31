@@ -111,14 +111,13 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // The handle: swipe down to never see this again.
-                      Container(
-                        width: 44,
-                        height: 5,
-                        margin: const EdgeInsets.only(bottom: 6, right: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFA1887F),
-                          borderRadius: BorderRadius.circular(3),
+                      // ⌄ (tap or swipe down): the narrator is off.
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: Narrator.turnOff,
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 8, bottom: 2),
+                          child: Icon(Icons.keyboard_arrow_down, size: 22, color: Color(0xFF8D6E63)),
                         ),
                       ),
                       Row(
