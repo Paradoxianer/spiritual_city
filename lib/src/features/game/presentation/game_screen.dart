@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/i18n/app_language.dart';
+import '../../../core/i18n/bible_ref.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/services/combat_abilities.dart';

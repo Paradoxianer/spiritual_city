@@ -61,7 +61,7 @@ class LessonOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    lesson.reference,
+                    BibleRef.localized(lesson.reference),
                     style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 12),
                   ),
                 ],
