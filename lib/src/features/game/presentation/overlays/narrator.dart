@@ -24,9 +24,10 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
   /// Letters per second of the typewriter.
   static const double _speed = 90;
 
-  /// Redraws per second while typing – the letters follow the clock, so a
-  /// busy frame never slows the text down (playtest 2026-10-31).
-  static const int _fps = 30;
+  /// The text appears word by word, following the clock – a handful of
+  /// redraws per second instead of one per letter, and a busy frame never
+  /// slows it down (playtest 2026-10-31: walking felt sluggish).
+  static const int _checksPerSecond = 15;
 
   final Stopwatch _clock = Stopwatch()..start();
   Timer? _timer;
@@ -35,12 +36,20 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
 
   int get _length => widget.line.text.length;
 
+  /// The end of the word that contains position [n].
+  int _wordEnd(int n) {
+    final t = widget.line.text;
+    if (n >= t.length) return t.length;
+    final next = t.indexOf(' ', n);
+    return next < 0 ? t.length : next;
+  }
+
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(milliseconds: 1000 ~/ _fps), (t) {
+    _timer = Timer.periodic(const Duration(milliseconds: 1000 ~/ _checksPerSecond), (t) {
       if (!mounted) return;
-      final n = (_clock.elapsedMilliseconds * _speed / 1000).floor().clamp(0, _length);
+      final n = _wordEnd((_clock.elapsedMilliseconds * _speed / 1000).floor());
       if (n != _shown) setState(() => _shown = n);
       if (n >= _length) {
         t.cancel();
@@ -73,7 +82,9 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
   Widget build(BuildContext context) {
     final line = widget.line;
     final text = _shown >= _length ? line.text : line.text.substring(0, _safeCut(line.text, _shown));
-    return SafeArea(
+    // Its own layer: redrawing the bubble never repaints the game.
+    return RepaintBoundary(
+      child: SafeArea(
       child: LayoutBuilder(
         builder: (context, box) => Align(
           alignment: Alignment.bottomCenter,
@@ -150,6 +161,7 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
           ),
         ),
       ),
+    ),
     );
   }
 }

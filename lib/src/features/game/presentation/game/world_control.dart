@@ -54,18 +54,34 @@ extension GameWorld on SpiritWorldGame {
 
   /// Called once when a chunk is generated: if the save knows the day it
   /// was last simulated, the missed days (at most [maxCatchUpDays]) are
-  /// simulated now for its ground, people and houses – a part of the city
-  /// does not stand still while the pastor is elsewhere.
+  /// queued – a part of the city does not stand still while the pastor is
+  /// elsewhere. They run a few per frame ([continueCatchUp]): all at once
+  /// they made walking stutter (playtest 2026-10-31).
   void catchUpChunk(CityChunk chunk) {
     final last = _savedChunkDays?.remove(chunk.id);
     if (last == null) return;
     final missed = (worldDay - last).clamp(0, maxCatchUpDays);
     if (missed == 0) return;
-    final people = residents(chunk: chunk);
-    final houses = houseAnchors(chunk: chunk);
-    for (var d = 0; d < missed; d++) {
-      WorldSimulation.simulateDay(grid,
-          chunks: [chunk], residents: people, anchors: houses, tuning: worldTuning);
+    _catchUps.add((chunk, missed));
+  }
+
+  /// Chunk-days of catching up per frame.
+  static const int catchUpPerFrame = 3;
+
+  /// Runs some queued catch-up days (called every frame).
+  void continueCatchUp() {
+    var budget = catchUpPerFrame;
+    while (budget > 0 && _catchUps.isNotEmpty) {
+      final (chunk, left) = _catchUps.removeAt(0);
+      final days = min(budget, left);
+      final people = residents(chunk: chunk);
+      final houses = houseAnchors(chunk: chunk);
+      for (var d = 0; d < days; d++) {
+        WorldSimulation.simulateDay(grid,
+            chunks: [chunk], residents: people, anchors: houses, tuning: worldTuning);
+      }
+      budget -= days;
+      if (left > days) _catchUps.insert(0, (chunk, left - days));
     }
   }
 

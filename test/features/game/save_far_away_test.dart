@@ -127,6 +127,10 @@ void main() {
     expect(g2.grid.getLoadedChunk(chunk.chunkX, chunk.chunkY), isNull, reason: 'far away');
     g2.player.position.setFrom(home);
     g2.chunkManager.update(0.016);
+    // Catching up runs a few chunk-days per frame.
+    for (var i = 0; i < 400; i++) {
+      g2.continueCatchUp();
+    }
     final back = g2.grid.getLoadedChunk(chunk.chunkX, chunk.chunkY)!;
     final changed = back.cells.values.where((c) => (c.spiritualState + 0.9).abs() > 1e-6).length;
     expect(changed, greaterThan(0), reason: '20 days of world simulation happened');

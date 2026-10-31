@@ -101,6 +101,7 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       if (_prayerAttractionTimer < 0) _prayerAttractionTimer = 0;
     }
     _continueDay();
+    game.continueCatchUp();
     _timer += dt;
     if (_timer >= tickInterval) {
       _timer = 0.0;

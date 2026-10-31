@@ -563,6 +563,9 @@ class SpiritWorldGame extends FlameGame
   /// From the save: day of the last simulation per chunk ('cx,cy').
   Map<String, int>? _savedChunkDays;
 
+  /// Generated chunks still catching up on missed days, with days left.
+  final List<(CityChunk, int)> _catchUps = [];
+
   /// 🌱 Disciples praying along (#193).
   final DisciplePrayer disciplePrayer = DisciplePrayer();
 
