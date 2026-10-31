@@ -41,7 +41,11 @@ class LotGenerator {
     final BuildingType? exactSpecial =
         _registry.getSpecialBuilding(wx, wy, district);
     if (exactSpecial != null) {
-      return _buildingData(exactSpecial, wx, wy, grid, modX, modY, district, rand);
+      // The whole lot is one building: the pastor house wins over a zoned
+      // special that happens to fall into the same lot (playtest
+      // 2026-10-31: a supermarket swallowed the home in some cities).
+      final lot = _lotSpecial(rootX, rootY, grid, district) ?? exactSpecial;
+      return _buildingData(lot, wx, wy, grid, modX, modY, district, rand);
     }
 
     // Row/column 0 of each grid block = sidewalk (empty).
@@ -51,17 +55,7 @@ class LotGenerator {
     // If any cell in this lot block is a special building, ALL non-sidewalk
     // cells in the lot use that type so the whole building renders correctly
     // (e.g. the pastor house appears amber/gold on every cell, not just one).
-    BuildingType? lotSpecial;
-    _scanLot:
-    for (int dy = 0; dy < grid; dy++) {
-      for (int dx = 0; dx < grid; dx++) {
-        final s = _registry.getSpecialBuilding(rootX + dx, rootY + dy, district);
-        if (s != null) {
-          lotSpecial = s;
-          break _scanLot;
-        }
-      }
-    }
+    final lotSpecial = _lotSpecial(rootX, rootY, grid, district);
     if (lotSpecial != null) {
       return _buildingData(lotSpecial, wx, wy, grid, modX, modY, district, rand);
     }
@@ -87,6 +81,20 @@ class LotGenerator {
       return NatureData(type: rand.nextDouble() < 0.2 ? NatureType.tree : NatureType.park);
     }
     return _buildingData(bType, wx, wy, grid, modX, modY, district, rand);
+  }
+
+  /// The special building of the lot rooted at ([rootX], [rootY]): the
+  /// pastor house if it is in the lot, otherwise the first one found.
+  BuildingType? _lotSpecial(int rootX, int rootY, int grid, DistrictType district) {
+    BuildingType? first;
+    for (int dy = 0; dy < grid; dy++) {
+      for (int dx = 0; dx < grid; dx++) {
+        final s = _registry.getSpecialBuilding(rootX + dx, rootY + dy, district);
+        if (s == BuildingType.pastorHouse) return s;
+        first ??= s;
+      }
+    }
+    return first;
   }
 
   int _gardenInset(BuildingType type, DistrictType district) {

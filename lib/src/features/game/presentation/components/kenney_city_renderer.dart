@@ -54,12 +54,24 @@ abstract final class KenneyCityRenderer {
   static const _Material _light = _Material(roof: (20, 2), plain: (22, 0), wall: [4, 5, 6, 7]);
   static const _Material _sand = _Material(roof: (28, 2), plain: (30, 0), wall: [8, 9, 10, 11]);
 
+  /// Roofs by kind (playtest 2026-10-31: homes, shops and high-rises could
+  /// not be told apart): homes red with a pitched roof, shops and offices
+  /// grey and flat with air conditioners, high-rises light with two floors.
   static _Material _materialFor(BuildingType t) => switch (t) {
-        BuildingType.house || BuildingType.pastorHouse || BuildingType.church || BuildingType.school => _red,
-        BuildingType.apartment || BuildingType.library || BuildingType.museum || BuildingType.cathedral => _sand,
-        BuildingType.shop || BuildingType.supermarket || BuildingType.mall || BuildingType.postOffice => _sand,
-        BuildingType.skyscraper ||
+        BuildingType.house ||
+        BuildingType.apartment ||
+        BuildingType.pastorHouse ||
+        BuildingType.church ||
+        BuildingType.school =>
+          _red,
+        BuildingType.library || BuildingType.museum || BuildingType.cathedral => _sand,
+        BuildingType.shop ||
+        BuildingType.supermarket ||
+        BuildingType.mall ||
         BuildingType.office ||
+        BuildingType.postOffice =>
+          _grey,
+        BuildingType.skyscraper ||
         BuildingType.hospital ||
         BuildingType.cityHall ||
         BuildingType.university ||
@@ -67,6 +79,10 @@ abstract final class KenneyCityRenderer {
           _light,
         _ => _grey,
       };
+
+  static bool _isHome(BuildingType t) => t == BuildingType.house || t == BuildingType.apartment;
+  static bool _isBusiness(BuildingType t) =>
+      t == BuildingType.shop || t == BuildingType.supermarket || t == BuildingType.mall || t == BuildingType.office;
 
   /// Window drawn on a facade cell (brown frame on brick, grey elsewhere).
   static (int, int) _windowFor(_Material m, int h) =>
@@ -190,6 +206,22 @@ abstract final class KenneyCityRenderer {
     final pitch = _lotPitch(cell.district);
     final (rootX, rootY) = _lotRoot(data.buildingId, wx, wy, pitch);
     final isFacade = !s && n; // south side of a building at least 2 deep
+    // High-rises show a second floor of windows above the facade.
+    final twoFloors = type == BuildingType.skyscraper;
+    final isUpperFloor = twoFloors && s && !same(0, 2) && n;
+    if (isUpperFloor) {
+      final fw = same(-1, 0) && !same(-1, 1);
+      final fe = same(1, 0) && !same(1, 1);
+      final col = switch ((fw, fe)) {
+        (false, false) => m.wall[0],
+        (false, true) => m.wall[1],
+        (true, true) => m.wall[2],
+        (true, false) => m.wall[3],
+      };
+      _tile(canvas, (col, 10), r);
+      _tile(canvas, _windowFor(m, h + 1), r.deflate(r.width * 0.12).translate(0, -r.height * 0.1));
+      return;
+    }
 
     if (isFacade) {
       // Facade row: wall tiles with a pavement base, windows, one door.
@@ -212,8 +244,13 @@ abstract final class KenneyCityRenderer {
 
     // Roof: the rim follows the outline; a facade below closes it.
     final top = !n, left = !w, right = !e;
-    final bottom = !s || !same(0, 2); // below is the facade row
+    final bottom = !s || !same(0, twoFloors ? 3 : 2); // below are the facade rows
     _roof(canvas, r, m, top: top, left: left, right: right, bottom: bottom);
+    if (_isHome(type)) {
+      _pitch(canvas, r, lookup, wx, wy, data.buildingId);
+    } else if (_isBusiness(type) && !top && !left && !right && !bottom && h % 3 == 0) {
+      _airCon(canvas, r, h);
+    }
     if (!top && !left && !right && !bottom && h % 9 == 0) {
       _tile(canvas, _roofDecor[(h >> 4) % _roofDecor.length], r);
     }
@@ -232,6 +269,53 @@ abstract final class KenneyCityRenderer {
     if (wx - rootX == pitch ~/ 2 && wy - rootY == (pitch - 1) ~/ 2) {
       _landmark(canvas, r, type);
     }
+  }
+
+  static final Paint _slopeLight = Paint()..color = const Color(0x22FFFFFF);
+  static final Paint _slopeDark = Paint()..color = const Color(0x33000000);
+  static final Paint _ridge = Paint()..color = const Color(0x88401010);
+  static final Paint _acBody = Paint()..color = const Color(0xFFCFD8DC);
+  static final Paint _acEdge = Paint()
+    ..color = const Color(0xFF78909C)
+    ..style = PaintingStyle.stroke;
+  static final Paint _acFan = Paint()..color = const Color(0xFF546E7A);
+
+  /// A pitched roof: the northern slope catches the light, the southern is
+  /// in shade, with the ridge between them.
+  static void _pitch(Canvas canvas, Rect r, CityCell? Function(int, int) lookup, int wx, int wy, String id) {
+    bool same(int dy) {
+      final d = lookup(wx, wy + dy)?.data;
+      return d is BuildingData && d.buildingId == id;
+    }
+
+    var up = 0, down = 0;
+    while (up < 12 && same(-(up + 1))) {
+      up++;
+    }
+    while (down < 12 && same(down + 1)) {
+      down++;
+    }
+    // The bottom row of the building is the facade – the roof ends above.
+    final roofDown = down - 1;
+    final north = up < roofDown || (up == roofDown && up == 0);
+    canvas.drawRect(r, north ? _slopeLight : _slopeDark);
+    if (up == roofDown + 1 || (up == roofDown && up > 0)) {
+      canvas.drawRect(Rect.fromLTWH(r.left, r.top - r.height * 0.06, r.width, r.height * 0.12), _ridge);
+    }
+  }
+
+  /// An air conditioner on a flat business roof.
+  static void _airCon(Canvas canvas, Rect r, int h) {
+    final u = r.width / 16;
+    final box = Rect.fromCenter(
+        center: r.center.translate(((h >> 2) % 3 - 1) * 2 * u, ((h >> 4) % 3 - 1) * 2 * u),
+        width: 9 * u,
+        height: 7 * u);
+    canvas.drawRect(box.translate(u, u), _symbolShadow);
+    canvas.drawRect(box, _acBody);
+    _acEdge.strokeWidth = 0.6 * u;
+    canvas.drawRect(box, _acEdge);
+    canvas.drawCircle(box.center, 2.4 * u, _acFan);
   }
 
   /// Composes a roof cell from the quarters of the material's 2×2 block so

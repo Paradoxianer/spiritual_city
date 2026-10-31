@@ -234,7 +234,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
           // (e.g. pastorHouse).  Promote the type whenever a later cell reveals
           // a more specific classification so the BuildingModel is always
           // created with the correct type.
-          if (_isSpecialBuildingType(data.type) && !_isSpecialBuildingType(info.type)) {
+          if ((_isSpecialBuildingType(data.type) && !_isSpecialBuildingType(info.type)) ||
+              data.type == BuildingType.pastorHouse) {
             info.type = data.type;
           }
           info.cells.add([x, y]);

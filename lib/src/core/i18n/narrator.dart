@@ -25,13 +25,25 @@ abstract final class Narrator {
   static void Function()? persist;
 
   /// Explains [key] with [text] while the narrator is on. A new line
-  /// replaces the one shown. ([force] is kept for callers that react to an
-  /// explicit tap; every explanation comes while the narrator is on.)
-  static void say(String key, String emoji, String title, String? text, {bool force = false}) {
+  /// replaces the one shown. [passing] lines (the pastor just walked past
+  /// something) never interrupt a bubble and come at most every
+  /// [passingGap] – walking along a street must not restart the
+  /// typewriter again and again (playtest 2026-10-31).
+  static void say(String key, String emoji, String title, String? text,
+      {bool force = false, bool passing = false}) {
     if (!TextMode.on || text == null || text.isEmpty) return;
     if (current.value?.key == key && current.value?.text == text) return;
+    if (passing) {
+      if (current.value != null) return;
+      final now = DateTime.now();
+      if (now.difference(_lastPassing) < passingGap) return;
+      _lastPassing = now;
+    }
     current.value = NarratorLine(key, emoji, title, text);
   }
+
+  static const Duration passingGap = Duration(seconds: 8);
+  static DateTime _lastPassing = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Read: fades out.
   static void hide(String key) {

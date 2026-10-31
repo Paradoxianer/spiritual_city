@@ -12,31 +12,47 @@ class _NarratorBubble extends StatefulWidget {
   State<_NarratorBubble> createState() => _NarratorBubbleState();
 }
 
+/// Cuts [s] at [n] code units, never inside a surrogate pair (emoji).
+int _safeCut(String s, int n) {
+  if (n <= 0) return 0;
+  if (n >= s.length) return s.length;
+  final c = s.codeUnitAt(n - 1);
+  return (c >= 0xD800 && c <= 0xDBFF) ? n - 1 : n;
+}
+
 class _NarratorBubbleState extends State<_NarratorBubble> {
   /// Letters per second of the typewriter.
   static const double _speed = 90;
 
+  /// Redraws per second while typing – the letters follow the clock, so a
+  /// busy frame never slows the text down (playtest 2026-10-31).
+  static const int _fps = 30;
+
+  final Stopwatch _clock = Stopwatch()..start();
   Timer? _timer;
   Timer? _hide;
   int _shown = 0;
 
+  int get _length => widget.line.text.length;
+
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(Duration(milliseconds: (1000 / _speed).round()), (t) {
+    _timer = Timer.periodic(const Duration(milliseconds: 1000 ~/ _fps), (t) {
       if (!mounted) return;
-      setState(() => _shown++);
-      if (_shown >= widget.line.text.length) {
+      final n = (_clock.elapsedMilliseconds * _speed / 1000).floor().clamp(0, _length);
+      if (n != _shown) setState(() => _shown = n);
+      if (n >= _length) {
         t.cancel();
         _scheduleHide();
       }
     });
   }
 
-  /// Time to read it, then it fades out (and comes again next time).
+  /// Time to read it, then it fades out.
   void _scheduleHide() {
     _hide?.cancel();
-    final seconds = 4 + widget.line.text.length / 20;
+    final seconds = 4 + _length / 20;
     _hide = Timer(Duration(milliseconds: (seconds * 1000).round()), () => Narrator.hide(widget.line.key));
   }
 
@@ -49,14 +65,14 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
 
   void _showAll() {
     _timer?.cancel();
-    setState(() => _shown = widget.line.text.length);
+    setState(() => _shown = _length);
     _scheduleHide();
   }
 
   @override
   Widget build(BuildContext context) {
     final line = widget.line;
-    final text = line.text.characters.take(_shown).toString();
+    final text = _shown >= _length ? line.text : line.text.substring(0, _safeCut(line.text, _shown));
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, box) => Align(

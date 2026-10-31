@@ -1727,11 +1727,13 @@ class SpiritWorldGame extends FlameGame
     if (i is NPCComponent) {
       final npc = i.model;
       final kind = npc.isShakenChristian ? 'shaken' : (npc.isChristian ? 'christian' : 'person');
-      Narrator.say('npc.$kind', i.interactionEmoji, npc.name.split(' ').first, NearTexts.people[kind]?.text);
+      Narrator.say('npc.$kind', i.interactionEmoji, npc.name.split(' ').first, NearTexts.people[kind]?.text,
+          passing: true);
     } else if (i is BuildingComponent) {
       final type = i.buildingModel.type;
       Narrator.say('building.${type.name}', BuildingComponent.buildingEmoji(type),
-          HelpContent.buildings[type]?.text.split(' (').first ?? '', NearTexts.buildings[type]?.text);
+          HelpContent.buildings[type]?.text.split(' (').first ?? '', NearTexts.buildings[type]?.text,
+          passing: true);
     }
   }
 
