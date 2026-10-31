@@ -24,7 +24,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
         final after = widget.game.combatAbilityTiers;
         for (final m in PrayerMode.values) {
           if ((after[m] ?? 0) > (before[m] ?? 0)) {
-            widget.game.announce('✨ ${CombatAbilities.emoji[m]![after[m]! - 1]}');
+            widget.game.announce('✨ ${CombatAbilities.emoji[m]![after[m]! - 1]}', 'ability');
           }
         }
         // Daemons keep their strength for a few visits (#178 grace period).

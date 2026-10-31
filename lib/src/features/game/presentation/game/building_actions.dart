@@ -409,7 +409,7 @@ extension GameBuildingActions on SpiritWorldGame {
     final blocker = openAirBlocker;
     if (blocker != null) {
       GameSound.play(Sfx.denied, volume: 0.5);
-      _toast(blocker);
+      _toast(blocker, 'openAirDenied');
       return;
     }
     spendFaith(openAirFaithCost);
@@ -421,7 +421,8 @@ extension GameBuildingActions on SpiritWorldGame {
     GameSound.playAction('preach', Discipline.bible.name);
     // The disciples nearby come together as a prayer circle.
     final gathered = gatherDisciples(player.position);
-    _toast('📢🎺👥 $reached  −${openAirFaithCost.round()}🙏${gathered > 0 ? '  🌱🙏 $gathered' : ''}');
+    _toast('📢🎺👥 $reached  −${openAirFaithCost.round()}🙏${gathered > 0 ? '  🌱🙏 $gathered' : ''}',
+        gathered > 0 ? 'openAirGathered' : 'openAir');
     // …and then God fills up what was given.
     add(TimerComponent(
       period: openAirRefillDelay,
@@ -429,7 +430,7 @@ extension GameBuildingActions on SpiritWorldGame {
       onTick: () {
         gainFaith(progress.maxFaith - faith);
         GameSound.play(Sfx.learned, volume: 0.7);
-        _toast('✨🙏💯');
+        _toast('✨🙏💯', 'faithRefilled');
       },
     ));
   }

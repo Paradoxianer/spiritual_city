@@ -35,6 +35,7 @@ import '../domain/services/combat_abilities.dart';
 import '../domain/services/daemon_combat_rules.dart';
 import '../domain/services/learning_service.dart';
 import '../domain/services/world_simulation.dart';
+import '../domain/help/help_content.dart';
 import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/city_generator.dart';
@@ -506,7 +507,7 @@ class SpiritWorldGame extends FlameGame
     if (comp != null) {
       _brightenspiritualAreaAroundPosition(comp.position, radius: 4, amount: 0.3);
     }
-    _toast('👁️➡️🕊️ ${npc.name.split(' ').first}');
+    _toast('👁️➡️🕊️ ${npc.name.split(' ').first}', 'released');
   }
 
   // ── Neighbourhoods (§3.3) ─────────────────────────────────────────────────
@@ -946,7 +947,7 @@ class SpiritWorldGame extends FlameGame
     if (!isSpiritualWorld && faith < worldToggleCost) {
       // Say why nothing happens: entering costs faith (playtest).
       GameSound.play(Sfx.denied, volume: 0.5);
-      _toast('🙏 ${faith.floor()}/${worldToggleCost.round()} ❌');
+      _toast('🙏 ${faith.floor()}/${worldToggleCost.round()} ❌', 'worldDenied');
       return;
     }
     
@@ -1222,11 +1223,7 @@ class SpiritWorldGame extends FlameGame
     final insightStr = mission.insightReward > 0
         ? ' +${mission.insightReward.toStringAsFixed(1)} 📖'
         : '';
-    missionCompleteMessage.value =
-        '📋 Mission!$insightStr';
-    Future.delayed(const Duration(seconds: 3), () {
-      missionCompleteMessage.value = null;
-    });
+    _toast('📋 Mission!$insightStr', 'missionDone');
 
     _log.info(
       'Mission completed: "${mission.description}" '
@@ -1540,11 +1537,7 @@ class SpiritWorldGame extends FlameGame
   void recordPractice(Discipline discipline) {
     if (!progress.practice.record(discipline)) return;
     GameSound.play(Sfx.learned);
-    missionCompleteMessage.value =
-        '⭐ ${discipline.emoji} ${progress.practice.level(discipline)}';
-    Future.delayed(const Duration(seconds: 3), () {
-      missionCompleteMessage.value = null;
-    });
+    _toast('⭐ ${discipline.emoji} ${progress.practice.level(discipline)}', 'practiceUp');
   }
 
   /// Record a completed conversation

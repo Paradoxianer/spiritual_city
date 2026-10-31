@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../../../core/audio/game_sound.dart';
+import '../../../../core/i18n/app_language.dart';
+import '../../domain/help/help_content.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../../domain/actions/game_action.dart';
 import '../../domain/actions/practice.dart';
@@ -48,6 +50,11 @@ class ActionButton extends StatelessWidget {
 
   final VoidCallback onTap;
 
+  /// Name under the button and explanation on long press – shown only
+  /// when texts are on (TextMode, playtest 2026-10-31).
+  final String? caption;
+  final String? explanation;
+
   const ActionButton({
     super.key,
     required this.emoji,
@@ -58,6 +65,8 @@ class ActionButton extends StatelessWidget {
     this.keyIndex,
     this.practiceLevel = 0,
     this.highlighted = false,
+    this.caption,
+    this.explanation,
   });
 
   /// Builds the button straight from a [GameAction] definition.
@@ -85,6 +94,8 @@ class ActionButton extends StatelessWidget {
       practiceLevel: d == null ? 0 : practice.level(d),
       highlighted: highlighted,
       onTap: onTap,
+      caption: HelpContent.actionNames[action.id]?.text,
+      explanation: HelpContent.actions[action.id]?.text,
     );
   }
 
@@ -114,7 +125,8 @@ class ActionButton extends StatelessWidget {
       border = Colors.transparent;
     }
 
-    return Opacity(
+    final texts = TextMode.on;
+    final button = Opacity(
       opacity: active || !available ? 1.0 : 0.5,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -164,6 +176,19 @@ class ActionButton extends StatelessWidget {
                 ),
             ],
           ),
+          if (texts && caption != null) ...[
+            const SizedBox(height: 3),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 92),
+              child: Text(
+                caption!,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 10, height: 1.1),
+              ),
+            ),
+          ],
           if (reason != null || hint != null) ...[
             const SizedBox(height: 4),
             Text(
@@ -176,6 +201,14 @@ class ActionButton extends StatelessWidget {
           ],
         ],
       ),
+    );
+    if (!texts || explanation == null) return button;
+    // Long press (or hover) explains the action in a sentence.
+    return Tooltip(
+      message: explanation!,
+      triggerMode: TooltipTriggerMode.longPress,
+      preferBelow: false,
+      child: button,
     );
   }
 }

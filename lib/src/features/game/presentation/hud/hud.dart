@@ -213,12 +213,31 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast> with Singl
                   BoxShadow(color: Colors.black54, blurRadius: 10),
                 ],
               ),
-              child: Text(
-                _message!,
-                style: const TextStyle(
-                  color: Color(0xFFFFD54F),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              // Emoji line, and with texts on the sentence below it.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _message!.split('\n').first,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFFFFD54F),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (TextMode.on && _message!.contains('\n'))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _message!.substring(_message!.indexOf('\n') + 1),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),

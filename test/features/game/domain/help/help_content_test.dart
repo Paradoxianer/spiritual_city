@@ -21,6 +21,12 @@ void main() {
   }
 
   test('every action has a sentence', () => complete('ActionId', ActionId.values, HelpContent.actions));
+  test('every action has a short name in every language', () {
+    complete('ActionId', ActionId.values, HelpContent.actionNames);
+    for (final t in HelpContent.actionNames.values) {
+      expect([t.es, t.fr, t.pt], everyElement(isNotNull), reason: t.en);
+    }
+  });
   test('every skill has a sentence', () => complete('Skill', Skill.values, HelpContent.skills));
   test('every lesson task says how to do it',
       () => complete('LessonTask', LessonTask.values, HelpContent.taskHowTo));

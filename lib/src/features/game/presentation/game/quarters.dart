@@ -38,7 +38,7 @@ extension GameQuarters on SpiritWorldGame {
       // neighbourhood's stronghold becomes attackable.
       if (before != null && before.quarter == q && !before.strongholdOpen &&
           status.strongholdOpen && !status.awakened) {
-        _toast('🏘️✝️ ➡️ 🏰⚔️');
+        _toast('🏘️✝️ ➡️ 🏰⚔️', 'strongholdOpen');
       }
       quarterStatus.value = status;
     }
@@ -116,7 +116,7 @@ extension GameQuarters on SpiritWorldGame {
     dayStats.awakenings++;
     GameSound.play(Sfx.awakening, volume: 0.8);
     quarterStatus.value = null; // recomputed on the next tick
-    _toast('🏰💥 ➡️ 🏘️🔥✝️');
+    _toast('🏰💥 ➡️ 🏘️🔥✝️', 'awakened');
   }
 
   /// Extra daemon power from awakened neighbourhoods (#178 scaling).

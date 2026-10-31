@@ -19,7 +19,7 @@ extension GameLearning on SpiritWorldGame {
     progress.lesson.start(lesson.skill);
     lessonNotifier.value++;
     closeLesson();
-    _toast(lesson.progressLabel(0));
+    _toast(lesson.progressLabel(0), 'lessonStarted');
   }
 
   /// 📖 Studies one step of [lesson] with the mentor (starting it if it
@@ -47,23 +47,27 @@ extension GameLearning on SpiritWorldGame {
   void _onLessonStep(Lesson active, Skill? learned) {
     lessonNotifier.value++;
     if (learned == null) {
-      _toast(active.progressLabel(progress.lesson.progress));
+      _toast(active.progressLabel(progress.lesson.progress), 'lessonStep');
       return;
     }
     dayStats.lessonsLearned++;
     GameSound.play(Sfx.learned);
-    _toast('🎓✨ ${learned.emoji}');
+    _toast('🎓✨ ${learned.emoji}', 'learned');
     // A new prayer mode shows up in the dock right away.
     _updateHudVisibility();
   }
 
   /// Short centred emoji message (e.g. a newly unlocked ability).
-  void announce(String msg) {
+  void announce(String msg, [String? text]) {
     GameSound.play(Sfx.learned);
-    _toast(msg);
+    _toast(msg, text);
   }
 
-  void _toast(String msg) {
+  /// Shows [msg] (emoji); with texts on, the sentence [text] (a key of
+  /// [HelpContent.toasts]) below it – sent as a second line.
+  void _toast(String msg, [String? text]) {
+    final sentence = text == null ? null : HelpContent.toasts[text]?.text;
+    msg = sentence == null ? msg : '$msg\n$sentence';
     missionCompleteMessage.value = msg;
     Future.delayed(const Duration(seconds: 3), () {
       if (missionCompleteMessage.value == msg) missionCompleteMessage.value = null;
