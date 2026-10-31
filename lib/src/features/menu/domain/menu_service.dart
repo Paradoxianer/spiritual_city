@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/app_strings.dart';
-import '../../../core/i18n/explanations.dart';
+import '../../../core/i18n/narrator.dart';
 import '../data/menu_repository.dart';
 import '../../../core/audio/game_sound.dart';
 import 'legal_texts.dart';
@@ -39,10 +39,10 @@ class MenuService {
     GameSound.enabled = settings.soundOn;
     _consentVersion = settings.consentVersion;
     TextMode.enabled.value = settings.showTexts;
-    Explanations.muted
+    Narrator.muted
       ..clear()
       ..addAll(settings.mutedExplanations);
-    Explanations.persist = () => _persistSettings();
+    Narrator.persist = () => _persistSettings();
     _log.info('MenuService init: lang=${settings.language}, '
         'difficulty=${settings.lastDifficulty}, '
         'tutorialCompleted=$_isTutorialCompleted');
@@ -169,7 +169,7 @@ class MenuService {
       soundOn: GameSound.enabled,
       consentVersion: _consentVersion,
       showTexts: TextMode.on,
-      mutedExplanations: Explanations.muted.toList(),
+      mutedExplanations: Narrator.muted.toList(),
     );
     await _repository.saveSettings(settings);
   }

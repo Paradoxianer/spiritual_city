@@ -15,6 +15,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
   PlayerProgress get _progress => widget.game.progress;
   CombatProfile get _profile => _progress.combatProfile;
 
+  /// The narrator explains what an upgrade does.
+  void _narrate(String key, String emoji) => Narrator.say('upgrade.$key', emoji,
+      AppStrings.get('upgrade.$key'), NearTexts.upgrades[key]?.text);
+
   void _buy(int level, VoidCallback apply) {
     setState(() {
       final before = widget.game.combatAbilityTiers;
@@ -68,7 +72,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                     effect: '−${(_profile.shieldDamageReduction * 100).toStringAsFixed(0)}%🙏',
                     insight: _progress.insight,
                     lock: _profile.shieldMaxed ? const Locked('✅') : null,
-                    onBuy: () => _buy(_profile.shieldLevel, () => _profile.shieldLevel++),
+                    onBuy: () {
+                      _narrate('shield', '🛡️');
+                      _buy(_profile.shieldLevel, () => _profile.shieldLevel++);
+                    },
                   ),
                   _UpgradeTile(
                     emoji: '⛑️',
@@ -77,7 +84,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                     effect: '−${(_profile.helmHungerReduction * 100).toStringAsFixed(0)}%🍞',
                     insight: _progress.insight,
                     lock: _profile.helmMaxed ? const Locked('✅') : null,
-                    onBuy: () => _buy(_profile.helmLevel, () => _profile.helmLevel++),
+                    onBuy: () {
+                      _narrate('helm', '⛑️');
+                      _buy(_profile.helmLevel, () => _profile.helmLevel++);
+                    },
                   ),
                 ],
               ),
@@ -115,7 +125,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
           effect: _pct(value),
           insight: _progress.insight,
           lock: lock,
-          onBuy: () => _buy(level, apply),
+          onBuy: () {
+            _narrate(key, emoji);
+            _buy(level, apply);
+          },
         );
     return _UpgradeGroup(
       icon: mode.icon,

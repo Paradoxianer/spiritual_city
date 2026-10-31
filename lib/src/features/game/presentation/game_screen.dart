@@ -7,9 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/bible_ref.dart';
-import '../../../core/i18n/explanations.dart';
+import '../../../core/i18n/narrator.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/services/combat_abilities.dart';
@@ -22,6 +21,7 @@ import '../domain/actions/resource.dart';
 import '../domain/help/help_content.dart';
 import '../domain/help/life_texts.dart';
 import '../domain/help/mission_texts.dart';
+import '../domain/help/near_texts.dart';
 import '../domain/models/mission_model.dart';
 import '../domain/models/base_interactable_entity.dart';
 import '../domain/city_generation/city_overview.dart';
@@ -58,7 +58,7 @@ part 'overlays/look.dart';
 part 'overlays/missions.dart';
 part 'overlays/npc_dialog.dart';
 part 'overlays/disciple.dart';
-part 'overlays/explanation.dart';
+part 'overlays/narrator.dart';
 part 'overlays/pause.dart';
 part 'overlays/shared.dart';
 part 'overlays/tutorial.dart';
@@ -425,10 +425,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               return _WinScreenOverlay(game: _game);
             },
           ),
-          // Explanation box: what an action will do, before it happens.
-          ValueListenableBuilder<PendingExplanation?>(
-            valueListenable: Explanations.pending,
-            builder: (context, e, _) => e == null ? const SizedBox.shrink() : _ExplanationBox(e: e),
+          // The narrator's speech bubble – the only text in the game screen.
+          ValueListenableBuilder<NarratorLine?>(
+            valueListenable: Narrator.current,
+            builder: (context, line, _) => line == null
+                ? const SizedBox.shrink()
+                : _NarratorBubble(key: ValueKey(line.key), line: line),
           ),
           // ❓ Help – topmost, so no HUD element covers it.
           ValueListenableBuilder<bool>(

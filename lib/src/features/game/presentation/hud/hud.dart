@@ -228,15 +228,6 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast> with Singl
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (TextMode.on && _message!.contains('\n'))
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          _message!.substring(_message!.indexOf('\n') + 1),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                        ),
-                      ),
                   ],
                 ),
               ),

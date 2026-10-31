@@ -7,8 +7,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart' show compute, ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
-import '../../../core/i18n/app_language.dart';
-import '../../../core/i18n/explanations.dart';
+import '../../../core/i18n/narrator.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../core/utils/stable_hash.dart';
@@ -38,6 +37,7 @@ import '../domain/services/daemon_combat_rules.dart';
 import '../domain/services/learning_service.dart';
 import '../domain/services/world_simulation.dart';
 import '../domain/help/help_content.dart';
+import '../domain/help/near_texts.dart';
 import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/city_generator.dart';
@@ -1111,7 +1111,6 @@ class SpiritWorldGame extends FlameGame
     final actions = <RadialAction>[
       RadialAction(
         label: '👀',
-        sublabel: TextMode.on ? HelpContent.labels['look']!.text : null,
         icon: Icons.search,
         onSelect: () {
           openLookOverlay();
@@ -1156,8 +1155,8 @@ class SpiritWorldGame extends FlameGame
       if (!offeredBuildingIds.add(model.buildingId)) continue; // already offered
       actions.add(RadialAction(
         label: BuildingComponent.buildingEmoji(model.type),
-        // The emoji says what it is; with texts on also its name.
-        sublabel: TextMode.on ? HelpContent.buildings[model.type]?.text.split(' (').first ?? '' : '',
+        // No translated type name – the emoji says what it is.
+        sublabel: '',
         icon: Icons.meeting_room,
         onSelect: () {
           openBuildingInterior(model);
@@ -1169,7 +1168,7 @@ class SpiritWorldGame extends FlameGame
     if (openAirOffered) {
       actions.add(RadialAction(
         label: '📢🎺',
-        sublabel: openAirBlocker ?? (TextMode.on ? HelpContent.labels['openAir']!.text : ''),
+        sublabel: openAirBlocker ?? '',
         icon: Icons.campaign,
         onSelect: holdOpenAirMeeting,
       ));
@@ -1697,6 +1696,7 @@ class SpiritWorldGame extends FlameGame
     // If no interactable found by distance, also check via grid adjacency.
     // This makes the interaction aura activate when the player is touching a
     // building wall, even for buildings without a registered component.
+    var sentinel = false;
     if (nearest == null) {
       final adjacentModels = _getAdjacentBuildingModels();
       if (adjacentModels.isNotEmpty) {
@@ -1707,12 +1707,30 @@ class SpiritWorldGame extends FlameGame
             .firstOrNull;
         // Fallback: any registered building component acts as a sentinel so
         // the player aura switches to its "nearby" colour.
-        nearest ??= chunkManager.allActiveBuildings.firstOrNull;
+        if (nearest == null) {
+          sentinel = true;
+          nearest = chunkManager.allActiveBuildings.firstOrNull;
+        }
       }
     }
 
     if (_nearestInteractable != nearest) {
       _nearestInteractable = nearest;
+      if (nearest != null && !sentinel && !isSpiritualWorld) _narrateNear(nearest);
+    }
+  }
+
+  /// The narrator tells what the person or building the pastor just came
+  /// near is about (playtest 2026-10-31).
+  void _narrateNear(Interactable i) {
+    if (i is NPCComponent) {
+      final npc = i.model;
+      final kind = npc.isShakenChristian ? 'shaken' : (npc.isChristian ? 'christian' : 'person');
+      Narrator.say('npc.$kind', i.interactionEmoji, npc.name.split(' ').first, NearTexts.people[kind]?.text);
+    } else if (i is BuildingComponent) {
+      final type = i.buildingModel.type;
+      Narrator.say('building.${type.name}', BuildingComponent.buildingEmoji(type),
+          HelpContent.buildings[type]?.text.split(' (').first ?? '', NearTexts.buildings[type]?.text);
     }
   }
 

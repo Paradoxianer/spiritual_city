@@ -41,14 +41,11 @@ extension GameInterior on SpiritWorldGame {
       },
       explain: (type, go) {
         final a = offered.where((a) => a.type == type).firstOrNull;
-        if (a == null) return go();
-        Explanations.gate('action.${a.id.name}', a.emoji, HelpContent.actionNames[a.id]?.text,
-            HelpContent.explanations[a.id]?.text, go);
-      },
-      stationLabel: {
-        for (final a in offered) a.type: HelpContent.actionNames[a.id]?.text ?? '',
-        InteriorLayout.churchOverview: HelpContent.labels['churchOverview']!.text,
-        InteriorLayout.upgrades: HelpContent.labels['upgrades']!.text,
+        if (a != null) {
+          Narrator.say('action.${a.id.name}', a.emoji, HelpContent.actionNames[a.id]?.text ?? '',
+              HelpContent.explanations[a.id]?.text);
+        }
+        go();
       },
       lesson: lessons.isEmpty ? null : lessons.first,
     );

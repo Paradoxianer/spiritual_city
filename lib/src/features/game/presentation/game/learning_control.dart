@@ -63,11 +63,12 @@ extension GameLearning on SpiritWorldGame {
     _toast(msg, text);
   }
 
-  /// Shows [msg] (emoji); with texts on, the sentence [text] (a key of
-  /// [HelpContent.toasts]) below it – sent as a second line.
+  /// Shows [msg] (emoji); the narrator tells what happened in words
+  /// ([text] is a key of [HelpContent.toasts]).
   void _toast(String msg, [String? text]) {
-    final sentence = text == null ? null : HelpContent.toasts[text]?.text;
-    msg = sentence == null ? msg : '$msg\n$sentence';
+    if (text != null) {
+      Narrator.say('toast.$text', msg.split(' ').first, '', HelpContent.toasts[text]?.text);
+    }
     missionCompleteMessage.value = msg;
     Future.delayed(const Duration(seconds: 3), () {
       if (missionCompleteMessage.value == msg) missionCompleteMessage.value = null;

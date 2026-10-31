@@ -220,10 +220,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
     final mission = model.activeMission;
     if (mission == null) return const SizedBox.shrink();
     final countLabel = mission.targetCount > 1 ? ' ×${mission.targetCount}' : '';
-    // Texts on: the task as a sentence under the emoji row.
-    final sentence = TextMode.on
-        ? MissionTexts.task[mission.actionType]?.text.replaceAll('{n}', '${mission.targetCount}')
-        : null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
@@ -258,11 +254,6 @@ class _DialogOverlayState extends State<DialogOverlay> {
           ),
         ],
           ),
-          if (sentence != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 3),
-              child: Text(sentence, style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.3)),
-            ),
         ],
       ),
     );
@@ -610,19 +601,18 @@ class _LifeLine extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: TextMode.on && text != null
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(story, style: const TextStyle(fontSize: 18)),
-                        Text(
+              // Tap: the narrator tells the line in words.
+              child: GestureDetector(
+                onTap: text == null
+                    ? null
+                    : () => Narrator.say(
+                          'life.${text!.en}',
+                          story,
+                          '',
                           isCurrent ? '${text!.text} – ${LifeTexts.current.text}' : text!.text,
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12),
                         ),
-                      ],
-                    )
-                  : Text(story, style: const TextStyle(fontSize: 18)),
+                child: Text(story, style: const TextStyle(fontSize: 18)),
+              ),
             ),
             if (progress != null)
               Text(

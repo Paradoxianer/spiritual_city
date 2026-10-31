@@ -66,6 +66,24 @@ class MissionBoardOverlay extends StatefulWidget {
 class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
   int _tab = 0;
 
+  /// The narrator explains the mission when it is accepted with 📍.
+  void _narrate(MissionEntry m, String? tracked) {
+    final type = m.actionType;
+    if (type == null || tracked == m.trackKey) return;
+    Narrator.say(
+      'mission.${type.name}',
+      m.actionEmoji,
+      m.isPerson ? m.targetName.split(' ').first : (m.address ?? ''),
+      MissionTexts.explain(
+        type: type,
+        count: m.targetCount,
+        who: m.isPerson && m.targetName.isNotEmpty ? m.targetName.split(' ').first : null,
+        where: m.address,
+        tracked: true,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
@@ -109,7 +127,10 @@ class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
                   tracked: tracked != null && tracked == data.entries[i].trackKey,
                   onTrack: data.entries[i].trackKey == null
                       ? null
-                      : () => game.toggleTrackedMission(data.entries[i].trackKey!),
+                      : () {
+                          _narrate(data.entries[i], tracked);
+                          game.toggleTrackedMission(data.entries[i].trackKey!);
+                        },
                 ),
               ),
             ),
@@ -192,29 +213,7 @@ class _MissionRow extends StatelessWidget {
         ],
       ),
     );
-    final type = m.actionType;
-    if (!TextMode.on || type == null) return row;
-    // Texts on: where to go, what to do and what it does, in sentences.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        row,
-        Padding(
-          padding: const EdgeInsets.only(left: 32, bottom: 4),
-          child: Text(
-            MissionTexts.explain(
-              type: type,
-              count: m.targetCount,
-              who: m.isPerson && m.targetName.isNotEmpty ? m.targetName.split(' ').first : null,
-              where: m.address,
-              tracked: tracked,
-            ),
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13, height: 1.35),
-          ),
-        ),
-      ],
-    );
+    return row;
   }
 }
 

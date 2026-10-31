@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spiritual_city/src/features/game/domain/help/life_texts.dart';
+import 'package:spiritual_city/src/features/game/domain/help/near_texts.dart';
 import 'package:spiritual_city/src/features/game/domain/help/mission_texts.dart';
 import 'package:spiritual_city/src/features/game/domain/models/mission_model.dart';
 import 'package:spiritual_city/src/features/game/domain/models/npc_backstory.dart';
@@ -77,6 +78,23 @@ void main() {
     ];
     for (final t in all) {
       expect([t.es, t.fr, t.pt], everyElement(isNotNull), reason: t.en);
+    }
+  });
+
+  test('the narrator has a sentence for every building, person and upgrade', () {
+    for (final b in BuildingType.values) {
+      final t = NearTexts.buildings[b];
+      expect(t, isNotNull, reason: b.name);
+      expect([t!.es, t.fr, t.pt], everyElement(isNotNull), reason: b.name);
+    }
+    for (final k in ['person', 'christian', 'shaken']) {
+      expect(NearTexts.people[k]?.pt, isNotNull, reason: k);
+    }
+    for (final k in ['radius', 'strength', 'duration', 'speed', 'shield', 'helm']) {
+      expect(NearTexts.upgrades[k]?.pt, isNotNull, reason: k);
+    }
+    for (final a in ActionId.values) {
+      expect(HelpContent.explanations[a]?.pt, isNotNull, reason: a.name);
     }
   });
 }

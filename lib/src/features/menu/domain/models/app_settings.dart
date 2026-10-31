@@ -21,7 +21,7 @@ class AppSettings {
   /// Texts besides the emoji (see TextMode).
   bool showTexts;
 
-  /// Explanations the player muted (see Explanations).
+  /// Explanations the player muted (see Narrator).
   List<String> mutedExplanations;
 
   AppSettings({
