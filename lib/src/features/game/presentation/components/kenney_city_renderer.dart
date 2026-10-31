@@ -5,6 +5,7 @@ import 'package:flame/cache.dart';
 import '../../domain/city_generation/district_selector.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/city_cell.dart';
+import 'red_shield_path.dart';
 
 /// Draws the physical city with the Kenney "Roguelike Modern City" tiles
 /// (CC0, assets/LICENSES.md; #18).
@@ -347,6 +348,9 @@ abstract final class KenneyCityRenderer {
 
   static final Paint _symbolGold = Paint()..color = const Color(0xFFFFC107);
   static final Paint _symbolRed = Paint()..color = const Color(0xFFE53935);
+
+  /// Salvation Army red (Pantone 485).
+  static final Paint _shieldRed = Paint()..color = const Color(0xFFDA291C);
   static final Paint _symbolWhite = Paint()..color = const Color(0xFFFFFFFF);
   static final Paint _symbolBlue = Paint()..color = const Color(0xFF1E3A8A);
   static final Paint _symbolShadow = Paint()..color = const Color(0x66000000);
@@ -364,33 +368,18 @@ abstract final class KenneyCityRenderer {
     }
 
     // The Salvation Army's red shield (the game's home is a corps, used with
-    // permission): the heraldic outline – pointed top corners with a small
-    // notch below, slightly concave top, rounded taper to the point – red,
-    // with the thin white inner rim, no lettering at this size.
+    // permission): the original outline (docs/art), red, with the inner rim
+    // as a thick white line; no lettering at this size.
     void redShield() {
-      Path shield(double s) {
-        final c = r.center;
-        Offset p(double x, double y) => Offset(c.dx + x * u * s, c.dy + y * u * s);
-        return Path()
-          ..moveTo(p(-6.6, -7.2).dx, p(-6.6, -7.2).dy)
-          ..quadraticBezierTo(p(0, -5.6).dx, p(0, -5.6).dy, p(6.6, -7.2).dx, p(6.6, -7.2).dy)
-          ..quadraticBezierTo(p(5.5, -5.9).dx, p(5.5, -5.9).dy, p(6.3, -4.2).dx, p(6.3, -4.2).dy)
-          ..quadraticBezierTo(p(7.0, -1.5).dx, p(7.0, -1.5).dy, p(6.4, 1.6).dx, p(6.4, 1.6).dy)
-          ..quadraticBezierTo(p(5.6, 6.2).dx, p(5.6, 6.2).dy, p(0, 8.0).dx, p(0, 8.0).dy)
-          ..quadraticBezierTo(p(-5.6, 6.2).dx, p(-5.6, 6.2).dy, p(-6.4, 1.6).dx, p(-6.4, 1.6).dy)
-          ..quadraticBezierTo(p(-7.0, -1.5).dx, p(-7.0, -1.5).dy, p(-6.3, -4.2).dx, p(-6.3, -4.2).dy)
-          ..quadraticBezierTo(p(-5.5, -5.9).dx, p(-5.5, -5.9).dy, p(-6.6, -7.2).dx, p(-6.6, -7.2).dy)
-          ..close();
-      }
-
-      canvas.drawPath(shield(1).shift(Offset(u, u)), _symbolShadow);
-      canvas.drawPath(shield(1), _symbolRed);
+      final h = 17 * u;
+      canvas.drawPath(RedShieldPath.outer(r.center.translate(u, u), h), _symbolShadow);
+      canvas.drawPath(RedShieldPath.outer(r.center, h), _shieldRed);
       canvas.drawPath(
-        shield(0.84),
+        RedShieldPath.inner(r.center, h),
         Paint()
           ..color = const Color(0xFFFFFFFF)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.7 * u,
+          ..strokeWidth = 1.3 * u,
       );
     }
 
