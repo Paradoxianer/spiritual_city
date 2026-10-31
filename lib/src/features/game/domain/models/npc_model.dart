@@ -105,6 +105,13 @@ class NPCModel extends BaseInteractableEntity {
   /// both – care *and* prayer (Mark 9:29).
   bool possessionWeakened = false;
 
+  /// ✝️💔 A Christian whose faith fell this low (dark surroundings, no
+  /// care) is shaken: they no longer protect the ground or pray along until
+  /// the pastor strengthens them again. They never stop being Christians
+  /// (#194).
+  static const double shakenBelow = 30.0;
+  bool get isShakenChristian => isConverted && faith < shakenBelow;
+
   /// 🌱 What the pastor has taught this Christian: the ⚔️ upgrades per
   /// prayer mode, never beyond the pastor's own (see Discipleship).
   CombatProfile discipleProfile = CombatProfile();

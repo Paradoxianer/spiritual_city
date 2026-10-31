@@ -298,6 +298,8 @@ extension GameSaveState on SpiritWorldGame {
       'npcs':               npcStates,
       'buildings':          buildingStates,
       'loot':               lootSystem.captureState(),
+      'worldDay':           worldDay,
+      'chunkDays':          captureChunkDays(),
     };
   }
 }

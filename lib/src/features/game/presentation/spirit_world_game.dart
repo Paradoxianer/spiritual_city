@@ -34,6 +34,7 @@ import '../domain/models/skills.dart';
 import '../domain/services/combat_abilities.dart';
 import '../domain/services/daemon_combat_rules.dart';
 import '../domain/services/learning_service.dart';
+import '../domain/services/world_simulation.dart';
 import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/city_generator.dart';
@@ -66,6 +67,7 @@ import 'game_screen.dart';
 
 part 'game/learning_control.dart';
 part 'game/discipleship_control.dart';
+part 'game/world_control.dart';
 part 'game/quarters.dart';
 part 'game/save_state.dart';
 part 'game/overlay_control.dart';
@@ -552,6 +554,13 @@ class SpiritWorldGame extends FlameGame
   /// Overall progress for the second HUD bar (🌐 prayed free / 🏙️ ✝️).
   final ValueNotifier<CityProgress?> cityProgress = ValueNotifier(null);
 
+  /// Days of the invisible world so far (one per [SpiritualDynamicsSystem]
+  /// tick) – world time, saved with the game (#194).
+  int worldDay = 0;
+
+  /// From the save: day of the last simulation per chunk ('cx,cy').
+  Map<String, int>? _savedChunkDays;
+
   /// 🌱 Disciples praying along (#193).
   final DisciplePrayer disciplePrayer = DisciplePrayer();
 
@@ -731,6 +740,11 @@ class SpiritWorldGame extends FlameGame
         _savedNPCStates      = _parseSavedNPCStates(savedState);
         _savedBuildingStates = _parseSavedBuildingStates(savedState);
         _savedLootState      = _parseSavedLootState(savedState);
+        worldDay = (savedState['worldDay'] as num?)?.toInt() ?? 0;
+        _savedChunkDays = {
+          for (final e in ((savedState['chunkDays'] as Map?) ?? const {}).entries)
+            '${e.key}': (e.value as num).toInt(),
+        };
       }
 
       player = PlayerComponent(joystick: _createJoystick());

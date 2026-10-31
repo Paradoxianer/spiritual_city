@@ -14,7 +14,8 @@ extension GameDiscipleship on SpiritWorldGame {
     const r2 = Discipleship.gatherRadius * Discipleship.gatherRadius;
     var n = 0;
     for (final c in chunkManager.allActiveNPCs) {
-      if (!c.model.isDisciple || c.position.distanceToSquared(at) > r2) continue;
+      if (!c.model.isDisciple || c.model.isShakenChristian) continue; // ✝️💔 needs care first
+      if (c.position.distanceToSquared(at) > r2) continue;
       c.gatherLeft = Discipleship.gatherSeconds;
       n++;
     }
@@ -76,7 +77,7 @@ class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
   /// The pastor just sent a wave: the gathered disciples pray with it.
   void joinPastorWave() {
     for (final c in game.chunkManager.allActiveNPCs) {
-      if (!c.isGathered || !c.model.isDisciple) continue;
+      if (!c.isGathered || !c.model.isDisciple || c.model.isShakenChristian) continue;
       final last = _lastChorus[c.model.id] ?? -999;
       if (_clock - last < Discipleship.chorusInterval) continue;
       _lastChorus[c.model.id] = _clock;
@@ -90,7 +91,11 @@ class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
     const r2 = Discipleship.prayRange * Discipleship.prayRange;
     final near = [
       for (final c in game.chunkManager.allActiveNPCs)
-        if (c.model.isDisciple && !c.isGathered && c.position.distanceToSquared(me) <= r2) c,
+        if (c.model.isDisciple &&
+            !c.model.isShakenChristian &&
+            !c.isGathered &&
+            c.position.distanceToSquared(me) <= r2)
+          c,
     ]..sort((a, b) => a.position.distanceToSquared(me).compareTo(b.position.distanceToSquared(me)));
     return near.take(Discipleship.maxPraying).toList();
   }

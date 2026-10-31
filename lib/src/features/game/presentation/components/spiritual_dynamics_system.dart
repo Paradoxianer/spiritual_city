@@ -6,10 +6,9 @@ import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import '../../domain/models/city_chunk.dart';
 import '../../domain/models/city_cell.dart';
-import '../../domain/models/cell_object.dart';
 import '../../domain/models/daemon_kind.dart';
 import '../../domain/models/daemon_model.dart';
-import '../../domain/services/christian_support.dart';
+import '../../domain/services/world_simulation.dart';
 import '../../domain/services/daemon_combat_rules.dart';
 import 'daemon_component.dart';
 import 'cell_component.dart';
@@ -30,34 +29,10 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   /// 60 s = one "game day" – matches [GameTime.gameDaySeconds].
   static const double tickInterval = GameTime.gameDaySeconds;
 
-  /// Spread strength: how much a cell's state bleeds into neighbours per tick.
-  static const double spreadFactor = 0.04;
-
-  /// Natural decay toward neutral for weakly-held cells (|state| < 0.1).
-  static const double decayRate = 0.98;
-
-  /// Church passive bonus applied to the cell each tick.
-  static const double churchBonus = 0.02;
-
-  /// Fall-back rate (negative drift) for cells without neighbours or support.
-  /// Reduced from 0.005 → 0.002 so liberated areas hold longer (less frustrating).
-  static const double fallbackRate = 0.002;
-
-  /// Extra negative pressure a strongly-dark cell (< [_darkBastion]) exerts
-  /// on each of its neighbours that is less negative than it (boundary seepage).
-  /// Reduced from 0.008 → 0.004 so darkness spreads more slowly.
-  static const double darkSeepageFactor = 0.004;
-
-  /// Threshold below which a cell is considered a "dark bastion" that seeps.
-  static const double _darkBastion = -0.55;
-
-  /// How much of a positive delta a dark bastion absorbs (resistance to light).
-  /// Increased from 0.35 → 0.55 so prayer is noticeably effective on dark cells.
-  static const double darkResistanceFactor = 0.55;
+  // The rules of the ground, people and houses live in WorldSimulation
+  // (domain, #194); this component only runs the day and spawns daemons.
 
   double _timer = 0.0;
-
-  // ── Continuous daemon spawning ────────────────────────────────────────────
 
   /// Counts up while the player is in the invisible world.
   double _continuousSpawnTimer = 0.0;
@@ -125,6 +100,7 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       _prayerAttractionTimer -= dt;
       if (_prayerAttractionTimer < 0) _prayerAttractionTimer = 0;
     }
+    _continueDay();
     _timer += dt;
     if (_timer >= tickInterval) {
       _timer = 0.0;
@@ -147,118 +123,32 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     }
   }
 
-  /// Packs cell coordinates into one int key (coordinates stay far below
-  /// ±2^20 in practice).
-  static int _cellKey(int x, int y) => ((x + 0x100000) << 21) | (y + 0x100000);
+  /// The day being simulated, a few chunks per frame.
+  WorldDay? _day;
 
+  /// Chunks of the ground simulated per frame (≈ 1–2 ms on a phone).
+  static const int _chunksPerFrame = 24;
+
+  /// One day of the invisible world for everything generated so far –
+  /// near the pastor or not (#194, rules in [WorldSimulation]). Started
+  /// here, finished over the next frames in [_continueDay].
   void _tick() {
-    final chunks = game.grid.getLoadedChunks();
+    _day?.step(1 << 30); // a day still running finishes first
+    game.worldDay++;
+    _day = WorldDay(
+      game.grid,
+      chunks: game.grid.getLoadedChunks(),
+      residents: game.residents(),
+      anchors: game.houseAnchors(),
+      tuning: game.worldTuning,
+    );
+    if (!game.tutorialCalmSpirit) _maybeSpawnDaemons(game.grid.getLoadedChunks());
+  }
 
-    // We compute deltas first to avoid order-dependent updates.
-    final Map<CityCell, double> deltas = {};
-
-    // Christians in reach of each cell (#180): they protect liberated cells.
-    final Map<int, int> christiansNear = {};
-    const r = ChristianSupport.radius;
-    for (final npc in game.chunkManager.allActiveNPCs) {
-      if (!npc.model.isChristian) continue;
-      final cx = (npc.position.x / CellComponent.cellSize).floor();
-      final cy = (npc.position.y / CellComponent.cellSize).floor();
-      for (int dy = -r; dy <= r; dy++) {
-        for (int dx = -r; dx <= r; dx++) {
-          final key = _cellKey(cx + dx, cy + dy);
-          christiansNear[key] = (christiansNear[key] ?? 0) + 1;
-        }
-      }
-    }
-
-    for (final chunk in chunks) {
-      for (int y = 0; y < CityChunk.chunkSize; y++) {
-        for (int x = 0; x < CityChunk.chunkSize; x++) {
-          final cell = chunk.cells['$x,$y'];
-          if (cell == null) continue;
-
-          double delta = 0.0;
-
-          // 1. Neighbour influence (4-directional)
-          double neighborSum = 0.0;
-          int neighborCount = 0;
-          int strongDarkNeighborCount = 0;
-          for (final dir in _dirs) {
-            final neighbor = game.grid.getCell(cell.x + dir[0], cell.y + dir[1]);
-            if (neighbor != null) {
-              neighborSum += neighbor.spiritualState;
-              neighborCount++;
-              if (neighbor.spiritualState < _darkBastion) {
-                strongDarkNeighborCount++;
-              }
-            }
-          }
-          if (neighborCount > 0) {
-            final avgNeighbor = neighborSum / neighborCount;
-            // Nudge toward the average of neighbours
-            delta += (avgNeighbor - cell.spiritualState) *
-                spreadFactor *
-                modifierSpreadMultiplier;
-          }
-
-          // 1b. Dark seepage: each strongly-dark neighbour pushes the cell
-          //     a little more negative, regardless of the neighbour average.
-          //     This makes darkness slowly seep into border areas.
-          if (strongDarkNeighborCount > 0) {
-            delta -= strongDarkNeighborCount * darkSeepageFactor;
-          }
-
-          // 2. Church cells act as anchors of positivity
-          if (cell.data is BuildingData) {
-            final bData = cell.data as BuildingData;
-            if (bData.type == BuildingType.church ||
-                bData.type == BuildingType.cathedral) {
-              delta += churchBonus;
-            }
-          }
-
-          // 3. Natural fallback – areas not actively supported drift negative
-          //    (represents ongoing spiritual "pressure" in a fallen world)
-          if (cell.spiritualState > -0.05) {
-            delta -= fallbackRate *
-                (1.0 - modifierDecayReduction) *
-                ChristianSupport.fallbackFactor(
-                    christiansNear[_cellKey(cell.x, cell.y)] ?? 0);
-          }
-
-          // 4. Decay toward neutral for very weakly-held cells
-          if (cell.spiritualState.abs() < 0.08) {
-            delta += -cell.spiritualState * (1.0 - decayRate);
-          }
-
-          deltas[cell] = delta;
-        }
-      }
-    }
-
-    // Apply all deltas at once
-    int updates = 0;
-    for (final entry in deltas.entries) {
-      var d = entry.value;
-
-      // Resistance: dark bastions are hard to push back toward the light.
-      // Only the positive component of the delta is reduced.
-      if (entry.key.spiritualState < _darkBastion && d > 0) {
-        d *= darkResistanceFactor;
-      }
-
-      final newState = (entry.key.spiritualState + d).clamp(-1.0, 1.0);
-      if ((newState - entry.key.spiritualState).abs() > 1e-6) {
-        entry.key.spiritualState = newState;
-        updates++;
-      }
-    }
-
-    _log.fine('Spiritual tick: $updates cells updated');
-
-    // Spawn daemons in strongly negative regions
-    if (!game.tutorialCalmSpirit) _maybeSpawnDaemons(chunks);
+  void _continueDay() {
+    final day = _day;
+    if (day == null) return;
+    if (day.step(_chunksPerFrame)) _day = null;
   }
 
   void _maybeSpawnDaemons(List<CityChunk> chunks) {
@@ -447,7 +337,4 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     }
   }
 
-  static const List<List<int>> _dirs = [
-    [1, 0], [-1, 0], [0, 1], [0, -1],
-  ];
 }

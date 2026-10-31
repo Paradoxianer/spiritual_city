@@ -22,7 +22,9 @@ void main() {
     expect(npcs, hasLength(3));
     final modes = [PrayerMode.slow, PrayerMode.drain, PrayerMode.rebuke];
     for (var i = 0; i < 3; i++) {
-      npcs[i].model.isConverted = true;
+      npcs[i].model
+        ..isConverted = true
+        ..faith = 80;
       npcs[i].model.discipleProfile.getFor(modes[i]).strengthLevel = 2;
     }
     expect(g.gatherDisciples(g.player.position), 3);

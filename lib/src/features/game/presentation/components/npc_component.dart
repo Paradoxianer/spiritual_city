@@ -2,21 +2,17 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/utils/game_time.dart';
 import '../../../../core/utils/stable_hash.dart';
 import '../../domain/actions/npc_actions.dart';
 import '../../domain/models/church.dart';
 import '../../domain/services/learning_service.dart';
 import 'character_sprites.dart';
 import 'daemon_component.dart';
-import '../../domain/models/building_model.dart';
 import '../../domain/models/npc_model.dart';
 import '../../domain/models/discipleship.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
-import '../../domain/services/influence_service.dart';
 import '../../domain/services/npc_interaction_service.dart';
-import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
@@ -76,12 +72,6 @@ class NPCComponent extends PositionComponent
   // keeps its current position and retries on the next recovery cycle.
   static const int _recoverySearchRadius = 6;
 
-  // Timer for daily NPC spiritual influence on cells (Lastenheft §6.3)
-  double _spiritualInfluenceTimer = 0.0;
-
-  /// One in-game day = [GameTime.gameDaySeconds] real seconds.
-  static const double _spiritualInfluenceInterval = GameTime.gameDaySeconds;
-
   // ─── Pre-allocated paints (never create Paint() in render()) ─────────────
 
   /// Body fill – colour updated each render, object reused.
@@ -122,7 +112,6 @@ class NPCComponent extends PositionComponent
     _model = newModel;
     _figure = CharacterSprites.figureFor(stableStringHash(newModel.id));
     position.setFrom(newModel.homePosition);
-    _spiritualInfluenceTimer = 0.0;
     _targetPosition = null;
     _aiUpdateTimer = 0;
     _stuckTimer = 0.0;
@@ -133,7 +122,6 @@ class NPCComponent extends PositionComponent
   /// graph if it still has a parent and resets all per-session state so a
   /// future [assignModel] call gets a clean slate.
   void deactivateForPool() {
-    _spiritualInfluenceTimer = 0.0;
     _stuckTimer = 0.0;
     detailLevel = NPCDetailLevel.high;
     removeFromParent();
@@ -149,6 +137,7 @@ class NPCComponent extends PositionComponent
   Vector2 get interactionPosition => position;
 
   String _getNPCEmoji() {
+    if (model.isShakenChristian) return '✝️💔'; // #194: needs a visit
     if (model.isChristian) return '✝️'; // Geändert von 🕊️ zu ✝️
     if (model.faith < -30) return '😠';
     if (model.faith < 30) return '👤';
@@ -278,11 +267,10 @@ class NPCComponent extends PositionComponent
     // ── Normal world: full AI ─────────────────────────────────────────────
 
     switch (detailLevel) {
+      // Their influence on the ground runs once a day for everyone in the
+      // world simulation (#194), not here.
       case NPCDetailLevel.high:
-        _updateAI(dt);
-        _updateSpiritualInfluence(dt);
       case NPCDetailLevel.medium:
-        // Simplified: only wander, skip expensive spiritual influence
         _updateAI(dt);
       case NPCDetailLevel.low:
         // Static placeholder – no logic executed
@@ -310,74 +298,6 @@ class NPCComponent extends PositionComponent
         .whereType<DaemonComponent>()
         .any((d) => d.model.hostNpcId == model.id && !d.model.dissolved);
     if (!hasOne) game.spiritualDynamics.spawnPossessor(position, model.id);
-  }
-
-  /// Daily: NPC faith state influences the cell they are standing on (Lastenheft §6.3)
-  ///
-  /// Converted NPCs additionally call [InfluenceService.applyAoE] so their
-  /// passive influence is tracked by the same system as building actions
-  /// (Issue #59 – NPC-Influence-Integration).
-  void _updateSpiritualInfluence(double dt) {
-    _spiritualInfluenceTimer += dt;
-    if (_spiritualInfluenceTimer < _spiritualInfluenceInterval) return;
-    _spiritualInfluenceTimer = 0.0;
-
-    final gx = (position.x / CellComponent.cellSize).floor();
-    final gy = (position.y / CellComponent.cellSize).floor();
-    final cell = game.grid.getCell(gx, gy);
-    if (cell == null) return;
-
-    if (model.isChristian) {
-      // Converted Christians radiate positive influence on the cell they
-      // occupy and on the four directly adjacent cells. The per-faith-point
-      // multipliers are tuned per difficulty so that, at max faith (100),
-      // the centre-cell delta is easy=0.7 / normal=0.5 / hard=0.3 and
-      // the adjacent-cell delta is easy=0.3 / normal=0.25 / hard=0.2.
-      final (centreK, adjacentK) = switch (game.difficulty) {
-        Difficulty.easy => (0.0150, 0.0075),
-        Difficulty.normal => (0.0100, 0.0050),
-        Difficulty.hard => (0.0050, 0.0025),
-      };
-      cell.spiritualState =
-          (cell.spiritualState + model.faith * centreK).clamp(-1.0, 1.0);
-      // Adjacent cells receive a slightly weaker push.
-      for (final offset in const [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1]
-      ]) {
-        final neighbour = game.grid.getCell(gx + offset[0], gy + offset[1]);
-        if (neighbour != null) {
-          neighbour.spiritualState =
-              (neighbour.spiritualState + model.faith * adjacentK)
-                  .clamp(-1.0, 1.0);
-        }
-      }
-      // Small faith decay: without ongoing care their fervour slowly cools.
-      // Floor at 50 so they remain Christian but their influence weakens.
-      model.faith = (model.faith - 0.15).clamp(50.0, 100.0);
-
-      // Passive AoE via InfluenceService (Issue #59 – NPC-Influence-Integration).
-      // Converted NPCs emit a permanent per-tick influence pulse so their
-      // spiritual footprint is visible and decays like other building actions.
-      game.influenceService.applyAoE(
-        grid: game.grid,
-        originX: gx,
-        originY: gy,
-        delta: BuildingInfluenceConstants.deltaNpcPassive,
-        radius: BuildingInfluenceConstants.radiusNpcPassive,
-        durationType: InfluenceDurationType.permanent,
-        buildingMultiplier: BuildingInfluenceConstants.multiplierSmall,
-      );
-    } else if (model.faith > 50) {
-      // Sympathetic NPCs provide a weak positive nudge
-      cell.spiritualState = (cell.spiritualState + 0.05).clamp(-1.0, 1.0);
-    } else if (model.faith < -50) {
-      // Very hostile NPCs reinforce darkness
-      cell.spiritualState =
-          (cell.spiritualState - model.faith.abs() * 0.002).clamp(-1.0, 1.0);
-    }
   }
 
   void _updateAI(double dt) {
@@ -626,6 +546,11 @@ class NPCComponent extends PositionComponent
       canvas.drawCircle((size / 2).toOffset(), size.x * 0.95, _discipleRing);
     }
 
+    // ✝️💔 A shaken Christian (#194): a small broken heart above them.
+    if (model.isShakenChristian) {
+      _shakenGlyph.paint(canvas, Offset(size.x / 2 - _shakenGlyph.width / 2, -14));
+    }
+
     // Possessed: a dark ring; with 👁️ discernment also the possessor's sign.
     if (model.possessed) {
       canvas.drawCircle((size / 2).toOffset(), size.x * 0.75, _possessedPaint);
@@ -641,6 +566,11 @@ class NPCComponent extends PositionComponent
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2.5
     ..color = const Color(0xDD000000);
+
+  static final TextPainter _shakenGlyph = TextPainter(
+    text: const TextSpan(text: '💔', style: TextStyle(fontSize: 11)),
+    textDirection: TextDirection.ltr,
+  )..layout();
 
   static final TextPainter _possessedGlyph = TextPainter(
     text: const TextSpan(text: '👁️', style: TextStyle(fontSize: 10)),

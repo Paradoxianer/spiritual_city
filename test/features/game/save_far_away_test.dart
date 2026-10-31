@@ -84,4 +84,52 @@ void main() {
       expect(back?.faith, 80);
     }
   });
+
+  // #194: a part of the city keeps living while the pastor is away – when
+  // it is generated again, it catches up on the missed days (max 30).
+  testWidgets('returning to a district catches up on the missed days', (tester) async {
+    final dir = Directory.systemTemp.createTempSync('save_catchup');
+    Hive.init(dir.path);
+    final repo = MenuRepository();
+    final fresh = GameSave(id: 'c${DateTime.now().millisecondsSinceEpoch}', name: 'c', createdAt: DateTime(2026), difficulty: Difficulty.normal, seed: 7);
+    await tester.runAsync(() => repo.writeSave(fresh));
+
+    final g1 = SpiritWorldGame(difficulty: fresh.difficulty, gameSave: fresh);
+    await tester.runAsync(() async {
+      g1.onGameResize(Vector2(800, 600));
+      await g1.onLoad();
+    });
+    final home = Vector2(7040, 7168);
+    g1.player.position.setFrom(home);
+    g1.chunkManager.update(0.016);
+    const side = 16 * 32;
+    final chunk = g1.grid.getLoadedChunk((home.x / side).floor(), (home.y / side).floor())!;
+    for (final c in chunk.cells.values) {
+      c.spiritualState = -0.9;
+    }
+    g1.player.position.setFrom(Vector2(home.x + 40 * 512, home.y));
+    g1.chunkManager.update(0.016);
+    final state = g1.captureGameState();
+    expect((state['chunkDays'] as Map)[chunk.id], 0);
+    late GameSave s1;
+    await tester.runAsync(() async {
+      final saves = await repo.loadAllSaves();
+      await repo.writeSave(saves.firstWhere((x) => x.id == fresh.id).copyWithState({...state, 'worldDay': 20}));
+      s1 = (await repo.loadAllSaves()).firstWhere((x) => x.id == fresh.id);
+    });
+
+    final g2 = SpiritWorldGame(difficulty: s1.difficulty, gameSave: s1);
+    await tester.runAsync(() async {
+      g2.onGameResize(Vector2(800, 600));
+      await g2.onLoad();
+    });
+    expect(g2.worldDay, 20);
+    expect(g2.grid.getLoadedChunk(chunk.chunkX, chunk.chunkY), isNull, reason: 'far away');
+    g2.player.position.setFrom(home);
+    g2.chunkManager.update(0.016);
+    final back = g2.grid.getLoadedChunk(chunk.chunkX, chunk.chunkY)!;
+    final changed = back.cells.values.where((c) => (c.spiritualState + 0.9).abs() > 1e-6).length;
+    expect(changed, greaterThan(0), reason: '20 days of world simulation happened');
+    expect((g2.captureGameState()['chunkDays'] as Map)[chunk.id], 20);
+  });
 }

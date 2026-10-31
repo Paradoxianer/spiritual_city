@@ -90,6 +90,20 @@ abstract final class HelpContent {
       ),
     ),
     (
+      '🌐 ↔️ 👥',
+      Tr(
+        'Die unsichtbare Welt lebt – jeden Tag, in der ganzen Stadt, auch wenn du nicht dort bist: Helle und dunkle Felder breiten sich zu ihren Nachbarn aus, tiefe Dunkelheit sickert weiter. Christen und heilige Häuser machen ihre Umgebung heller, feindselige Menschen dunkler. Umgekehrt wirkt die Umgebung auf alle Menschen: Im Hellen werden sie offener (höchstens 🤔 suchend – zum Glauben finden sie nur im Gespräch mit dir), im Dunkeln verschlossener. Kommst du in eine Gegend zurück, hat sie sich in der Zwischenzeit verändert.',
+        'The invisible world lives – every day, in the whole city, even where you are not: light and dark cells spread to their neighbours, deep darkness seeps on. Christians and holy houses brighten their surroundings, hostile people darken them. In turn the surroundings act on everyone: in the light people grow more open (at most 🤔 seeking – they find faith only in a talk with you), in the dark more closed. When you come back to an area, it has changed in the meantime.',
+      ),
+    ),
+    (
+      '✝️💔',
+      Tr(
+        'Angeschlagener Christ: Wer lange im Dunkeln wohnt, verliert Glauben – weniger, wenn er stabil ist (Seelsorge 👂, durchgearbeitete Lebensthemen 📜, Gemeinde ⛪, Jüngerschaft 🌱, andere Christen in der Nähe). Unter 30 ✝️ schützt und betet er nicht mehr. Er bleibt Christ – besuche ihn, sprich und bete mit ihm, dann ist er wieder stark.',
+        'Shaken Christian: whoever lives in the dark for long loses faith – less when they are stable (care 👂, life challenges worked through 📜, church ⛪, discipleship 🌱, other Christians nearby). Below 30 ✝️ they no longer protect or pray. They stay a Christian – visit them, talk and pray with them, and they are strong again.',
+      ),
+    ),
+    (
       '🏰 ⚔️ 🔥',
       Tr('Bollwerk: zu → angreifbar (⚔️) → besiegt, der Stadtteil ist erweckt (🔥). Erweckte Viertel öffnen neue Lektionen.',
           'Stronghold: closed → attackable (⚔️) → defeated, the neighbourhood is awakened (🔥). Awakened quarters open new lessons.')

@@ -190,6 +190,9 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       // Spawn building entrance components.
       _spawnBuildingComponents(chunk, npcsByBuilding);
 
+      // Days this part of the city missed since the save (#194).
+      game.catchUpChunk(chunk);
+
       _log.fine('Created ${npcs.length} NPCs for chunk (${chunk.id})');
     }
   }
