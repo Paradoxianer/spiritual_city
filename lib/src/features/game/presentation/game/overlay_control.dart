@@ -109,6 +109,8 @@ extension GameOverlayControl on SpiritWorldGame {
         targetCount: m.targetCount,
         address: _addressForPixelPos(npcComp.position),
         trackKey: GameMissionTracking.npcKey(npc.id),
+        actionType: m.actionType,
+        isPerson: true,
       ));
     }
     for (final bldComp in chunkManager.allActiveBuildings) {
@@ -129,6 +131,7 @@ extension GameOverlayControl on SpiritWorldGame {
         targetCount: m.targetCount,
         address: _addressForPixelPos(bldComp.position),
         trackKey: GameMissionTracking.buildingKey(bld.buildingId),
+        actionType: m.actionType,
       ));
     }
     activeMissionBoardData = MissionBoardData(entries: entries);

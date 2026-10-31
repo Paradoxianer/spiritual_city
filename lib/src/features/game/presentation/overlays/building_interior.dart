@@ -193,7 +193,7 @@ class InteriorHud extends StatelessWidget {
               if (data == null || game.interior == null) return const SizedBox.shrink();
               final b = data.building;
               final mission = b.activeMission;
-              return Container(
+              final bar = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
@@ -227,6 +227,31 @@ class InteriorHud extends StatelessWidget {
                     ),
                   ],
                 ),
+              );
+              // Texts on: the house's mission as a sentence below.
+              final sentence = mission == null || !TextMode.on
+                  ? null
+                  : MissionTexts.task[mission.actionType]?.text.replaceAll('{n}', '${mission.targetCount}');
+              if (sentence == null) return bar;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  bar,
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '📋 $sentence',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.3),
+                    ),
+                  ),
+                ],
               );
             },
           ),

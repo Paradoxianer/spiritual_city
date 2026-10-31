@@ -220,10 +220,18 @@ class _DialogOverlayState extends State<DialogOverlay> {
     final mission = model.activeMission;
     if (mission == null) return const SizedBox.shrink();
     final countLabel = mission.targetCount > 1 ? ' ×${mission.targetCount}' : '';
+    // Texts on: the task as a sentence under the emoji row.
+    final sentence = TextMode.on
+        ? MissionTexts.task[mission.actionType]?.text.replaceAll('{n}', '${mission.targetCount}')
+        : null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
         children: [
           const Text('📋', style: TextStyle(fontSize: 13)),
           const SizedBox(width: 6),
@@ -248,6 +256,13 @@ class _DialogOverlayState extends State<DialogOverlay> {
               fontWeight: FontWeight.bold,
             ),
           ),
+        ],
+          ),
+          if (sentence != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(sentence, style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.3)),
+            ),
         ],
       ),
     );

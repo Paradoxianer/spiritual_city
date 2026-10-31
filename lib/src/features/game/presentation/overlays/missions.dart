@@ -20,6 +20,12 @@ class MissionEntry {
   /// 📍 key to accept / follow this mission (see GameMissionTracking).
   final String? trackKey;
 
+  /// Kind of mission – for the explanation in sentences (texts on).
+  final ActionType? actionType;
+
+  /// A person's mission (else a building's).
+  final bool isPerson;
+
   const MissionEntry({
     required this.targetEmoji,
     required this.targetName,
@@ -32,6 +38,8 @@ class MissionEntry {
     this.targetCount = 1,
     this.address,
     this.trackKey,
+    this.actionType,
+    this.isPerson = false,
   });
 }
 
@@ -135,7 +143,7 @@ class _MissionRow extends StatelessWidget {
       if (m.materialsReward > 0) '+${m.materialsReward}📦',
       if (m.insightReward > 0) '+${m.insightReward.toStringAsFixed(1)}📖',
     ].join(' ');
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
@@ -183,6 +191,29 @@ class _MissionRow extends StatelessWidget {
           ],
         ],
       ),
+    );
+    final type = m.actionType;
+    if (!TextMode.on || type == null) return row;
+    // Texts on: where to go, what to do and what it does, in sentences.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        row,
+        Padding(
+          padding: const EdgeInsets.only(left: 32, bottom: 4),
+          child: Text(
+            MissionTexts.explain(
+              type: type,
+              count: m.targetCount,
+              who: m.isPerson && m.targetName.isNotEmpty ? m.targetName.split(' ').first : null,
+              where: m.address,
+              tracked: tracked,
+            ),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13, height: 1.35),
+          ),
+        ),
+      ],
     );
   }
 }
