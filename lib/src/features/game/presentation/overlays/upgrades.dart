@@ -130,11 +130,40 @@ class _UpgradePanelState extends State<_UpgradePanel> {
             _buy(level, apply);
           },
         );
+    final modeName = AppStrings.get('mode.${mode.id}');
     return _UpgradeGroup(
       icon: mode.icon,
       color: mode.color,
-      title: AppStrings.get('mode.${mode.id}'),
+      title: modeName,
       badge: '$level/$cap',
+      // Tap: the narrator explains this prayer and how to build it up.
+      onTap: () {
+        if (modeSkill != null && !CombatAbilities.canUse(mode, skills)) {
+          widget.game.explainLesson(Lessons.of(modeSkill), force: true);
+          return;
+        }
+        Narrator.say(
+          'mode.${mode.id}',
+          mode.icon,
+          modeName,
+          LessonTexts.explainMode(
+            mode,
+            level: level,
+            cap: cap,
+            modeName: modeName,
+            nextLesson: next == null
+                ? null
+                : LessonTexts.explain(
+                    Lessons.of(next),
+                    learned: skills,
+                    awakenings: widget.game.progress.awakenedQuarters.length,
+                    active: widget.game.progress.lesson.active,
+                    progress: widget.game.progress.lesson.progress,
+                  ),
+          ),
+          force: true,
+        );
+      },
       // Abilities: unlocked ones bright, the next with the level it needs.
       footer: Wrap(
         spacing: 10,
@@ -208,7 +237,10 @@ class _NextLesson extends StatelessWidget {
                 minimumSize: const Size(36, 30),
                 padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
-              onPressed: () => game.toggleTrackedMission(key),
+              onPressed: () {
+                if (tracked != key) game.explainLesson(Lessons.of(skill), force: true);
+                game.toggleTrackedMission(key);
+              },
               child: Text(tracked == key ? '📍✅' : '📍', style: const TextStyle(fontSize: 15)),
             ),
           ],
@@ -228,6 +260,9 @@ class _UpgradeGroup extends StatelessWidget {
   final List<Widget> children;
   final Widget? footer;
 
+  /// Tap on the header (the narrator explains it).
+  final VoidCallback? onTap;
+
   const _UpgradeGroup({
     required this.icon,
     required this.color,
@@ -235,6 +270,7 @@ class _UpgradeGroup extends StatelessWidget {
     required this.children,
     this.badge,
     this.footer,
+    this.onTap,
   });
 
   @override
@@ -250,7 +286,10 @@ class _UpgradeGroup extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Row(
             children: [
               Text(icon, style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 6),
@@ -268,6 +307,7 @@ class _UpgradeGroup extends StatelessWidget {
                   child: Text('Lv $badge', style: const TextStyle(color: Colors.amber, fontSize: 10)),
                 ),
             ],
+          ),
           ),
           const SizedBox(height: 6),
           Row(

@@ -265,7 +265,11 @@ class _LearningPath extends StatelessWidget {
               if (awakenings < l.minAwakenings) '🏰🔥×${l.minAwakenings}',
             ].join(' ')}';
           }
-          return Opacity(
+          // Tap: the narrator tells what it teaches, where and how.
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => game.explainLesson(l, force: true),
+            child: Opacity(
             opacity: learned ? 0.55 : (open || active ? 1 : 0.6),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -295,10 +299,14 @@ class _LearningPath extends StatelessWidget {
                     ActionButton(
                       emoji: tracked == key ? '📍✅' : '📍',
                       highlighted: tracked == key,
-                      onTap: () => game.toggleTrackedMission(key),
+                      onTap: () {
+                        if (tracked != key) game.explainLesson(l, force: true);
+                        game.toggleTrackedMission(key);
+                      },
                     ),
                 ],
               ),
+            ),
             ),
           );
         },

@@ -132,8 +132,10 @@ class _LessonChip extends StatelessWidget {
         if (l == null) return const SizedBox.shrink();
         // Tap → ❓ help on "my tasks": how this lesson is done (playtest
         // 2026-10-20, stuck on 🎓📢).
+        // Tap → the narrator tells how this lesson is done (playtest
+        // 2026-10-31: what to do, where and how).
         return GestureDetector(
-          onTap: () => game.openHelp(),
+          onTap: () => game.explainLesson(l, force: true),
           child: Container(
           margin: const EdgeInsets.only(top: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

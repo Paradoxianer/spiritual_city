@@ -28,11 +28,13 @@ abstract final class Narrator {
   static void Function()? persist;
 
   /// Explains [key] with [text] – unless the narrator is off, [text] is
-  /// missing, or the player closed this explanation before. A new line
+  /// missing, or the player closed this explanation before ([force]: the
+  /// player asked for it by tapping, so it comes anyway). A new line
   /// replaces the one shown.
-  static void say(String key, String emoji, String title, String? text) {
-    if (!TextMode.on || text == null || text.isEmpty || muted.contains(key)) return;
-    if (current.value?.key == key) return;
+  static void say(String key, String emoji, String title, String? text, {bool force = false}) {
+    if (!TextMode.on || text == null || text.isEmpty) return;
+    if (!force && muted.contains(key)) return;
+    if (current.value?.key == key && current.value?.text == text) return;
     current.value = NarratorLine(key, emoji, title, text);
   }
 

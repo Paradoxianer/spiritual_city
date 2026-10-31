@@ -7,6 +7,25 @@ extension GameLearning on SpiritWorldGame {
   void openLesson(Lesson lesson) {
     activeLessonOffer = lesson;
     overlays.add('LessonOverlay');
+    explainLesson(lesson);
+  }
+
+  /// The narrator tells what [lesson] teaches, where and how – [force]
+  /// when the player tapped it (then even a closed explanation comes).
+  void explainLesson(Lesson lesson, {bool force = false}) {
+    Narrator.say(
+      'lesson.${lesson.skill.name}',
+      '🎓${lesson.skill.emoji}',
+      LessonTexts.skillName(lesson.skill),
+      LessonTexts.explain(
+        lesson,
+        learned: progress.skills,
+        awakenings: progress.awakenedQuarters.length,
+        active: progress.lesson.active,
+        progress: progress.lesson.progress,
+      ),
+      force: force,
+    );
   }
 
   void closeLesson() {

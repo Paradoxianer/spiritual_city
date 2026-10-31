@@ -22,6 +22,7 @@ import '../domain/help/help_content.dart';
 import '../domain/help/life_texts.dart';
 import '../domain/help/mission_texts.dart';
 import '../domain/help/near_texts.dart';
+import '../domain/help/lesson_texts.dart';
 import '../domain/models/mission_model.dart';
 import '../domain/models/base_interactable_entity.dart';
 import '../domain/city_generation/city_overview.dart';

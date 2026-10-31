@@ -38,6 +38,7 @@ import '../domain/services/learning_service.dart';
 import '../domain/services/world_simulation.dart';
 import '../domain/help/help_content.dart';
 import '../domain/help/near_texts.dart';
+import '../domain/help/lesson_texts.dart';
 import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/city_generator.dart';
