@@ -120,13 +120,21 @@ class CombatProfile {
 
   CombatModifierSet getFor(PrayerMode mode) => modes[mode]!;
 
+  /// Shield and helm stop at this reduction; further levels would only
+  /// cost 📖 (playtest 2026-10-31).
+  static const double maxReduction = 0.8;
+  static final int maxShieldLevel = (maxReduction / kShieldDamageReductionPerLevel).round();
+  static final int maxHelmLevel = (maxReduction / kHelmHungerReductionPerLevel).round();
+  bool get shieldMaxed => shieldLevel >= maxShieldLevel;
+  bool get helmMaxed => helmLevel >= maxHelmLevel;
+
   /// Faith-damage reduction fraction (0.0–0.8) based on [shieldLevel].
   double get shieldDamageReduction =>
-      (shieldLevel * kShieldDamageReductionPerLevel).clamp(0.0, 0.8);
+      (shieldLevel * kShieldDamageReductionPerLevel).clamp(0.0, maxReduction);
 
   /// Hunger-damage reduction fraction (0.0–0.8) based on [helmLevel].
   double get helmHungerReduction =>
-      (helmLevel * kHelmHungerReductionPerLevel).clamp(0.0, 0.8);
+      (helmLevel * kHelmHungerReductionPerLevel).clamp(0.0, maxReduction);
 
   Map<String, dynamic> toJson() => {
     for (var entry in modes.entries) entry.key.id: entry.value.toJson(),

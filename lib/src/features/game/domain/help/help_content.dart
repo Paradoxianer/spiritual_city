@@ -321,14 +321,14 @@ abstract final class HelpContent {
     (
       '🎓',
       Tr('Lerne bei Mentoren', 'Learn from mentors'),
-      Tr('Im Missionsbrett 📋 unter 🎓 siehst du alle Fähigkeiten und wo ihre Mentoren sind. Tippe 📍, geh hin und nimm die Lektion an 🎓✅. Dann übst du die Aufgabe – die gelbe Zeile oben links zeigt, wie weit du bist.',
-          'The mission board 📋 lists every skill under 🎓 and where its mentors are. Tap 📍, go there and accept the lesson 🎓✅. Then practise the task – the yellow line top-left shows your progress.')
+      Tr('Im Missionsbrett 📋 unter 🎓 siehst du alle Fähigkeiten und wo ihre Mentoren sind. Tippe 📍, geh hin und nimm die Lektion an 🎓✅. Dann übst du die Aufgabe – die gelbe Zeile oben links zeigt, wie weit du bist. Beim Mentor kannst du auch mit 📖 studieren 📖➡️: je 3 📖 ein Schritt, höchstens die Hälfte – den Rest übst du selbst.',
+          'The mission board 📋 lists every skill under 🎓 and where its mentors are. Tap 📍, go there and accept the lesson 🎓✅. Then practise the task – the yellow line top-left shows your progress. At the mentor you can also study with 📖 📖➡️: one step per 3 📖, at most half – the rest you practise yourself.')
     ),
     (
       '⚔️',
       Tr('Verbessere deine Gebete', 'Improve your prayers'),
-      Tr('Erkenntnis 📖 investierst du im Pastorenhaus 🏡 am ⚔️-Schrank. Ab einer Stufe brauchst du eine Meisterschaft ⭐ von einem Mentor – das Menü zeigt dir, welche und wo (📍).',
-          'Spend insight 📖 at the ⚔️ cabinet in the pastor house 🏡. Past a certain level you need a mastery ⭐ from a mentor – the menu shows which one and where (📍).')
+      Tr('Erkenntnis 📖 investierst du im Pastorenhaus 🏡 am ⚔️-Schrank. Bis Stufe 3 geht es allein, danach brauchst du eine Meisterschaft ⭐ von einem Mentor – das Menü zeigt dir, welche und wo (📍).',
+          'Spend insight 📖 at the ⚔️ cabinet in the pastor house 🏡. Up to level 3 on your own, then you need a mastery ⭐ from a mentor – the menu shows which one and where (📍).')
     ),
     (
       '🏘️🔥',

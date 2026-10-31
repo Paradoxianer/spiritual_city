@@ -272,11 +272,36 @@ class LessonState {
   Skill? active;
   int progress = 0;
 
+  /// Steps of the active lesson bought with 📖 at the mentor.
+  int studied = 0;
+
+  /// 📖 studying with the mentor (playtest 2026-10-31: insight piled up):
+  /// one step of the lesson for [studyInsightCost] 📖 – but at most half
+  /// of it; the rest is practised ("doers of the word", Jas 1:22).
+  static const int studyInsightCost = 3;
+
   Lesson? get lesson => active == null ? null : Lessons.of(active!);
 
   void start(Skill s) {
     active = s;
     progress = 0;
+    studied = 0;
+  }
+
+  /// Steps of [l] that can still be studied (it need not be active yet).
+  int studyLeft(Lesson l) {
+    final max = l.count ~/ 2;
+    if (active != l.skill) return max;
+    return (max - studied).clamp(0, l.count - progress);
+  }
+
+  /// Studies one step of [l] (starting it if needed); returns the learned
+  /// skill when this finished it. Paying is the caller's job.
+  Skill? study(Lesson l, LearnedSkills learned) {
+    if (studyLeft(l) <= 0) return null;
+    if (active != l.skill) start(l.skill);
+    studied++;
+    return _step(l, learned);
   }
 
   /// Counts one [task]; returns the learned skill when this finished the
@@ -284,26 +309,34 @@ class LessonState {
   Skill? record(LessonTask task, LearnedSkills learned) {
     final l = lesson;
     if (l == null || l.task != task) return null;
+    return _step(l, learned);
+  }
+
+  Skill? _step(Lesson l, LearnedSkills learned) {
     progress++;
     if (progress < l.count) return null;
     learned.learn(l.skill);
     active = null;
     progress = 0;
+    studied = 0;
     return l.skill;
   }
 
   Map<String, dynamic> toJson() => {
         if (active != null) 'active': active!.name,
         'progress': progress,
+        if (studied > 0) 'studied': studied,
       };
 
   void loadFromJson(Object? raw) {
     active = null;
     progress = 0;
+    studied = 0;
     if (raw is! Map) return;
     for (final s in Skill.values) {
       if (s.name == raw['active']) active = s;
     }
     progress = (raw['progress'] as num?)?.toInt() ?? 0;
+    studied = (raw['studied'] as num?)?.toInt() ?? 0;
   }
 }

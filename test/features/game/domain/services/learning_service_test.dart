@@ -62,9 +62,9 @@ void main() {
       expect(drain.isOpen(warrior, 1), isFalse, reason: 'needs ⏳ first');
     });
 
-    test('mentors lift the upgrade cap of a mode: 2 → 5 → 10', () {
+    test('mentors lift the upgrade cap of a mode: 3 → 5 → 10', () {
       final s = LearnedSkills({Skill.spiritualWarfare});
-      expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 2);
+      expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 3);
       s.learn(Skill.rebukeMastery1);
       expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 5);
       expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 0), isFalse);
@@ -77,7 +77,7 @@ void main() {
 
     test('🕊️ Liberation, the main weapon, climbs to 15 in a chain of three', () {
       final s = LearnedSkills();
-      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 2);
+      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 3);
       expect(CombatAbilities.nextMastery(PrayerMode.liberation, s), Skill.liberationMastery1);
       s.learn(Skill.liberationMastery1);
       expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 5);
@@ -162,5 +162,36 @@ void main() {
       expect(npc.possessionWeakened, isTrue);
       expect(npc.possessed, isTrue, reason: 'still needs the invisible-world half');
     });
+  });
+
+  test('📖 studying with the mentor: one step per 📖, at most half the lesson', () {
+    final learned = LearnedSkills();
+    final l = Lessons.all.firstWhere((l) => l.count >= 6);
+    final st = LessonState();
+    expect(st.studyLeft(l), l.count ~/ 2, reason: 'offered before it runs');
+    expect(st.study(l, learned), isNull);
+    expect(st.active, l.skill, reason: 'studying starts the lesson');
+    while (st.studyLeft(l) > 0) {
+      st.study(l, learned);
+    }
+    expect(st.progress, l.count ~/ 2);
+    expect(st.study(l, learned), isNull);
+    expect(st.progress, l.count ~/ 2, reason: 'the rest is practised');
+    final r = LessonState()..loadFromJson(st.toJson());
+    expect(r.studied, l.count ~/ 2);
+    // Practising the rest finishes it.
+    Skill? done;
+    for (var i = st.progress; i < l.count; i++) {
+      done = st.record(l.task, learned);
+    }
+    expect(done, l.skill);
+    expect(st.studied, 0);
+  });
+
+  test('a lesson of one step cannot be studied', () {
+    final st = LessonState();
+    for (final l in Lessons.all.where((l) => l.count == 1)) {
+      expect(st.studyLeft(l), 0);
+    }
   });
 }

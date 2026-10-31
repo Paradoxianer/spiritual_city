@@ -67,6 +67,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                     level: _profile.shieldLevel,
                     effect: '−${(_profile.shieldDamageReduction * 100).toStringAsFixed(0)}%🙏',
                     insight: _progress.insight,
+                    lock: _profile.shieldMaxed ? const Locked('✅') : null,
                     onBuy: () => _buy(_profile.shieldLevel, () => _profile.shieldLevel++),
                   ),
                   _UpgradeTile(
@@ -75,6 +76,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                     level: _profile.helmLevel,
                     effect: '−${(_profile.helmHungerReduction * 100).toStringAsFixed(0)}%🍞',
                     insight: _progress.insight,
+                    lock: _profile.helmMaxed ? const Locked('✅') : null,
                     onBuy: () => _buy(_profile.helmLevel, () => _profile.helmLevel++),
                   ),
                 ],

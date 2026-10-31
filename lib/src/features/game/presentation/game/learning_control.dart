@@ -22,11 +22,29 @@ extension GameLearning on SpiritWorldGame {
     _toast(lesson.progressLabel(0));
   }
 
+  /// 📖 Studies one step of [lesson] with the mentor (starting it if it
+  /// is not the active one); the lesson card stays open.
+  void studyLesson(Lesson lesson) {
+    const cost = LessonState.studyInsightCost;
+    if (progress.lesson.studyLeft(lesson) <= 0) return;
+    if (!progress.spendInsight(cost)) {
+      GameSound.play(Sfx.denied);
+      return;
+    }
+    GameSound.play(Sfx.book);
+    final learned = progress.lesson.study(lesson, progress.skills);
+    _onLessonStep(lesson, learned);
+    if (learned != null) closeLesson();
+  }
+
   /// Counts one practice [task] towards the active lesson.
   void recordLessonTask(LessonTask task) {
     final active = progress.lesson.lesson;
     if (active == null || active.task != task) return;
-    final learned = progress.lesson.record(task, progress.skills);
+    _onLessonStep(active, progress.lesson.record(task, progress.skills));
+  }
+
+  void _onLessonStep(Lesson active, Skill? learned) {
     lessonNotifier.value++;
     if (learned == null) {
       _toast(active.progressLabel(progress.lesson.progress));

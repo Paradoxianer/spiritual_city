@@ -35,9 +35,11 @@ abstract final class CombatAbilities {
 
   /// Highest mode level the pastor may buy (sum of the four upgrades)
   /// without a mentor, after ⭐, after ⭐⭐ …: 🕊️ Liberation, the main
-  /// weapon, goes up to 15, the others to 10 (playtest 2026-10-19).
+  /// weapon, goes up to 15, the others to 10 (playtest 2026-10-19). Up to
+  /// 3 without a mentor – the first ability needs no lesson (playtest
+  /// 2026-10-31: 📖 piled up with nothing to buy).
   static List<int> levelCaps(PrayerMode mode) =>
-      mode == PrayerMode.liberation ? const [2, 5, 10, 15] : const [2, 5, 10];
+      mode == PrayerMode.liberation ? const [3, 5, 10, 15] : const [3, 5, 10];
 
   static int maxCap(PrayerMode mode) => levelCaps(mode).last;
 

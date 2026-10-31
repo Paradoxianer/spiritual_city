@@ -11,7 +11,19 @@ class LessonOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final lesson = game.activeLessonOffer;
     if (lesson == null) return const SizedBox.shrink();
-    final replaces = game.progress.lesson.lesson;
+    // Rebuilt while 📖 studying moves the lesson on and spends insight.
+    return ListenableBuilder(
+      listenable: Listenable.merge([game.lessonNotifier, game.progress]),
+      builder: (context, _) => _build(lesson),
+    );
+  }
+
+  Widget _build(Lesson lesson) {
+    final state = game.progress.lesson;
+    final replaces = state.lesson;
+    final running = state.active == lesson.skill;
+    const cost = LessonState.studyInsightCost;
+    final studyLeft = state.studyLeft(lesson);
 
     return OverlayShell(
       theme: OverlayTheme.missions,
@@ -56,10 +68,12 @@ class LessonOverlay extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            // The practice task: 👂 ×3
+            // The practice task: 👂 ×3, or how far it is: 👂 2/6
             Center(
               child: Text(
-                '${lesson.task.emoji} ×${lesson.count}',
+                running
+                    ? '${lesson.task.emoji} ${state.progress}/${lesson.count}'
+                    : '${lesson.task.emoji} ×${lesson.count}',
                 style: const TextStyle(color: Colors.white, fontSize: 22),
               ),
             ),
@@ -75,13 +89,30 @@ class LessonOverlay extends StatelessWidget {
           ],
         ),
       ),
-      actions: Center(
-        child: ActionButton(
-          emoji: '🎓✅',
-          highlighted: true,
-          keyIndex: 1,
-          onTap: () => game.startLesson(lesson),
-        ),
+      actions: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (!running)
+            ActionButton(
+              emoji: '🎓✅',
+              highlighted: true,
+              keyIndex: 1,
+              onTap: () => game.startLesson(lesson),
+            ),
+          // 📖 Study with the mentor: one step for 📖, at most half.
+          if (studyLeft > 0) ...[
+            const SizedBox(width: 12),
+            ActionButton(
+              emoji: '📖➡️${lesson.task.emoji}',
+              hint: '−$cost📖  ×$studyLeft',
+              availability: game.progress.insight >= cost
+                  ? const AvailableNow()
+                  : const CannotAfford(Resource.insight),
+              keyIndex: running ? 1 : 2,
+              onTap: () => game.studyLesson(lesson),
+            ),
+          ],
+        ],
       ),
     );
   }
