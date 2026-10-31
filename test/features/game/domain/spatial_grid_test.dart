@@ -31,12 +31,12 @@ void main() {
     });
 
     test('returns entities in adjacent cells when range spans cell boundary', () {
-      final e1 = makeTestEntity(255, 255); // near top-right of cell (0,0)
+      final e1 = makeTestEntity(200, 200); // in cell (0,0), 283 from the origin
       final e2 = makeTestEntity(257, 0);  // just inside cell (1,0)
 
       grid.update([e1, e2]);
 
-      // range = 300 > cellSize => adjacent cells are included
+      // range = 300 > cellSize => adjacent cells are searched (exact range)
       final nearby = grid.getNearby(Vector2(0, 0), 300);
       expect(nearby, contains(e1));
       expect(nearby, contains(e2));

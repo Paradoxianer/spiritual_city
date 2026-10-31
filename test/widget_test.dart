@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:spiritual_city/src/app.dart';
@@ -7,7 +9,8 @@ import 'package:spiritual_city/src/features/menu/domain/models/game_save.dart';
 
 void main() {
   setUpAll(() async {
-    await Hive.initFlutter();
+    // No path_provider plugin in tests: a temporary folder instead.
+    Hive.init(Directory.systemTemp.createTempSync('smoke').path);
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(GameSaveAdapter());
     }

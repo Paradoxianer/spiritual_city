@@ -117,9 +117,9 @@ class StrongholdComponent extends PositionComponent with HasGameReference<Spirit
       _lock.paint(canvas, Offset(c.dx - _lock.width / 2, -_lock.height));
     } else {
       // Remaining wall strength.
-      final w = radius * 2;
+      const w = radius * 2;
       final frac = (energy / Awakening.strongholdEnergy).clamp(0.0, 1.0);
-      canvas.drawRect(Rect.fromLTWH(0, -10, w, 5), _barBg);
+      canvas.drawRect(const Rect.fromLTWH(0, -10, w, 5), _barBg);
       canvas.drawRect(Rect.fromLTWH(0, -10, w * frac, 5), _barFg);
     }
   }
