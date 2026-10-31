@@ -133,7 +133,7 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
       if (dist <= _currentRadius + s.radius &&
           dist > _currentRadius - s.radius) {
         final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
-        s.takeHit(strength * 5.0 * falloff, mode, source: source);
+        s.takeHit(strength * 5.0 * falloff, mode, source: source, duration: duration);
         _hitIds.add(id);
       }
     }

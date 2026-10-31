@@ -44,6 +44,19 @@ class StrongholdComponent extends PositionComponent with HasGameReference<Spirit
   bool _narrated = false;
 
   double _spawnTimer = 0.0;
+
+  /// 🪫 Disarmed: no healing while > 0 (seconds).
+  double _disarmedFor = 0.0;
+
+  /// ⏳ Bound: half healing, guards come half as often while > 0.
+  double _boundFor = 0.0;
+
+  /// Seconds a 🪫 / ⏳ wave (duration 1) works on a stronghold.
+  static const double disarmSeconds = 4.0;
+  static const double bindSeconds = 6.0;
+
+  bool get disarmed => _disarmedFor > 0;
+  bool get bound => _boundFor > 0;
   double _sinceHit = 99.0;
   double _t = 0.0;
 
@@ -80,19 +93,23 @@ class StrongholdComponent extends PositionComponent with HasGameReference<Spirit
     if (!game.isSpiritualWorld || fallen) return;
     _t += dt;
     _sinceHit += dt;
+    _disarmedFor = math.max(0, _disarmedFor - dt);
+    _boundFor = math.max(0, _boundFor - dt);
     // Healing: a fort heals when nobody prays; bulwarks and great
-    // fortresses keep healing until enough pray together.
+    // fortresses keep healing until enough pray together – or 🪫 disarms
+    // them; ⏳ binding halves it.
     final united = together >= kind.unityNeeded;
-    final heals = kind.healsWhileHit ? !united : _sinceHit > 2.0;
+    final heals = !disarmed && (kind.healsWhileHit ? !united : _sinceHit > 2.0);
     if (heals && energy < kind.energy) {
-      energy = math.min(kind.energy, energy + kind.regenPerSecond * dt);
+      final rate = kind.regenPerSecond * (bound ? 0.5 : 1.0);
+      energy = math.min(kind.energy, energy + rate * dt);
     }
     if (!_near) return;
     if (!_narrated && isOpen && kind != StrongholdKind.fort) {
       _narrated = true;
       Narrator.say('stronghold.${kind.name}', kind.emoji, kind.emoji, NearTexts.strongholds[kind.name]?.text);
     }
-    _spawnTimer += dt;
+    _spawnTimer += bound ? dt * 0.5 : dt;
     if (_spawnTimer < spawnInterval) return;
     _spawnTimer = 0;
     final guards = game.world.children
@@ -109,12 +126,24 @@ class StrongholdComponent extends PositionComponent with HasGameReference<Spirit
   }
 
   /// Hit by a prayer wave from [source]. Every prayer counts as praying
-  /// together; only Liberation breaks walls, and only when open – harder
-  /// the more pray together.
-  void takeHit(double amount, PrayerMode mode, {String source = 'pastor'}) {
+  /// together; 🪫 Drain stops the healing and ⏳ Slow halves it for a
+  /// while ([duration] of the wave); only Liberation breaks walls, and only
+  /// when open – harder the more pray together.
+  void takeHit(double amount, PrayerMode mode, {String source = 'pastor', double duration = 1.0}) {
     if (fallen || !isOpen) return;
     _lastHitBy[source] = _t;
-    if (mode != PrayerMode.liberation) return;
+    switch (mode) {
+      case PrayerMode.drain:
+        _disarmedFor = math.max(_disarmedFor, disarmSeconds * duration);
+        return;
+      case PrayerMode.slow:
+        _boundFor = math.max(_boundFor, bindSeconds * duration);
+        return;
+      case PrayerMode.rebuke:
+        return;
+      case PrayerMode.liberation:
+        break;
+    }
     _sinceHit = 0;
     energy -= amount * StrongholdKind.unityFactor(together);
     if (energy <= 0) {
@@ -164,6 +193,15 @@ class StrongholdComponent extends PositionComponent with HasGameReference<Spirit
           textDirection: TextDirection.ltr,
         )..layout();
         label.paint(canvas, Offset(c.dx - label.width / 2, -12 - label.height));
+      }
+      // 🪫 disarmed / ⏳ bound: shown under the bar.
+      final marks = [if (disarmed) PrayerMode.drain.icon, if (bound) PrayerMode.slow.icon];
+      if (marks.isNotEmpty) {
+        final m = TextPainter(
+          text: TextSpan(text: marks.join(' '), style: const TextStyle(fontSize: 14)),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        m.paint(canvas, Offset(c.dx - m.width / 2, -3));
       }
     }
   }

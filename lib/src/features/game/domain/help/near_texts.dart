@@ -210,18 +210,18 @@ abstract final class NearTexts {
   /// Strong strongholds (StrongholdKind.name): too strong to win alone.
   static const Map<String, Tr> strongholds = {
     'bulwark': Tr(
-      'Ein Bollwerk 🏰🏰. Allein heilt es fast so schnell, wie du es triffst. Wenn zwei zusammen beten 👥, hört die Heilung auf – ruf deine Jünger mit einer Freiversammlung 📢🎺. „Wo zwei unter euch eins werden …“',
-      'A bulwark 🏰🏰. Alone, it heals almost as fast as you hit it. When two pray together 👥, the healing stops – call your disciples with an open-air meeting 📢🎺. “If two of you agree …”',
-      es: 'Un baluarte 🏰🏰. Solo, se cura casi tan rápido como lo golpeas. Cuando dos oran juntos 👥, la curación se detiene: llama a tus discípulos con una reunión al aire libre 📢🎺. «Si dos de vosotros se pusieren de acuerdo …»',
-      fr: 'Un rempart 🏰🏰. Seul, il guérit presque aussi vite que tu le frappes. Quand deux prient ensemble 👥, la guérison s’arrête – appelle tes disciples avec une réunion en plein air 📢🎺. « Si deux d’entre vous s’accordent … »',
-      pt: 'Um baluarte 🏰🏰. Sozinho, ele se cura quase tão rápido quanto você o atinge. Quando dois oram juntos 👥, a cura para – chame seus discípulos com uma reunião ao ar livre 📢🎺. “Se dois de vós concordarem …”',
+      'Ein Bollwerk 🏰🏰. Allein heilt es fast so schnell, wie du es triffst. Wenn zwei zusammen beten 👥, hört die Heilung auf – ruf deine Jünger mit einer Freiversammlung 📢🎺. Vorher hilft 🪫 Entwaffnen: Es stoppt die Heilung eine Weile. ⏳ Binden halbiert sie und hält die Wächter auf.',
+      'A bulwark 🏰🏰. Alone, it heals almost as fast as you hit it. When two pray together 👥, the healing stops – call your disciples with an open-air meeting 📢🎺. First, 🪫 Disarm helps: it stops the healing for a while. ⏳ Bind halves it and holds the guards back.',
+      es: 'Un baluarte 🏰🏰. Solo, se cura casi tan rápido como lo golpeas. Cuando dos oran juntos 👥, la curación se detiene: llama a tus discípulos con una reunión al aire libre 📢🎺. Antes ayuda 🪫 Desarmar: detiene la curación un rato. ⏳ Atar la reduce a la mitad y frena a los guardianes.',
+      fr: 'Un rempart 🏰🏰. Seul, il guérit presque aussi vite que tu le frappes. Quand deux prient ensemble 👥, la guérison s’arrête – appelle tes disciples avec une réunion en plein air 📢🎺. Avant, 🪫 Désarmer aide : cela arrête la guérison un moment. ⏳ Lier la divise par deux et retient les gardiens.',
+      pt: 'Um baluarte 🏰🏰. Sozinho, ele se cura quase tão rápido quanto você o atinge. Quando dois oram juntos 👥, a cura para – chame seus discípulos com uma reunião ao ar livre 📢🎺. Antes ajuda 🪫 Desarmar: para a cura por um tempo. ⏳ Amarrar a reduz pela metade e segura os guardas.',
     ),
     'greatFortress': Tr(
-      'Eine Großfestung 🏯 – zu stark für dich allein. Erst wenn drei zusammen beten 👥 3, hört sie auf zu heilen, und jeder Mitbeter macht die Welle stärker. Ruf deine Jünger mit einer Freiversammlung 📢🎺 zusammen.',
-      'A great fortress 🏯 – too strong for you alone. Only when three pray together 👥 3 does it stop healing, and every one praying along makes the wave stronger. Gather your disciples with an open-air meeting 📢🎺.',
-      es: 'Una gran fortaleza 🏯: demasiado fuerte para ti solo. Solo cuando tres oran juntos 👥 3 deja de curarse, y cada uno que ora contigo hace la onda más fuerte. Reúne a tus discípulos con una reunión al aire libre 📢🎺.',
-      fr: 'Une grande forteresse 🏯 – trop forte pour toi seul. Ce n’est que quand trois prient ensemble 👥 3 qu’elle cesse de guérir, et chaque personne qui prie avec toi rend l’onde plus forte. Rassemble tes disciples avec une réunion en plein air 📢🎺.',
-      pt: 'Uma grande fortaleza 🏯 – forte demais para você sozinho. Só quando três oram juntos 👥 3 ela para de se curar, e cada um que ora junto deixa a onda mais forte. Reúna seus discípulos com uma reunião ao ar livre 📢🎺.',
+      'Eine Großfestung 🏯 – zu stark für dich allein. Erst wenn drei zusammen beten 👥 3, hört sie auf zu heilen, und jeder Mitbeter macht die Welle stärker. Ruf deine Jünger mit einer Freiversammlung 📢🎺 zusammen. 🪫 Entwaffnen stoppt die Heilung eine Weile, ⏳ Binden halbiert sie – gut, wenn ein Jünger das betet.',
+      'A great fortress 🏯 – too strong for you alone. Only when three pray together 👥 3 does it stop healing, and every one praying along makes the wave stronger. Gather your disciples with an open-air meeting 📢🎺. 🪫 Disarm stops the healing for a while, ⏳ Bind halves it – good when a disciple prays that.',
+      es: 'Una gran fortaleza 🏯: demasiado fuerte para ti solo. Solo cuando tres oran juntos 👥 3 deja de curarse, y cada uno que ora contigo hace la onda más fuerte. Reúne a tus discípulos con una reunión al aire libre 📢🎺. 🪫 Desarmar detiene la curación un rato, ⏳ Atar la reduce a la mitad: bueno si un discípulo ora así.',
+      fr: 'Une grande forteresse 🏯 – trop forte pour toi seul. Ce n’est que quand trois prient ensemble 👥 3 qu’elle cesse de guérir, et chaque personne qui prie avec toi rend l’onde plus forte. Rassemble tes disciples avec une réunion en plein air 📢🎺. 🪫 Désarmer arrête la guérison un moment, ⏳ Lier la divise par deux – utile quand un disciple prie ainsi.',
+      pt: 'Uma grande fortaleza 🏯 – forte demais para você sozinho. Só quando três oram juntos 👥 3 ela para de se curar, e cada um que ora junto deixa a onda mais forte. Reúna seus discípulos com uma reunião ao ar livre 📢🎺. 🪫 Desarmar para a cura por um tempo, ⏳ Amarrar a reduz pela metade – bom quando um discípulo ora assim.',
     ),
   };
 

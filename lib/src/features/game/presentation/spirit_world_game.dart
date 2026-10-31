@@ -1797,8 +1797,13 @@ class SpiritWorldGame extends FlameGame
       keyLabel: 'E',
       position: Vector2(size.x - 80, size.y - 80)
     )
-      // In the invisible world ✝️ shows the faith left for prayer waves.
-      ..ring = (() => isSpiritualWorld ? faith / progress.maxFaith : null);
+      // In the invisible world ✝️ shows the faith left for prayer waves as
+      // a faint track; while praying, the strength grows along it – the
+      // longer you pray, the stronger, bounded by your faith.
+      ..ringTrack = (() => isSpiritualWorld ? faith / progress.maxFaith : null)
+      ..ring = (() => isSpiritualWorld && player.holdingTime > 0
+          ? faith / progress.maxFaith * ModifierManager.holdBonus(player.holdingTime) / ModifierManager.maxHoldBonus
+          : null);
     await camera.viewport.add(actionButton);
 
     worldToggleButton = HudButton(
@@ -1863,6 +1868,10 @@ class HudButton extends PositionComponent with TapCallbacks {
   /// left for prayer waves on ✝️ (playtest 2026-10-31: the bar above the
   /// prayer modes covered them on phones). Null = no ring.
   double? Function()? ring;
+
+  /// A faint ring under [ring] up to this share – the most [ring] can grow
+  /// to (e.g. the faith left). Null = none.
+  double? Function()? ringTrack;
   Color ringColor = const Color(0xFFFFD740);
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
   String? keyLabel;
@@ -1925,18 +1934,26 @@ class HudButton extends PositionComponent with TapCallbacks {
 
       // 2b. Ring: how much is left (e.g. 🙏 for prayer waves).
       final share = ring?.call();
-      if (share != null) {
+      final track = ringTrack?.call();
+      if (share != null || track != null) {
         final rect = Rect.fromCircle(center: center, radius: radius + 6);
         canvas.drawCircle(center, radius + 6, Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 6
           ..color = Colors.black.withValues(alpha: 0.45 * opacity));
-        if (share > 0.005) {
+        if (track != null && track > 0.005) {
+          canvas.drawArc(rect, -pi / 2, 2 * pi * track.clamp(0.0, 1.0), false, Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 5
+            ..strokeCap = StrokeCap.round
+            ..color = (track < 0.2 ? Colors.redAccent : ringColor).withValues(alpha: 0.35 * opacity));
+        }
+        if (share != null && share > 0.005) {
           canvas.drawArc(rect, -pi / 2, 2 * pi * share.clamp(0.0, 1.0), false, Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 5
             ..strokeCap = StrokeCap.round
-            ..color = (share < 0.2 ? Colors.redAccent : ringColor).withValues(alpha: opacity));
+            ..color = (track == null && share < 0.2 ? Colors.redAccent : ringColor).withValues(alpha: opacity));
         }
       }
 

@@ -113,6 +113,12 @@ class ModifierManager {
 
   // ---- Advanced Combat Calculations (Issue #9) ----------------------------
 
+  /// Praying longer grows the prayer: +20 % strength per second held, up
+  /// to [maxHoldBonus] after [maxHoldSeconds] (the ring around ✝️).
+  static const double maxHoldSeconds = 20.0;
+  static double get maxHoldBonus => holdBonus(maxHoldSeconds);
+  static double holdBonus(double holdingTime) => 1.0 + holdingTime.clamp(0.0, maxHoldSeconds) * 0.2;
+
   /// Calculates the effective stats for a specific prayer shockwave.
   ///
   /// [mode] The active prayer mode.
@@ -126,8 +132,7 @@ class ModifierManager {
     final base = progress.combatProfile.getFor(mode);
     final faithFactor = (currentFaith / 100.0).clamp(0.1, 2.0);
     
-    // Holding time bonus: 20% strength increase per second held
-    final strengthHoldingBonus = 1.0 + (holdingTime * 0.2);
+    final strengthHoldingBonus = holdBonus(holdingTime);
 
     // Apply global passives
     final radiusMultiplier = zoneSizeSpeedMultiplier; // Ausdauer
