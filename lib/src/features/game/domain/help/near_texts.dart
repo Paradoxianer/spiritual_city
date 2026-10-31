@@ -207,6 +207,24 @@ abstract final class NearTexts {
     ),
   };
 
+  /// Strong strongholds (StrongholdKind.name): too strong to win alone.
+  static const Map<String, Tr> strongholds = {
+    'bulwark': Tr(
+      'Ein Bollwerk 🏰🏰. Allein heilt es fast so schnell, wie du es triffst. Wenn zwei zusammen beten 👥, hört die Heilung auf – ruf deine Jünger mit einer Freiversammlung 📢🎺. „Wo zwei unter euch eins werden …“',
+      'A bulwark 🏰🏰. Alone, it heals almost as fast as you hit it. When two pray together 👥, the healing stops – call your disciples with an open-air meeting 📢🎺. “If two of you agree …”',
+      es: 'Un baluarte 🏰🏰. Solo, se cura casi tan rápido como lo golpeas. Cuando dos oran juntos 👥, la curación se detiene: llama a tus discípulos con una reunión al aire libre 📢🎺. «Si dos de vosotros se pusieren de acuerdo …»',
+      fr: 'Un rempart 🏰🏰. Seul, il guérit presque aussi vite que tu le frappes. Quand deux prient ensemble 👥, la guérison s’arrête – appelle tes disciples avec une réunion en plein air 📢🎺. « Si deux d’entre vous s’accordent … »',
+      pt: 'Um baluarte 🏰🏰. Sozinho, ele se cura quase tão rápido quanto você o atinge. Quando dois oram juntos 👥, a cura para – chame seus discípulos com uma reunião ao ar livre 📢🎺. “Se dois de vós concordarem …”',
+    ),
+    'greatFortress': Tr(
+      'Eine Großfestung 🏯 – zu stark für dich allein. Erst wenn drei zusammen beten 👥 3, hört sie auf zu heilen, und jeder Mitbeter macht die Welle stärker. Ruf deine Jünger mit einer Freiversammlung 📢🎺 zusammen.',
+      'A great fortress 🏯 – too strong for you alone. Only when three pray together 👥 3 does it stop healing, and every one praying along makes the wave stronger. Gather your disciples with an open-air meeting 📢🎺.',
+      es: 'Una gran fortaleza 🏯: demasiado fuerte para ti solo. Solo cuando tres oran juntos 👥 3 deja de curarse, y cada uno que ora contigo hace la onda más fuerte. Reúne a tus discípulos con una reunión al aire libre 📢🎺.',
+      fr: 'Une grande forteresse 🏯 – trop forte pour toi seul. Ce n’est que quand trois prient ensemble 👥 3 qu’elle cesse de guérir, et chaque personne qui prie avec toi rend l’onde plus forte. Rassemble tes disciples avec une réunion en plein air 📢🎺.',
+      pt: 'Uma grande fortaleza 🏯 – forte demais para você sozinho. Só quando três oram juntos 👥 3 ela para de se curar, e cada um que ora junto deixa a onda mais forte. Reúna seus discípulos com uma reunião ao ar livre 📢🎺.',
+    ),
+  };
+
   /// ⚔️ upgrades: 'radius', 'strength', 'duration', 'speed', 'shield', 'helm'.
   static const Map<String, Tr> upgrades = {
     'radius': Tr('Radius: Deine Gebetswelle reicht weiter.', 'Radius: your prayer wave reaches further.', es: 'Radio: tu onda de oración llega más lejos.', fr: 'Rayon : ton onde de prière va plus loin.', pt: 'Raio: sua onda de oração alcança mais longe.'),

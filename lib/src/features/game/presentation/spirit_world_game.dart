@@ -19,6 +19,8 @@ import '../domain/actions/npc_actions.dart';
 import '../domain/interior/interior_layout.dart';
 import '../domain/city_generation/city_overview.dart';
 import '../domain/city_generation/special_building_registry.dart';
+import '../domain/city_generation/district_selector.dart';
+import '../domain/models/stronghold_kind.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../domain/models/daemon_model.dart';
 import '../domain/models/day_stats.dart';
@@ -565,6 +567,9 @@ class SpiritWorldGame extends FlameGame
 
   /// Generated chunks still catching up on missed days, with days left.
   final List<(CityChunk, int)> _catchUps = [];
+
+  /// Districts of the city, for the kind of each stronghold (lazily).
+  DistrictSelector? _districts;
 
   /// 🌱 Disciples praying along (#193).
   final DisciplePrayer disciplePrayer = DisciplePrayer();

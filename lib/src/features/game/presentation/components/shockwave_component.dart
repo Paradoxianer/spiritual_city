@@ -17,6 +17,10 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
   final Color color;
   
   final PrayerMode mode; // Add mode reference
+
+  /// Who prayed this wave ('pastor', 'disciple:<id>') – people praying
+  /// together at a stronghold count (StrongholdKind).
+  final String source;
   
   double _currentRadius = 0;
   
@@ -44,6 +48,7 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
     required this.speed,
     required this.color,
     required this.mode,
+    this.source = 'pastor',
   }) : super(position: position, anchor: Anchor.center, priority: 115);
 
   @override
@@ -125,10 +130,10 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
       final id = 'fort_${s.quarter.key}';
       if (_hitIds.contains(id)) continue;
       final dist = position.distanceTo(s.position);
-      if (dist <= _currentRadius + StrongholdComponent.radius &&
-          dist > _currentRadius - StrongholdComponent.radius) {
+      if (dist <= _currentRadius + s.radius &&
+          dist > _currentRadius - s.radius) {
         final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
-        s.takeHit(strength * 5.0 * falloff, mode);
+        s.takeHit(strength * 5.0 * falloff, mode, source: source);
         _hitIds.add(id);
       }
     }

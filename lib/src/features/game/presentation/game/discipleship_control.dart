@@ -112,6 +112,7 @@ class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
       speed: Discipleship.speed(s),
       color: mode.color.withValues(alpha: 0.7),
       mode: mode,
+      source: 'disciple:${c.model.id}',
     ));
   }
 }

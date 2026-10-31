@@ -104,7 +104,11 @@ extension GameQuarters on SpiritWorldGame {
     }
     if (status.awakened) return;
     if (forts.any((f) => f.quarter == status.quarter)) return;
-    world.add(StrongholdComponent(status.quarter, StrongholdComponent.centerOf(status.quarter)));
+    world.add(StrongholdComponent(
+      status.quarter,
+      StrongholdComponent.centerOf(status.quarter),
+      kind: strongholdKind(status.quarter),
+    ));
   }
 
   /// The stronghold fell: the neighbourhood is awakened.
@@ -118,6 +122,14 @@ extension GameQuarters on SpiritWorldGame {
     quarterStatus.value = null; // recomputed on the next tick
     _toast('🏰💥 ➡️ 🏘️🔥✝️', 'awakened');
   }
+
+  /// 🏰 / 🏰🏰 / 🏯 of [q] – decided by the city (district, city hall, home).
+  StrongholdKind strongholdKind(Quarter q) => StrongholdKind.of(
+        q,
+        district: (_districts ??= DistrictSelector(seed: seedManager.seed)).getDistrictType,
+        homeCell: SpecialBuildingRegistry.pastorHouseCell,
+        cityHallCell: SpecialBuildingRegistry.cityHallCell,
+      );
 
   /// Extra daemon power from awakened neighbourhoods (#178 scaling).
   int get awakeningPower => progress.awakenedQuarters.length * Awakening.powerPerAwakening;
