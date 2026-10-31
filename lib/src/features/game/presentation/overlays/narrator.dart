@@ -13,7 +13,7 @@ class _NarratorBubble extends StatefulWidget {
 
 class _NarratorBubbleState extends State<_NarratorBubble> {
   /// Letters per second of the typewriter.
-  static const double _speed = 45;
+  static const double _speed = 90;
 
   Timer? _timer;
   Timer? _hide;

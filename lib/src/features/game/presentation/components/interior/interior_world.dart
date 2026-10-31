@@ -49,9 +49,6 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
   /// Emoji per station action (from the building's actions).
   final Map<String, String> stationEmoji;
 
-  /// Lets a tap on a station first explain its action (Narrator);
-  /// [go] walks there and acts.
-  final void Function(String action, void Function() go)? explain;
 
   /// A mentor stands in the room when this building offers a lesson.
   final Lesson? lesson;
@@ -60,7 +57,6 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
     required this.building,
     required this.layout,
     required this.stationEmoji,
-    this.explain,
     this.lesson,
   });
 
@@ -373,12 +369,7 @@ class _StationMarker extends PositionComponent with TapCallbacks {
         );
 
   @override
-  void onTapUp(TapUpEvent event) {
-    void go() => room.goAndAct(StationTarget(f));
-    final explain = room.explain;
-    final action = f.action;
-    explain == null || action == null ? go() : explain(action, go);
-  }
+  void onTapUp(TapUpEvent event) => room.goAndAct(StationTarget(f));
 
   @override
   void render(Canvas canvas) {

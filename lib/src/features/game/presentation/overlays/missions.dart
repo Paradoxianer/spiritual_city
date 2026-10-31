@@ -66,10 +66,11 @@ class MissionBoardOverlay extends StatefulWidget {
 class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
   int _tab = 0;
 
-  /// The narrator explains the mission when it is accepted with 📍.
+  /// The narrator explains the mission (tap on the row, or 📍).
   void _narrate(MissionEntry m, String? tracked) {
     final type = m.actionType;
     if (type == null || tracked == m.trackKey) return;
+    Narrator.current.value = null; // a new mission: tell it even if shown
     Narrator.say(
       'mission.${type.name}',
       m.actionEmoji,
@@ -124,6 +125,7 @@ class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
                 valueListenable: game.trackedMission,
                 builder: (context, tracked, _) => _MissionRow(
                   entry: data.entries[i],
+                  onExplain: () => _narrate(data.entries[i], null),
                   tracked: tracked != null && tracked == data.entries[i].trackKey,
                   onTrack: data.entries[i].trackKey == null
                       ? null
@@ -150,7 +152,10 @@ class _MissionRow extends StatelessWidget {
   /// 📍 This mission is accepted and shown on the map.
   final bool tracked;
   final VoidCallback? onTrack;
-  const _MissionRow({required this.entry, this.tracked = false, this.onTrack});
+
+  /// Tap on the row: the narrator explains the mission.
+  final VoidCallback? onExplain;
+  const _MissionRow({required this.entry, this.tracked = false, this.onTrack, this.onExplain});
 
   @override
   Widget build(BuildContext context) {
@@ -213,7 +218,7 @@ class _MissionRow extends StatelessWidget {
         ],
       ),
     );
-    return row;
+    return GestureDetector(behavior: HitTestBehavior.opaque, onTap: onExplain, child: row);
   }
 }
 

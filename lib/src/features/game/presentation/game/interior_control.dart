@@ -39,14 +39,6 @@ extension GameInterior on SpiritWorldGame {
         InteriorLayout.churchOverview: '⛪👥',
         InteriorLayout.upgrades: '⚔️',
       },
-      explain: (type, go) {
-        final a = offered.where((a) => a.type == type).firstOrNull;
-        if (a != null) {
-          Narrator.say('action.${a.id.name}', a.emoji, HelpContent.actionNames[a.id]?.text ?? '',
-              HelpContent.explanations[a.id]?.text);
-        }
-        go();
-      },
       lesson: lessons.isEmpty ? null : lessons.first,
     );
     interior = room;
@@ -146,6 +138,11 @@ extension GameInterior on SpiritWorldGame {
     }
     final b = room.building;
     final a = BuildingActions.find(b.type, action);
+    // The narrator tells what this station does (tap or walk + E).
+    if (a != null) {
+      Narrator.say('action.${a.id.name}', a.emoji, HelpContent.actionNames[a.id]?.text ?? '',
+          HelpContent.explanations[a.id]?.text);
+    }
     if (a != null) {
       final av = a.availability(b, this, difficulty);
       if (!av.isOk) {
