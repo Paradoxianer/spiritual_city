@@ -18,6 +18,7 @@ import '../domain/actions/npc_actions.dart';
 import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/help/help_content.dart';
+import '../domain/help/life_texts.dart';
 import '../domain/help/mission_texts.dart';
 import '../domain/models/mission_model.dart';
 import '../domain/models/base_interactable_entity.dart';

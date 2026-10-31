@@ -519,7 +519,7 @@ class _NpcLifeTimeline extends StatelessWidget {
     final revealed = backstory.revealedCount;
 
     final rows = <Widget>[
-      const _LifeLine(age: 0, story: '👶🎉'),
+      const _LifeLine(age: 0, story: '👶🎉', text: LifeTexts.born),
     ];
     var hidden = 0;
     for (var i = 0; i < backstory.events.length; i++) {
@@ -535,19 +535,20 @@ class _NpcLifeTimeline extends StatelessWidget {
         isCurrent: o == current,
         progress: o == current ? o.workProgress : null,
         faded: o.event.isNegative && o.processed,
+        text: LifeTexts.events[o.event.id],
       ));
     }
     if (hidden > 0) {
-      rows.add(const _LifeLine(story: '❓❓❓', faded: true));
+      rows.add(const _LifeLine(story: '❓❓❓', faded: true, text: LifeTexts.hidden));
     }
 
     // Recent life: what the pastor helped resolve, faith, then today.
     for (final o in backstory.resolvedChallenges) {
       if (o.phase == LifePhase.christ) continue;
-      rows.add(_LifeLine(story: '${o.event.glyph}➡️🌱'));
+      rows.add(_LifeLine(story: '${o.event.glyph}➡️🌱', text: LifeTexts.resolved));
     }
     if (model.isConverted) {
-      rows.add(const _LifeLine(story: '🙏✝️🕊️'));
+      rows.add(const _LifeLine(story: '🙏✝️🕊️', text: LifeTexts.converted));
     }
     for (final o in backstory.events) {
       if (o.phase != LifePhase.christ) continue;
@@ -555,9 +556,10 @@ class _NpcLifeTimeline extends StatelessWidget {
         story: o.event.story,
         isCurrent: o == current,
         progress: o == current ? o.workProgress : null,
+        text: LifeTexts.events[o.event.id],
       ));
     }
-    rows.add(_LifeLine(age: backstory.age, story: '📍'));
+    rows.add(_LifeLine(age: backstory.age, story: '📍', text: LifeTexts.today));
 
     return ListView(children: rows);
   }
@@ -572,12 +574,16 @@ class _LifeLine extends StatelessWidget {
   final int? progress;
   final bool faded;
 
+  /// The line in words (texts on).
+  final Tr? text;
+
   const _LifeLine({
     this.age,
     required this.story,
     this.isCurrent = false,
     this.progress,
     this.faded = false,
+    this.text,
   });
 
   @override
@@ -604,7 +610,19 @@ class _LifeLine extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(story, style: const TextStyle(fontSize: 18)),
+              child: TextMode.on && text != null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(story, style: const TextStyle(fontSize: 18)),
+                        Text(
+                          isCurrent ? '${text!.text} – ${LifeTexts.current.text}' : text!.text,
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12),
+                        ),
+                      ],
+                    )
+                  : Text(story, style: const TextStyle(fontSize: 18)),
             ),
             if (progress != null)
               Text(

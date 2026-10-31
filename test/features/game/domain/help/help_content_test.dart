@@ -1,4 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiritual_city/src/features/game/domain/help/life_texts.dart';
+import 'package:spiritual_city/src/features/game/domain/help/mission_texts.dart';
+import 'package:spiritual_city/src/features/game/domain/models/mission_model.dart';
+import 'package:spiritual_city/src/features/game/domain/models/npc_backstory.dart';
 import 'package:spiritual_city/src/features/game/domain/actions/game_action.dart';
 import 'package:spiritual_city/src/features/game/domain/actions/resource.dart';
 import 'package:spiritual_city/src/features/game/domain/help/help_content.dart';
@@ -39,6 +43,20 @@ void main() {
   test('every lesson task used by a lesson is explained', () {
     for (final l in Lessons.all) {
       expect(HelpContent.taskHowTo[l.task], isNotNull, reason: l.skill.name);
+    }
+  });
+
+  test('every life event and mission kind is told in all five languages', () {
+    for (final e in kLifeEventCatalog) {
+      final t = LifeTexts.events[e.id];
+      expect(t, isNotNull, reason: e.id);
+      expect([t!.es, t.fr, t.pt], everyElement(isNotNull), reason: e.id);
+    }
+    for (final a in ActionType.values) {
+      final t = MissionTexts.task[a];
+      expect(t, isNotNull, reason: a.name);
+      expect([t!.es, t.fr, t.pt], everyElement(isNotNull), reason: a.name);
+      expect(t.de.contains('{n}') || !t.de.contains('×'), isTrue, reason: a.name);
     }
   });
 }
