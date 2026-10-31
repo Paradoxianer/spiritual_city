@@ -40,12 +40,14 @@ abstract final class LessonTexts {
     pt: 'Depois você pratica {n} vezes: {how}',
   );
   static const Tr _study = Tr(
-    'Beim Mentor kannst du auch mit 📖 studieren (📖➡️): je 3 📖 ein Schritt, höchstens die Hälfte.',
-    'At the mentor you can also study with 📖 (📖➡️): one step per 3 📖, at most half.',
-    es: 'Con el mentor también puedes estudiar con 📖 (📖➡️): un paso por cada 3 📖, como mucho la mitad.',
-    fr: 'Chez le mentor, tu peux aussi étudier avec 📖 (📖➡️) : une étape pour 3 📖, au plus la moitié.',
-    pt: 'Com o mentor você também pode estudar com 📖 (📖➡️): um passo a cada 3 📖, no máximo a metade.',
+    'Mit dem Knopf 📖 {cost} lernst du einen Schritt durch Weisheit statt durch Übung – bis zu {half} von {n}. Den Rest musst du wirklich in der Praxis erfahren.',
+    'With the 📖 {cost} button you learn a step through insight instead of practice – up to {half} of {n}. The rest you really have to experience in practice.',
+    es: 'Con el botón 📖 {cost} aprendes un paso por la sabiduría en lugar de la práctica, hasta {half} de {n}. El resto tienes que vivirlo de verdad en la práctica.',
+    fr: 'Avec le bouton 📖 {cost}, tu apprends une étape par la sagesse plutôt que par l’exercice – jusqu’à {half} sur {n}. Le reste, tu dois vraiment le vivre dans la pratique.',
+    pt: 'Com o botão 📖 {cost} você aprende um passo pela sabedoria em vez da prática – até {half} de {n}. O resto você precisa mesmo experimentar na prática.',
   );
+
+
   static const Tr _needs = Tr('Noch gesperrt – vorher brauchst du: {skills}.', 'Still locked – first you need: {skills}.',
       es: 'Aún bloqueado: antes necesitas {skills}.', fr: 'Encore verrouillé – il te faut d’abord : {skills}.',
       pt: 'Ainda bloqueado – antes você precisa de: {skills}.');
@@ -127,7 +129,12 @@ abstract final class LessonTexts {
       }
       parts.add(_where.text.replaceAll('{places}', _places(l)));
       parts.add(_practice.text.replaceAll('{n}', '${l.count}').replaceAll('{how}', how));
-      if (l.count >= 2) parts.add(_study.text);
+      if (l.count >= 2) {
+        parts.add(_study.text
+            .replaceAll('{cost}', '${LessonState.studyInsightCost}')
+            .replaceAll('{half}', '${l.count ~/ 2}')
+            .replaceAll('{n}', '${l.count}'));
+      }
     }
     return parts.join(' ');
   }

@@ -391,29 +391,44 @@ class _UpgradeTile extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.greenAccent, fontSize: 10)),
           const SizedBox(height: 4),
-          GestureDetector(
-            onTap: active ? onBuy : null,
-            child: Opacity(
-              opacity: active ? 1.0 : 0.45,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: active ? Colors.amber.withValues(alpha: 0.25) : Colors.white10,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: active ? Colors.amber.withValues(alpha: 0.7) : Colors.white24,
-                  ),
-                ),
-                child: Text(buyLabel,
-                    style: TextStyle(
-                      color: active ? Colors.amber : Colors.white60,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    )),
-              ),
+          _BuyButton(label: buyLabel, active: active, onTap: onBuy),
+        ],
+      ),
+    );
+  }
+}
+
+/// The 📖 buy button of the ⚔️ cabinet – also used for studying at a
+/// mentor, so both look the same (playtest 2026-10-31).
+class _BuyButton extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final double fontSize;
+  const _BuyButton({required this.label, required this.active, required this.onTap, this.fontSize = 11});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: active ? onTap : null,
+      child: Opacity(
+        opacity: active ? 1.0 : 0.45,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: active ? Colors.amber.withValues(alpha: 0.25) : Colors.white10,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: active ? Colors.amber.withValues(alpha: 0.7) : Colors.white24,
             ),
           ),
-        ],
+          child: Text(label,
+              style: TextStyle(
+                color: active ? Colors.amber : Colors.white60,
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+              )),
+        ),
       ),
     );
   }
