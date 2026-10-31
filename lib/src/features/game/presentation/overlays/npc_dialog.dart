@@ -305,7 +305,11 @@ class _DialogOverlayState extends State<DialogOverlay> {
                     child: _tab == _DialogTab.life
                         ? _NpcLifeTimeline(model: model)
                         : _tab == _DialogTab.grow
-                            ? _DiscipleTab(model: model, game: widget.game)
+                            ? _DiscipleTab(
+                                model: model,
+                                game: widget.game,
+                                onTaught: () => setState(() {}),
+                              )
                             : Scrollbar(
                             controller: _scrollController,
                             thumbVisibility: true,
@@ -339,25 +343,8 @@ class _DialogOverlayState extends State<DialogOverlay> {
     if (_isReadingBible) {
       return _Countdown(emoji: NpcActions.bible.emoji, seconds: _bibleSecondsLeft);
     }
-    if (_tab == _DialogTab.grow) {
-      return _DiscipleActions(
-        model: model,
-        game: widget.game,
-        enabled: !_isWaiting,
-        onTeach: (mode) {
-          _addMessage('🌱${mode.icon}', true);
-          final reaction = widget.game.teachDisciple(model, mode);
-          _addMessage(reaction, false);
-          setState(() {});
-          if (model.isReadyToLeave) {
-            setState(() => _isSessionOver = true);
-            Future.delayed(const Duration(milliseconds: 1500), () {
-              if (mounted) widget.game.closeDialog();
-            });
-          }
-        },
-      );
-    }
+    // 🌱 Teaching happens on the tiles of the tab itself.
+    if (_tab == _DialogTab.grow) return const SizedBox.shrink();
     if (_tab == _DialogTab.life) {
       return _LifeTalkButton(
         model: model,

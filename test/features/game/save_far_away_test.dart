@@ -65,11 +65,8 @@ void main() {
     }
     final shop = worked.first;
     // 🌱 A disciple keeps their gift too.
-    final disciple = g1.chunkManager.allNPCModels.first
-      ..isConverted = true
-      ..discipleGift = PrayerMode.rebuke
-      ..discipleLevel = 2
-      ..discipleTaughtDay = 4;
+    final disciple = g1.chunkManager.allNPCModels.first..isConverted = true;
+    disciple.discipleProfile.getFor(PrayerMode.rebuke).strengthLevel = 2;
     walkTo(g1, far);
     final s1 = await save(g1);
 
@@ -79,9 +76,8 @@ void main() {
     final g3 = await load(s2);
     walkTo(g3, home);
     final d = g3.chunkManager.allNPCModels.firstWhere((n) => n.id == disciple.id);
-    expect(d.discipleGift, PrayerMode.rebuke);
-    expect(d.discipleLevel, 2);
-    expect(d.discipleTaughtDay, 4);
+    expect(d.discipleProfile.getFor(PrayerMode.rebuke).strengthLevel, 2);
+    expect(d.isDisciple, isTrue);
     for (final b in worked) {
       final back = g3.chunkManager.getBuildingModel(b.buildingId);
       expect(back?.interactionCount, 7, reason: '${b.buildingId} ${b.type}');

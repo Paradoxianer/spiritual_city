@@ -1,31 +1,32 @@
 part of '../spirit_world_game.dart';
 
-/// 🌱 Discipleship (#193): teaching Christians a prayer gift with 📖.
+/// 🌱 Discipleship (#193): passing on the pastor's ⚔️ upgrades to
+/// Christians with 📖.
 extension GameDiscipleship on SpiritWorldGame {
-  /// Teaches [npc] one step of [mode]; returns the reaction for the chat.
-  String teachDisciple(NPCModel npc, PrayerMode mode) {
-    final blocker = discipleBlocker(npc, mode, progress.insight, dayStats.day);
-    if (blocker != null) {
-      GameSound.play(Sfx.denied);
-      return blocker;
-    }
-    progress.spendInsight(Discipleship.teachCost(npc.discipleLevel));
-    npc.discipleGift = mode;
-    npc.discipleLevel++;
-    npc.discipleTaughtDay = dayStats.day;
-    npc.currentSessionInteractions++;
-    GameSound.play(Sfx.learned, volume: 0.7);
-    return '🌱${mode.icon}${Discipleship.stars(npc.discipleLevel)}';
-  }
+  String? discipleBlocker(NPCModel npc, PrayerMode mode, CombatStat stat) =>
+      Discipleship.blocker(npc, mode, stat,
+          pastor: progress.combatProfile, learned: progress.skills, insight: progress.insight);
 
-  /// Disciples somewhere in the city (loaded ones).
-  int get discipleCount => chunkManager.allNPCModels.where((n) => n.isDisciple).length;
+  /// Teaches [npc] one level of [stat] in [mode]; false when not possible.
+  bool teachDisciple(NPCModel npc, PrayerMode mode, CombatStat stat) {
+    if (discipleBlocker(npc, mode, stat) != null) {
+      GameSound.play(Sfx.denied);
+      return false;
+    }
+    final set = npc.discipleProfile.getFor(mode);
+    progress.spendInsight(upgradeInsightCost(stat.of(set)));
+    stat.raise(set);
+    GameSound.play(Sfx.learned, volume: 0.7);
+    return true;
+  }
 }
 
 /// Lets disciples near the pastor pray along in the invisible world: each
-/// sends a small wave of its gift every few seconds.
+/// sends a small wave every few seconds, taking turns with the prayer
+/// modes they know.
 class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
   final Map<String, double> _timers = {};
+  final Map<String, int> _turn = {};
   final Random _rng = Random();
   List<NPCComponent> _praying = const [];
   double _scan = 0;
@@ -43,16 +44,14 @@ class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
       _praying = _nearest();
     }
     for (final c in _praying) {
-      final npc = c.model;
-      if (!npc.isDisciple) continue;
+      final id = c.model.id;
       // Start out of step, so they do not all pray at the same moment.
-      var t = _timers[npc.id] ?? _rng.nextDouble() * Discipleship.interval(npc.discipleLevel);
-      t += dt;
-      if (t >= Discipleship.interval(npc.discipleLevel)) {
+      var t = (_timers[id] ?? _rng.nextDouble() * Discipleship.interval) + dt;
+      if (t >= Discipleship.interval) {
         t = 0;
         _wave(c);
       }
-      _timers[npc.id] = t;
+      _timers[id] = t;
     }
   }
 
@@ -67,14 +66,18 @@ class DisciplePrayer extends Component with HasGameReference<SpiritWorldGame> {
   }
 
   void _wave(NPCComponent c) {
-    final mode = c.model.discipleGift!;
-    final level = c.model.discipleLevel;
+    final modes = Discipleship.praying(c.model.discipleProfile);
+    if (modes.isEmpty) return;
+    final i = (_turn[c.model.id] ?? 0) % modes.length;
+    _turn[c.model.id] = i + 1;
+    final mode = modes[i];
+    final s = c.model.discipleProfile.getFor(mode);
     game.world.add(ShockwaveComponent(
       position: c.position.clone(),
-      maxRadius: Discipleship.radius(level),
-      strength: Discipleship.strength(level),
-      duration: 1.0,
-      speed: 70,
+      maxRadius: Discipleship.radius(s),
+      strength: Discipleship.strength(s),
+      duration: Discipleship.duration(s),
+      speed: Discipleship.speed(s),
       color: mode.color.withValues(alpha: 0.7),
       mode: mode,
     ));

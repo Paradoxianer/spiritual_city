@@ -11,6 +11,8 @@ import 'character_sprites.dart';
 import 'daemon_component.dart';
 import '../../domain/models/building_model.dart';
 import '../../domain/models/npc_model.dart';
+import '../../domain/models/discipleship.dart';
+import '../../domain/services/combat_abilities.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
 import '../../domain/services/influence_service.dart';
@@ -584,13 +586,16 @@ class NPCComponent extends PositionComponent
         .withValues(alpha: 0.3 + (faithFactor * 0.4));
     canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, _auraPaint);
 
-    // 🌱 A disciple: a ring in the colour of their prayer gift, thicker
-    // the deeper it is (#193).
-    final gift = model.discipleGift;
-    if (gift != null && model.discipleLevel > 0) {
+    // 🌱 A disciple: a ring in the colour of what they pray most, thicker
+    // the more they have been taught (#193).
+    if (model.isDisciple) {
+      final p = model.discipleProfile;
+      final modes = Discipleship.praying(p)
+        ..sort((a, b) => CombatAbilities.modeLevel(p.getFor(b))
+            .compareTo(CombatAbilities.modeLevel(p.getFor(a))));
       _discipleRing
-        ..color = gift.color.withValues(alpha: 0.85)
-        ..strokeWidth = 1.0 + model.discipleLevel;
+        ..color = modes.first.color.withValues(alpha: 0.85)
+        ..strokeWidth = (1.0 + Discipleship.totalLevel(p) / 2).clamp(1.0, 5.0);
       canvas.drawCircle((size / 2).toOffset(), size.x * 0.95, _discipleRing);
     }
 

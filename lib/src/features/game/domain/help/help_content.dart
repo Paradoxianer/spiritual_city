@@ -83,10 +83,10 @@ abstract final class HelpContent {
       ),
     ),
     (
-      '🌱 ⭐⭐⭐',
+      '🌱 🔒⚔️',
       Tr(
-        'Jüngerschaft (Gespräch mit einem Christen, Tab 🌱): Du lehrst ihn eine Gebetsart, die du selbst kannst – mit 📖 (5 / 10 / 20 📖 für ⭐ / ⭐⭐ / ⭐⭐⭐), ein Schritt pro Tag. In der unsichtbaren Welt betet er dann in deiner Nähe mit: alle paar Sekunden eine kleine Welle seiner Gabe. Erkennbar am farbigen Ring. Je mehr Jünger in einem Viertel wohnen, desto stärker betet es mit (2 Tim 2,2).',
-        'Discipleship (talk with a Christian, tab 🌱): teach them a kind of prayer you know yourself – with 📖 (5 / 10 / 20 📖 for ⭐ / ⭐⭐ / ⭐⭐⭐), one step per day. In the invisible world they then pray along near you: a small wave of their gift every few seconds. You can tell them by the coloured ring. The more disciples live in a quarter, the more it prays along (2 Tim 2:2).',
+        'Jüngerschaft (Gespräch mit einem Christen, Tab 🌱): Dasselbe ⚔️-Menü wie im Pastorenhaus – nur für diesen Menschen. Du gibst weiter, was du selbst gelernt hast, mit 📖 und nie weiter als deine eigene Stufe (🔒⚔️ = erst selbst verbessern). In der unsichtbaren Welt betet er dann in deiner Nähe mit: alle paar Sekunden eine kleine Welle, abwechselnd in den Gebetsarten, die er kann. Erkennbar am farbigen Ring. Je mehr Jünger in einem Viertel wohnen, desto stärker betet es mit (2 Tim 2,2).',
+        'Discipleship (talk with a Christian, tab 🌱): the same ⚔️ menu as in the pastor house – for this person. You pass on what you have learned yourself, with 📖 and never beyond your own level (🔒⚔️ = improve yourself first). In the invisible world they then pray along near you: a small wave every few seconds, taking turns with the kinds of prayer they know. You can tell them by the coloured ring. The more disciples live in a quarter, the more it prays along (2 Tim 2:2).',
       ),
     ),
     (

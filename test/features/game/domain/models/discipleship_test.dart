@@ -20,31 +20,31 @@ void main() {
         [PrayerMode.liberation, PrayerMode.rebuke]);
   });
 
-  test('only Christians, one gift, one step per day, paid with 📖', () {
-    expect(discipleBlocker(_npc(christian: false), PrayerMode.liberation, 99, 1), '✝️🔒');
+  test('never beyond the pastor\'s own level, paid like the pastor\'s upgrades', () {
+    final pastor = CombatProfile();
+    final learned = LearnedSkills();
+    String? why(NPCModel n, PrayerMode m, CombatStat s, int insight) =>
+        Discipleship.blocker(n, m, s, pastor: pastor, learned: learned, insight: insight);
+
+    expect(why(_npc(christian: false), PrayerMode.liberation, CombatStat.radius, 99), '✝️🔒');
     final n = _npc();
-    expect(discipleBlocker(n, PrayerMode.liberation, 4, 1), '🚫📖');
-    expect(discipleBlocker(n, PrayerMode.liberation, 5, 1), isNull);
-    n
-      ..discipleGift = PrayerMode.liberation
-      ..discipleLevel = 1
-      ..discipleTaughtDay = 1;
+    expect(why(n, PrayerMode.rebuke, CombatStat.radius, 99), '🎓', reason: '🫸 not learned');
+    expect(why(n, PrayerMode.liberation, CombatStat.radius, 99), '🔒⚔️',
+        reason: 'the pastor has no 🎯 yet');
+    pastor.getFor(PrayerMode.liberation).radiusLevel = 2;
+    expect(why(n, PrayerMode.liberation, CombatStat.radius, 0), '🚫📖');
+    expect(why(n, PrayerMode.liberation, CombatStat.radius, upgradeInsightCost(0)), isNull);
+    CombatStat.radius.raise(n.discipleProfile.getFor(PrayerMode.liberation));
+    CombatStat.radius.raise(n.discipleProfile.getFor(PrayerMode.liberation));
     expect(n.isDisciple, isTrue);
-    expect(discipleBlocker(n, PrayerMode.liberation, 99, 1), '📅');
-    expect(discipleBlocker(n, PrayerMode.rebuke, 99, 2), '✅', reason: 'one gift per person');
-    expect(discipleBlocker(n, PrayerMode.liberation, 9, 2), '🚫📖', reason: 'next day');
-    expect(discipleBlocker(n, PrayerMode.liberation, 10, 2), isNull);
-    n.discipleLevel = Discipleship.maxLevel;
-    expect(discipleBlocker(n, PrayerMode.liberation, 99, 3), '✅');
+    expect(why(n, PrayerMode.liberation, CombatStat.radius, 99), '🔒⚔️');
+    expect(Discipleship.praying(n.discipleProfile), [PrayerMode.liberation]);
   });
 
-  test('deeper gifts pray more often, wider and stronger – but far below the pastor', () {
-    for (var l = 1; l < Discipleship.maxLevel; l++) {
-      expect(Discipleship.interval(l + 1), lessThan(Discipleship.interval(l)));
-      expect(Discipleship.radius(l + 1), greaterThan(Discipleship.radius(l)));
-      expect(Discipleship.strength(l + 1), greaterThan(Discipleship.strength(l)));
-    }
-    expect(Discipleship.strength(Discipleship.maxLevel), lessThan(25 * 0.4));
-    expect(Discipleship.radius(Discipleship.maxLevel), lessThan(140));
+  test('a disciple prays far weaker than the pastor', () {
+    final s = CombatModifierSet(radiusLevel: 5, strengthLevel: 5, speedLevel: 5);
+    // The pastor's wave: radius 140, strength 25 (full faith), × upgrades.
+    expect(Discipleship.radius(s), lessThan(140 * s.radius));
+    expect(Discipleship.strength(s), lessThan(25 * s.strength * 0.3));
   });
 }

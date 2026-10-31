@@ -105,14 +105,15 @@ class NPCModel extends BaseInteractableEntity {
   /// both – care *and* prayer (Mark 9:29).
   bool possessionWeakened = false;
 
-  /// 🌱 The prayer gift the pastor taught this Christian, and how deep
-  /// (see Discipleship).
-  PrayerMode? discipleGift;
-  int discipleLevel = 0;
-
-  /// Game day of the last teaching step (one per day).
-  int? discipleTaughtDay;
-  bool get isDisciple => discipleGift != null && discipleLevel > 0;
+  /// 🌱 What the pastor has taught this Christian: the ⚔️ upgrades per
+  /// prayer mode, never beyond the pastor's own (see Discipleship).
+  CombatProfile discipleProfile = CombatProfile();
+  bool get isDisciple {
+    for (final s in discipleProfile.modes.values) {
+      if (s.radiusLevel + s.strengthLevel + s.durationLevel + s.speedLevel > 0) return true;
+    }
+    return false;
+  }
 
   /// Unlocks (but does not fill) this NPC's "Als Christ" chapter once
   /// [isConverted] is true. Safe to call unconditionally, as often as

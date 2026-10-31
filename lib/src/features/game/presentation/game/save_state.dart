@@ -137,12 +137,10 @@ extension GameSaveState on SpiritWorldGame {
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
     if (saved['possessed'] is bool) npc.possessed = saved['possessed'] as bool;
     npc.possessionWeakened = saved['possWeak'] as bool? ?? false;
-    final gift = saved['gift'];
-    for (final m in PrayerMode.values) {
-      if (m.id == gift) npc.discipleGift = m;
+    if (saved['disciple'] is Map) {
+      npc.discipleProfile =
+          CombatProfile.fromJson((saved['disciple'] as Map).cast<String, dynamic>());
     }
-    npc.discipleLevel = (saved['giftLv'] as num?)?.toInt() ?? 0;
-    npc.discipleTaughtDay = (saved['taughtDay'] as num?)?.toInt();
     // NPC backstory (docs/game_design/npc_backstory.md): re-trigger in case
     // the save says converted but the fresh spawn roll didn't (idempotent –
     // a no-op if NPCRegistry already unlocked it for a pre-converted spawn).
@@ -243,9 +241,7 @@ extension GameSaveState on SpiritWorldGame {
           if (npc.faith < NPCModel.possessionFaithThreshold || !npc.possessed)
             'possessed': npc.possessed,
           if (npc.possessionWeakened)    'possWeak': true,
-          if (npc.isDisciple)            'gift': npc.discipleGift!.id,
-          if (npc.isDisciple)            'giftLv': npc.discipleLevel,
-          if (npc.isDisciple)            'taughtDay': npc.discipleTaughtDay,
+          if (npc.isDisciple)            'disciple': npc.discipleProfile.toJson(),
           'posX': npcComp.position.x,
           'posY': npcComp.position.y,
           if (npc.activeMission != null) 'mission': npc.activeMission!.toJson(),
