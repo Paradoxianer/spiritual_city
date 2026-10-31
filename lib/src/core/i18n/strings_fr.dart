@@ -132,7 +132,6 @@ const Map<String, String> stringsFr = {
   'loading.verse3': '« La vérité vous affranchira » – Jean 8,32',
   'loading.verse4': '« Je puis tout par celui qui me fortifie » – Philippiens 4,13',
   'loading.verse5': '« Dieu est amour » – 1 Jean 4,8',
-  'lesson.study': 'Étudier',
   'keymap.title': 'Touches',
 
   // Lessons – Louis Segond 1910

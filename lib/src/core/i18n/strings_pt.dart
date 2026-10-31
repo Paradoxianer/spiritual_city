@@ -132,7 +132,6 @@ const Map<String, String> stringsPt = {
   'loading.verse3': '“A verdade vos libertará” – João 8:32',
   'loading.verse4': '“Posso todas as coisas naquele que me fortalece” – Filipenses 4:13',
   'loading.verse5': '“Deus é amor” – 1 João 4:8',
-  'lesson.study': 'Estudar',
   'keymap.title': 'Teclas',
 
   // Lessons – Almeida Revista e Corrigida

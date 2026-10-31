@@ -24,100 +24,134 @@ class LessonOverlay extends StatelessWidget {
     final running = state.active == lesson.skill;
     const cost = LessonState.studyInsightCost;
     final studyLeft = state.studyLeft(lesson);
+    final done = running ? state.progress : 0;
+    // What it gives: the part of the unlock sentence after ➡️.
+    final gives = lesson.unlocks.contains('➡️')
+        ? lesson.unlocks.substring(lesson.unlocks.indexOf('➡️') + '➡️'.length).trim()
+        : lesson.unlocks;
+    final canStudy = game.progress.insight >= cost;
 
     return OverlayShell(
       theme: OverlayTheme.missions,
-      leading: Text('🎓${lesson.skill.emoji}', style: const TextStyle(fontSize: 24)),
+      leading: Text('🎓 ${LessonTexts.skillName(lesson.skill)}',
+          style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
       onClose: game.closeLesson,
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // What it unlocks, as an emoji sentence.
-            Center(
-              child: Text(lesson.unlocks, style: const TextStyle(fontSize: 26)),
+            // Compact rows, each "symbol: content" (playtest 2026-10-31):
+            // 🎁 what you get, 💪 what to practise, 📖 the shortcut.
+            _LessonRow(
+              icon: '🎁',
+              onTap: () => game.explainLesson(lesson, force: true),
+              child: Text(gives, style: const TextStyle(fontSize: 22, color: Colors.white)),
             ),
-            const SizedBox(height: 14),
-            // The Bible verse – the lesson's only real text.
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(10),
-                border: const Border(left: BorderSide(color: Color(0xFFFFD54F), width: 3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            _LessonRow(
+              icon: '💪',
+              onTap: () => game.explainLesson(lesson, force: true),
+              child: Row(
                 children: [
-                  Text(
-                    '„${AppStrings.get(lesson.verseKey)}“',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                      height: 1.4,
+                  Text('${lesson.task.emoji} ×${lesson.count}',
+                      style: const TextStyle(fontSize: 22, color: Colors.white)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: lesson.count == 0 ? 0 : done / lesson.count,
+                        minHeight: 8,
+                        backgroundColor: Colors.white12,
+                        color: const Color(0xFFFFD54F),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    BibleRef.localized(lesson.reference),
-                    style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 12),
-                  ),
+                  const SizedBox(width: 8),
+                  Text('$done/${lesson.count}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            // The practice task: 👂 ×3, or how far it is: 👂 2/6
-            Center(
-              child: Text(
-                running
-                    ? '${lesson.task.emoji} ${state.progress}/${lesson.count}'
-                    : '${lesson.task.emoji} ×${lesson.count}',
-                style: const TextStyle(color: Colors.white, fontSize: 22),
+            if (studyLeft > 0 || state.studied > 0)
+              _LessonRow(
+                icon: '📖',
+                child: Row(
+                  children: [
+                    Text('+1 ${lesson.task.emoji}', style: const TextStyle(fontSize: 18, color: Colors.white)),
+                    const SizedBox(width: 10),
+                    Text('${running ? state.studied : 0}/${lesson.count ~/ 2}',
+                        style: const TextStyle(color: Colors.white60, fontSize: 13)),
+                    const Spacer(),
+                    if (studyLeft > 0)
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFB300),
+                          foregroundColor: Colors.black,
+                          disabledBackgroundColor: Colors.white12,
+                          disabledForegroundColor: Colors.white38,
+                          minimumSize: const Size(64, 34),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        onPressed: canStudy ? () => game.studyLesson(lesson) : null,
+                        child: const Text('📖 $cost', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                  ],
+                ),
               ),
+            const SizedBox(height: 10),
+            // The Bible verse – small, below.
+            Text(
+              '„${AppStrings.get(lesson.verseKey)}“ – ${BibleRef.localized(lesson.reference)}',
+              style: const TextStyle(color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic, height: 1.4),
             ),
             if (replaces != null && replaces != lesson) ...[
               const SizedBox(height: 6),
-              Center(
-                child: Text(
-                  '🎓${replaces.skill.emoji} ➡️ 🎓${lesson.skill.emoji}',
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
-                ),
+              Text(
+                '🎓${replaces.skill.emoji} ➡️ 🎓${lesson.skill.emoji}',
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
               ),
             ],
           ],
         ),
       ),
-      actions: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (!running)
-            ActionButton(
-              emoji: '🎓✅',
-              highlighted: true,
-              keyIndex: 1,
-              onTap: () => game.startLesson(lesson),
-            ),
-          // 📖 Study with the mentor: one step for 📖, at most half – the
-          // same tile as in the ⚔️ cabinet (playtest 2026-10-31).
-          if (studyLeft > 0) ...[
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 110,
-              child: _UpgradeTile(
-                emoji: '📖➡️${lesson.task.emoji}',
-                label: AppStrings.get('lesson.study'),
-                level: state.studied,
-                badge: '${running ? state.studied : 0}/${lesson.count ~/ 2}',
-                effect: '+1 ${lesson.task.emoji}',
-                insight: game.progress.insight,
-                cost: cost,
-                onBuy: () => game.studyLesson(lesson),
+      actions: running
+          ? null
+          : Center(
+              child: ActionButton(
+                emoji: '🎓✅',
+                highlighted: true,
+                keyIndex: 1,
+                onTap: () => game.startLesson(lesson),
               ),
             ),
+    );
+  }
+}
+
+/// One row of the lesson card: "🎁:  content".
+class _LessonRow extends StatelessWidget {
+  final String icon;
+  final Widget child;
+  final VoidCallback? onTap;
+  const _LessonRow({required this.icon, required this.child, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 44,
+              child: Text('$icon:', style: const TextStyle(fontSize: 20, color: Colors.white70)),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: child),
           ],
-        ],
+        ),
       ),
     );
   }

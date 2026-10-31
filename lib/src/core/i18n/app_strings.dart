@@ -134,7 +134,6 @@ class AppStrings {
       'loading.verse3': '„Die Wahrheit wird euch frei machen“ – Joh 8,32',
       'loading.verse4': '„Ich vermag alles durch den, der mich mächtig macht, Christus“ – Phil 4,13',
       'loading.verse5': '„Gott ist die Liebe“ – 1 Joh 4,8',
-      'lesson.study': 'Studieren',
       'keymap.title': 'Tastenbelegung',
       // ── Lern-Missionen (release_roadmap.md §3.9). Verse: Luther 1912 ──
       'lesson.pastoralCare.verse':
@@ -295,7 +294,6 @@ class AppStrings {
       'loading.verse3': '"The truth shall make you free" – John 8:32',
       'loading.verse4': '"I can do all things through Christ" – Philippians 4:13',
       'loading.verse5': '"God is love" – 1 John 4:8',
-      'lesson.study': 'Study',
       'keymap.title': 'Key bindings',
       // ── Learning missions (release_roadmap.md §3.9). Verses: KJV ──
       'lesson.pastoralCare.verse':

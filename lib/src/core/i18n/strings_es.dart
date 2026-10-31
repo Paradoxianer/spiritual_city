@@ -132,7 +132,6 @@ const Map<String, String> stringsEs = {
   'loading.verse3': '«La verdad os libertará» – Juan 8:32',
   'loading.verse4': '«Todo lo puedo en Cristo» – Filipenses 4:13',
   'loading.verse5': '«Dios es amor» – 1 Juan 4:8',
-  'lesson.study': 'Estudiar',
   'keymap.title': 'Teclas',
 
   // Lessons – Reina-Valera 1909
