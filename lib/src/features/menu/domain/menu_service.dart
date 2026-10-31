@@ -37,6 +37,7 @@ class MenuService {
     _isTutorialCompleted = settings.tutorialCompleted;
     GameSound.enabled = settings.soundOn;
     _consentVersion = settings.consentVersion;
+    TextMode.enabled.value = settings.showTexts;
     _log.info('MenuService init: lang=${settings.language}, '
         'difficulty=${settings.lastDifficulty}, '
         'tutorialCompleted=$_isTutorialCompleted');
@@ -75,6 +76,15 @@ class MenuService {
   Future<void> setSoundOn(bool on) async {
     GameSound.enabled = on;
     if (!on) GameAmbience.stop();
+    await _persistSettings();
+  }
+
+  // --------------- Texts besides the emoji ---------------------------------
+
+  bool get showTexts => TextMode.on;
+
+  Future<void> setShowTexts(bool on) async {
+    TextMode.enabled.value = on;
     await _persistSettings();
   }
 
@@ -153,6 +163,7 @@ class MenuService {
       tutorialCompleted: _isTutorialCompleted,
       soundOn: GameSound.enabled,
       consentVersion: _consentVersion,
+      showTexts: TextMode.on,
     );
     await _repository.saveSettings(settings);
   }

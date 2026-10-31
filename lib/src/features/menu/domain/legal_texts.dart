@@ -15,7 +15,7 @@ abstract final class LegalTexts {
   static const int consentVersion = 1;
 
   static String get(String key) =>
-      (_texts[AppStrings.currentLanguage] ?? _texts['de']!)[key] ?? _texts['de']![key] ?? key;
+      _texts[AppStrings.currentLanguage]?[key] ?? _texts['en']![key] ?? _texts['de']![key] ?? key;
 
   static const Map<String, Map<String, String>> _texts = {
     'de': {
@@ -84,6 +84,8 @@ Technik
       'credits.licenses': 'Lizenzen der Bibliotheken',
       'settings.sound': 'Töne',
       'settings.language': 'Sprache',
+      'settings.texts': 'Texte anzeigen',
+      'settings.texts.hint': 'Beschriftungen und Erklärungen zu den Emojis – aus: nur Emojis',
       'settings.info': 'Info',
     },
     'en': {
@@ -149,6 +151,8 @@ Technology
       'credits.licenses': 'Library licences',
       'settings.sound': 'Sound',
       'settings.language': 'Language',
+      'settings.texts': 'Show texts',
+      'settings.texts.hint': 'Captions and explanations for the emoji – off: emoji only',
       'settings.info': 'Info',
     },
   };

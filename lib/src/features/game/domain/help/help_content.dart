@@ -13,9 +13,19 @@ import '../services/learning_service.dart';
 class Tr {
   final String de;
   final String en;
-  const Tr(this.de, this.en);
+  final String? es;
+  final String? fr;
+  final String? pt;
+  const Tr(this.de, this.en, {this.es, this.fr, this.pt});
 
-  String get text => AppStrings.currentLanguage == 'en' ? en : de;
+  /// In the current language; missing translations fall back to English.
+  String get text => switch (AppStrings.currentLanguage) {
+        'de' => de,
+        'es' => es ?? en,
+        'fr' => fr ?? en,
+        'pt' => pt ?? en,
+        _ => en,
+      };
 }
 
 /// The explanations behind the emoji, for the ❓ help screen. Lists are

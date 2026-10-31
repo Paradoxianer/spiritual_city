@@ -1,8 +1,17 @@
+import 'strings_es.dart';
+import 'strings_fr.dart';
+import 'strings_pt.dart';
+
 /// Simple i18n string lookup system without external packages.
 ///
-/// Supports DE and EN. All UI text should be retrieved via [AppStrings.get].
+/// DE and EN here, ES / FR / PT in their own files; a key missing in a
+/// language falls back to English. All UI text should be retrieved via
+/// [AppStrings.get].
 class AppStrings {
   static final Map<String, Map<String, String>> _translations = {
+    'es': stringsEs,
+    'fr': stringsFr,
+    'pt': stringsPt,
     'de': {
       // Main Menu
       'menu.title': 'SpiritWorld City',
@@ -337,6 +346,6 @@ class AppStrings {
   /// Looks up a translation key in the current language.
   /// Falls back to the key itself if not found.
   static String get(String key) {
-    return _translations[_currentLanguage]?[key] ?? key;
+    return _translations[_currentLanguage]?[key] ?? _translations['en']?[key] ?? key;
   }
 }
