@@ -344,6 +344,11 @@ class _UpgradeTile extends StatelessWidget {
   /// Set when a mentor has to teach the next step first.
   final Availability? lock;
 
+  /// 📖 price, if not the upgrade price of [level] (e.g. studying at a
+  /// mentor); [badge] replaces "Lv [level]".
+  final int? cost;
+  final String? badge;
+
   const _UpgradeTile({
     required this.emoji,
     required this.label,
@@ -352,11 +357,13 @@ class _UpgradeTile extends StatelessWidget {
     required this.insight,
     required this.onBuy,
     this.lock,
+    this.cost,
+    this.badge,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cost = upgradeInsightCost(level);
+    final cost = this.cost ?? upgradeInsightCost(level);
     final canAfford = insight >= cost;
     final locked = lock;
     final active = locked == null && canAfford;
@@ -384,7 +391,7 @@ class _UpgradeTile extends StatelessWidget {
               color: Colors.amber.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: Text('Lv $level', style: const TextStyle(color: Colors.amber, fontSize: 9)),
+            child: Text(badge ?? 'Lv $level', style: const TextStyle(color: Colors.amber, fontSize: 9)),
           ),
           const SizedBox(height: 2),
           Text(effect,

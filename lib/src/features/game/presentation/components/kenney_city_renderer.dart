@@ -371,7 +371,7 @@ abstract final class KenneyCityRenderer {
     // permission): the original outline (docs/art), red, with the inner rim
     // as a thick white line; no lettering at this size.
     void redShield() {
-      final h = 17 * u;
+      final h = 21 * u;
       canvas.drawPath(RedShieldPath.outer(r.center.translate(u, u), h), _symbolShadow);
       canvas.drawPath(RedShieldPath.outer(r.center, h), _shieldRed);
       canvas.drawPath(

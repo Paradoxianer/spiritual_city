@@ -99,17 +99,22 @@ class LessonOverlay extends StatelessWidget {
               keyIndex: 1,
               onTap: () => game.startLesson(lesson),
             ),
-          // 📖 Study with the mentor: one step for 📖, at most half.
+          // 📖 Study with the mentor: one step for 📖, at most half – the
+          // same tile as in the ⚔️ cabinet (playtest 2026-10-31).
           if (studyLeft > 0) ...[
             const SizedBox(width: 12),
-            ActionButton(
-              emoji: '📖➡️${lesson.task.emoji}',
-              hint: '−$cost📖  ×$studyLeft',
-              availability: game.progress.insight >= cost
-                  ? const AvailableNow()
-                  : const CannotAfford(Resource.insight),
-              keyIndex: running ? 1 : 2,
-              onTap: () => game.studyLesson(lesson),
+            SizedBox(
+              width: 110,
+              child: _UpgradeTile(
+                emoji: '📖➡️${lesson.task.emoji}',
+                label: AppStrings.get('lesson.study'),
+                level: state.studied,
+                badge: '${running ? state.studied : 0}/${lesson.count ~/ 2}',
+                effect: '+1 ${lesson.task.emoji}',
+                insight: game.progress.insight,
+                cost: cost,
+                onBuy: () => game.studyLesson(lesson),
+              ),
             ),
           ],
         ],
