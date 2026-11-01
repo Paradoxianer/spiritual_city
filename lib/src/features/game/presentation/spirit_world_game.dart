@@ -704,6 +704,35 @@ class SpiritWorldGame extends FlameGame
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
 
+  /// [p], or the nearest free cell when a saved position lies inside a
+  /// building – the city layout can change between versions (playtest
+  /// 2026-11-01: streets no longer cut through houses). Probes a scratch
+  /// grid, so the real chunks still load with their saved states.
+  Vector2 _walkableNear(Vector2 p) {
+    const cellSize = 32.0;
+    final probe = CityGrid();
+    bool free(int x, int y) {
+      final chunk = probe.getOrCreateChunk(
+          (x / CityChunk.chunkSize).floor(), (y / CityChunk.chunkSize).floor());
+      if (chunk.cells.isEmpty) generator.generateChunk(chunk);
+      return probe.isWalkable(x, y);
+    }
+
+    final cx = (p.x / cellSize).floor(), cy = (p.y / cellSize).floor();
+    if (free(cx, cy)) return p;
+    for (var r = 1; r <= 12; r++) {
+      for (var dy = -r; dy <= r; dy++) {
+        for (var dx = -r; dx <= r; dx++) {
+          if (dx.abs() != r && dy.abs() != r) continue;
+          if (free(cx + dx, cy + dy)) {
+            return Vector2((cx + dx + 0.5) * cellSize, (cy + dy + 0.5) * cellSize);
+          }
+        }
+      }
+    }
+    return p;
+  }
+
   @override
   Future<void> onLoad() async {
     GameSound.preload();
@@ -771,6 +800,7 @@ class SpiritWorldGame extends FlameGame
               (savedState['playerY'] as num).toDouble(),
             )
           : Vector2(7040, 7168);
+      if (hasSavedState) player.position = _walkableNear(player.position);
       await world.add(player);
 
       chunkManager = ChunkManager(

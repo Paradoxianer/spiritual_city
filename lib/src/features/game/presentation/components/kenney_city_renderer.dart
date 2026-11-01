@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/cache.dart';
 
+import '../../domain/city_generation/lot_generator.dart';
 import '../../domain/city_generation/district_selector.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/city_cell.dart';
@@ -423,7 +424,7 @@ abstract final class KenneyCityRenderer {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /// Lot pitch per district (mirrors `LotGenerator._gridPitch`).
+  /// Lot pitch per district (the same as `LotGenerator.gridPitch`).
   /// Whether the facade at ([wx], [wy]) shows the lot's door – walking
   /// into it enters the building (playtest 2026-10-18).
   static bool isDoor(CityCell? Function(int wx, int wy) lookup, int wx, int wy) {
@@ -442,11 +443,7 @@ abstract final class KenneyCityRenderer {
     return wx - rootX == pitch ~/ 2;
   }
 
-  static int _lotPitch(DistrictType? d) => switch (d) {
-        DistrictType.slums => 6,
-        DistrictType.outskirts => 10,
-        _ => 8,
-      };
+  static int _lotPitch(DistrictType? d) => LotGenerator.gridPitch(d ?? DistrictType.suburbs);
 
   /// Lot root from the building id (`b_<x>_<y>`), else from the pitch.
   static (int, int) _lotRoot(String id, int wx, int wy, int pitch) {
@@ -455,7 +452,7 @@ abstract final class KenneyCityRenderer {
       final x = int.tryParse(parts[1]), y = int.tryParse(parts[2]);
       if (x != null && y != null) return (x, y);
     }
-    return ((wx ~/ pitch) * pitch, (wy ~/ pitch) * pitch);
+    return (wx - wx % pitch, wy - wy % pitch);
   }
 
   /// Well-mixed per-cell hash (neighbouring cells differ).

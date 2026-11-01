@@ -48,8 +48,12 @@ class CityGenerator {
           continue;
         }
 
-        final lotContent = _lotGenerator.generateLotContent(worldX, worldY, district, cellRand);
-        chunk.cells['$x,$y'] = _createCell(worldX, worldY, lotContent, district, _getDensity(district));
+        // One district per lot block, so a district border never splits a
+        // building (playtest 2026-11-01).
+        final (bx, by) = LotGenerator.blockCentre(worldX, worldY);
+        final lotDistrict = _districtSelector.getDistrictType(bx, by);
+        final lotContent = _lotGenerator.generateLotContent(worldX, worldY, lotDistrict, cellRand);
+        chunk.cells['$x,$y'] = _createCell(worldX, worldY, lotContent, lotDistrict, _getDensity(lotDistrict));
       }
     }
   }
