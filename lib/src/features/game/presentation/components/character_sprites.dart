@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flame/cache.dart';
 import 'package:flame/components.dart';
 
+import '../../../../core/utils/image_retry.dart';
+
 /// Kenney "RPG Urban Pack" figures (CC0, assets/LICENSES.md) for the pastor
 /// and the people of the city (#13/#18, release_roadmap.md §3.7).
 ///
@@ -23,11 +25,11 @@ abstract final class CharacterSprites {
 
   static Future<void> load(Images images) async {
     if (_sheet != null) return;
-    try {
-      _sheet = await images.load(asset);
-    } catch (_) {
-      _sheet = null; // components fall back to their drawn shapes
-    }
+    // Until it arrives, components fall back to their drawn shapes.
+    await loadImageWithRetry(images, asset, (i) {
+      _sheet = i;
+      _cache.clear();
+    });
   }
 
   /// Figure for a person (never the pastor's), deterministic from [hash].

@@ -15,6 +15,10 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
   static const double cellSize = CellComponent.cellSize;
 
   Picture? _cachedPicture;
+
+  /// Whether [_cachedPicture] was drawn with the Kenney sheet – a chunk
+  /// drawn with the fallback shapes is redrawn once the sheet arrives.
+  bool _cachedWithSheet = false;
   late final SpiritualRenderer _spiritualRenderer;
 
   // Pre-allocated paint for the glow overlay (never allocate in render/update).
@@ -105,8 +109,10 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
     // Wenn wir in der unsichtbaren Welt sind, rendert der SpiritualRenderer (als Child)
     // Wir rendern hier nur die physische Welt, falls sichtbar oder transparent
     if (!game.isSpiritualWorld) {
-      if (_cachedPicture == null) {
+      if (_cachedPicture == null || (!_cachedWithSheet && KenneyCityRenderer.ready)) {
+        _cachedPicture?.dispose();
         _createCache();
+        _cachedWithSheet = KenneyCityRenderer.ready;
       }
       if (_cachedPicture != null) {
         canvas.drawPicture(_cachedPicture!);

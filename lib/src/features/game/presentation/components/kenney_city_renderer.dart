@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/cache.dart';
 
+import '../../../../core/utils/image_retry.dart';
 import '../../domain/city_generation/lot_generator.dart';
 import '../../domain/city_generation/district_selector.dart';
 import '../../domain/models/cell_object.dart';
@@ -35,11 +36,7 @@ abstract final class KenneyCityRenderer {
 
   static Future<void> load(Images images) async {
     if (_sheet != null) return;
-    try {
-      _sheet = await images.load(asset);
-    } catch (_) {
-      _sheet = null;
-    }
+    await loadImageWithRetry(images, asset, (i) => _sheet = i);
   }
 
   // ── Sheet coordinates (column, row) ──────────────────────────────────────
