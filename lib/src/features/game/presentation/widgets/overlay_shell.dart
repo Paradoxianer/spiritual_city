@@ -65,6 +65,10 @@ class OverlayTheme {
 /// Handles safe area, margins, max sizes per [placement] and a close button
 /// with a full touch target.
 class OverlayShell extends StatelessWidget {
+  /// Height of the narrator's bubble at the bottom (0 = none): menus leave
+  /// that room free instead of lying under it (playtest 2026-11-01: ⚔️).
+  static final ValueNotifier<double> bottomReserve = ValueNotifier(0);
+
   final Widget leading;
   final Widget? title;
   final List<Widget> trailing;
@@ -127,6 +131,18 @@ class OverlayShell extends StatelessWidget {
       ),
     );
 
+    return ValueListenableBuilder<double>(
+      valueListenable: bottomReserve,
+      builder: (context, reserve, _) => AnimatedPadding(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(bottom: placement == OverlayPlacement.top ? 0 : reserve),
+        child: _frame(media, landscape, panel),
+      ),
+    );
+  }
+
+  Widget _frame(MediaQueryData media, bool landscape, Widget panel) {
     return SafeArea(
       child: LayoutBuilder(builder: (context, constraints) {
         final h = constraints.maxHeight.isFinite ? constraints.maxHeight : media.size.height;

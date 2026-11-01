@@ -65,10 +65,23 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
     _hide = Timer(Duration(milliseconds: (seconds * 1000).round()), () => Narrator.hide(widget.line.key));
   }
 
+  /// The bubble itself, measured for [OverlayShell.bottomReserve].
+  final GlobalKey _box = GlobalKey();
+
+  /// Tells open menus how much room the bubble needs at the bottom.
+  void _reportHeight() {
+    final r = _box.currentContext?.findRenderObject();
+    if (!mounted || r is! RenderBox || !r.hasSize) return;
+    final h = r.size.height + 10 + MediaQuery.of(context).padding.bottom;
+    if ((OverlayShell.bottomReserve.value - h).abs() > 1) OverlayShell.bottomReserve.value = h;
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
     _hide?.cancel();
+    final reserve = OverlayShell.bottomReserve;
+    WidgetsBinding.instance.addPostFrameCallback((_) => reserve.value = 0);
     super.dispose();
   }
 
@@ -82,6 +95,7 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
   Widget build(BuildContext context) {
     final line = widget.line;
     final text = _shown >= _length ? line.text : line.text.substring(0, _safeCut(line.text, _shown));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
     // Its own layer: redrawing the bubble never repaints the game.
     return RepaintBoundary(
       child: SafeArea(
@@ -101,6 +115,7 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
                 child: GestureDetector(
                 onTap: _showAll,
                 child: Container(
+                  key: _box,
                   padding: const EdgeInsets.fromLTRB(14, 6, 6, 12),
                   decoration: BoxDecoration(
                     color: const Color(0xF0FFF8E1),
@@ -134,9 +149,19 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
                               Text(line.title,
                                   style: const TextStyle(
                                       color: Color(0xFF5D4037), fontWeight: FontWeight.bold, fontSize: 13)),
-                            Text(
-                              text,
-                              style: const TextStyle(color: Color(0xFF3E2723), fontSize: 14, height: 1.35),
+                            // The whole text invisible underneath: the bubble has its
+                            // final size at once and never grows while typing.
+                            Stack(
+                              children: [
+                                Text(
+                                  line.text,
+                                  style: const TextStyle(color: Color(0x00000000), fontSize: 14, height: 1.35),
+                                ),
+                                Text(
+                                  text,
+                                  style: const TextStyle(color: Color(0xFF3E2723), fontSize: 14, height: 1.35),
+                                ),
+                              ],
                             ),
                           ],
                         ),
