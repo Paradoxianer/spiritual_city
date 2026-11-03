@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
@@ -368,16 +369,83 @@ class NPCComponent extends PositionComponent
   void _followPastor(double dt) {
     gatherLeft -= dt;
     final spot = game.player.position + Vector2(cos(_circleAngle), sin(_circleAngle)) * _circleRadius;
-    final diff = spot - position;
-    final d = diff.length;
-    if (d < 3) return;
-    // Hurry from far away, step along once close.
-    final speed = d > 200 ? 160.0 : 90.0;
-    position.add(diff.normalized() * min(d, speed * dt));
+    final d = (spot - position).length;
+    if (d >= 3) {
+      // Hurry from far away, step along once close.
+      final speed = d > 200 ? 160.0 : 90.0;
+      if (d <= CellComponent.cellSize * 1.5) {
+        // The last steps into the circle.
+        _gatherPath = null;
+        position.add((spot - position).normalized() * min(d, speed * dt));
+      } else {
+        // Along streets and lawns, not over the roofs (playtest 2026-11-03).
+        _replanIn -= dt;
+        if (_gatherPath == null || _replanIn <= 0) {
+          _gatherPath = _walkablePath(position, spot);
+          _replanIn = 2.0;
+        }
+        final path = _gatherPath;
+        if (path != null && path.isNotEmpty) {
+          final step = path.first - position;
+          if (step.length <= speed * dt) {
+            position.setFrom(path.first);
+            path.removeAt(0);
+          } else {
+            position.add(step.normalized() * speed * dt);
+          }
+        }
+      }
+    }
     if (!isGathered) {
+      _gatherPath = null;
       _targetPosition = null;
       _aiUpdateTimer = 0;
     }
+  }
+
+  /// Way to the open-air meeting, cell centre by cell centre.
+  List<Vector2>? _gatherPath;
+  double _replanIn = 0;
+
+  /// Shortest way over walkable cells from [from] to (next to) [to] – a
+  /// breadth-first search in the box around both (gatherRadius ≈ 40
+  /// cells, so at most ~10 000 cells); null if there is none.
+  List<Vector2>? _walkablePath(Vector2 from, Vector2 to) {
+    const cs = CellComponent.cellSize;
+    final sx = (from.x / cs).floor(), sy = (from.y / cs).floor();
+    final tx = (to.x / cs).floor(), ty = (to.y / cs).floor();
+    const margin = 8;
+    final x0 = min(sx, tx) - margin, y0 = min(sy, ty) - margin;
+    final w = (sx - tx).abs() + 2 * margin + 1, h = (sy - ty).abs() + 2 * margin + 1;
+    if (w * h > 20000) return null;
+    final prev = Int32List(w * h)..fillRange(0, w * h, -2);
+    int idx(int x, int y) => (y - y0) * w + (x - x0);
+    final queue = <int>[idx(sx, sy)];
+    prev[queue.first] = -1;
+    int? goal;
+    for (var head = 0; head < queue.length; head++) {
+      final i = queue[head];
+      final x = x0 + i % w, y = y0 + i ~/ w;
+      // Next to the spot is enough: it may be a house the pastor stands by.
+      if ((x - tx).abs() + (y - ty).abs() <= 1) {
+        goal = i;
+        break;
+      }
+      for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+        final nx = x + dx, ny = y + dy;
+        if (nx < x0 || ny < y0 || nx >= x0 + w || ny >= y0 + h) continue;
+        final n = idx(nx, ny);
+        if (prev[n] != -2 || !game.grid.isWalkable(nx, ny)) continue;
+        prev[n] = i;
+        queue.add(n);
+      }
+    }
+    if (goal == null) return null;
+    final path = <Vector2>[];
+    for (var i = goal; prev[i] != -1; i = prev[i]) {
+      path.add(Vector2((x0 + i % w + 0.5) * cs, (y0 + i ~/ w + 0.5) * cs));
+    }
+    return path.reversed.toList();
   }
 
   void _moveTowardsTarget(double dt) {

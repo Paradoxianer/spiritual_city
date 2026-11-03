@@ -207,6 +207,15 @@ abstract final class NearTexts {
     ),
   };
 
+  /// 📍 A place marked on the city map.
+  static const Tr pin = Tr(
+    'Dein Ziel 📍 ist markiert. Der Pfeil oben links und die kleine Karte zeigen dir den Weg. Tippe es auf der Karte noch einmal an, um es zu entfernen.',
+    'Your destination 📍 is marked. The arrow at the top left and the small map show you the way. Tap it on the map again to remove it.',
+    es: 'Tu destino 📍 está marcado. La flecha arriba a la izquierda y el minimapa te muestran el camino. Tócalo otra vez en el mapa para quitarlo.',
+    fr: 'Ta destination 📍 est marquée. La flèche en haut à gauche et la petite carte te montrent le chemin. Touche-la encore sur la carte pour la retirer.',
+    pt: 'Seu destino 📍 está marcado. A seta no canto superior esquerdo e o minimapa mostram o caminho. Toque nele de novo no mapa para removê-lo.',
+  );
+
   /// Strong strongholds (StrongholdKind.name): too strong to win alone.
   static const Map<String, Tr> strongholds = {
     'bulwark': Tr(

@@ -32,6 +32,7 @@ enum ActionId {
   houseVisit,
   discipleshipGroup,
   blessHousehold,
+  fellowship,
 
   // ── Church ──────────────────────────────────────────────────────────────
   sundayService,

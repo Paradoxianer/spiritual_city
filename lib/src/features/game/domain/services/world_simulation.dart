@@ -21,12 +21,16 @@ class Resident {
   const Resident(this.npc, this.x, this.y, {this.baseStability = 0});
 }
 
-/// A house in the world simulation: its holiness acts on its door cell.
+/// A house in the world simulation: its holiness acts on the cells
+/// around it ([radius], BuildingModel.influenceRadius), strongest at the
+/// house – a holy household holds its street (playtest 2026-11-03: on the
+/// door cell alone it changed nothing).
 class HouseAnchor {
   final double holiness;
   final int x;
   final int y;
-  const HouseAnchor(this.holiness, this.x, this.y);
+  final int radius;
+  const HouseAnchor(this.holiness, this.x, this.y, {this.radius = 3});
 }
 
 /// Difficulty and modifier knobs of the simulation.
@@ -91,7 +95,8 @@ abstract final class WorldSimulation {
   /// Hostile people (faith < −50) darken their cell per faith point.
   static const double hostilePerFaith = 0.002;
 
-  /// A house's holiness (−100 … 100) on its door cell, per 100 points.
+  /// A house's holiness (−100 … 100) at its centre, per 100 points; it
+  /// fades to nothing at the edge of its radius.
   static const double housePer100 = 0.03;
 
   // ── The ground on people ────────────────────────────────────────────────
@@ -195,8 +200,17 @@ abstract final class WorldSimulation {
 
   static void _houses(CityGrid grid, List<HouseAnchor> anchors) {
     for (final a in anchors) {
-      final cell = grid.getCell(a.x, a.y);
-      if (cell != null) _add(cell, a.holiness / 100 * housePer100);
+      final centre = a.holiness / 100 * housePer100;
+      if (centre == 0) continue;
+      final r = a.radius;
+      for (var dy = -r; dy <= r; dy++) {
+        for (var dx = -r; dx <= r; dx++) {
+          final d = math.sqrt((dx * dx + dy * dy).toDouble());
+          if (d > r) continue;
+          final cell = grid.getCell(a.x + dx, a.y + dy);
+          if (cell != null) _add(cell, centre * (1 - d / (r + 1)));
+        }
+      }
     }
   }
 

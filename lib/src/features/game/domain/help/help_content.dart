@@ -253,6 +253,13 @@ abstract final class HelpContent {
       fr: 'Tu animes un groupe de disciples (−🙏). Les chrétiens de la maison grandissent dans la foi, tu gagnes de la sagesse (📖) – et les environs s’éclairent durablement dans le monde invisible.',
       pt: 'Você conduz um grupo de discipulado (−🙏). Os cristãos da casa crescem na fé, você ganha sabedoria (📖) – e os arredores ficam iluminados de forma duradoura no mundo invisível.',
     ),
+    ActionId.fellowship: Tr(
+      'Hier wohnen nur Christen. Du betest mit deinen Geschwistern und schöpfst neue Kraft (🙏) – wie zu Hause. „Wo zwei oder drei versammelt sind in meinem Namen, da bin ich mitten unter ihnen.“ So musst du zum Auftanken nicht jedes Mal nach Hause.',
+      'Only Christians live here. You pray with your brothers and sisters and draw new strength (🙏) – as at home. “Where two or three gather in my name, there am I with them.” So you need not go home every time to refill.',
+      es: 'Aquí solo viven cristianos. Oras con tus hermanos y recibes nuevas fuerzas (🙏), como en casa. «Donde están dos o tres congregados en mi nombre, allí estoy yo en medio de ellos.» Así no tienes que volver a casa cada vez para recargar.',
+      fr: 'Ici n’habitent que des chrétiens. Tu pries avec tes frères et sœurs et tu reprends des forces (🙏) – comme à la maison. « Là où deux ou trois sont assemblés en mon nom, je suis au milieu d’eux. » Ainsi, tu n’as pas besoin de rentrer à chaque fois pour te ressourcer.',
+      pt: 'Aqui só moram cristãos. Você ora com seus irmãos e recebe novas forças (🙏) – como em casa. “Onde estiverem dois ou três reunidos em meu nome, aí estou eu no meio deles.” Assim você não precisa voltar para casa toda vez para recarregar.',
+    ),
     ActionId.blessHousehold: Tr(
       'Du segnest alle Haushalte im Wohnblock (−🙏). Viele Menschen werden auf einmal berührt, und um das Haus wird es für eine Weile heller.',
       'You bless every household in the block (−🙏). Many people are touched at once, and for a while it grows brighter around the building.',
@@ -537,6 +544,7 @@ abstract final class HelpContent {
     ActionId.housePray: Tr('Für das Haus beten', 'Pray for the home', es: 'Orar por la casa', fr: 'Prier pour la maison', pt: 'Orar pela casa'),
     ActionId.houseVisit: Tr('Kaffeebesuch', 'Coffee visit', es: 'Visita con café', fr: 'Visite autour d’un café', pt: 'Visita com café'),
     ActionId.discipleshipGroup: Tr('Jüngerschaftsgruppe', 'Discipleship group', es: 'Grupo de discipulado', fr: 'Groupe de disciples', pt: 'Grupo de discipulado'),
+    ActionId.fellowship: Tr('Gebet mit Geschwistern', 'Prayer with fellow believers', es: 'Oración con los hermanos', fr: 'Prière avec les frères et sœurs', pt: 'Oração com os irmãos'),
     ActionId.blessHousehold: Tr('Haushalte segnen', 'Bless households', es: 'Bendecir hogares', fr: 'Bénir les foyers', pt: 'Abençoar lares'),
     ActionId.sundayService: Tr('Gottesdienst', 'Sunday service', es: 'Culto dominical', fr: 'Culte du dimanche', pt: 'Culto de domingo'),
     ActionId.worship: Tr('Lobpreis', 'Worship', es: 'Alabanza', fr: 'Louange', pt: 'Louvor'),
@@ -597,6 +605,7 @@ abstract final class HelpContent {
     ActionId.houseVisit: Tr('Kaffeebesuch – ab einigen Besuchen. Du wirst bewirtet: ❤️ und 🍞.', 'Coffee visit – after a few visits. You are looked after: ❤️ and 🍞.', es: 'Visita con café, tras algunas visitas. Te atienden: ❤️ y 🍞.', fr: 'Visite autour d’un café – après quelques visites. On prend soin de toi : ❤️ et 🍞.', pt: 'Visita com café – depois de algumas visitas. Cuidam de você: ❤️ e 🍞.'),
     ActionId.discipleshipGroup:
         Tr('Hauskreis – wenn hier ein Christ wohnt. Gibt 📖.', 'Home group – when a Christian lives here. Gives 📖.', es: 'Grupo en casa, cuando aquí vive un cristiano. Da 📖.', fr: 'Groupe de maison – quand un chrétien habite ici. Donne 📖.', pt: 'Grupo nos lares – quando um cristão mora aqui. Dá 📖.'),
+    ActionId.fellowship: Tr('Gebet mit Geschwistern – wenn hier nur Christen wohnen. Gibt 🙏 wie zu Hause.', 'Prayer with fellow believers – when only Christians live here. Gives 🙏 as at home.', es: 'Oración con los hermanos, cuando aquí solo viven cristianos. Da 🙏 como en casa.', fr: 'Prière avec les frères et sœurs – quand seuls des chrétiens habitent ici. Donne 🙏 comme à la maison.', pt: 'Oração com os irmãos – quando só moram cristãos aqui. Dá 🙏 como em casa.'),
     ActionId.blessHousehold: Tr('Alle Haushalte im Wohnblock segnen.', 'Bless every household in the block.', es: 'Bendecir todos los hogares del bloque.', fr: 'Bénir tous les foyers de l’immeuble.', pt: 'Abençoar todos os lares do prédio.'),
     // ── Church ──
     ActionId.sundayService: Tr('Gottesdienst halten (−📦 −❤️): viel 🙏, die Umgebung wird hell. Zählt für Lektionen mit ⛪.', 'Hold a service (−📦 −❤️): lots of 🙏, the area grows bright. Counts for ⛪ lessons.', es: 'Celebrar un culto (−📦 −❤️): mucho 🙏, el entorno se ilumina. Cuenta para las lecciones ⛪.', fr: 'Célébrer un culte (−📦 −❤️) : beaucoup de 🙏, les environs s’éclairent. Compte pour les leçons ⛪.', pt: 'Realizar um culto (−📦 −❤️): muito 🙏, os arredores se iluminam. Conta para as lições ⛪.'),

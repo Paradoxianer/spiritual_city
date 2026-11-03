@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'dart:math' show Random, min, pi;
+import 'dart:typed_data';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -308,6 +309,56 @@ class SpiritWorldGame extends FlameGame
       _log.warning('City map failed: $e');
       _cityMapLoading = false;
     }
+  }
+
+  /// 🌐 The invisible world on the city map (playtest 2026-11-03): known
+  /// ground – generated this session or saved – green where it is free,
+  /// red where it is dark; unknown ground stays clear.
+  final ValueNotifier<ui.Image?> spiritMapImage = ValueNotifier(null);
+
+  void refreshSpiritMap() {
+    const n = CityOverview.size, step = CityOverview.step, r = CityOverview.radius;
+    final sum = Float32List(n * n);
+    final count = Uint16List(n * n);
+    void add(int x, int y, double s) {
+      final i = ((x + r) / step).floor(), j = ((y + r) / step).floor();
+      if (i < 0 || j < 0 || i >= n || j >= n) return;
+      sum[j * n + i] += s;
+      count[j * n + i]++;
+    }
+
+    final loaded = <String>{};
+    for (final c in grid.getLoadedChunks()) {
+      if (c.cells.isEmpty) continue;
+      loaded.add(c.id);
+      for (final cell in c.cells.values) {
+        add(cell.x, cell.y, cell.spiritualState);
+      }
+    }
+    for (final e in (_savedCellStates ?? const <String, Map<String, dynamic>>{}).entries) {
+      final comma = e.key.indexOf(',');
+      if (comma < 0) continue;
+      final x = int.tryParse(e.key.substring(0, comma)), y = int.tryParse(e.key.substring(comma + 1));
+      if (x == null || y == null) continue;
+      final chunk = '${(x / CityChunk.chunkSize).floor()},${(y / CityChunk.chunkSize).floor()}';
+      if (loaded.contains(chunk)) continue; // the live state is newer
+      add(x, y, (e.value['s'] as num?)?.toDouble() ?? 0);
+    }
+    final px = Uint8List(n * n * 4);
+    for (var k = 0; k < n * n; k++) {
+      if (count[k] == 0) continue;
+      final v = (sum[k] / count[k]).clamp(-1.0, 1.0);
+      final c = Color.lerp(const Color(0xFF1E1E28), v >= 0 ? const Color(0xFF3CE07A) : const Color(0xFFE53935),
+          0.3 + v.abs() * 0.7)!;
+      px[k * 4] = (c.r * 255).round();
+      px[k * 4 + 1] = (c.g * 255).round();
+      px[k * 4 + 2] = (c.b * 255).round();
+      px[k * 4 + 3] = 235;
+    }
+    ui.decodeImageFromPixels(px, n, n, ui.PixelFormat.rgba8888, (img) {
+      spiritMapImage.value?.dispose();
+      spiritMapImage.value = img;
+    });
   }
 
   /// Tutorial step from the save (resumed instead of starting over).
@@ -1557,6 +1608,8 @@ class SpiritWorldGame extends FlameGame
     conversionToastMessage.dispose();
     isFainting.dispose();
     isWon.dispose();
+    spiritMapImage.value?.dispose();
+    spiritMapImage.dispose();
     wakeupMessage.dispose();
     tutorialService.dispose();
     super.onRemove();

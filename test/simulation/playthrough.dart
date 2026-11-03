@@ -51,6 +51,39 @@ class PlaythroughConfig {
   /// Whether the bot spends insight on Liberation radius and strength.
   final bool buysUpgrades;
 
+  /// How the bot talks: [DialogStyle.mixed] (📖, 🙏 when likely accepted,
+  /// 👂, 💬) or [DialogStyle.bibleThenCounsel] (📖 in every slot, the last
+  /// one 👂 – the way the author plays).
+  final DialogStyle dialog;
+
+  /// Houses act on the ground: holiness from the residents' faith on the
+  /// door cell (WorldSimulation.housePer100), plus [blessHouses] = the bot
+  /// prays in every Christian household's house until it is fully holy.
+  final bool houses;
+  final bool blessHouses;
+
+  /// After a conversion the bot works through the person's whole life
+  /// story (🗣️ life talks) – stability against darkness.
+  final bool lifeTalks;
+
+  /// 🚌 Buses: longer ways ride at [busSpeedFactor] × walking speed after
+  /// [busWaitSeconds] (walk to the stop included).
+  final bool bus;
+  final double busSpeedFactor;
+  final double busWaitSeconds;
+
+  /// Refill faith in the nearest church (🎶 worship, 7 s, +56 🙏) instead
+  /// of always walking home.
+  final bool churches;
+
+  /// 🙏👥 Prayer with the brothers and sisters: a house whose residents
+  /// are all Christians refills faith (+30 in 5 s) like the pastor house.
+  final bool fellowship;
+
+  /// Holding test: the bot wins only the home quarter, then rests this many
+  /// days – how long does it stay light among dark neighbours?
+  final int holdDays;
+
   const PlaythroughConfig({
     this.seed = 959865928,
     this.quarterRadius = 1,
@@ -59,8 +92,20 @@ class PlaythroughConfig {
     this.tapSeconds = 2.0,
     this.closeSeconds = 4.0,
     this.buysUpgrades = true,
+    this.dialog = DialogStyle.mixed,
+    this.houses = false,
+    this.blessHouses = false,
+    this.lifeTalks = false,
+    this.bus = false,
+    this.busSpeedFactor = 4,
+    this.busWaitSeconds = 25,
+    this.holdDays = 0,
+    this.churches = false,
+    this.fellowship = false,
   });
 }
+
+enum DialogStyle { mixed, bibleThenCounsel }
 
 /// One row of the report (one game day).
 class DayReport {
@@ -183,6 +228,14 @@ class Playthrough {
           final chunk = grid.getOrCreateChunk(cx, cy);
           _generator.generateChunk(chunk);
           _chunks.add(chunk);
+          for (final cell in chunk.cells.values) {
+            final d = cell.data;
+            if (d is BuildingData &&
+                (d.type == BuildingType.church || d.type == BuildingType.cathedral) &&
+                _churchIds.add(d.buildingId)) {
+              _churchCells.add((cell.x, cell.y));
+            }
+          }
           for (final npc in registry.getNPCsInChunk(cx, cy, chunk: chunk)) {
             people.add(npc);
             _homeCell[npc.id] =
@@ -194,6 +247,9 @@ class Playthrough {
       }
     }
   }
+
+  final Set<String> _churchIds = {};
+  final List<(int, int)> _churchCells = [];
 
   static int _qDist(Quarter a, Quarter b) => (a.qx - b.qx).abs() + (a.qy - b.qy).abs();
 
@@ -239,7 +295,7 @@ class Playthrough {
       for (final p in people)
         Resident(p, _pos[p.id]!.$1, _pos[p.id]!.$2,
             baseStability: WorldSimulation.baseStability(
-              resolvedChallenges: 0,
+              resolvedChallenges: p.isChristian ? p.backstory.resolvedChallenges.length : 0,
               interactions: p.interactionCount,
               churchMember: _members.contains(p.id),
               discipleLevel: 0,
@@ -248,12 +304,54 @@ class Playthrough {
     WorldSimulation.simulateDay(grid,
         chunks: _chunks,
         residents: residents,
+        anchors: config.houses ? _anchors() : const [],
         tuning: WorldTuning(personFactor: switch (config.difficulty) {
           Difficulty.easy => 1.5,
           Difficulty.normal => 1.0,
           Difficulty.hard => 0.5,
         }));
     _report();
+  }
+
+  /// Households: the residents of one building, at the door of their home.
+  late final Map<String, List<NPCModel>> _households = () {
+    final m = <String, List<NPCModel>>{};
+    for (final p in people) {
+      final id = p.homeBuildingId;
+      if (id != null) m.putIfAbsent(id, () => []).add(p);
+    }
+    return m;
+  }();
+
+  /// Own faith of houses the bot prayed in (BuildingModel.faith).
+  final Map<String, double> _houseFaith = {};
+
+  /// Holiness as BuildingModel.holiness: own faith + half the residents' average.
+  List<HouseAnchor> _anchors() => [
+        for (final e in _households.entries)
+          HouseAnchor(
+            ((_houseFaith[e.key] ?? 0) + e.value.fold(0.0, (s, p) => s + p.faith) / e.value.length * 0.5)
+                .clamp(-100.0, 100.0),
+            _homeCell[e.value.first.id]!.$1,
+            _homeCell[e.value.first.id]!.$2,
+          ),
+      ];
+
+  /// Prays in every house whose people are all Christians until it is fully
+  /// holy (🙏 in the house: +10 own faith per visit of ~10 s).
+  void _blessHouses(Quarter q) {
+    for (final e in _households.entries) {
+      final door = _homeCell[e.value.first.id]!;
+      if (!q.containsCell(door.$1, door.$2)) continue;
+      if (!e.value.every((p) => p.isChristian)) continue;
+      if ((_houseFaith[e.key] ?? 0) >= 100) continue;
+      _doing = 'häuser ${q.key}';
+      _walkTo(door);
+      while ((_houseFaith[e.key] ?? 0) < 100) {
+        _spend(10, 'häuser');
+        _houseFaith[e.key] = (_houseFaith[e.key] ?? 0) + 10;
+      }
+    }
   }
 
   void _report() {
@@ -302,9 +400,17 @@ class Playthrough {
   // ════════════════════════════════════════════════════════════════════════
 
   /// Along the street grid: Manhattan distance.
-  void _walkTo((int, int) to) {
+  void _walkTo((int, int) to, {String activity = 'gehen'}) {
     final d = (to.$1 - _at.$1).abs() + (to.$2 - _at.$2).abs();
-    if (d > 0) _spend(d / walkCellsPerSecond, 'gehen');
+    if (d > 0) {
+      final walk = d / walkCellsPerSecond;
+      final ride = config.busWaitSeconds + d / (walkCellsPerSecond * config.busSpeedFactor);
+      if (config.bus && ride < walk) {
+        _spend(ride, 'bus');
+      } else {
+        _spend(walk, activity);
+      }
+    }
     _at = to;
   }
 
@@ -312,8 +418,46 @@ class Playthrough {
   void _refill() {
     final back = _at;
     final before = _doing;
+    if (config.fellowship) {
+      (int, int)? best;
+      for (final e in _households.entries) {
+        if (!e.value.every((p) => p.isChristian)) continue;
+        final door = _homeCell[e.value.first.id]!;
+        if (best == null || _dist(door) < _dist(best)) best = door;
+      }
+      if (best != null && _dist(best) < _dist(_home) && health >= 50) {
+        _doing = 'geschwister';
+        _walkTo(best, activity: 'heimweg');
+        while (faith < maxFaith) {
+          _spend(5, 'zuhause');
+          faith = math.min(maxFaith, faith + 30);
+        }
+        _buyUpgrades();
+        _walkTo(back, activity: 'heimweg');
+        _doing = before;
+        return;
+      }
+    }
+    if (config.churches && _churchCells.isNotEmpty) {
+      final church = _churchCells.reduce((a, b) => _dist(a) <= _dist(b) ? a : b);
+      if (_dist(church) < _dist(_home)) {
+        _doing = 'kirche';
+        _walkTo(church, activity: 'heimweg');
+        while (faith < maxFaith) {
+          _spend(7, 'zuhause');
+          faith = math.min(maxFaith, faith + 56);
+        }
+        // Health only at home – if low, go there too.
+        if (health >= 50) {
+          _buyUpgrades();
+          _walkTo(back, activity: 'heimweg');
+          _doing = before;
+          return;
+        }
+      }
+    }
     _doing = 'zuhause';
-    _walkTo(_home);
+    _walkTo(_home, activity: 'heimweg');
     while (faith < maxFaith) {
       _spend(bibleAtHomeSeconds, 'zuhause');
       faith = math.min(maxFaith, faith + bibleAtHomeFaith);
@@ -323,7 +467,7 @@ class Playthrough {
       health = math.min(100, health + sleepHealth);
     }
     _buyUpgrades();
-    _walkTo(back);
+    _walkTo(back, activity: 'heimweg');
     _doing = before;
   }
 
@@ -388,11 +532,34 @@ class Playthrough {
           _members.add(npc.id);
           _brighten(home, 5, 0.35);
           _spend(config.closeSeconds, 'gespräche');
+          if (config.lifeTalks) _lifeTalks(npc);
           return;
         }
         if (!r.performed) break;
       }
       _spend(config.closeSeconds, 'gespräche');
+    }
+  }
+
+  /// 🗣️ Works through [npc]'s life story, session after session.
+  void _lifeTalks(NPCModel npc) {
+    final at = _pos[npc.id]!;
+    for (var s = 0; s < 30 && npc.backstory.currentChallenge != null; s++) {
+      npc.resetSession();
+      while (!npc.isReadyToLeave && npc.backstory.currentChallenge != null) {
+        if (faith < 10 || health < 20) {
+          _refill();
+          break;
+        }
+        final r = _dialog.perform('lifetalk', npc,
+            spiritualState: _stateAt(at), playerFaith: faith, playerHealth: health, playerMaterials: 0);
+        faith = (faith + r.playerFaithDelta).clamp(0.0, maxFaith);
+        health = (health + r.playerHealthDelta).clamp(0.0, 100.0);
+        insight += r.insightDelta;
+        _spend(config.tapSeconds, 'lebensgespräche');
+        if (!r.performed) break;
+      }
+      _spend(config.closeSeconds, 'lebensgespräche');
     }
   }
 
@@ -404,6 +571,10 @@ class Playthrough {
   String _choose(NPCModel npc, double state) {
     String pick() {
       if (!npc.isChristian && npc.faith + state * 50 > 50) return 'convert';
+      if (config.dialog == DialogStyle.bibleThenCounsel) {
+        final last = npc.currentSessionInteractions == npc.maxSessionInteractions - 1;
+        return last && health > 30 ? 'counsel' : 'bible';
+      }
       if (npc.sessionCountFor('bible') == 0) return 'bible';
       final accept = npc.faith / 100 * 0.6 + 0.2 + (npc.interactionCount * 0.015).clamp(0.0, 0.25);
       if (npc.sessionCountFor('pray') == 0 && accept >= 0.55) return 'pray';
@@ -559,9 +730,23 @@ class Playthrough {
   // The whole game
   // ════════════════════════════════════════════════════════════════════════
 
+  /// Free share of [q]'s ground now.
+  double freeShareOf(Quarter q) {
+    final states = [
+      for (var y = q.qy * Quarter.sizeCells; y < (q.qy + 1) * Quarter.sizeCells; y++)
+        for (var x = q.qx * Quarter.sizeCells; x < (q.qx + 1) * Quarter.sizeCells; x++)
+          if (grid.getCell(x, y) case final c?) c.spiritualState,
+    ];
+    return Liberation.ofStates(states).share;
+  }
+
+  /// Free share of the home quarter per day of the holding test.
+  final List<double> held = [];
+
   PlaythroughResult run() {
     _build();
     _report();
+    if (config.holdDays > 0) return _holdTest();
     try {
       // Pass after pass over all quarters (nearest first) until everything
       // is light – an earlier quarter may have fallen back meanwhile.
@@ -573,6 +758,7 @@ class Playthrough {
           _convertQuarter(q, upToShare: Awakening.christianShare);
           if (!awakened.contains(q.key) && !fortsGivenUp.contains(q.key) && _fortOpen(q)) _fight(q);
           _convertQuarter(q);
+          if (config.blessHouses) _blessHouses(q);
         }
         if (_won()) break;
         // Nothing left to do on this pass (all gave up?) – let a day pass.
@@ -585,5 +771,37 @@ class Playthrough {
     _doing = _won() ? 'gewonnen' : 'ende';
     _report();
     return PlaythroughResult(_won(), day, reports, fortAttempts, fortsGivenUp, timeSpent);
+  }
+
+  PlaythroughResult _holdTest() {
+    final home = quarters.first;
+    try {
+      _liberateQuarter(home);
+      _convertQuarter(home, upToShare: Awakening.christianShare);
+      if (_fortOpen(home)) _fight(home);
+      for (var pass = 0; pass < 6; pass++) {
+        _convertQuarter(home);
+        if (config.blessHouses) _blessHouses(home);
+        _liberateQuarter(home);
+      }
+      _doing = 'ruhen';
+      final end = day + config.holdDays;
+      while (day < end) {
+        _spend(GameTime.gameDaySeconds, 'warten');
+        held.add(freeShareOf(home));
+      }
+    } on _Stop {
+      // max days
+    }
+    return PlaythroughResult(false, day, reports, fortAttempts, fortsGivenUp, timeSpent);
+  }
+
+  /// The most shaken Christians on any day.
+  int get peakShaken {
+    var m = 0;
+    for (final r in reports) {
+      if (r.shaken > m) m = r.shaken;
+    }
+    return m;
   }
 }

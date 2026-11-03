@@ -37,6 +37,7 @@ extension GameWorld on SpiritWorldGame {
               b.buildingModel.holiness,
               (b.position.x / CellComponent.cellSize).floor(),
               (b.position.y / CellComponent.cellSize).floor(),
+              radius: b.buildingModel.influenceRadius.round(),
             ),
       ];
 
