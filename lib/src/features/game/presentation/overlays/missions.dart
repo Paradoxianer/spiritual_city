@@ -20,6 +20,12 @@ class MissionEntry {
   /// 📍 key to accept / follow this mission (see GameMissionTracking).
   final String? trackKey;
 
+  /// Kind of mission – for the explanation in sentences (texts on).
+  final ActionType? actionType;
+
+  /// A person's mission (else a building's).
+  final bool isPerson;
+
   const MissionEntry({
     required this.targetEmoji,
     required this.targetName,
@@ -32,6 +38,8 @@ class MissionEntry {
     this.targetCount = 1,
     this.address,
     this.trackKey,
+    this.actionType,
+    this.isPerson = false,
   });
 }
 
@@ -57,6 +65,25 @@ class MissionBoardOverlay extends StatefulWidget {
 
 class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
   int _tab = 0;
+
+  /// The narrator explains the mission (tap on the row, or 📍).
+  void _narrate(MissionEntry m, String? tracked) {
+    final type = m.actionType;
+    if (type == null || tracked == m.trackKey) return;
+    Narrator.current.value = null; // a new mission: tell it even if shown
+    Narrator.say(
+      'mission.${type.name}',
+      m.actionEmoji,
+      m.isPerson ? m.targetName.split(' ').first : (m.address ?? ''),
+      MissionTexts.explain(
+        type: type,
+        count: m.targetCount,
+        who: m.isPerson && m.targetName.isNotEmpty ? m.targetName.split(' ').first : null,
+        where: m.address,
+        tracked: true,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,10 +125,14 @@ class _MissionBoardOverlayState extends State<MissionBoardOverlay> {
                 valueListenable: game.trackedMission,
                 builder: (context, tracked, _) => _MissionRow(
                   entry: data.entries[i],
+                  onExplain: () => _narrate(data.entries[i], null),
                   tracked: tracked != null && tracked == data.entries[i].trackKey,
                   onTrack: data.entries[i].trackKey == null
                       ? null
-                      : () => game.toggleTrackedMission(data.entries[i].trackKey!),
+                      : () {
+                          _narrate(data.entries[i], tracked);
+                          game.toggleTrackedMission(data.entries[i].trackKey!);
+                        },
                 ),
               ),
             ),
@@ -121,7 +152,10 @@ class _MissionRow extends StatelessWidget {
   /// 📍 This mission is accepted and shown on the map.
   final bool tracked;
   final VoidCallback? onTrack;
-  const _MissionRow({required this.entry, this.tracked = false, this.onTrack});
+
+  /// Tap on the row: the narrator explains the mission.
+  final VoidCallback? onExplain;
+  const _MissionRow({required this.entry, this.tracked = false, this.onTrack, this.onExplain});
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +169,7 @@ class _MissionRow extends StatelessWidget {
       if (m.materialsReward > 0) '+${m.materialsReward}📦',
       if (m.insightReward > 0) '+${m.insightReward.toStringAsFixed(1)}📖',
     ].join(' ');
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
@@ -184,6 +218,7 @@ class _MissionRow extends StatelessWidget {
         ],
       ),
     );
+    return GestureDetector(behavior: HitTestBehavior.opaque, onTap: onExplain, child: row);
   }
 }
 
@@ -230,7 +265,11 @@ class _LearningPath extends StatelessWidget {
               if (awakenings < l.minAwakenings) '🏰🔥×${l.minAwakenings}',
             ].join(' ')}';
           }
-          return Opacity(
+          // Tap: the narrator tells what it teaches, where and how.
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => game.explainLesson(l, force: true),
+            child: Opacity(
             opacity: learned ? 0.55 : (open || active ? 1 : 0.6),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -260,10 +299,14 @@ class _LearningPath extends StatelessWidget {
                     ActionButton(
                       emoji: tracked == key ? '📍✅' : '📍',
                       highlighted: tracked == key,
-                      onTap: () => game.toggleTrackedMission(key),
+                      onTap: () {
+                        if (tracked != key) game.explainLesson(l, force: true);
+                        game.toggleTrackedMission(key);
+                      },
                     ),
                 ],
               ),
+            ),
             ),
           );
         },

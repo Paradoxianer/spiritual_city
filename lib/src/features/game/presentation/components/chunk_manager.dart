@@ -190,6 +190,9 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       // Spawn building entrance components.
       _spawnBuildingComponents(chunk, npcsByBuilding);
 
+      // Days this part of the city missed since the save (#194).
+      game.catchUpChunk(chunk);
+
       _log.fine('Created ${npcs.length} NPCs for chunk (${chunk.id})');
     }
   }
@@ -231,7 +234,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
           // (e.g. pastorHouse).  Promote the type whenever a later cell reveals
           // a more specific classification so the BuildingModel is always
           // created with the correct type.
-          if (_isSpecialBuildingType(data.type) && !_isSpecialBuildingType(info.type)) {
+          if ((_isSpecialBuildingType(data.type) && !_isSpecialBuildingType(info.type)) ||
+              data.type == BuildingType.pastorHouse) {
             info.type = data.type;
           }
           info.cells.add([x, y]);
@@ -293,7 +297,8 @@ class ChunkManager extends Component with HasGameReference<SpiritWorldGame> {
       parent?.add(comp);
 
       // Notify the game once we know where the pastor's house is.
-      if (model.isHomebase && game.pastorhousePosition.value == null) {
+      if (model.isHomebase && !game.pastorhouseDoorKnown) {
+        game.pastorhouseDoorKnown = true;
         game.pastorhousePosition.value = pos.clone();
         _log.info(
           'Pastor house placed at pixel (${pos.x.toInt()}, ${pos.y.toInt()}) '

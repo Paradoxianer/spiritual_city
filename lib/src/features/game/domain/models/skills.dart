@@ -35,6 +35,8 @@ enum Skill {
   // 5 → 10), which also opens its two special abilities.
   liberationMastery1('🕊️⭐'),
   liberationMastery2('🕊️⭐⭐'),
+  /// 🕊️ Liberation is the main weapon and goes one step further (→ 15).
+  liberationMastery3('🕊️⭐⭐⭐'),
   rebukeMastery1('🫸⭐'),
   rebukeMastery2('🫸⭐⭐'),
   slowMastery1('⏳⭐'),

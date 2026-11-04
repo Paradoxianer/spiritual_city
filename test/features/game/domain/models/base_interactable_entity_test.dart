@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spiritual_city/src/features/game/domain/models/base_interactable_entity.dart';
+import 'package:spiritual_city/src/features/game/domain/models/building_model.dart';
+import 'package:spiritual_city/src/features/game/domain/models/cell_object.dart';
 
 /// Minimal concrete subclass used only in tests.
 class _TestEntity extends BaseInteractableEntity {
@@ -169,6 +171,14 @@ void main() {
     });
 
     group('isFaithVague / isFaithRevealed (progressive reveal)', () {
+      test('the own pastor house is always known', () {
+        final home = BuildingModel(buildingId: 'ph', type: BuildingType.pastorHouse, isHomebase: true);
+        expect(home.isFaithVague, isTrue);
+        expect(home.isFaithRevealed, isTrue);
+        final other = BuildingModel(buildingId: 'h', type: BuildingType.house);
+        expect(other.isFaithVague, isFalse);
+      });
+
       test('not vague at 0 interactions', () {
         expect(make(interactionCount: 0).isFaithVague, isFalse);
       });

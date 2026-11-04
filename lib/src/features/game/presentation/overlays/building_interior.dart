@@ -193,7 +193,7 @@ class InteriorHud extends StatelessWidget {
               if (data == null || game.interior == null) return const SizedBox.shrink();
               final b = data.building;
               final mission = b.activeMission;
-              return Container(
+              final bar = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
@@ -228,6 +228,7 @@ class InteriorHud extends StatelessWidget {
                   ],
                 ),
               );
+              return bar;
             },
           ),
         ),

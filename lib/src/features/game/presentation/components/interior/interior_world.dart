@@ -49,6 +49,7 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
   /// Emoji per station action (from the building's actions).
   final Map<String, String> stationEmoji;
 
+
   /// A mentor stands in the room when this building offers a lesson.
   final Lesson? lesson;
 
@@ -464,7 +465,7 @@ class _WallStatus extends Component {
       _emoji(canvas, '?', bar.center, 11);
       return;
     }
-    final norm = ((b.faith + 100) / 200).clamp(0.0, 1.0);
+    final norm = ((b.holiness + 100) / 200).clamp(0.0, 1.0);
     final shown = b.isFaithRevealed ? norm : ((norm * 4).round() / 4).clamp(0.0, 1.0);
     _p.color = Color.lerp(const Color(0xFFD32F2F), const Color(0xFF43A047), norm)!;
     canvas.drawRRect(

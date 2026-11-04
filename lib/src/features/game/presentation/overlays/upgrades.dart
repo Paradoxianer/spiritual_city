@@ -15,6 +15,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
   PlayerProgress get _progress => widget.game.progress;
   CombatProfile get _profile => _progress.combatProfile;
 
+  /// The narrator explains what an upgrade does.
+  void _narrate(String key, String emoji) => Narrator.say('upgrade.$key', emoji,
+      AppStrings.get('upgrade.$key'), NearTexts.upgrades[key]?.text);
+
   void _buy(int level, VoidCallback apply) {
     setState(() {
       final before = widget.game.combatAbilityTiers;
@@ -24,7 +28,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
         final after = widget.game.combatAbilityTiers;
         for (final m in PrayerMode.values) {
           if ((after[m] ?? 0) > (before[m] ?? 0)) {
-            widget.game.announce('✨ ${CombatAbilities.emoji[m]![after[m]! - 1]}');
+            widget.game.announce('✨ ${CombatAbilities.emoji[m]![after[m]! - 1]}', 'ability');
           }
         }
         // Daemons keep their strength for a few visits (#178 grace period).
@@ -67,7 +71,11 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                     level: _profile.shieldLevel,
                     effect: '−${(_profile.shieldDamageReduction * 100).toStringAsFixed(0)}%🙏',
                     insight: _progress.insight,
-                    onBuy: () => _buy(_profile.shieldLevel, () => _profile.shieldLevel++),
+                    lock: _profile.shieldMaxed ? const Locked('✅') : null,
+                    onBuy: () {
+                      _narrate('shield', '🛡️');
+                      _buy(_profile.shieldLevel, () => _profile.shieldLevel++);
+                    },
                   ),
                   _UpgradeTile(
                     emoji: '⛑️',
@@ -75,7 +83,11 @@ class _UpgradePanelState extends State<_UpgradePanel> {
                     level: _profile.helmLevel,
                     effect: '−${(_profile.helmHungerReduction * 100).toStringAsFixed(0)}%🍞',
                     insight: _progress.insight,
-                    onBuy: () => _buy(_profile.helmLevel, () => _profile.helmLevel++),
+                    lock: _profile.helmMaxed ? const Locked('✅') : null,
+                    onBuy: () {
+                      _narrate('helm', '⛑️');
+                      _buy(_profile.helmLevel, () => _profile.helmLevel++);
+                    },
                   ),
                 ],
               ),
@@ -96,12 +108,15 @@ class _UpgradePanelState extends State<_UpgradePanel> {
     // Not learned yet, or at the mentor cap: the next step is a 🎓 lesson.
     final modeSkill = CombatAbilities.modeSkill(mode);
     final cap = CombatAbilities.levelCap(mode, skills);
-    final (m1, m2) = CombatAbilities.mastery(mode);
+    final next = CombatAbilities.nextMastery(mode, skills);
     final Availability? lock = !CombatAbilities.canUse(mode, skills)
         ? Locked('🎓${modeSkill!.emoji}')
         : level >= cap
-            ? (cap >= CombatAbilities.levelCaps.last ? const Locked('✅') : Locked('🎓${(skills.has(m1) ? m2 : m1).emoji}'))
+            ? (next == null ? const Locked('✅') : const Locked('🔒'))
             : null;
+    // At the cap the next mentor step is shown with what it still needs and
+    // a 📍 to follow it (playtest 2026-10-19: the way on was not visible).
+    final teach = !CombatAbilities.canUse(mode, skills) ? modeSkill : (level >= cap ? next : null);
     _UpgradeTile tile(String emoji, String key, int level, double value, VoidCallback apply) =>
         _UpgradeTile(
           emoji: emoji,
@@ -110,17 +125,52 @@ class _UpgradePanelState extends State<_UpgradePanel> {
           effect: _pct(value),
           insight: _progress.insight,
           lock: lock,
-          onBuy: () => _buy(level, apply),
+          onBuy: () {
+            _narrate(key, emoji);
+            _buy(level, apply);
+          },
         );
+    final modeName = AppStrings.get('mode.${mode.id}');
     return _UpgradeGroup(
       icon: mode.icon,
       color: mode.color,
-      title: AppStrings.get('mode.${mode.id}'),
+      title: modeName,
       badge: '$level/$cap',
+      // Tap: the narrator explains this prayer and how to build it up.
+      onTap: () {
+        if (modeSkill != null && !CombatAbilities.canUse(mode, skills)) {
+          widget.game.explainLesson(Lessons.of(modeSkill), force: true);
+          return;
+        }
+        Narrator.say(
+          'mode.${mode.id}',
+          mode.icon,
+          modeName,
+          LessonTexts.explainMode(
+            mode,
+            level: level,
+            cap: cap,
+            modeName: modeName,
+            nextLesson: next == null
+                ? null
+                : LessonTexts.explain(
+                    Lessons.of(next),
+                    learned: skills,
+                    awakenings: widget.game.progress.awakenedQuarters.length,
+                    active: widget.game.progress.lesson.active,
+                    progress: widget.game.progress.lesson.progress,
+                  ),
+          ),
+          force: true,
+        );
+      },
       // Abilities: unlocked ones bright, the next with the level it needs.
       footer: Wrap(
         spacing: 10,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
+          if (teach != null) _NextLesson(game: widget.game, skill: teach),
           for (var i = 0; i < CombatAbilities.milestones.length; i++)
             Opacity(
               opacity: i < tier ? 1.0 : 0.45,
@@ -143,6 +193,63 @@ class _UpgradePanelState extends State<_UpgradePanel> {
   }
 }
 
+/// The mentor step that opens the next upgrades: `🎓🕊️⭐⭐ ⛪ 📍`, or what
+/// is still missing (`🔒 🏰🔥 0/1`), or the running count (`7/20 👹`).
+class _NextLesson extends StatelessWidget {
+  final SpiritWorldGame game;
+  final Skill skill;
+  const _NextLesson({required this.game, required this.skill});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = game.progress;
+    final l = Lessons.of(skill);
+    final awakenings = p.awakenedQuarters.length;
+    final key = GameMissionTracking.lessonKey(skill);
+    final String status;
+    if (p.lesson.active == skill) {
+      status = '${p.lesson.progress}/${l.count} ${l.task.emoji}';
+    } else if (l.isOpen(p.skills, awakenings)) {
+      status = l.mentorAt.map(BuildingComponent.buildingEmoji).join(' ');
+    } else {
+      status = '🔒 ${[
+        for (final r in l.requires)
+          if (!p.skills.has(r)) r.emoji,
+        if (awakenings < l.minAwakenings) '🏰🔥 $awakenings/${l.minAwakenings}',
+      ].join(' ')}';
+    }
+    return ValueListenableBuilder<String?>(
+      valueListenable: game.trackedMission,
+      builder: (context, tracked, _) => Container(
+        padding: const EdgeInsets.fromLTRB(8, 2, 2, 2),
+        decoration: BoxDecoration(
+          color: Colors.amber.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('🎓${skill.emoji}  $status',
+                style: const TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+            TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(36, 30),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+              onPressed: () {
+                if (tracked != key) game.explainLesson(Lessons.of(skill), force: true);
+                game.toggleTrackedMission(key);
+              },
+              child: Text(tracked == key ? '📍✅' : '📍', style: const TextStyle(fontSize: 15)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// A section like the original panel: a header (icon, name, level/cap)
 /// and the upgrades as equal tiles side by side.
 class _UpgradeGroup extends StatelessWidget {
@@ -153,6 +260,9 @@ class _UpgradeGroup extends StatelessWidget {
   final List<Widget> children;
   final Widget? footer;
 
+  /// Tap on the header (the narrator explains it).
+  final VoidCallback? onTap;
+
   const _UpgradeGroup({
     required this.icon,
     required this.color,
@@ -160,6 +270,7 @@ class _UpgradeGroup extends StatelessWidget {
     required this.children,
     this.badge,
     this.footer,
+    this.onTap,
   });
 
   @override
@@ -175,7 +286,10 @@ class _UpgradeGroup extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Row(
             children: [
               Text(icon, style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 6),
@@ -193,6 +307,7 @@ class _UpgradeGroup extends StatelessWidget {
                   child: Text('Lv $badge', style: const TextStyle(color: Colors.amber, fontSize: 10)),
                 ),
             ],
+          ),
           ),
           const SizedBox(height: 6),
           Row(
@@ -276,29 +391,44 @@ class _UpgradeTile extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.greenAccent, fontSize: 10)),
           const SizedBox(height: 4),
-          GestureDetector(
-            onTap: active ? onBuy : null,
-            child: Opacity(
-              opacity: active ? 1.0 : 0.45,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: active ? Colors.amber.withValues(alpha: 0.25) : Colors.white10,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: active ? Colors.amber.withValues(alpha: 0.7) : Colors.white24,
-                  ),
-                ),
-                child: Text(buyLabel,
-                    style: TextStyle(
-                      color: active ? Colors.amber : Colors.white60,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    )),
-              ),
+          _BuyButton(label: buyLabel, active: active, onTap: onBuy),
+        ],
+      ),
+    );
+  }
+}
+
+/// The 📖 buy button of the ⚔️ cabinet – also used for studying at a
+/// mentor, so both look the same (playtest 2026-10-31).
+class _BuyButton extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final double fontSize;
+  const _BuyButton({required this.label, required this.active, required this.onTap, this.fontSize = 11});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: active ? onTap : null,
+      child: Opacity(
+        opacity: active ? 1.0 : 0.45,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: active ? Colors.amber.withValues(alpha: 0.25) : Colors.white10,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: active ? Colors.amber.withValues(alpha: 0.7) : Colors.white24,
             ),
           ),
-        ],
+          child: Text(label,
+              style: TextStyle(
+                color: active ? Colors.amber : Colors.white60,
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+              )),
+        ),
       ),
     );
   }

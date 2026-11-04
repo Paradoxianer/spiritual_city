@@ -7,6 +7,30 @@ extension GameMissionTracking on SpiritWorldGame {
   static String npcKey(String id) => 'npc:$id';
   static String buildingKey(String id) => 'b:$id';
 
+  /// 📍 A place the player marked on the city map (cell coordinates).
+  static String pinKey(int x, int y) => 'pin:$x,$y';
+
+  static (int, int)? _pin(String key) {
+    if (!key.startsWith('pin:')) return null;
+    final p = key.substring(4).split(',');
+    if (p.length != 2) return null;
+    final x = int.tryParse(p[0]), y = int.tryParse(p[1]);
+    return x == null || y == null ? null : (x, y);
+  }
+
+  /// Marks cell ([x], [y]) as the place to go – or, tapped near the
+  /// marked place again, removes it (playtest 2026-11-03).
+  void togglePin(int x, int y) {
+    final old = _pin(trackedMission.value ?? '');
+    if (old != null && (old.$1 - x).abs() <= 6 && (old.$2 - y).abs() <= 6) {
+      trackedMission.value = null;
+    } else {
+      trackedMission.value = pinKey(x, y);
+      Narrator.say('map.pin', '📍', '📍', NearTexts.pin.text);
+    }
+    GameSound.play(Sfx.tap, volume: 0.4);
+  }
+
   /// 🎓 The nearest mentor for [skill] (learning path tab).
   static String lessonKey(Skill skill) => 'lesson:${skill.name}';
 
@@ -45,6 +69,10 @@ extension GameMissionTracking on SpiritWorldGame {
   Vector2? get trackedTargetPosition {
     final key = trackedMission.value;
     if (key == null) return null;
+    final pin = _pin(key);
+    if (pin != null) {
+      return Vector2((pin.$1 + 0.5) * CellComponent.cellSize, (pin.$2 + 0.5) * CellComponent.cellSize);
+    }
     if (key.startsWith('lesson:')) {
       final skill = Skill.values.where((s) => 'lesson:${s.name}' == key).firstOrNull;
       return skill == null ? null : _nearestMentor(Lessons.of(skill));
@@ -71,6 +99,12 @@ extension GameMissionTracking on SpiritWorldGame {
   void _checkTrackedMission() {
     final key = trackedMission.value;
     if (key == null) return;
+    if (key.startsWith('pin:')) {
+      // Arrived: the marker goes.
+      final t = trackedTargetPosition;
+      if (t != null && t.distanceTo(player.position) < 2 * CellComponent.cellSize) trackedMission.value = null;
+      return;
+    }
     if (key.startsWith('lesson:')) {
       // Done once the skill is learned or its lesson has been accepted.
       final skill = Skill.values.where((s) => 'lesson:${s.name}' == key).firstOrNull;

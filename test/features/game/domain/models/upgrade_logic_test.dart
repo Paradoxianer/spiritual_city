@@ -135,6 +135,15 @@ void main() {
       expect(profile.helmHungerReduction, 0.8);
     });
 
+    test('shield and helm are done once they reach 0.8 – no 📖 for nothing', () {
+      expect(CombatProfile.maxShieldLevel, 10);
+      expect(CombatProfile(shieldLevel: 9).shieldMaxed, isFalse);
+      final done = CombatProfile(shieldLevel: 10, helmLevel: 10);
+      expect(done.shieldMaxed, isTrue);
+      expect(done.helmMaxed, isTrue);
+      expect(done.shieldDamageReduction, closeTo(0.8, 1e-9));
+    });
+
     test('toJson / fromJson round-trips shield and helm levels', () {
       final original = CombatProfile(shieldLevel: 3, helmLevel: 2);
       final json = original.toJson();

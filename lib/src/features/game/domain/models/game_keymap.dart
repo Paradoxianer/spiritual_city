@@ -16,10 +16,10 @@ class KeymapEntry {
   /// English action description (#152 i18n).
   final String actionEn;
 
-  String get localizedAction => AppStrings.currentLanguage == 'en' ? actionEn : action;
+  String get localizedAction => AppStrings.currentLanguage == 'de' ? action : actionEn;
 
   String get localizedCategory =>
-      AppStrings.currentLanguage == 'en' ? (_categoryEn[category] ?? category) : category;
+      AppStrings.currentLanguage == 'de' ? category : (_categoryEn[category] ?? category);
 
   static const Map<String, String> _categoryEn = {
     'Bewegung': 'Movement',

@@ -138,6 +138,11 @@ extension GameInterior on SpiritWorldGame {
     }
     final b = room.building;
     final a = BuildingActions.find(b.type, action);
+    // The narrator tells what this station does (tap or walk + E).
+    if (a != null) {
+      Narrator.say('action.${a.id.name}', a.emoji, HelpContent.actionNames[a.id]?.text ?? '',
+          HelpContent.explanations[a.id]?.text);
+    }
     if (a != null) {
       final av = a.availability(b, this, difficulty);
       if (!av.isOk) {

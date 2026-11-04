@@ -2,12 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/app_strings.dart';
+import '../../../core/i18n/narrator.dart';
 import '../data/menu_repository.dart';
 import '../../../core/audio/game_sound.dart';
 import 'legal_texts.dart';
 import 'models/app_settings.dart';
 import 'models/difficulty.dart';
 import 'models/game_save.dart';
+import 'save_transfer.dart';
 
 // Re-export for convenience (Directives must appear before any declarations)
 export 'models/difficulty.dart';
@@ -37,6 +39,8 @@ class MenuService {
     _isTutorialCompleted = settings.tutorialCompleted;
     GameSound.enabled = settings.soundOn;
     _consentVersion = settings.consentVersion;
+    TextMode.enabled.value = settings.showTexts;
+    Narrator.persist = () => _persistSettings();
     _log.info('MenuService init: lang=${settings.language}, '
         'difficulty=${settings.lastDifficulty}, '
         'tutorialCompleted=$_isTutorialCompleted');
@@ -75,6 +79,15 @@ class MenuService {
   Future<void> setSoundOn(bool on) async {
     GameSound.enabled = on;
     if (!on) GameAmbience.stop();
+    await _persistSettings();
+  }
+
+  // --------------- Texts besides the emoji ---------------------------------
+
+  bool get showTexts => TextMode.on;
+
+  Future<void> setShowTexts(bool on) async {
+    TextMode.enabled.value = on;
     await _persistSettings();
   }
 
@@ -118,6 +131,17 @@ class MenuService {
   /// Renames the save identified by [id] to [newName].
   ///
   /// If the save no longer exists this is a no-op.
+  /// Reads an exported save file (#192) as a new save and stores it.
+  /// Throws [SaveImportException] for files the game cannot read.
+  Future<GameSave> importSave(String text, {required int maxSchemaVersion}) async {
+    final save = SaveTransfer.import(text,
+        newId: DateTime.now().millisecondsSinceEpoch.toString(),
+        maxSchemaVersion: maxSchemaVersion);
+    await _repository.writeSave(save);
+    _log.info('Imported save ${save.id} ("${save.name}")');
+    return save;
+  }
+
   Future<void> renameSave(String id, String newName) async {
     final saves = await _repository.loadAllSaves();
     final existing = saves.where((s) => s.id == id).firstOrNull;
@@ -153,6 +177,7 @@ class MenuService {
       tutorialCompleted: _isTutorialCompleted,
       soundOn: GameSound.enabled,
       consentVersion: _consentVersion,
+      showTexts: TextMode.on,
     );
     await _repository.saveSettings(settings);
   }

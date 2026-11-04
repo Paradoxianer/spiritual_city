@@ -38,13 +38,64 @@ extension GameQuarters on SpiritWorldGame {
       // neighbourhood's stronghold becomes attackable.
       if (before != null && before.quarter == q && !before.strongholdOpen &&
           status.strongholdOpen && !status.awakened) {
-        _toast('🏘️✝️ ➡️ 🏰⚔️');
+        _toast('🏘️✝️ ➡️ 🏰⚔️', 'strongholdOpen');
       }
       quarterStatus.value = status;
     }
 
     if (isSpiritualWorld) _ensureStronghold(status);
+    _updateCityProgress(q);
   }
+
+  /// Liberated ground of [q] and of every known chunk – generated ones
+  /// live, the rest from the save – plus all known people. Only the
+  /// chunks of [q], new ones and a rotating few others are counted again
+  /// per call; the rest keep their last tally.
+  void _updateCityProgress(Quarter q) {
+    final tallies = _chunkTallies ??= Liberation.savedByChunk(_savedCellStates ?? const {});
+    final chunks = grid.getLoadedChunks();
+    void count(CityChunk chunk) {
+      if (chunk.cells.isEmpty) return;
+      final key = chunk.id;
+      tallies[key] = Liberation.ofStates(chunk.cells.values.map((c) => c.spiritualState));
+      _liveTallied.add(key);
+    }
+
+    for (final chunk in chunks) {
+      if (!_liveTallied.contains(chunk.id) ||
+          Liberation.quarterOfChunk(chunk.chunkX, chunk.chunkY) == q) {
+        count(chunk);
+      }
+    }
+    if (chunks.isNotEmpty) {
+      for (var i = 0; i < _tallyRefreshPerCall; i++) {
+        count(chunks[_tallyCursor++ % chunks.length]);
+      }
+    }
+
+    var quarter = Tally.zero;
+    var city = Tally.zero;
+    for (final t in tallies.values) {
+      city += t;
+    }
+    const side = Quarter.chunksPerSide;
+    for (var dy = 0; dy < side; dy++) {
+      for (var dx = 0; dx < side; dx++) {
+        quarter += tallies['${q.qx * side + dx},${q.qy * side + dy}'] ?? Tally.zero;
+      }
+    }
+    final people = knownNpcCounts;
+    cityProgress.value = CityProgress(
+      quarterCells: quarter,
+      cityCells: city,
+      cityPeople: Tally(people.converted, people.total),
+      spiritWorld: isSpiritualWorld,
+    );
+  }
+
+  /// Generated chunks outside the current neighbourhood counted again per
+  /// call – the whole city line catches up within a minute or so.
+  static const int _tallyRefreshPerCall = 12;
 
   void _ensureStronghold(QuarterStatus status) {
     final forts = world.children.whereType<StrongholdComponent>().toList();
@@ -53,7 +104,11 @@ extension GameQuarters on SpiritWorldGame {
     }
     if (status.awakened) return;
     if (forts.any((f) => f.quarter == status.quarter)) return;
-    world.add(StrongholdComponent(status.quarter, StrongholdComponent.centerOf(status.quarter)));
+    world.add(StrongholdComponent(
+      status.quarter,
+      StrongholdComponent.centerOf(status.quarter),
+      kind: strongholdKind(status.quarter),
+    ));
   }
 
   /// The stronghold fell: the neighbourhood is awakened.
@@ -65,8 +120,16 @@ extension GameQuarters on SpiritWorldGame {
     dayStats.awakenings++;
     GameSound.play(Sfx.awakening, volume: 0.8);
     quarterStatus.value = null; // recomputed on the next tick
-    _toast('🏰💥 ➡️ 🏘️🔥✝️');
+    _toast('🏰💥 ➡️ 🏘️🔥✝️', 'awakened');
   }
+
+  /// 🏰 / 🏰🏰 / 🏯 of [q] – decided by the city (district, city hall, home).
+  StrongholdKind strongholdKind(Quarter q) => StrongholdKind.of(
+        q,
+        district: (_districts ??= DistrictSelector(seed: seedManager.seed)).getDistrictType,
+        homeCell: SpecialBuildingRegistry.pastorHouseCell,
+        cityHallCell: SpecialBuildingRegistry.cityHallCell,
+      );
 
   /// Extra daemon power from awakened neighbourhoods (#178 scaling).
   int get awakeningPower => progress.awakenedQuarters.length * Awakening.powerPerAwakening;

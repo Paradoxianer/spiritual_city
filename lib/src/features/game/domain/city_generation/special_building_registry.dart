@@ -51,6 +51,13 @@ class SpecialBuildingRegistry {
   static const int _pastorHouseX   = 220;
   static const int _pastorHouseY   = 222;
 
+  /// The pastor house's lot cell – fixed, so the game knows where home is
+  /// before its chunk is generated (e.g. after loading a save far away).
+  static const (int, int) pastorHouseCell = (_pastorHouseX, _pastorHouseY);
+
+  /// The city hall's cell (city centre).
+  static const (int, int) cityHallCell = (_cityHallX, _cityHallY);
+
   // ---- Zone sizes for per-zone buildings (in cells, ~1 cell = 10 m) -------
   // Roughly calibrated for a 500 000-inhabitant city (~650-cell radius):
   static const int _hospitalZone      = 220; // 1 hospital   per ~2.2 km²

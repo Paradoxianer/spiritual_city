@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-import 'dart:math' show Random, min;
+import 'dart:math' show Random, min, pi;
+import 'dart:typed_data';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart' show compute, ValueListenable, ValueNotifier, kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import '../../../core/i18n/narrator.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../core/utils/stable_hash.dart';
@@ -17,9 +19,13 @@ import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
 import '../domain/interior/interior_layout.dart';
 import '../domain/city_generation/city_overview.dart';
+import '../domain/city_generation/special_building_registry.dart';
+import '../domain/city_generation/district_selector.dart';
+import '../domain/models/stronghold_kind.dart';
 import '../domain/services/faith_calculator_service.dart';
 import '../domain/models/daemon_model.dart';
 import '../domain/models/day_stats.dart';
+import '../domain/models/discipleship.dart';
 import '../domain/models/quarter.dart';
 import 'components/cell_component.dart';
 import 'components/daemon_component.dart';
@@ -32,6 +38,10 @@ import '../domain/models/skills.dart';
 import '../domain/services/combat_abilities.dart';
 import '../domain/services/daemon_combat_rules.dart';
 import '../domain/services/learning_service.dart';
+import '../domain/services/world_simulation.dart';
+import '../domain/help/help_content.dart';
+import '../domain/help/near_texts.dart';
+import '../domain/help/lesson_texts.dart';
 import '../domain/actions/practice.dart';
 import '../domain/actions/resource.dart';
 import '../domain/city_generator.dart';
@@ -55,13 +65,15 @@ import 'components/building_component.dart';
 import 'components/chunk_manager.dart';
 import 'components/loot_system.dart';
 import 'components/npc_component.dart';
+import 'components/shockwave_component.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
-import 'components/prayer_hud_component.dart';
 import 'components/spiritual_dynamics_system.dart';
 import 'game_screen.dart';
 
 part 'game/learning_control.dart';
+part 'game/discipleship_control.dart';
+part 'game/world_control.dart';
 part 'game/quarters.dart';
 part 'game/save_state.dart';
 part 'game/overlay_control.dart';
@@ -163,7 +175,6 @@ class SpiritWorldGame extends FlameGame
   late final HudButton actionButton;
   late final HudButton worldToggleButton;
   late final List<HudButton> modeButtons;
-  late final PrayerHudComponent prayerHud;
   late final LootSystem lootSystem;
 
   /// Mission system – wired to all interaction hooks.
@@ -208,9 +219,16 @@ class SpiritWorldGame extends FlameGame
   /// Influence system – manages AoE spiritual-state effects with duration/decay.
   final InfluenceService influenceService = InfluenceService();
 
-  /// World-pixel position of the pastor house once its chunk is first loaded.
-  /// `null` until the first chunk containing the pastor house is generated.
-  final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(null);
+  /// World-pixel position of the pastor house. The house always stands on
+  /// [SpecialBuildingRegistry.pastorHouseCell], so it starts there (the
+  /// 🏠 compass and fainting home also work after loading a save far away,
+  /// playtest 2026-10-21); once its chunk is generated, [ChunkManager]
+  /// moves it to the exact door.
+  final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(Vector2(
+    (SpecialBuildingRegistry.pastorHouseCell.$1 + 0.5) * CellComponent.cellSize,
+    (SpecialBuildingRegistry.pastorHouseCell.$2 + 1.5) * CellComponent.cellSize,
+  ));
+  bool pastorhouseDoorKnown = false;
 
   /// Current street / address label displayed top-center.
   /// Updated in [update()] every ~0.5 s when the player moves cells.
@@ -291,6 +309,56 @@ class SpiritWorldGame extends FlameGame
       _log.warning('City map failed: $e');
       _cityMapLoading = false;
     }
+  }
+
+  /// 🌐 The invisible world on the city map (playtest 2026-11-03): known
+  /// ground – generated this session or saved – green where it is free,
+  /// red where it is dark; unknown ground stays clear.
+  final ValueNotifier<ui.Image?> spiritMapImage = ValueNotifier(null);
+
+  void refreshSpiritMap() {
+    const n = CityOverview.size, step = CityOverview.step, r = CityOverview.radius;
+    final sum = Float32List(n * n);
+    final count = Uint16List(n * n);
+    void add(int x, int y, double s) {
+      final i = ((x + r) / step).floor(), j = ((y + r) / step).floor();
+      if (i < 0 || j < 0 || i >= n || j >= n) return;
+      sum[j * n + i] += s;
+      count[j * n + i]++;
+    }
+
+    final loaded = <String>{};
+    for (final c in grid.getLoadedChunks()) {
+      if (c.cells.isEmpty) continue;
+      loaded.add(c.id);
+      for (final cell in c.cells.values) {
+        add(cell.x, cell.y, cell.spiritualState);
+      }
+    }
+    for (final e in (_savedCellStates ?? const <String, Map<String, dynamic>>{}).entries) {
+      final comma = e.key.indexOf(',');
+      if (comma < 0) continue;
+      final x = int.tryParse(e.key.substring(0, comma)), y = int.tryParse(e.key.substring(comma + 1));
+      if (x == null || y == null) continue;
+      final chunk = '${(x / CityChunk.chunkSize).floor()},${(y / CityChunk.chunkSize).floor()}';
+      if (loaded.contains(chunk)) continue; // the live state is newer
+      add(x, y, (e.value['s'] as num?)?.toDouble() ?? 0);
+    }
+    final px = Uint8List(n * n * 4);
+    for (var k = 0; k < n * n; k++) {
+      if (count[k] == 0) continue;
+      final v = (sum[k] / count[k]).clamp(-1.0, 1.0);
+      final c = Color.lerp(const Color(0xFF1E1E28), v >= 0 ? const Color(0xFF3CE07A) : const Color(0xFFE53935),
+          0.3 + v.abs() * 0.7)!;
+      px[k * 4] = (c.r * 255).round();
+      px[k * 4 + 1] = (c.g * 255).round();
+      px[k * 4 + 2] = (c.b * 255).round();
+      px[k * 4 + 3] = 235;
+    }
+    ui.decodeImageFromPixels(px, n, n, ui.PixelFormat.rgba8888, (img) {
+      spiritMapImage.value?.dispose();
+      spiritMapImage.value = img;
+    });
   }
 
   /// Tutorial step from the save (resumed instead of starting over).
@@ -493,7 +561,7 @@ class SpiritWorldGame extends FlameGame
     if (comp != null) {
       _brightenspiritualAreaAroundPosition(comp.position, radius: 4, amount: 0.3);
     }
-    _toast('👁️➡️🕊️ ${npc.name.split(' ').first}');
+    _toast('👁️➡️🕊️ ${npc.name.split(' ').first}', 'released');
   }
 
   // ── Neighbourhoods (§3.3) ─────────────────────────────────────────────────
@@ -537,6 +605,33 @@ class SpiritWorldGame extends FlameGame
   /// Status of the neighbourhood the pastor is in.
   final ValueNotifier<QuarterStatus?> quarterStatus = ValueNotifier(null);
   double _quarterTimer = 0.0;
+
+  /// Overall progress for the second HUD bar (🌐 prayed free / 🏙️ ✝️).
+  final ValueNotifier<CityProgress?> cityProgress = ValueNotifier(null);
+
+  /// Days of the invisible world so far (one per [SpiritualDynamicsSystem]
+  /// tick) – world time, saved with the game (#194).
+  int worldDay = 0;
+
+  /// From the save: day of the last simulation per chunk ('cx,cy').
+  Map<String, int>? _savedChunkDays;
+
+  /// Generated chunks still catching up on missed days, with days left.
+  final List<(CityChunk, int)> _catchUps = [];
+
+  /// Districts of the city, for the kind of each stronghold (lazily).
+  DistrictSelector? _districts;
+
+  /// 🌱 Disciples praying along (#193).
+  final DisciplePrayer disciplePrayer = DisciplePrayer();
+
+  /// Liberated ground per chunk ('cx,cy'): seeded once from
+  /// [_savedCellStates] (see [Liberation.savedByChunk]), then refreshed a
+  /// few generated chunks at a time – summing every cell each second made
+  /// walking stutter once much of the city was explored (playtest).
+  Map<String, Tally>? _chunkTallies;
+  final Set<String> _liveTallied = {};
+  int _tallyCursor = 0;
 
   // ── Learning missions (§3.9) ──────────────────────────────────────────────
 
@@ -660,6 +755,35 @@ class SpiritWorldGame extends FlameGame
   @override
   Color backgroundColor() => isSpiritualWorld ? const Color(0xFF000511) : const Color(0xFF111111);
 
+  /// [p], or the nearest free cell when a saved position lies inside a
+  /// building – the city layout can change between versions (playtest
+  /// 2026-11-01: streets no longer cut through houses). Probes a scratch
+  /// grid, so the real chunks still load with their saved states.
+  Vector2 _walkableNear(Vector2 p) {
+    const cellSize = 32.0;
+    final probe = CityGrid();
+    bool free(int x, int y) {
+      final chunk = probe.getOrCreateChunk(
+          (x / CityChunk.chunkSize).floor(), (y / CityChunk.chunkSize).floor());
+      if (chunk.cells.isEmpty) generator.generateChunk(chunk);
+      return probe.isWalkable(x, y);
+    }
+
+    final cx = (p.x / cellSize).floor(), cy = (p.y / cellSize).floor();
+    if (free(cx, cy)) return p;
+    for (var r = 1; r <= 12; r++) {
+      for (var dy = -r; dy <= r; dy++) {
+        for (var dx = -r; dx <= r; dx++) {
+          if (dx.abs() != r && dy.abs() != r) continue;
+          if (free(cx + dx, cy + dy)) {
+            return Vector2((cx + dx + 0.5) * cellSize, (cy + dy + 0.5) * cellSize);
+          }
+        }
+      }
+    }
+    return p;
+  }
+
   @override
   Future<void> onLoad() async {
     GameSound.preload();
@@ -706,6 +830,11 @@ class SpiritWorldGame extends FlameGame
         _savedNPCStates      = _parseSavedNPCStates(savedState);
         _savedBuildingStates = _parseSavedBuildingStates(savedState);
         _savedLootState      = _parseSavedLootState(savedState);
+        worldDay = (savedState['worldDay'] as num?)?.toInt() ?? 0;
+        _savedChunkDays = {
+          for (final e in ((savedState['chunkDays'] as Map?) ?? const {}).entries)
+            '${e.key}': (e.value as num).toInt(),
+        };
       }
 
       player = PlayerComponent(joystick: _createJoystick());
@@ -722,6 +851,7 @@ class SpiritWorldGame extends FlameGame
               (savedState['playerY'] as num).toDouble(),
             )
           : Vector2(7040, 7168);
+      if (hasSavedState) player.position = _walkableNear(player.position);
       await world.add(player);
 
       chunkManager = ChunkManager(
@@ -734,6 +864,7 @@ class SpiritWorldGame extends FlameGame
 
       // System already initialized, now add to world
       await world.add(spiritualDynamics);
+      await world.add(disciplePrayer);
 
       // Wire modifier values to the dynamics system
       spiritualDynamics.modifierSpreadMultiplier = modifiers.greenSpreadMultiplier;
@@ -762,8 +893,7 @@ class SpiritWorldGame extends FlameGame
         await camera.viewport.add(btn);
       }
       
-      prayerHud = PrayerHudComponent();
-      await camera.viewport.add(prayerHud);
+      // The faith for prayer waves is a ring around ✝️ (HudButton.ring).
 
       lootSystem = LootSystem(seed: seedManager.seed);
       await world.add(lootSystem);
@@ -906,7 +1036,7 @@ class SpiritWorldGame extends FlameGame
     if (!isSpiritualWorld && faith < worldToggleCost) {
       // Say why nothing happens: entering costs faith (playtest).
       GameSound.play(Sfx.denied, volume: 0.5);
-      _toast('🙏 ${faith.floor()}/${worldToggleCost.round()} ❌');
+      _toast('🙏 ${faith.floor()}/${worldToggleCost.round()} ❌', 'worldDenied');
       return;
     }
     
@@ -1124,6 +1254,16 @@ class SpiritWorldGame extends FlameGame
       ));
     }
 
+    // 📢🎺 Open-air meeting on the street (Salvation Army, once 📢 is learned).
+    if (openAirOffered) {
+      actions.add(RadialAction(
+        label: '📢🎺',
+        sublabel: openAirBlocker ?? '',
+        icon: Icons.campaign,
+        onSelect: holdOpenAirMeeting,
+      ));
+    }
+
     _currentMenu = RadialMenu(actions: actions, position: player.position);
     world.add(_currentMenu!);
   }
@@ -1172,11 +1312,7 @@ class SpiritWorldGame extends FlameGame
     final insightStr = mission.insightReward > 0
         ? ' +${mission.insightReward.toStringAsFixed(1)} 📖'
         : '';
-    missionCompleteMessage.value =
-        '📋 Mission!$insightStr';
-    Future.delayed(const Duration(seconds: 3), () {
-      missionCompleteMessage.value = null;
-    });
+    _toast('📋 Mission!$insightStr', 'missionDone');
 
     _log.info(
       'Mission completed: "${mission.description}" '
@@ -1204,9 +1340,17 @@ class SpiritWorldGame extends FlameGame
 
   void closeMenu() { _currentMenu?.removeFromParent(); _currentMenu = null; }
 
-  // ── Keymap overlay ────────────────────────────────────────────────────────
+  // ── ❓ Help overlay ───────────────────────────────────────────────────────
 
-  bool _keymapOpen = false;
+  /// Shown above the whole HUD (not as a Flame overlay, which lies below
+  /// the tutorial chip and the resource bars).
+  final ValueNotifier<bool> helpOpen = ValueNotifier(false);
+
+  /// Back to the pause menu when the help closes (it was opened from there).
+  bool _helpFromPause = false;
+
+  /// Tab the help opens on (0 = 🎓 my tasks … 3 = ⌨️ keys).
+  int helpTab = 0;
 
   // ── Pause menu (Issue #162) ───────────────────────────────────────────────
   //
@@ -1464,6 +1608,8 @@ class SpiritWorldGame extends FlameGame
     conversionToastMessage.dispose();
     isFainting.dispose();
     isWon.dispose();
+    spiritMapImage.value?.dispose();
+    spiritMapImage.dispose();
     wakeupMessage.dispose();
     tutorialService.dispose();
     super.onRemove();
@@ -1482,11 +1628,7 @@ class SpiritWorldGame extends FlameGame
   void recordPractice(Discipline discipline) {
     if (!progress.practice.record(discipline)) return;
     GameSound.play(Sfx.learned);
-    missionCompleteMessage.value =
-        '⭐ ${discipline.emoji} ${progress.practice.level(discipline)}';
-    Future.delayed(const Duration(seconds: 3), () {
-      missionCompleteMessage.value = null;
-    });
+    _toast('⭐ ${discipline.emoji} ${progress.practice.level(discipline)}', 'practiceUp');
   }
 
   /// Record a completed conversation
@@ -1646,6 +1788,7 @@ class SpiritWorldGame extends FlameGame
     // If no interactable found by distance, also check via grid adjacency.
     // This makes the interaction aura activate when the player is touching a
     // building wall, even for buildings without a registered component.
+    var sentinel = false;
     if (nearest == null) {
       final adjacentModels = _getAdjacentBuildingModels();
       if (adjacentModels.isNotEmpty) {
@@ -1656,12 +1799,32 @@ class SpiritWorldGame extends FlameGame
             .firstOrNull;
         // Fallback: any registered building component acts as a sentinel so
         // the player aura switches to its "nearby" colour.
-        nearest ??= chunkManager.allActiveBuildings.firstOrNull;
+        if (nearest == null) {
+          sentinel = true;
+          nearest = chunkManager.allActiveBuildings.firstOrNull;
+        }
       }
     }
 
     if (_nearestInteractable != nearest) {
       _nearestInteractable = nearest;
+      if (nearest != null && !sentinel && !isSpiritualWorld) _narrateNear(nearest);
+    }
+  }
+
+  /// The narrator tells what the person or building the pastor just came
+  /// near is about (playtest 2026-10-31).
+  void _narrateNear(Interactable i) {
+    if (i is NPCComponent) {
+      final npc = i.model;
+      final kind = npc.isShakenChristian ? 'shaken' : (npc.isChristian ? 'christian' : 'person');
+      Narrator.say('npc.$kind', i.interactionEmoji, npc.name.split(' ').first, NearTexts.people[kind]?.text,
+          passing: true);
+    } else if (i is BuildingComponent) {
+      final type = i.buildingModel.type;
+      Narrator.say('building.${type.name}', BuildingComponent.buildingEmoji(type),
+          HelpContent.buildings[type]?.text.split(' (').first ?? '', NearTexts.buildings[type]?.text,
+          passing: true);
     }
   }
 
@@ -1716,7 +1879,14 @@ class SpiritWorldGame extends FlameGame
       onUp: handleActionUp, 
       keyLabel: 'E',
       position: Vector2(size.x - 80, size.y - 80)
-    );
+    )
+      // In the invisible world ✝️ shows the faith left for prayer waves as
+      // a faint track; while praying, the strength grows along it – the
+      // longer you pray, the stronger, bounded by your faith.
+      ..ringTrack = (() => isSpiritualWorld ? faith / progress.maxFaith : null)
+      ..ring = (() => isSpiritualWorld && player.holdingTime > 0
+          ? faith / progress.maxFaith * ModifierManager.holdBonus(player.holdingTime) / ModifierManager.maxHoldBonus
+          : null);
     await camera.viewport.add(actionButton);
 
     worldToggleButton = HudButton(
@@ -1776,6 +1946,16 @@ class HudButton extends PositionComponent with TapCallbacks {
 
   /// Pulsing golden ring: the tutorial points at this button.
   bool highlight = false;
+
+  /// A ring around the button filled to this share (0–1), e.g. the faith
+  /// left for prayer waves on ✝️ (playtest 2026-10-31: the bar above the
+  /// prayer modes covered them on phones). Null = no ring.
+  double? Function()? ring;
+
+  /// A faint ring under [ring] up to this share – the most [ring] can grow
+  /// to (e.g. the faith left). Null = none.
+  double? Function()? ringTrack;
+  Color ringColor = const Color(0xFFFFD740);
   /// Optional keyboard shortcut label shown as an amber badge (desktop/web only).
   String? keyLabel;
   
@@ -1833,6 +2013,31 @@ class HudButton extends PositionComponent with TapCallbacks {
           ..color = Colors.white.withValues(alpha: 0.7 * opacity)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3);
+      }
+
+      // 2b. Ring: how much is left (e.g. 🙏 for prayer waves).
+      final share = ring?.call();
+      final track = ringTrack?.call();
+      if (share != null || track != null) {
+        final rect = Rect.fromCircle(center: center, radius: radius + 6);
+        canvas.drawCircle(center, radius + 6, Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 6
+          ..color = Colors.black.withValues(alpha: 0.45 * opacity));
+        if (track != null && track > 0.005) {
+          canvas.drawArc(rect, -pi / 2, 2 * pi * track.clamp(0.0, 1.0), false, Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 5
+            ..strokeCap = StrokeCap.round
+            ..color = (track < 0.2 ? Colors.redAccent : ringColor).withValues(alpha: 0.35 * opacity));
+        }
+        if (share != null && share > 0.005) {
+          canvas.drawArc(rect, -pi / 2, 2 * pi * share.clamp(0.0, 1.0), false, Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 5
+            ..strokeCap = StrokeCap.round
+            ..color = (track == null && share < 0.2 ? Colors.redAccent : ringColor).withValues(alpha: opacity));
+        }
       }
 
       // 3. Glanz-Effekt oben

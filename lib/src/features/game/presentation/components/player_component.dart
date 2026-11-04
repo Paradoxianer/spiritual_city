@@ -232,7 +232,7 @@ class PlayerComponent extends PositionComponent
     if (event is KeyUpEvent &&
         (event.logicalKey == GameKeymap.keymapOverlay ||
             event.logicalKey == GameKeymap.keymapOverlayAlt)) {
-      game.toggleKeymapOverlay();
+      game.toggleHelp();
     }
 
     // ── Mission board (M) ─────────────────────────────────────────────────────
@@ -310,6 +310,7 @@ class PlayerComponent extends PositionComponent
     game.faith -= cost;
 
     GameSound.playWave(_currentMode.id);
+    game.disciplePrayer.joinPastorWave();
     game.world.add(ShockwaveComponent(
       position: position.clone(),
       maxRadius: stats.radius,

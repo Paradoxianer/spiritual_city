@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/cache.dart';
 
+import '../../../../../core/utils/image_retry.dart';
 import '../../../domain/interior/interior_layout.dart';
 
 /// Draws an [InteriorLayout] with Kenney's Roguelike Indoors (furniture) and
@@ -20,13 +21,9 @@ abstract final class InteriorRenderer {
   static bool get ready => _indoor != null && _rpg != null;
 
   static Future<void> load(Images images) async {
-    try {
-      _indoor = await images.load(indoorAsset);
-      _rpg = await images.load(rpgAsset);
-    } catch (_) {
-      _indoor = null; // the room falls back to plain shapes
-      _rpg = null;
-    }
+    // Until they arrive, the room falls back to plain shapes.
+    if (_indoor == null) await loadImageWithRetry(images, indoorAsset, (i) => _indoor = i);
+    if (_rpg == null) await loadImageWithRetry(images, rpgAsset, (i) => _rpg = i);
   }
 
   static final Paint _paint = Paint()..filterQuality = FilterQuality.none;

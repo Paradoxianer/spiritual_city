@@ -169,6 +169,14 @@ class BuildingInteractionService {
   // (user feedback: Health had become about as important as Faith because
   // even the spiritual home actions drained it).
   static const double pastorHouseReadBibleFaith = 40.0;
+
+  /// 🙏👥 Prayer with the Christians of a converted household.
+  static const double fellowshipFaith = 30.0;
+  static const int fellowshipSeconds = 5;
+
+  /// Everyone who lives here is a Christian (not a shaken one).
+  static bool isChristianHousehold(BuildingModel b) =>
+      b.residents.isNotEmpty && b.residents.every((n) => n.isChristian && !n.isShakenChristian);
   static const double pastorHousePrayFaith = 30.0;
   static const double worshipFaithPerSecond = 8.0;
   static const double sundayServiceFaith = 40.0;
@@ -287,6 +295,18 @@ class BuildingInteractionService {
         );
 
       // ── Jüngerschaftsgruppe: >20 Interaktionen + 1 Bekehrter, -50 Faith
+      case 'fellowship':
+        if (!isChristianHousehold(building)) {
+          return const BuildingInteractionResult(reactionEmoji: '🚫✝️', success: false);
+        }
+        building.interactionCount++;
+        building.applyInfluence(2.0);
+        return const BuildingInteractionResult(
+          playerFaithDelta: fellowshipFaith,
+          reactionEmoji: '🙏👥🔥',
+          actionDurationSeconds: fellowshipSeconds,
+        );
+
       case 'discipleshipGroup':
         final hasChristianResident = building.residents.any((n) => n.isChristian);
         if (building.interactionCount <= 20 || !hasChristianResident) {

@@ -20,10 +20,22 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
   final TransformationController _ctrl = TransformationController();
   bool _placed = false;
 
+  /// 🌐 In the invisible world the plan shows it (what was discovered).
+  bool get _spirit => widget.game.isSpiritualWorld;
+
   @override
   void initState() {
     super.initState();
     widget.game.loadCityMap();
+    if (_spirit) widget.game.refreshSpiritMap();
+  }
+
+  /// 📍 A tap on the map marks the place to go (again: removes it).
+  void _tap(Offset local) {
+    final x = (local.dx / _scale * CityOverview.step - CityOverview.radius).floor();
+    final y = (local.dy / _scale * CityOverview.step - CityOverview.radius).floor();
+    widget.game.togglePin(x, y);
+    setState(() {});
   }
 
   @override
@@ -68,14 +80,18 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
                     minScale: 0.3,
                     maxScale: 8,
                     boundaryMargin: const EdgeInsets.all(400),
-                    child: AnimatedBuilder(
-                      animation: _ctrl,
-                      builder: (context, _) => CustomPaint(
-                        size: const Size(_side, _side),
-                        painter: _CityMapPainter(
-                          game: g,
-                          image: img,
-                          zoom: _ctrl.value.getMaxScaleOnAxis(),
+                    child: GestureDetector(
+                      onTapUp: (d) => _tap(d.localPosition),
+                      child: AnimatedBuilder(
+                        animation: Listenable.merge([_ctrl, g.spiritMapImage]),
+                        builder: (context, _) => CustomPaint(
+                          size: const Size(_side, _side),
+                          painter: _CityMapPainter(
+                            game: g,
+                            image: img,
+                            spirit: _spirit ? g.spiritMapImage.value : null,
+                            zoom: _ctrl.value.getMaxScaleOnAxis(),
+                          ),
                         ),
                       ),
                     ),
@@ -120,9 +136,12 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
 class _CityMapPainter extends CustomPainter {
   final SpiritWorldGame game;
   final ui.Image image;
+
+  /// 🌐 The invisible world over the plan (null: the plan only).
+  final ui.Image? spirit;
   final double zoom;
 
-  _CityMapPainter({required this.game, required this.image, required this.zoom});
+  _CityMapPainter({required this.game, required this.image, required this.zoom, this.spirit});
 
   static const double _s = _CityMapOverlayState._scale;
 
@@ -149,6 +168,15 @@ class _CityMapPainter extends CustomPainter {
       dst,
       Paint()..filterQuality = FilterQuality.none,
     );
+    final s = spirit;
+    if (s != null) {
+      canvas.drawImageRect(
+        s,
+        Rect.fromLTWH(0, 0, s.width.toDouble(), s.height.toDouble()),
+        dst,
+        Paint()..filterQuality = FilterQuality.none,
+      );
+    }
 
     // Boulevards every 32 cells.
     final road = Paint()
@@ -161,7 +189,7 @@ class _CityMapPainter extends CustomPainter {
       canvas.drawLine(l, r, road);
     }
 
-    if (game.isSpiritualWorld) _paintQuarters(canvas);
+    if (game.isSpiritualWorld || spirit != null) _paintQuarters(canvas);
 
     // Special buildings – tiny dots far out, emoji when zoomed in.
     final emojiSize = (13 / zoom).clamp(3.0, 13.0);

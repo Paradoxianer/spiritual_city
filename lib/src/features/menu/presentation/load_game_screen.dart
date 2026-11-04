@@ -1,7 +1,13 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/i18n/app_strings.dart';
+import '../../game/presentation/spirit_world_game.dart';
 import '../domain/menu_service.dart';
+import '../domain/save_transfer.dart';
 
 /// Screen that lists saved games loaded from Hive.
 class LoadGameScreen extends StatefulWidget {
@@ -44,6 +50,46 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
     }
   }
 
+  /// 📤 The save as a `.json` file: Android shares it, the web downloads it.
+  Future<void> _export(GameSave save) async {
+    final name = SaveTransfer.fileName(save);
+    final bytes = utf8.encode(SaveTransfer.export(save));
+    try {
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile.fromData(bytes, mimeType: 'application/json', name: name)],
+        fileNameOverrides: [name],
+      ));
+    } catch (_) {
+      _snack('❌');
+    }
+  }
+
+  /// 📥 A `.json` file from [_export] becomes a new save.
+  Future<void> _import() async {
+    final PlatformFile? file;
+    try {
+      file = await FilePicker.pickFile();
+    } catch (_) {
+      _snack('❌');
+      return;
+    }
+    if (file == null) return;
+    try {
+      final text = utf8.decode(await file.xFile.readAsBytes());
+      await widget.menuService.importSave(text, maxSchemaVersion: SpiritWorldGame.kSaveDataVersion);
+      _snack('✅ ${AppStrings.get('loadGame.imported')}');
+      _reload();
+    } catch (_) {
+      // Broken, foreign or newer files – never a crash (#192).
+      _snack('❌ ${AppStrings.get('loadGame.importFailed')}');
+    }
+  }
+
+  void _snack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
   void _load(GameSave save) {
     context.go('/game', extra: save);
   }
@@ -56,13 +102,24 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
         child: Column(
           children: [
             const SizedBox(height: 24),
-            Text(
-              AppStrings.get('loadGame.title'),
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 22,
-                letterSpacing: 1.5,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  AppStrings.get('loadGame.title'),
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 22,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  tooltip: AppStrings.get('loadGame.import'),
+                  onPressed: _import,
+                  icon: const Text('📥', style: TextStyle(fontSize: 22)),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -93,6 +150,7 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
                       onLoad: () => _load(saves[i]),
                       onDelete: () => _delete(saves[i].id),
                       onRename: () => _rename(saves[i]),
+                      onExport: () => _export(saves[i]),
                     ),
                   );
                 },
@@ -195,12 +253,14 @@ class _SaveTile extends StatelessWidget {
   final VoidCallback onLoad;
   final VoidCallback onDelete;
   final VoidCallback onRename;
+  final VoidCallback onExport;
 
   const _SaveTile({
     required this.save,
     required this.onLoad,
     required this.onDelete,
     required this.onRename,
+    required this.onExport,
   });
 
   @override
@@ -232,13 +292,27 @@ class _SaveTile extends StatelessWidget {
           save.name,
           style: const TextStyle(color: Colors.white),
         ),
-        subtitle: Text(
-          '$diffLabel · ${AppStrings.get('loadGame.lastPlayed')}: $dateStr',
-          style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$diffLabel · ${AppStrings.get('loadGame.lastPlayed')}: $dateStr',
+              style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 12),
+            ),
+            if (hasState)
+              Text(saveSummary(save.gameState),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            IconButton(
+              icon: const Text('📤', style: TextStyle(fontSize: 20)),
+              tooltip: AppStrings.get('loadGame.export'),
+              onPressed: onExport,
+            ),
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Colors.lightBlueAccent),
               tooltip: AppStrings.get('loadGame.rename'),
@@ -254,4 +328,17 @@ class _SaveTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// What a save holds, as emoji: resource levels, insight, day and
+/// conversions – so a player sees before loading what was stored
+/// (playtest 2026-10-19).
+String saveSummary(Map<String, dynamic> state) {
+  final p = state['progress'] is Map ? state['progress'] as Map : const {};
+  final stages = p['stages'] is Map ? p['stages'] as Map : const {};
+  int lv(String k) => ((stages[k] is Map ? (stages[k] as Map)['stage'] : null) as num?)?.toInt() ?? 1;
+  int n(Object? v) => (v as num?)?.toInt() ?? 0;
+  final day = p['day'] is Map ? n((p['day'] as Map)['day']) : 0;
+  return '🙏${n(state['faith'])} Lv${lv('faith')} · 📦${n(state['materials'])} Lv${lv('materials')} · '
+      '📖${n(p['insight'])} · ✝️${n(p['npcsConverted'])}${day > 0 ? ' · 📅$day' : ''}';
 }
