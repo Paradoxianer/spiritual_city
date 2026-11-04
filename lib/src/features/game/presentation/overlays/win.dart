@@ -253,7 +253,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // 📣 Share the victory (the picture is this screen).
+                    // Share the victory (the picture is this screen).
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -267,7 +267,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('📣', style: TextStyle(fontSize: 18)),
+                        child: Icon(Icons.adaptive.share, color: Colors.amber),
                       ),
                     ),
                     const SizedBox(height: 12),

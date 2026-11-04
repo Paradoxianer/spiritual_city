@@ -5,20 +5,25 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/i18n/app_strings.dart';
 import 'spirit_world_game.dart';
 
-/// 📣 Share the game (social media, messenger): a picture of the city as
-/// it is now plus the progress as emoji and the link – no text to translate.
+/// Share the game (social media, messenger): a picture of the city as
+/// it is now plus the progress and the link.
 class ShareProgress {
   static const String url = 'https://paradoxianer.github.io/spiritual_city/';
 
-  /// ✝️ converted · ⛪👥 church · 🏘️🔥 awakened quarters · 📅 day.
+  /// The post in the player's language – outside the game, where whoever
+  /// reads it does not know the game's emoji (playtest 2026-11-04).
   static String text(SpiritWorldGame g) {
     final p = g.progress;
-    return '🏙️✝️ SpiritWorld City\n'
-        '✝️ ${p.npcsConverted} · ⛪👥 ${p.church.members.length} · '
-        '🏘️🔥 ${p.awakenedQuarters.length} · 📅 ${p.dayStats.day}\n'
-        '$url';
+    String t(String k) => AppStrings.get('share.$k');
+    final awakened = p.awakenedQuarters.length;
+    return '🏙️✝️ ${t('title').replaceAll('{day}', '${p.dayStats.day}')}\n'
+        '✝️ ${p.npcsConverted} ${t('converted')}\n'
+        '⛪ ${p.church.members.length} ${t('church')}\n'
+        '${awakened > 0 ? '🔥 $awakened ${t('awakened')}\n' : ''}'
+        '${t('play')} $url';
   }
 
   /// Shares [text] and, when [shot] is on screen, a picture of it.

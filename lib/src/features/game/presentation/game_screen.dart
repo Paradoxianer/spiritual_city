@@ -89,7 +89,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late final SpiritWorldGame _game;
   bool _isSaving = false;
 
-  /// What 📣 photographs: the game with its HUD.
+  /// What sharing photographs: the game with its HUD.
   final GlobalKey _shotKey = GlobalKey();
 
   /// Autosave (playtest 2026-10-19: closing the app or an update lost
@@ -188,7 +188,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// 📣 Share a picture of the city and the progress. The pause menu closes
+  /// Share a picture of the city and the progress. The pause menu closes
   /// first so it is not in the picture.
   Future<void> _share() async {
     _game.closePauseMenu();

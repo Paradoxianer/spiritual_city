@@ -89,7 +89,7 @@ class PauseMenuOverlay extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 12),
-                      // Sound on/off and 📣 share – emoji only, no label to translate.
+                      // Sound on/off and share – emoji only, no label to translate.
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -111,8 +111,7 @@ class PauseMenuOverlay extends StatelessWidget {
                           IconButton(
                             iconSize: 30,
                             onPressed: onShare,
-                            icon: const Text('📣',
-                                style: TextStyle(fontSize: 28)),
+                            icon: Icon(Icons.adaptive.share, color: Colors.white),
                           ),
                         ],
                       ),
