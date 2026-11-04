@@ -45,6 +45,7 @@ import 'components/cell_component.dart';
 import 'components/daemon_component.dart';
 import 'components/npc_component.dart';
 import 'components/stronghold_component.dart';
+import 'share_progress.dart';
 import 'spirit_world_game.dart';
 import 'widgets/action_button.dart';
 import 'widgets/overlay_shell.dart';
@@ -87,6 +88,9 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late final SpiritWorldGame _game;
   bool _isSaving = false;
+
+  /// What 📣 photographs: the game with its HUD.
+  final GlobalKey _shotKey = GlobalKey();
 
   /// Autosave (playtest 2026-10-19: closing the app or an update lost
   /// everything since the last manual 💾): every minute and whenever the
@@ -184,6 +188,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// 📣 Share a picture of the city and the progress. The pause menu closes
+  /// first so it is not in the picture.
+  Future<void> _share() async {
+    _game.closePauseMenu();
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    final size = MediaQuery.sizeOf(context);
+    try {
+      await ShareProgress.share(_game, shot: _shotKey,
+          origin: Rect.fromCenter(center: size.center(Offset.zero), width: 1, height: 1));
+    } catch (_) {
+      // No share sheet (e.g. an old browser): nothing to do.
+    }
+  }
+
   /// Captures and persists the current game state without leaving the game.
   /// Used by the pause menu's "Save" button.
   Future<void> _saveOnly() async {
@@ -227,7 +247,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _game.handleEscape();
       },
       child: Scaffold(
-        body: Stack(
+        body: RepaintBoundary(
+        key: _shotKey,
+        child: Stack(
         children: [
           GameWidget(
             game: _game,
@@ -245,6 +267,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     game: _game,
                     isSaving: _isSaving,
                     onSave: _saveOnly,
+                    onShare: _share,
                     onSaveAndQuit: _saveAndQuit,
                   ),
             },
@@ -449,6 +472,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             builder: (context, open, _) => open ? HelpOverlay(game: _game) : const SizedBox.shrink(),
           ),
         ],
+        ),
         ),
       ),
     );

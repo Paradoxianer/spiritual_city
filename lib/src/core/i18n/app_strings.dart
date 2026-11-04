@@ -49,6 +49,10 @@ class AppStrings {
       'loadGame.rename.hint': 'Neuer Name',
       'loadGame.rename.confirm': 'Umbenennen',
       'loadGame.rename.cancel': 'Abbrechen',
+      'loadGame.export': 'Spielstand als Datei speichern / teilen',
+      'loadGame.import': 'Spielstand aus Datei laden',
+      'loadGame.imported': 'Spielstand importiert',
+      'loadGame.importFailed': 'Diese Datei ist kein Spielstand (oder von einer neueren Version)',
 
       // In-game
       'game.saveQuit': 'Speichern & Beenden',
@@ -209,6 +213,10 @@ class AppStrings {
       'loadGame.rename.hint': 'New name',
       'loadGame.rename.confirm': 'Rename',
       'loadGame.rename.cancel': 'Cancel',
+      'loadGame.export': 'Save / share as a file',
+      'loadGame.import': 'Load a save from a file',
+      'loadGame.imported': 'Save imported',
+      'loadGame.importFailed': 'This file is not a save (or from a newer version)',
 
       // In-game
       'game.saveQuit': 'Save & Quit',

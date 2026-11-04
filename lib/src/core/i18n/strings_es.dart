@@ -37,6 +37,10 @@ const Map<String, String> stringsEs = {
   'loadGame.rename.hint': 'Nuevo nombre',
   'loadGame.rename.confirm': 'Renombrar',
   'loadGame.rename.cancel': 'Cancelar',
+  'loadGame.export': 'Guardar / compartir como archivo',
+  'loadGame.import': 'Cargar partida desde un archivo',
+  'loadGame.imported': 'Partida importada',
+  'loadGame.importFailed': 'Este archivo no es una partida (o es de una versión más nueva)',
 
   // In-game
   'game.saveQuit': 'Guardar y salir',

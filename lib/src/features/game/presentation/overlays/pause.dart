@@ -8,6 +8,7 @@ class PauseMenuOverlay extends StatelessWidget {
   final bool isSaving;
   final Future<void> Function() onSave;
   final Future<void> Function() onSaveAndQuit;
+  final Future<void> Function() onShare;
 
   const PauseMenuOverlay({
     super.key,
@@ -15,6 +16,7 @@ class PauseMenuOverlay extends StatelessWidget {
     required this.isSaving,
     required this.onSave,
     required this.onSaveAndQuit,
+    required this.onShare,
   });
 
   Future<void> _confirmSaveAndQuit(BuildContext context) async {
@@ -87,19 +89,32 @@ class PauseMenuOverlay extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 12),
-                      // Sound on/off – emoji only, no label to translate.
-                      StatefulBuilder(
-                        builder: (context, setState) => IconButton(
-                          iconSize: 30,
-                          onPressed: () async {
-                            await getIt<MenuService>().setSoundOn(!GameSound.enabled);
-                            setState(() {});
-                          },
-                          icon: Text(
-                            GameSound.enabled ? '🔊' : '🔇',
-                            style: const TextStyle(fontSize: 28),
+                      // Sound on/off and 📣 share – emoji only, no label to translate.
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          StatefulBuilder(
+                            builder: (context, setState) => IconButton(
+                              iconSize: 30,
+                              onPressed: () async {
+                                await getIt<MenuService>()
+                                    .setSoundOn(!GameSound.enabled);
+                                setState(() {});
+                              },
+                              icon: Text(
+                                GameSound.enabled ? '🔊' : '🔇',
+                                style: const TextStyle(fontSize: 28),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 16),
+                          IconButton(
+                            iconSize: 30,
+                            onPressed: onShare,
+                            icon: const Text('📣',
+                                style: TextStyle(fontSize: 28)),
+                          ),
+                        ],
                       ),
                       if (game.tutorialService.isActive) ...[
                         const SizedBox(height: 12),
@@ -126,7 +141,9 @@ class PauseMenuOverlay extends StatelessWidget {
                       _PauseMenuButton(
                         icon: Icons.logout,
                         label: AppStrings.get('game.pause.quit'),
-                        onPressed: isSaving ? null : () => _confirmSaveAndQuit(context),
+                        onPressed: isSaving
+                            ? null
+                            : () => _confirmSaveAndQuit(context),
                       ),
                     ],
                   ),
