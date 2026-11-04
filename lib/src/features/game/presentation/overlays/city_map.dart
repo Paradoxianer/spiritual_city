@@ -20,18 +20,13 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
   final TransformationController _ctrl = TransformationController();
   bool _placed = false;
 
-  /// 🌐 The invisible world over the plan – on by default there.
-  late bool _spirit = widget.game.isSpiritualWorld;
+  /// 🌐 In the invisible world the plan shows it (what was discovered).
+  bool get _spirit => widget.game.isSpiritualWorld;
 
   @override
   void initState() {
     super.initState();
     widget.game.loadCityMap();
-    if (_spirit) widget.game.refreshSpiritMap();
-  }
-
-  void _toggleSpirit() {
-    setState(() => _spirit = !_spirit);
     if (_spirit) widget.game.refreshSpiritMap();
   }
 
@@ -125,24 +120,10 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
             Positioned(
               bottom: 12,
               right: 12,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 🌐 / 🏙️: the invisible world or the plan.
-                  IconButton(
-                    onPressed: _toggleSpirit,
-                    style: IconButton.styleFrom(
-                      backgroundColor: _spirit ? const Color(0xCC1B5E20) : Colors.black54,
-                    ),
-                    icon: Text(_spirit ? '🏙️' : '🌐', style: const TextStyle(fontSize: 20)),
-                  ),
-                  const SizedBox(height: 8),
-                  IconButton(
-                    onPressed: () => setState(() => _placed = false),
-                    style: IconButton.styleFrom(backgroundColor: Colors.black54),
-                    icon: const Text('🧍', style: TextStyle(fontSize: 20)),
-                  ),
-                ],
+              child: IconButton(
+                onPressed: () => setState(() => _placed = false),
+                style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                icon: const Text('🧍', style: TextStyle(fontSize: 20)),
               ),
             ),
           ],
