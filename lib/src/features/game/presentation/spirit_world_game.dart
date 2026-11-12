@@ -1,3 +1,4 @@
+import '../../../core/utils/text_cache.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'dart:math' show Random, min, pi;
@@ -647,13 +648,16 @@ class SpiritWorldGame extends FlameGame
     lootPickupMessage.value = '⏳🪫🫸⚡';
   }
 
-  /// A daemon was defeated by prayer (not dissolved on its own).
-  void onDaemonKilled(DaemonModel daemon, {PrayerMode? mode}) {
+  /// A daemon was defeated by prayer (not dissolved on its own): the
+  /// final [mode] and every mode that [helpers] it count for mastery.
+  void onDaemonKilled(DaemonModel daemon, {PrayerMode? mode, Set<PrayerMode> helpers = const {}}) {
     dayStats.daemonsDefeated++;
     tutorialService.onDaemonKilled();
     GameSound.play(Sfx.daemonDefeated, volume: 0.4);
     recordLessonTask(LessonTask.defeatDaemons);
-    if (mode != null) recordLessonTask(LessonTask.defeatWith(mode));
+    for (final m in {if (mode != null) mode, ...helpers}) {
+      recordLessonTask(LessonTask.defeatWith(m));
+    }
     if (daemon.hostNpcId != null) {
       final npc = chunkManager.findNpcModel(daemon.hostNpcId!);
       if (npc != null && npc.possessionWeakened) _releaseFromPossession(npc);
@@ -2072,27 +2076,21 @@ class HudButton extends PositionComponent with TapCallbacks {
       ] : null,
     );
 
-    TextPainter(
-      text: TextSpan(text: icon, style: iconStyle),
-      textDirection: TextDirection.ltr
-    )..layout()..paint(canvas, Offset(size.x / 2 - (size.x * (plain ? 0.4 : 0.2)), size.y / 2 - (size.y * (plain ? 0.45 : 0.25))));
+    TextCache.get(icon, iconStyle).paint(canvas, Offset(size.x / 2 - (size.x * (plain ? 0.4 : 0.2)), size.y / 2 - (size.y * (plain ? 0.45 : 0.25))));
 
     // 5. Keyboard shortcut badge (amber circle, top-right corner, desktop/web only)
     if (!plain && keyLabel != null && _shouldShowKeyHints()) {
       const badgeRadius = 11.0;
       final badgeCenter = Offset(size.x - badgeRadius + 2, badgeRadius - 2);
       canvas.drawCircle(badgeCenter, badgeRadius, Paint()..color = const Color(0xFFFFA000).withValues(alpha: opacity));
-      TextPainter(
-        text: TextSpan(
-          text: keyLabel,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: Colors.black.withValues(alpha: opacity),
-          ),
+      TextCache.get(
+        keyLabel!,
+        TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.black.withValues(alpha: opacity),
         ),
-        textDirection: TextDirection.ltr,
-      )..layout()..paint(
+      ).paint(
         canvas,
         Offset(badgeCenter.dx - 5.5, badgeCenter.dy - 7),
       );

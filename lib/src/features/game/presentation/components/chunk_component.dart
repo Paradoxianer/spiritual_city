@@ -102,6 +102,14 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
     }
   }
 
+  @override
+  void onRemove() {
+    // Unloaded chunks free their drawing at once, not whenever the GC runs.
+    _cachedPicture?.dispose();
+    _cachedPicture = null;
+    super.onRemove();
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   @override

@@ -83,10 +83,55 @@ abstract final class GameSound {
     _play(sfx, volume);
   }
 
+  /// At most [_perSfx] players per sound, made once and reused. Before,
+  /// every sound made a new player that was never freed: after a while
+  /// hundreds of them slowed the sound down (the house sound played after
+  /// leaving the house), the game stuttered and the phone app crashed
+  /// (playtest 2026-11-12).
+  static const int _perSfx = 2;
+  static final Map<Sfx, List<AudioPlayer>> _players = {};
+  static final Set<AudioPlayer> _busy = {};
+  static final AudioContext _context =
+      AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build();
+
   static Future<void> _play(Sfx sfx, double volume) async {
+    final list = _players.putIfAbsent(sfx, () => []);
+    AudioPlayer? p;
+    for (final q in list) {
+      if (!_busy.contains(q)) {
+        p = q;
+        break;
+      }
+    }
+    if (p == null) {
+      // Already sounding often enough: drop it rather than pile up.
+      if (list.length >= _perSfx) return;
+      p = AudioPlayer()..audioCache = FlameAudio.audioCache;
+      list.add(p);
+      _busy.add(p);
+      try {
+        await p.setAudioContext(_context);
+        await p.setReleaseMode(ReleaseMode.stop);
+        await p.setSource(AssetSource(sfx.file));
+        p.onPlayerComplete.listen((_) => _busy.remove(p));
+      } catch (e) {
+        _log.fine('Sound ${sfx.name} failed: $e');
+        list.remove(p);
+        _busy.remove(p);
+        unawaited(p.dispose());
+        return;
+      }
+    }
+    final player = p;
+    _busy.add(player);
+    // Free again even if "complete" never comes.
+    Timer(const Duration(seconds: 4), () => _busy.remove(player));
     try {
-      await FlameAudio.play(sfx.file, volume: volume);
+      await player.stop();
+      await player.setVolume(volume);
+      await player.resume();
     } catch (e) {
+      _busy.remove(player);
       _log.fine('Sound ${sfx.name} failed: $e');
     }
   }

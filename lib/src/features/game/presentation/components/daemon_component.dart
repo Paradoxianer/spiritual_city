@@ -52,6 +52,11 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   // Active effect tracking (Issue #9)
   final Map<PrayerMode, double> _activeEffects = {};
+
+  /// Every prayer mode that hit this daemon: at its defeat each one counts
+  /// for its mastery lesson, not only the final blow – 🫸 alone hardly
+  /// kills, it is meant to be combined (playtest 2026-11-12).
+  final Set<PrayerMode> _hitBy = {};
   double _knockbackVelocity = 0.0;
 
   // ── Pure orbital movement ─────────────────────────────────────────────────
@@ -293,6 +298,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
       return;
     }
 
+    _hitBy.add(mode);
     final hit = DaemonCombatRules.hit(
       kind: model.kind,
       mode: mode,
@@ -334,7 +340,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   void _explode(PrayerMode? mode) {
     model.dissolved = true;
     game.progress.addInsight(_killInsightReward);
-    game.onDaemonKilled(model, mode: mode);
+    game.onDaemonKilled(model, mode: mode, helpers: _hitBy);
     _cleanseAroundDeathPoint();
     removeFromParent();
   }
@@ -350,7 +356,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
             : 1.0);
     game.gainFaith(faithGain);
     game.progress.addInsight(_killInsightReward);
-    game.onDaemonKilled(model, mode: PrayerMode.drain);
+    game.onDaemonKilled(model, mode: PrayerMode.drain, helpers: _hitBy);
     _cleanseAroundDeathPoint();
     removeFromParent();
   }

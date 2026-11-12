@@ -256,6 +256,9 @@ class _LearningPath extends StatelessWidget {
             status = '✅';
           } else if (active) {
             status = '${p.lesson.progress}/${l.count} ${l.task.emoji}';
+          } else if (open && p.lesson.progressOf(l.skill) > 0) {
+            // Parked: goes on where it stopped once taken up again.
+            status = '⏸️ ${p.lesson.progressOf(l.skill)}/${l.count} ${l.task.emoji} · 🎓 $mentors';
           } else if (open) {
             status = '🎓 $mentors';
           } else {

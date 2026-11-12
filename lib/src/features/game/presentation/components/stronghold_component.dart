@@ -1,3 +1,4 @@
+import '../../../../core/utils/text_cache.dart';
 import 'dart:math' as math;
 
 import 'package:flame/components.dart';
@@ -181,26 +182,20 @@ class StrongholdComponent extends PositionComponent with HasGameReference<Spirit
       // How many pray together – and how many it takes (👥 1/3).
       if (kind.unityNeeded > 1) {
         final t = together;
-        final label = TextPainter(
-          text: TextSpan(
-            text: '👥 $t/${kind.unityNeeded}',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: t >= kind.unityNeeded ? const Color(0xFF9CFF9C) : const Color(0xFFFFE082),
-            ),
+        final label = TextCache.get(
+          '👥 $t/${kind.unityNeeded}',
+          TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: t >= kind.unityNeeded ? const Color(0xFF9CFF9C) : const Color(0xFFFFE082),
           ),
-          textDirection: TextDirection.ltr,
-        )..layout();
+        );
         label.paint(canvas, Offset(c.dx - label.width / 2, -12 - label.height));
       }
       // 🪫 disarmed / ⏳ bound: shown under the bar.
       final marks = [if (disarmed) PrayerMode.drain.icon, if (bound) PrayerMode.slow.icon];
       if (marks.isNotEmpty) {
-        final m = TextPainter(
-          text: TextSpan(text: marks.join(' '), style: const TextStyle(fontSize: 14)),
-          textDirection: TextDirection.ltr,
-        )..layout();
+        final m = TextCache.get(marks.join(' '), const TextStyle(fontSize: 14));
         m.paint(canvas, Offset(c.dx - m.width / 2, -3));
       }
     }

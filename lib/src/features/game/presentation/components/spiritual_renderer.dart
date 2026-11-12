@@ -131,6 +131,8 @@ class SpiritualRenderer extends PositionComponent
 
   @override
   void onRemove() {
+    _basePicture?.dispose();
+    _basePicture = null;
     _stateImage?.dispose();
     _stateImage = null;
     _shader?.dispose();
@@ -232,6 +234,7 @@ class SpiritualRenderer extends PositionComponent
     _baseRebuildTimer += dt;
     if (_baseRebuildTimer >= _baseRebuildInterval) {
       _baseRebuildTimer = 0.0;
+      _basePicture?.dispose();
       _basePicture = null; // mark dirty; rebuilt in render()
       _stateImage?.dispose();
       _stateImage = null;

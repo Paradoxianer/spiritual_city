@@ -280,12 +280,23 @@ class LessonState {
   /// of it; the rest is practised ("doers of the word", Jas 1:22).
   static const int studyInsightCost = 3;
 
+  /// Progress of lessons the pastor switched away from: (progress,
+  /// studied). Taking one up again goes on where it stopped – before, a
+  /// switch started it from 0 (playtest 2026-11-12).
+  final Map<Skill, (int, int)> parked = {};
+
   Lesson? get lesson => active == null ? null : Lessons.of(active!);
 
+  /// Progress of [s], whether it is the active lesson or parked.
+  int progressOf(Skill s) => active == s ? progress : (parked[s]?.$1 ?? 0);
+
   void start(Skill s) {
+    if (active == s) return;
+    if (active != null && (progress > 0 || studied > 0)) parked[active!] = (progress, studied);
     active = s;
-    progress = 0;
-    studied = 0;
+    final back = parked.remove(s);
+    progress = back?.$1 ?? 0;
+    studied = back?.$2 ?? 0;
   }
 
   /// Steps of [l] that can still be studied (it need not be active yet).
@@ -326,17 +337,29 @@ class LessonState {
         if (active != null) 'active': active!.name,
         'progress': progress,
         if (studied > 0) 'studied': studied,
+        if (parked.isNotEmpty)
+          'parked': {for (final e in parked.entries) e.key.name: [e.value.$1, e.value.$2]},
       };
 
   void loadFromJson(Object? raw) {
     active = null;
     progress = 0;
     studied = 0;
+    parked.clear();
     if (raw is! Map) return;
     for (final s in Skill.values) {
       if (s.name == raw['active']) active = s;
     }
     progress = (raw['progress'] as num?)?.toInt() ?? 0;
     studied = (raw['studied'] as num?)?.toInt() ?? 0;
+    final p = raw['parked'];
+    if (p is Map) {
+      for (final s in Skill.values) {
+        final v = p[s.name];
+        if (v is List && v.length == 2) {
+          parked[s] = ((v[0] as num).toInt(), (v[1] as num).toInt());
+        }
+      }
+    }
   }
 }
