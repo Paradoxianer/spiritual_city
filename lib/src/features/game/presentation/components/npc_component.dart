@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/stable_hash.dart';
+import '../../../../core/utils/text_cache.dart';
 import '../../domain/actions/npc_actions.dart';
 import '../../domain/models/church.dart';
 import '../../domain/services/learning_service.dart';
@@ -248,6 +249,7 @@ class NPCComponent extends PositionComponent
   void update(double dt) {
     super.update(dt);
     _anim.update(dt, position);
+    if (_flash != null && (_flashLeft -= dt) <= 0) _flash = null;
     if (game.paused) return;
 
     if (isGathered) {
@@ -368,15 +370,23 @@ class NPCComponent extends PositionComponent
   /// Walks to their place in the circle around the pastor and stays there.
   void _followPastor(double dt) {
     gatherLeft -= dt;
-    final spot = game.player.position + Vector2(cos(_circleAngle), sin(_circleAngle)) * _circleRadius;
+    const cs = CellComponent.cellSize;
+    bool walkable(Vector2 p) => game.grid.isWalkable((p.x / cs).floor(), (p.y / cs).floor());
+    var spot = game.player.position + Vector2(cos(_circleAngle), sin(_circleAngle)) * _circleRadius;
+    // Their place in the circle lies in a house (the pastor walks along
+    // one): they come to the pastor instead – never glide through walls
+    // (playtest 2026-11-12: they hovered behind at a fixed distance).
+    final toPastor = !walkable(spot);
+    if (toPastor) spot = game.player.position.clone();
     final d = (spot - position).length;
-    if (d >= 3) {
+    if (d >= (toPastor ? _circleRadius : 3)) {
       // Hurry from far away, step along once close.
       final speed = d > 200 ? 160.0 : 90.0;
-      if (d <= CellComponent.cellSize * 1.5) {
+      final next = position + (spot - position).normalized() * min(d, speed * dt);
+      if (d <= cs * 1.5 && walkable(next)) {
         // The last steps into the circle.
         _gatherPath = null;
-        position.add((spot - position).normalized() * min(d, speed * dt));
+        position.setFrom(next);
       } else {
         // Along streets and lawns, not over the roofs (playtest 2026-11-03).
         _replanIn -= dt;
@@ -594,6 +604,23 @@ class NPCComponent extends PositionComponent
       canvas.drawCircle(
           Offset(cx, cy + 2.5), 0.8, Paint()..color = const Color(0xFF5A3A00));
     }
+
+    // A short reaction over the head (e.g. at an open-air meeting).
+    if (_flash != null) {
+      final tp = TextCache.get(_flash!, const TextStyle(fontSize: 14));
+      final rise = (1 - _flashLeft / _flashSeconds) * 8;
+      tp.paint(canvas, Offset(size.x / 2 - tp.width / 2, -tp.height - 4 - rise));
+    }
+  }
+
+  String? _flash;
+  double _flashLeft = 0;
+  static const double _flashSeconds = 2.5;
+
+  /// Shows [emoji] over the head for a moment.
+  void flash(String emoji) {
+    _flash = emoji;
+    _flashLeft = _flashSeconds;
   }
 
   void _renderSpiritualAura(Canvas canvas) {

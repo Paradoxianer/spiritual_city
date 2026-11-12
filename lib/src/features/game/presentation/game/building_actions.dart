@@ -362,6 +362,7 @@ extension GameBuildingActions on SpiritWorldGame {
       if (npc.isChristian) continue;
       if (npc.faith < -30) {
         npc.applyInfluence(-5);
+        c.flash('🙉');
         continue;
       }
       final st = grid
@@ -370,7 +371,9 @@ extension GameBuildingActions on SpiritWorldGame {
           0.0;
       final cellFactor = (1.0 + st * 0.5).clamp(0.5, 1.5);
       final falloff = 1.0 - (c.position.distanceTo(at) / reach) * 0.5;
-      npc.applyInfluence(((2 + rng.nextInt(3)) * cellFactor * community * falloff * strength).roundToDouble());
+      final gain = ((2 + rng.nextInt(3)) * cellFactor * community * falloff * strength).roundToDouble();
+      npc.applyInfluence(gain);
+      c.flash(gain >= 10 ? '💛' : '👂');
     }
     return near.length;
   }
@@ -389,7 +392,10 @@ extension GameBuildingActions on SpiritWorldGame {
   static const double openAirHealthShare = 0.5;
   static const double openAirHungerShare = 0.3;
   static const int openAirRadiusCells = 20;
-  static const double openAirStrength = 1.5;
+  /// Against preaching in a church (1.0): an open-air meeting costs much
+  /// more, so it moves people much more – before (1.5) it gave the
+  /// not-yet-Christians around just +3 … +9 (playtest 2026-11-12).
+  static const double openAirStrength = 4;
 
   /// Seconds until faith is filled up after the meeting.
   static const double openAirRefillDelay = 3;

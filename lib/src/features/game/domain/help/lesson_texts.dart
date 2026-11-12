@@ -58,19 +58,12 @@ abstract final class LessonTexts {
     fr: 'Il faut aussi d’abord {n} quartiers réveillés 🏰🔥 (maintenant : {have}) : quand assez de gens d’un quartier sont chrétiens, vaincs sa forteresse dans le monde invisible.',
     pt: 'Além disso, primeiro {n} bairros precisam estar despertados 🏰🔥 (agora: {have}): quando houver cristãos suficientes num bairro, vença a fortaleza no mundo invisível.',
   );
-  static const Tr _capReached = Tr(
-    '{mode} ist auf der höchsten Stufe, die du gerade erreichen kannst ({level}/{cap}). Weiter geht es mit dem nächsten Mentor-Schritt:',
-    '{mode} is at the highest level you can reach right now ({level}/{cap}). The next mentor step takes you further:',
-    es: '{mode} está en el nivel más alto que puedes alcanzar ahora ({level}/{cap}). El siguiente paso con un mentor te lleva más lejos:',
-    fr: '{mode} est au niveau le plus haut que tu peux atteindre pour l’instant ({level}/{cap}). L’étape suivante avec un mentor te mène plus loin :',
-    pt: '{mode} está no nível mais alto que você pode alcançar agora ({level}/{cap}). O próximo passo com um mentor leva você mais longe:',
-  );
   static const Tr _canBuild = Tr(
-    '{mode}: Stufe {level} von {cap}. Mit 📖 Weisheit kaufst du hier Stufen – 🎯 weiter, ⚡ stärker, ⏱️ länger, 💨 schneller. Weisheit bekommst du von besiegten Dämonen, Missionen und Bibelkreisen.',
-    '{mode}: level {level} of {cap}. With 📖 insight you buy levels here – 🎯 further, ⚡ stronger, ⏱️ longer, 💨 faster. You get insight from defeated demons, missions and Bible groups.',
-    es: '{mode}: nivel {level} de {cap}. Con sabiduría 📖 compras niveles aquí: 🎯 más lejos, ⚡ más fuerte, ⏱️ más tiempo, 💨 más rápido. La sabiduría la ganas venciendo demonios, con misiones y grupos bíblicos.',
-    fr: '{mode} : niveau {level} sur {cap}. Avec la sagesse 📖, tu achètes des niveaux ici – 🎯 plus loin, ⚡ plus fort, ⏱️ plus longtemps, 💨 plus vite. Tu gagnes de la sagesse en vainquant des démons, par les missions et les groupes bibliques.',
-    pt: '{mode}: nível {level} de {cap}. Com sabedoria 📖 você compra níveis aqui – 🎯 mais longe, ⚡ mais forte, ⏱️ mais tempo, 💨 mais rápido. Você ganha sabedoria vencendo demônios, com missões e grupos bíblicos.',
+    '{mode}: Stufe {level}. Mit 📖 Weisheit kaufst du hier Stufen – jede kostet mehr als die davor, nach oben gibt es keine Grenze – 🎯 weiter, ⚡ stärker, ⏱️ länger, 💨 schneller. Weisheit bekommst du von besiegten Dämonen, Missionen und Bibelkreisen.',
+    '{mode}: level {level}. With 📖 insight you buy levels here – each costs more than the one before, there is no top – 🎯 further, ⚡ stronger, ⏱️ longer, 💨 faster. You get insight from defeated demons, missions and Bible groups.',
+    es: '{mode}: nivel {level}. Con sabiduría 📖 compras niveles aquí (cada uno cuesta más que el anterior, sin límite): 🎯 más lejos, ⚡ más fuerte, ⏱️ más tiempo, 💨 más rápido. La sabiduría la ganas venciendo demonios, con misiones y grupos bíblicos.',
+    fr: '{mode} : niveau {level}. Avec la sagesse 📖, tu achètes des niveaux ici (chacun coûte plus que le précédent, sans limite) – 🎯 plus loin, ⚡ plus fort, ⏱️ plus longtemps, 💨 plus vite. Tu gagnes de la sagesse en vainquant des démons, par les missions et les groupes bibliques.',
+    pt: '{mode}: nível {level}. Com sabedoria 📖 você compra níveis aqui (cada um custa mais que o anterior, sem limite) – 🎯 mais longe, ⚡ mais forte, ⏱️ mais tempo, 💨 mais rápido. Você ganha sabedoria vencendo demônios, com missões e grupos bíblicos.',
   );
 
   /// Name of a skill: its help sentence up to the colon.
@@ -141,16 +134,8 @@ abstract final class LessonTexts {
 
   /// A prayer mode in the ⚔️ cabinet: what it is, its level, and how to
   /// go further.
-  static String explainMode(PrayerMode mode, {
-    required int level,
-    required int cap,
-    required String modeName,
-    String? nextLesson,
-  }) {
+  static String explainMode(PrayerMode mode, {required int level, required String modeName}) {
     final base = HelpContent.prayerModes[mode]?.text ?? '';
-    if (level >= cap && nextLesson != null) {
-      return '$base ${_capReached.text.replaceAll('{mode}', modeName).replaceAll('{level}', '$level').replaceAll('{cap}', '$cap')} $nextLesson';
-    }
-    return '$base ${_canBuild.text.replaceAll('{mode}', modeName).replaceAll('{level}', '$level').replaceAll('{cap}', '$cap')}';
+    return '$base ${_canBuild.text.replaceAll('{mode}', modeName).replaceAll('{level}', '$level')}';
   }
 }

@@ -20,45 +20,10 @@ abstract final class CombatAbilities {
     return s == null || learned.has(s);
   }
 
-  /// Mastery lessons of [mode] in order (⭐, ⭐⭐, …) – a small quest chain:
-  /// each one lifts the mode's upgrade cap one step.
-  static List<Skill> mastery(PrayerMode mode) => switch (mode) {
-        PrayerMode.liberation => const [
-            Skill.liberationMastery1,
-            Skill.liberationMastery2,
-            Skill.liberationMastery3,
-          ],
-        PrayerMode.rebuke => const [Skill.rebukeMastery1, Skill.rebukeMastery2],
-        PrayerMode.slow => const [Skill.slowMastery1, Skill.slowMastery2],
-        PrayerMode.drain => const [Skill.drainMastery1, Skill.drainMastery2],
-      };
-
-  /// Highest mode level the pastor may buy (sum of the four upgrades)
-  /// without a mentor, after ⭐, after ⭐⭐ …: 🕊️ Liberation, the main
-  /// weapon, goes up to 15, the others to 10 (playtest 2026-10-19). Up to
-  /// 3 without a mentor – the first ability needs no lesson (playtest
-  /// 2026-10-31: 📖 piled up with nothing to buy).
-  static List<int> levelCaps(PrayerMode mode) =>
-      mode == PrayerMode.liberation ? const [3, 5, 10, 15] : const [3, 5, 10];
-
-  static int maxCap(PrayerMode mode) => levelCaps(mode).last;
-
-  /// Next mastery lesson that lifts the cap, or null at the top.
-  static Skill? nextMastery(PrayerMode mode, LearnedSkills learned) {
-    for (final s in mastery(mode)) {
-      if (!learned.has(s)) return s;
-    }
-    return null;
-  }
-
-  static int levelCap(PrayerMode mode, LearnedSkills learned) {
-    var i = 0;
-    for (final s in mastery(mode)) {
-      if (!learned.has(s)) break;
-      i++;
-    }
-    return levelCaps(mode)[i];
-  }
+  /// Mastery lessons once lifted a level cap; there is no cap any more –
+  /// every level just costs more (playtest 2026-11-12). Kept empty so old
+  /// saves and texts still resolve.
+  static List<Skill> mastery(PrayerMode mode) => const [];
 
   /// Mode level = sum of its radius/strength/duration/speed upgrades.
   static int modeLevel(CombatModifierSet s) =>

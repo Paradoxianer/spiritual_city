@@ -21,7 +21,7 @@ void main() {
           expect(t.contains('{'), isFalse, reason: '$lang ${l.skill}: $t');
         }
       }
-      final m = LessonTexts.explainMode(PrayerMode.rebuke, level: 3, cap: 3, modeName: 'X', nextLesson: 'Y');
+      final m = LessonTexts.explainMode(PrayerMode.rebuke, level: 3, modeName: 'X');
       expect(m.contains('{'), isFalse, reason: m);
     }
     AppStrings.setLanguage('de');

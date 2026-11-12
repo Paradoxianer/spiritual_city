@@ -748,7 +748,7 @@ abstract final class HelpContent {
     (
       '⚔️',
       Tr('Verbessere deine Gebete', 'Improve your prayers', es: 'Mejora tus oraciones', fr: 'Améliore tes prières', pt: 'Melhore suas orações'),
-      Tr('Erkenntnis 📖 investierst du im Pastorenhaus 🏡 am ⚔️-Schrank. Bis Stufe 3 geht es allein, danach brauchst du eine Meisterschaft ⭐ von einem Mentor – das Menü zeigt dir, welche und wo (📍).', 'Spend insight 📖 at the ⚔️ cabinet in the pastor house 🏡. Up to level 3 on your own, then you need a mastery ⭐ from a mentor – the menu shows which one and where (📍).', es: 'Gasta la sabiduría 📖 en el armario ⚔️ de la casa pastoral 🏡. Hasta el nivel 3 por tu cuenta; después necesitas una maestría ⭐ de un mentor: el menú te muestra cuál y dónde (📍).', fr: 'Dépense ta sagesse 📖 à l’armoire ⚔️ de la maison pastorale 🏡. Jusqu’au niveau 3 seul, ensuite il te faut une maîtrise ⭐ d’un mentor – le menu te montre laquelle et où (📍).', pt: 'Gaste a sabedoria 📖 no armário ⚔️ da casa pastoral 🏡. Até o nível 3 sozinho; depois você precisa de uma maestria ⭐ de um mentor – o menu mostra qual e onde (📍).')
+      Tr('Erkenntnis 📖 investierst du im Pastorenhaus 🏡 am ⚔️-Schrank. Jede Stufe kostet mehr als die davor – nach oben gibt es keine Grenze.', 'Spend insight 📖 at the ⚔️ cabinet in the pastor house 🏡. Each level costs more than the one before – there is no top.', es: 'Gasta la sabiduría 📖 en el armario ⚔️ de la casa pastoral 🏡. Cada nivel cuesta más que el anterior; no hay límite.', fr: 'Dépense ta sagesse 📖 à l’armoire ⚔️ de la maison pastorale 🏡. Chaque niveau coûte plus que le précédent – il n’y a pas de limite.', pt: 'Gaste a sabedoria 📖 no armário ⚔️ da casa pastoral 🏡. Cada nível custa mais que o anterior – não há limite.')
     ),
     (
       '🏘️🔥',

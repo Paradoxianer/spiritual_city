@@ -105,18 +105,14 @@ class _UpgradePanelState extends State<_UpgradePanel> {
     final skills = _progress.skills;
     final tier = CombatAbilities.tier(s);
     final level = CombatAbilities.modeLevel(s);
-    // Not learned yet, or at the mentor cap: the next step is a 🎓 lesson.
+    // Not learned yet: the next step is a 🎓 lesson. Learned: no top, every
+    // level just costs more (playtest 2026-11-12).
     final modeSkill = CombatAbilities.modeSkill(mode);
-    final cap = CombatAbilities.levelCap(mode, skills);
-    final next = CombatAbilities.nextMastery(mode, skills);
-    final Availability? lock = !CombatAbilities.canUse(mode, skills)
-        ? Locked('🎓${modeSkill!.emoji}')
-        : level >= cap
-            ? (next == null ? const Locked('✅') : const Locked('🔒'))
-            : null;
-    // At the cap the next mentor step is shown with what it still needs and
-    // a 📍 to follow it (playtest 2026-10-19: the way on was not visible).
-    final teach = !CombatAbilities.canUse(mode, skills) ? modeSkill : (level >= cap ? next : null);
+    final Availability? lock =
+        !CombatAbilities.canUse(mode, skills) ? Locked('🎓${modeSkill!.emoji}') : null;
+    // The mentor step is shown with what it still needs and a 📍 to follow
+    // it (playtest 2026-10-19: the way on was not visible).
+    final teach = !CombatAbilities.canUse(mode, skills) ? modeSkill : null;
     _UpgradeTile tile(String emoji, String key, int level, double value, VoidCallback apply) =>
         _UpgradeTile(
           emoji: emoji,
@@ -135,7 +131,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
       icon: mode.icon,
       color: mode.color,
       title: modeName,
-      badge: '$level/$cap',
+      badge: 'Lv $level',
       // Tap: the narrator explains this prayer and how to build it up.
       onTap: () {
         if (modeSkill != null && !CombatAbilities.canUse(mode, skills)) {
@@ -146,21 +142,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
           'mode.${mode.id}',
           mode.icon,
           modeName,
-          LessonTexts.explainMode(
-            mode,
-            level: level,
-            cap: cap,
-            modeName: modeName,
-            nextLesson: next == null
-                ? null
-                : LessonTexts.explain(
-                    Lessons.of(next),
-                    learned: skills,
-                    awakenings: widget.game.progress.awakenedQuarters.length,
-                    active: widget.game.progress.lesson.active,
-                    progress: widget.game.progress.lesson.progress,
-                  ),
-          ),
+          LessonTexts.explainMode(mode, level: level, modeName: modeName),
           force: true,
         );
       },

@@ -161,103 +161,12 @@ abstract final class Lessons {
       unlocks: '📢⛪ ➡️ 👥✝️',
       requires: {Skill.spiritualWarfare},
     ),
-    // ── Mastery per prayer mode: lifts the upgrade cap (2 → 5 → 10, 🕊️ → 15) ──
-    Lesson(
-      skill: Skill.liberationMastery1,
-      mentorAt: {BuildingType.church, BuildingType.cemetery},
-      task: LessonTask.defeatLiberation,
-      count: 10,
-      reference: 'Joh 8,36',
-      verse: 'lesson.mastery.liberation.verse',
-      unlocks: '🕊️⭐ ➡️ 🔓5 🕊️💥',
-    ),
-    Lesson(
-      skill: Skill.liberationMastery2,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatLiberation,
-      count: 20,
-      reference: 'Joh 8,36',
-      verse: 'lesson.mastery.liberation.verse',
-      unlocks: '🕊️⭐⭐ ➡️ 🔓10 🕊️✨',
-      requires: {Skill.liberationMastery1},
-    ),
-    Lesson(
-      skill: Skill.liberationMastery3,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatLiberation,
-      count: 30,
-      reference: 'Joh 8,36',
-      verse: 'lesson.mastery.liberation.verse',
-      unlocks: '🕊️⭐⭐⭐ ➡️ 🔓15',
-      requires: {Skill.liberationMastery2},
-      minAwakenings: 1,
-    ),
-    Lesson(
-      skill: Skill.rebukeMastery1,
-      mentorAt: {BuildingType.church, BuildingType.cathedral},
-      task: LessonTask.defeatRebuke,
-      count: 10,
-      reference: 'Jak 4,7',
-      verse: 'lesson.mastery.rebuke.verse',
-      unlocks: '🫸⭐ ➡️ 🔓5 🫸💪',
-      requires: {Skill.spiritualWarfare},
-    ),
-    Lesson(
-      skill: Skill.rebukeMastery2,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatRebuke,
-      count: 20,
-      reference: 'Jak 4,7',
-      verse: 'lesson.mastery.rebuke.verse',
-      unlocks: '🫸⭐⭐ ➡️ 🔓10 🫸⚡',
-      requires: {Skill.rebukeMastery1},
-      minAwakenings: 1,
-    ),
-    Lesson(
-      skill: Skill.slowMastery1,
-      mentorAt: {BuildingType.library, BuildingType.cathedral},
-      task: LessonTask.defeatSlow,
-      count: 10,
-      reference: 'Mk 3,27',
-      verse: 'lesson.mastery.slow.verse',
-      unlocks: '⏳⭐ ➡️ 🔓5 ⏳⏳',
-      requires: {Skill.binding},
-    ),
-    Lesson(
-      skill: Skill.slowMastery2,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatSlow,
-      count: 20,
-      reference: 'Mk 3,27',
-      verse: 'lesson.mastery.slow.verse',
-      unlocks: '⏳⭐⭐ ➡️ 🔓10 ⏳💥',
-      requires: {Skill.slowMastery1},
-      minAwakenings: 1,
-    ),
-    Lesson(
-      skill: Skill.drainMastery1,
-      mentorAt: {BuildingType.cathedral, BuildingType.cemetery},
-      task: LessonTask.defeatDrain,
-      count: 10,
-      reference: 'Lk 10,19',
-      verse: 'lesson.mastery.drain.verse',
-      unlocks: '🪫⭐ ➡️ 🔓5 🪫🙏',
-      requires: {Skill.disarming},
-    ),
-    Lesson(
-      skill: Skill.drainMastery2,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatDrain,
-      count: 20,
-      reference: 'Lk 10,19',
-      verse: 'lesson.mastery.drain.verse',
-      unlocks: '🪫⭐⭐ ➡️ 🔓10 🪫⚡',
-      requires: {Skill.drainMastery1},
-      minAwakenings: 1,
-    ),
   ];
 
   static Lesson of(Skill s) => all.firstWhere((l) => l.skill == s);
+
+  /// [of], or null for a skill without a lesson (old mastery lessons).
+  static Lesson? maybeOf(Skill s) => all.where((l) => l.skill == s).firstOrNull;
 
   /// Lessons a mentor in [type] offers to a pastor who knows [learned]:
   /// not yet learned, prerequisites met.
@@ -280,7 +189,7 @@ class LessonState {
   /// of it; the rest is practised ("doers of the word", Jas 1:22).
   static const int studyInsightCost = 3;
 
-  Lesson? get lesson => active == null ? null : Lessons.of(active!);
+  Lesson? get lesson => active == null ? null : Lessons.maybeOf(active!);
 
   void start(Skill s) {
     active = s;
@@ -336,6 +245,8 @@ class LessonState {
     for (final s in Skill.values) {
       if (s.name == raw['active']) active = s;
     }
+    // An old save in a mastery lesson that no longer exists.
+    if (active != null && Lessons.maybeOf(active!) == null) active = null;
     progress = (raw['progress'] as num?)?.toInt() ?? 0;
     studied = (raw['studied'] as num?)?.toInt() ?? 0;
   }

@@ -62,48 +62,21 @@ void main() {
       expect(drain.isOpen(warrior, 1), isFalse, reason: 'needs ⏳ first');
     });
 
-    test('mentors lift the upgrade cap of a mode: 3 → 5 → 10', () {
-      final s = LearnedSkills({Skill.spiritualWarfare});
-      expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 3);
-      s.learn(Skill.rebukeMastery1);
-      expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 5);
-      expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 0), isFalse);
-      expect(Lessons.of(Skill.rebukeMastery2).isOpen(s, 1), isTrue);
-      s.learn(Skill.rebukeMastery2);
-      expect(CombatAbilities.levelCap(PrayerMode.rebuke, s), 10);
-      // The abilities stay reachable under the caps.
-      expect(CombatAbilities.milestones.every((m) => m <= 10), isTrue);
+    test('no top: no mentor gates the levels any more (playtest 2026-11-12)', () {
+      for (final m in PrayerMode.values) {
+        expect(CombatAbilities.mastery(m), isEmpty);
+      }
+      expect(Lessons.all.where((l) => l.task == LessonTask.defeatLiberation), isEmpty);
+      // Old saves in a mastery lesson start without one.
+      final s = LessonState()..loadFromJson({'active': 'liberationMastery1', 'progress': 4});
+      expect(s.active, isNull);
+      expect(s.lesson, isNull);
     });
 
-    test('🕊️ Liberation, the main weapon, climbs to 15 in a chain of three', () {
-      final s = LearnedSkills();
-      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 3);
-      expect(CombatAbilities.nextMastery(PrayerMode.liberation, s), Skill.liberationMastery1);
-      s.learn(Skill.liberationMastery1);
-      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 5);
-      expect(Lessons.of(Skill.liberationMastery2).isOpen(s, 0), isTrue,
-          reason: 'no awakened quarter needed for 🕊️⭐⭐');
-      s.learn(Skill.liberationMastery2);
-      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 10);
-      expect(Lessons.of(Skill.liberationMastery3).isOpen(s, 0), isFalse);
-      expect(Lessons.of(Skill.liberationMastery3).isOpen(s, 1), isTrue);
-      s.learn(Skill.liberationMastery3);
-      expect(CombatAbilities.levelCap(PrayerMode.liberation, s), 15);
-      expect(CombatAbilities.nextMastery(PrayerMode.liberation, s), isNull);
-      expect(CombatAbilities.maxCap(PrayerMode.rebuke), 10);
-    });
-
-    test('mastery lessons count kills of their own mode only', () {
-      final learned = LearnedSkills({Skill.spiritualWarfare});
-      final state = LessonState()..start(Skill.rebukeMastery1);
-      expect(state.record(LessonTask.defeatLiberation, learned), isNull);
-      expect(state.progress, 0);
-      expect(state.record(LessonTask.defeatWith(PrayerMode.rebuke), learned), isNull);
-      expect(state.progress, 1);
-    });
-
-    test('every skill has a lesson', () {
-      for (final s in Skill.values) {
+    test('every skill has a lesson (but the old mastery ones)', () {
+      final mastery = {for (final s in Skill.values) if (s.name.contains('Mastery')) s};
+      expect(mastery, hasLength(9));
+      for (final s in Skill.values.where((s) => !mastery.contains(s))) {
         expect(Lessons.all.where((l) => l.skill == s), hasLength(1), reason: '$s');
       }
     });

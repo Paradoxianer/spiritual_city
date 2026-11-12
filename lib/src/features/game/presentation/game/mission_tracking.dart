@@ -75,7 +75,8 @@ extension GameMissionTracking on SpiritWorldGame {
     }
     if (key.startsWith('lesson:')) {
       final skill = Skill.values.where((s) => 'lesson:${s.name}' == key).firstOrNull;
-      return skill == null ? null : _nearestMentor(Lessons.of(skill));
+      final lesson = skill == null ? null : Lessons.maybeOf(skill);
+      return lesson == null ? null : _nearestMentor(lesson);
     }
     if (key.startsWith('npc:')) {
       return chunkManager.findNpcComponent(key.substring(4))?.position;

@@ -23,14 +23,9 @@ class LessonOverlay extends StatelessWidget {
   /// first levels, a mastery with the next cap, or another skill.
   ({String icon, String name, String gain, Color color}) _reward(Lesson l) {
     for (final m in PrayerMode.values) {
-      final caps = CombatAbilities.levelCaps(m);
       final name = AppStrings.get('mode.${m.id}');
       if (CombatAbilities.modeSkill(m) == l.skill) {
-        return (icon: m.icon, name: name, gain: 'Lv ${caps.first}', color: m.color);
-      }
-      final k = CombatAbilities.mastery(m).indexOf(l.skill);
-      if (k >= 0) {
-        return (icon: '${m.icon}${'⭐' * (k + 1)}', name: name, gain: 'Lv ${caps[k + 1]}', color: m.color);
+        return (icon: m.icon, name: name, gain: '🔓', color: m.color);
       }
     }
     final parts = l.unlocks.split('➡️');
