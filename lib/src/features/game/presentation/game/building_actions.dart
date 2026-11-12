@@ -360,8 +360,11 @@ extension GameBuildingActions on SpiritWorldGame {
     for (final c in near) {
       final npc = c.model;
       if (npc.isChristian) continue;
-      if (npc.faith < -30) {
-        npc.applyInfluence(-5);
+      // Some turn away – like at a conversion attempt, by chance: the more
+      // hostile, the likelier (15 % for the open, 75 % for the most hostile).
+      final reject = 0.15 + (npc.faith < 0 ? -npc.faith / 100 * 0.6 : 0);
+      if (rng.nextDouble() < reject) {
+        npc.applyInfluence(-(3 + rng.nextInt(3)).toDouble());
         c.flash('🙉');
         continue;
       }
