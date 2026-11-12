@@ -14,7 +14,7 @@ class LessonOverlay extends StatelessWidget {
     // Rebuilt while 📖 studying moves the lesson on and spends insight.
     return ListenableBuilder(
       listenable: Listenable.merge([game.lessonNotifier, game.progress]),
-      builder: (context, _) => _build(lesson),
+      builder: (context, _) => _build(game.activeLessonOffer ?? lesson),
     );
   }
 
@@ -70,6 +70,23 @@ class LessonOverlay extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // This mentor teaches more: tap to switch.
+              if (game.lessonChoices.length > 1) ...[
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final l in game.lessonChoices)
+                      ChoiceChip(
+                        label: Text(_reward(l).icon, style: const TextStyle(fontSize: 18)),
+                        selected: l.skill == lesson.skill,
+                        onSelected: (_) => game.switchLesson(l),
+                        showCheckmark: false,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
               // 🎁: what you get – in the symbols of the ⚔️ cabinet.
               Row(children: [
                 const SizedBox(width: 44, child: Text('🎁:', style: label)),

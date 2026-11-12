@@ -28,6 +28,13 @@ extension GameLearning on SpiritWorldGame {
     );
   }
 
+  /// Shows another lesson of the same mentor on the card.
+  void switchLesson(Lesson lesson) {
+    activeLessonOffer = lesson;
+    lessonNotifier.value++;
+    explainLesson(lesson);
+  }
+
   void closeLesson() {
     activeLessonOffer = null;
     overlays.remove('LessonOverlay');

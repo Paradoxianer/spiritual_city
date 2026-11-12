@@ -210,9 +210,7 @@ class _NextLesson extends StatelessWidget {
     if (p.lesson.active == skill) {
       status = '${p.lesson.progress}/${l.count} ${l.task.emoji}';
     } else if (l.isOpen(p.skills, awakenings)) {
-      final parked = p.lesson.progressOf(skill);
-      status = '${parked > 0 ? '⏸️ $parked/${l.count} · ' : ''}'
-          '${l.mentorAt.map(BuildingComponent.buildingEmoji).join(' ')}';
+      status = l.mentorAt.map(BuildingComponent.buildingEmoji).join(' ');
     } else {
       status = '🔒 ${[
         for (final r in l.requires)

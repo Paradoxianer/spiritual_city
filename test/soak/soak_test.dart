@@ -14,6 +14,7 @@ void main() {
     await tester.runAsync(() async {
       g.onGameResize(Vector2(800, 600));
       // Like flame_test's initializeGame: a mounted game queues adds.
+      // ignore: invalid_use_of_internal_member
       await g.load();
       // ignore: invalid_use_of_internal_member
       g.mount();

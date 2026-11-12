@@ -31,6 +31,14 @@ extension GameInterior on SpiritWorldGame {
     );
     final lessons = Lessons.offeredAt(building.type, progress.skills,
         awakenings: progress.awakenedQuarters.length);
+    // The one the pastor follows (📍) or has begun comes first.
+    int rank(Lesson l) => trackedMission.value == GameMissionTracking.lessonKey(l.skill)
+        ? 0
+        : progress.lesson.active == l.skill
+            ? 1
+            : 2;
+    lessons.sort((a, b) => rank(a).compareTo(rank(b)));
+    lessonChoices = lessons;
     final room = InteriorWorld(
       building: building,
       layout: layout,

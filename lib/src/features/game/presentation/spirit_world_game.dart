@@ -639,6 +639,11 @@ class SpiritWorldGame extends FlameGame
   /// Lesson card currently shown (LessonOverlay), if any.
   Lesson? activeLessonOffer;
 
+  /// All lessons the mentor in the current building offers – the card
+  /// switches between them (playtest 2026-11-12: only the first was ever
+  /// offered, e.g. a church never showed 🕊️⭐ while ➖🍞 was open).
+  List<Lesson> lessonChoices = const [];
+
   /// Bumped whenever the active lesson changes (HUD chip listens).
   final ValueNotifier<int> lessonNotifier = ValueNotifier(0);
 
