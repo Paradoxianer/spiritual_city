@@ -178,6 +178,22 @@ class BuildingInteractionService {
   static bool isChristianHousehold(BuildingModel b) =>
       b.residents.isNotEmpty && b.residents.every((n) => n.isChristian && !n.isShakenChristian);
   static const double pastorHousePrayFaith = 30.0;
+
+  // Faith from home and from fellowship grows with the pastor: at faith
+  // level 9 (max 260) the fixed +30 took four prayers to fill up again
+  // (playtest 2026-11-13). The constants above stay the minimum.
+
+  /// 🙏 at home: half of the pastor's faith.
+  static double homePrayFaith(double maxFaith) => max(pastorHousePrayFaith, maxFaith / 2);
+
+  /// 📖 at home: a third.
+  static double homeBibleFaith(double maxFaith) => max(pastorHouseReadBibleFaith, maxFaith / 3);
+
+  /// 🙏👥 with a Christian household: more the more stable they are – care
+  /// (👂, 📜), church and discipleship make Christians who carry others
+  /// (Ex 17:12). [stability] 0 … 0.9 (WorldSimulation.baseStability).
+  static double fellowshipFaithFor(double maxFaith, double stability) =>
+      max(fellowshipFaith, maxFaith * (0.1 + 0.5 * stability.clamp(0.0, 1.0)));
   static const double worshipFaithPerSecond = 8.0;
   static const double sundayServiceFaith = 40.0;
   static const double sundayServiceHealthCost = 25.0;

@@ -39,6 +39,21 @@ extension GameBuildingActions on SpiritWorldGame {
       faith,
     );
 
+    // Faith that grows with the pastor (playtest 2026-11-13).
+    if (result.success) {
+      final b = data.building;
+      final scaled = switch (actionType) {
+        'pray' when b.type == BuildingType.pastorHouse =>
+          BuildingInteractionService.homePrayFaith(progress.maxFaith),
+        'readBible' when b.type == BuildingType.pastorHouse =>
+          BuildingInteractionService.homeBibleFaith(progress.maxFaith),
+        'fellowship' => BuildingInteractionService.fellowshipFaithFor(progress.maxFaith,
+            b.residents.isEmpty ? 0.0 : b.residents.map(_baseStability).reduce((a, c) => a + c) / b.residents.length),
+        _ => null,
+      };
+      if (scaled != null) result = result.withFaithDelta(scaled.roundToDouble());
+    }
+
     // Practice ("Übung", §3.4): the more often the pastor reads, prays and
     // worships, the more faith these actions give him.
     final discipline = action?.discipline;

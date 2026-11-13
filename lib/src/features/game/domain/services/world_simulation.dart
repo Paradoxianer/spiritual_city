@@ -83,6 +83,8 @@ abstract final class WorldSimulation {
   // ── People and houses on the ground ─────────────────────────────────────
 
   /// A Christian's light per faith point on their own / neighbouring cells.
+  /// (Their protecting reach is [ChristianSupport.radius]; a lone Christian
+  /// in deep darkness must still be worn down – they need the others.)
   static const double christianCentre = 0.003;
   static const double christianAdjacent = 0.001;
 
@@ -98,6 +100,11 @@ abstract final class WorldSimulation {
   /// A house's holiness (−100 … 100) at its centre, per 100 points; it
   /// fades to nothing at the edge of its radius.
   static const double housePer100 = 0.03;
+
+  /// A holy house (holiness > 0, e.g. converted residents) shines this much
+  /// stronger and one cell further than a dark one darkens.
+  static const double holyHouseFactor = 2.0;
+  static const int holyHouseExtraRadius = 1;
 
   // ── The ground on people ────────────────────────────────────────────────
 
@@ -200,9 +207,10 @@ abstract final class WorldSimulation {
 
   static void _houses(CityGrid grid, List<HouseAnchor> anchors) {
     for (final a in anchors) {
-      final centre = a.holiness / 100 * housePer100;
+      final holy = a.holiness > 0;
+      final centre = a.holiness / 100 * housePer100 * (holy ? holyHouseFactor : 1);
       if (centre == 0) continue;
-      final r = a.radius;
+      final r = a.radius + (holy ? holyHouseExtraRadius : 0);
       for (var dy = -r; dy <= r; dy++) {
         for (var dx = -r; dx <= r; dx++) {
           final d = math.sqrt((dx * dx + dy * dy).toDouble());
@@ -235,9 +243,9 @@ abstract final class WorldSimulation {
   /// Christians (not shaken ones) in reach of each cell (#180).
   static Map<int, int> _christiansNear(List<Resident> residents) {
     final near = <int, int>{};
-    const r = ChristianSupport.radius;
     for (final p in residents) {
       if (!p.npc.isChristian || p.npc.isShakenChristian) continue;
+      final r = ChristianSupport.radiusFor(p.baseStability);
       for (var dy = -r; dy <= r; dy++) {
         for (var dx = -r; dx <= r; dx++) {
           final k = _key(p.x + dx, p.y + dy);
@@ -314,7 +322,9 @@ abstract final class WorldSimulation {
     if (cell == null) return;
     if (npc.isChristian) {
       if (npc.isShakenChristian) return; // ✝️💔 needs care first
-      final f = npc.faith * t.personFactor * (npc.isDisciple ? discipleFactor : 1.0);
+      // Firm Christians (care, church, discipleship) shine brighter.
+      final f = npc.faith * t.personFactor * (npc.isDisciple ? discipleFactor : 1.0) *
+          (1 + r.baseStability.clamp(0.0, 1.0));
       _add(cell, f * christianCentre);
       for (final (dx, dy) in _dirs) {
         final n = grid.getCell(r.x + dx, r.y + dy);

@@ -179,6 +179,9 @@ class NPCComponent extends PositionComponent
       playerHealth: game.health,
       playerMaterials: game.materials,
       practiceMultiplier: game.progress.practice.multiplier(discipline) * _intercessionFactor,
+      christianFaith: model.isChristian && !model.isShakenChristian
+          ? NpcInteractionService.prayWithChristianFaith(game.progress.maxFaith, game.baseStabilityOf(model))
+          : 0.0,
     );
 
     if (r.playerFaithDelta != 0) game.gainFaith(r.playerFaithDelta);

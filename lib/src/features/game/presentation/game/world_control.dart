@@ -41,6 +41,9 @@ extension GameWorld on SpiritWorldGame {
             ),
       ];
 
+  /// How firmly [npc] stands (0 … 0.9) – care, church, discipleship.
+  double baseStabilityOf(NPCModel npc) => _baseStability(npc);
+
   double _baseStability(NPCModel npc) => WorldSimulation.baseStability(
         resolvedChallenges: npc.isChristian ? npc.backstory.resolvedChallenges.length : 0,
         interactions: npc.interactionCount,

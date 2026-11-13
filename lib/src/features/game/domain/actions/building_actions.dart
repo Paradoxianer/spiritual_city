@@ -23,11 +23,11 @@ abstract final class BuildingActions {
 
   // ── Pastor house ────────────────────────────────────────────────────────
 
-  static final readBible = GameAction<BuildingModel>(
+  static const readBible = GameAction<BuildingModel>(
     id: ActionId.readBible,
     type: 'readBible',
     emoji: '📖',
-    effect: '🙏+${BuildingInteractionService.pastorHouseReadBibleFaith.round()}',
+    effect: '🙏+⅓',
     baseSeconds: BuildingInteractionService.pastorHouseReadBibleSeconds,
     discipline: Discipline.bible,
   );
@@ -45,11 +45,11 @@ abstract final class BuildingActions {
     effect: '❤️+50',
     baseSeconds: BuildingInteractionService.pastorHouseSleepSeconds,
   );
-  static final homePray = GameAction<BuildingModel>(
+  static const homePray = GameAction<BuildingModel>(
     id: ActionId.homePray,
     type: 'pray',
     emoji: '🙏',
-    effect: '🙏+${BuildingInteractionService.pastorHousePrayFaith.round()}🌍',
+    effect: '🙏+½🌍',
     baseSeconds: BuildingInteractionService.pastorHousePraySeconds,
     discipline: Discipline.prayer,
   );
@@ -106,7 +106,7 @@ abstract final class BuildingActions {
     id: ActionId.fellowship,
     type: 'fellowship',
     emoji: '🙏👥',
-    effect: '🙏+${BuildingInteractionService.fellowshipFaith.round()}',
+    effect: '🙏⬆️',
     baseSeconds: BuildingInteractionService.fellowshipSeconds,
     discipline: Discipline.prayer,
     lockedBy: (b) => BuildingInteractionService.isChristianHousehold(b) ? null : '🔒✝️',

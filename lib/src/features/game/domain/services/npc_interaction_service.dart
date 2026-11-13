@@ -77,6 +77,12 @@ class NpcInteractionService {
   static const double lifeTalkInsightOnChristGrowth = 0.3;
   static const double lifeTalkInsightOnFullyResolved = 0.5;
 
+  /// Faith 🙏 with a Christian gives the pastor: a share of his faith,
+  /// more the more stable they are – care (👂, 📜), church, discipleship
+  /// (playtest 2026-11-13: at faith level 9 a prayer together gave ~8).
+  static double prayWithChristianFaith(double maxFaith, double stability) =>
+      (maxFaith * (0.02 + 0.15 * stability.clamp(0.0, 1.0))).roundToDouble();
+
   /// NPC faith gained per severity point once a challenge is worked through.
   static const double lifeTalkFaithPerSeverity = 2.0;
 
@@ -85,6 +91,8 @@ class NpcInteractionService {
   /// [spiritualState] is the NPC's cell (−1 … 1), [playerFaith] /
   /// [playerHealth] / [playerMaterials] the current amounts, and
   /// [practiceMultiplier] the pastor's practice bonus for this action.
+  /// [christianFaith] is the extra faith 🙏 with this person gives the
+  /// pastor when they are a Christian ([prayWithChristianFaith]).
   NpcInteractionResult perform(
     String type,
     NPCModel npc, {
@@ -94,6 +102,7 @@ class NpcInteractionService {
     required double playerMaterials,
     double practiceMultiplier = 1.0,
     bool freeLifeTalk = false,
+    double christianFaith = 0.0,
   }) {
     npc.currentSessionInteractions++;
 
@@ -230,7 +239,7 @@ class NpcInteractionService {
           final boosted = (prayerGain * interactionMultiplier).roundToDouble();
           npc.applyInfluence(boosted);
           npc.lastNpcFaithDelta = boosted;
-          playerFaith0 += 3.0;
+          playerFaith0 += 3.0 + christianFaith;
           npc.lastPlayerFaithDelta = playerFaith0;
           final weakens = npc.possessed && !npc.possessionWeakened;
           if (weakens) npc.possessionWeakened = true;
