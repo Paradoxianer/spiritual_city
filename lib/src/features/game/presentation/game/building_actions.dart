@@ -29,6 +29,11 @@ extension GameBuildingActions on SpiritWorldGame {
       }
     }
 
+    // 🙏👥 Prayer with a Christian household: once a day per household.
+    if (actionType == 'fellowship' && data.building.fellowshipDay == dayStats.day) {
+      return const BuildingInteractionResult(reactionEmoji: '🙏👥✅', success: false);
+    }
+
     // Learned abilities are handled here, not in the service (§3.9, M3).
     final special = _learnedAbility(actionType, data.building);
     if (special != null) return special;
@@ -52,6 +57,7 @@ extension GameBuildingActions on SpiritWorldGame {
         _ => null,
       };
       if (scaled != null) result = result.withFaithDelta(scaled.roundToDouble());
+      if (actionType == 'fellowship') b.fellowshipDay = dayStats.day;
     }
 
     // Practice ("Übung", §3.4): the more often the pastor reads, prays and

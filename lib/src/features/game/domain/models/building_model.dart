@@ -129,6 +129,10 @@ class BuildingModel extends BaseInteractableEntity {
   /// Day on which the pastor last preached here (📢, once a day).
   int preachedDay = 0;
 
+  /// Day on which the pastor last prayed with this household (🙏👥, once
+  /// a day – free faith, but not to be repeated at will).
+  int fellowshipDay = 0;
+
   BuildingModel({
     required this.buildingId,
     required this.type,

@@ -122,6 +122,28 @@ class _DifficultySelectorState extends State<DifficultySelector> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  // Difficulty cards — clicking one immediately starts the game
+                  _DifficultyCard(
+                    difficulty: Difficulty.easy,
+                    icon: '☁️',
+                    onTap: () => _startGame(Difficulty.easy),
+                    isLoading: _isStarting,
+                  ),
+                  const SizedBox(height: 10),
+                  _DifficultyCard(
+                    difficulty: Difficulty.normal,
+                    icon: '⚔️',
+                    onTap: () => _startGame(Difficulty.normal),
+                    isLoading: _isStarting,
+                  ),
+                  const SizedBox(height: 10),
+                  _DifficultyCard(
+                    difficulty: Difficulty.hard,
+                    icon: '🔥',
+                    onTap: () => _startGame(Difficulty.hard),
+                    isLoading: _isStarting,
+                  ),
+                  const SizedBox(height: 20),
                   // The city: its size and its seed – together they make
                   // the playable city (the goal: everyone in it a Christian).
                   SizedBox(
@@ -157,29 +179,6 @@ class _DifficultySelectorState extends State<DifficultySelector> {
                           hint: AppStrings.get('difficulty.seed.hint')),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // Difficulty cards — clicking one immediately starts the game
-                  _DifficultyCard(
-                    difficulty: Difficulty.easy,
-                    icon: '☁️',
-                    onTap: () => _startGame(Difficulty.easy),
-                    isLoading: _isStarting,
-                  ),
-                  const SizedBox(height: 10),
-                  _DifficultyCard(
-                    difficulty: Difficulty.normal,
-                    icon: '⚔️',
-                    onTap: () => _startGame(Difficulty.normal),
-                    isLoading: _isStarting,
-                  ),
-                  const SizedBox(height: 10),
-                  _DifficultyCard(
-                    difficulty: Difficulty.hard,
-                    icon: '🔥',
-                    onTap: () => _startGame(Difficulty.hard),
-                    isLoading: _isStarting,
-                  ),
-                  const SizedBox(height: 20),
                   const SizedBox(height: 32),
                   MenuButton(
                     icon: Icons.arrow_back,
