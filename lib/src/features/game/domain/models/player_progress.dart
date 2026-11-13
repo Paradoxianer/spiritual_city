@@ -127,6 +127,10 @@ class PlayerProgress extends ChangeNotifier {
   // --- Neighbourhoods prayed free and celebrated 🎉 (keys "qx,qy") ---
   final Set<String> celebratedQuarters = {};
 
+  // --- Neighbourhoods where everyone is a Christian ✝️ – all of the city's
+  //     is the big goal (playtest 2026-11-13) ---
+  final Set<String> christianQuarters = {};
+
   // --- Daemon scaling with grace period (#178, daemons_and_combat.md §5) ---
 
   /// Player power the daemons currently scale with. Lags behind the real
@@ -203,6 +207,7 @@ class PlayerProgress extends ChangeNotifier {
     'lesson': lesson.toJson(),
     'awakened': awakenedQuarters.toList(),
     'celebrated': celebratedQuarters.toList(),
+    'christianQuarters': christianQuarters.toList(),
     'day': dayStats.toJson(),
     'church': church.toJson(),
     'graceVisitsLeft': graceVisitsLeft,
@@ -235,6 +240,9 @@ class PlayerProgress extends ChangeNotifier {
     celebratedQuarters
       ..clear()
       ..addAll([for (final k in (json['celebrated'] as List?) ?? const []) '$k']);
+    christianQuarters
+      ..clear()
+      ..addAll([for (final k in (json['christianQuarters'] as List?) ?? const []) '$k']);
     graceVisitsLeft = (json['graceVisitsLeft'] as num?)?.toInt() ?? 0;
     final practiceRaw = json['practice'];
     practice.loadFromJson(

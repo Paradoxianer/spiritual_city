@@ -1,4 +1,5 @@
 import '../models/cell_object.dart';
+import 'city_layout.dart';
 import 'district_selector.dart';
 
 /// Handles placement of special / unique buildings so that globally-unique
@@ -42,34 +43,37 @@ class SpecialBuildingRegistry {
   static const int _centralLibOffY =  12;
   static const int _museumOffX     = -12;
   static const int _museumOffY     =   8;
-  static const int _powerPlantOffX = 200;
-  static const int _powerPlantOffY = 180;
+  // The power plant lies out in the industrial ring – nearer in a smaller
+  // city.
+  static int get _powerPlantOffX => (200 * CityLayout.current.suburbsRadius / 420).round();
+  static int get _powerPlantOffY => (180 * CityLayout.current.suburbsRadius / 420).round();
   // Player spawn is at pixel (7040, 7168) = grid cell (220, 224) — on the
   // boulevard at y=224 (always a road, guaranteed walkable).
   // The pastor house is placed 2 cells north at (220, 222) so the player
   // can walk straight to it.  (220 % 8 = 4, 222 % 8 = 6 → valid non-sidewalk lot cells.)
-  static const int _pastorHouseX   = 220;
-  static const int _pastorHouseY   = 222;
+  static int get _pastorHouseX => pastorHouseCell.$1;
+  static int get _pastorHouseY => pastorHouseCell.$2;
 
-  /// The pastor house's lot cell – fixed, so the game knows where home is
-  /// before its chunk is generated (e.g. after loading a save far away).
-  static const (int, int) pastorHouseCell = (_pastorHouseX, _pastorHouseY);
+  /// The pastor house's lot cell – fixed per city size, so the game knows
+  /// where home is before its chunk is generated (e.g. after loading a
+  /// save far away). (220, 222) in the 🌆 big city.
+  static (int, int) get pastorHouseCell => CityLayout.current.pastorHouseCell;
 
   /// The city hall's cell (city centre).
   static const (int, int) cityHallCell = (_cityHallX, _cityHallY);
 
   // ---- Zone sizes for per-zone buildings (in cells, ~1 cell = 10 m) -------
   // Roughly calibrated for a 500 000-inhabitant city (~650-cell radius):
-  static const int _hospitalZone      = 220; // 1 hospital   per ~2.2 km²
-  static const int _policeZone        = 110; // 1 per ~1.1 km²
-  static const int _fireZone          = 130; // 1 per ~1.3 km²
-  static const int _schoolZone        =  90; // 1 per ~0.9 km²
-  static const int _churchZone        = 100; // 1 per ~1 km²
-  static const int _libraryZone       = 170; // branch library
-  static const int _mallZone          = 280; // 1 shopping centre per ~2.8 km²
-  static const int _supermarketZone   =  95; // neighbourhood grocery
-  static const int _postOfficeZone    = 130;
-  static const int _cemeteryZone      = 450; // rare
+  static int get _hospitalZone => (220 * CityLayout.current.zoneScale).round(); // 1 hospital   per ~2.2 km²
+  static int get _policeZone => (110 * CityLayout.current.zoneScale).round(); // 1 per ~1.1 km²
+  static int get _fireZone => (130 * CityLayout.current.zoneScale).round(); // 1 per ~1.3 km²
+  static int get _schoolZone => (90 * CityLayout.current.zoneScale).round(); // 1 per ~0.9 km²
+  static int get _churchZone => (100 * CityLayout.current.zoneScale).round(); // 1 per ~1 km²
+  static int get _libraryZone => (170 * CityLayout.current.zoneScale).round(); // branch library
+  static int get _mallZone => (280 * CityLayout.current.zoneScale).round(); // 1 shopping centre per ~2.8 km²
+  static int get _supermarketZone => (95 * CityLayout.current.zoneScale).round(); // neighbourhood grocery
+  static int get _postOfficeZone => (130 * CityLayout.current.zoneScale).round();
+  static int get _cemeteryZone => (450 * CityLayout.current.zoneScale).round(); // rare
 
   // ---- Constructor --------------------------------------------------------
 
@@ -202,7 +206,7 @@ class SpecialBuildingRegistry {
 
   /// Global landmark cells (some only become a landmark in the right
   /// district – [all] checks that via [getSpecialBuilding]).
-  static const List<(int, int)> _globalCells = [
+  static List<(int, int)> get _globalCells => [
     (_pastorHouseX, _pastorHouseY),
     (_cityHallX, _cityHallY),
     (_cathedralOffX, _cathedralOffY),
@@ -214,7 +218,7 @@ class SpecialBuildingRegistry {
     (_powerPlantOffX, _powerPlantOffY),
   ];
 
-  static const List<(int, int)> _zones = [
+  static List<(int, int)> get _zones => [
     (_hospitalZone, 0),
     (_policeZone, 1),
     (_fireZone, 2),

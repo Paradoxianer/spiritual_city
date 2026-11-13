@@ -132,6 +132,12 @@ class QuarterCelebration {
   /// Neighbourhoods of the city prayed free so far, this one included.
   final int prayedFree;
 
+  /// Neighbourhoods of the whole city.
+  final int cityQuarters;
+
+  /// Neighbourhoods where everyone is a Christian.
+  final int allChristian;
+
   const QuarterCelebration({
     required this.quarter,
     required this.percent,
@@ -141,6 +147,8 @@ class QuarterCelebration {
     required this.day,
     required this.awakened,
     required this.prayedFree,
+    this.cityQuarters = 0,
+    this.allChristian = 0,
   });
 }
 

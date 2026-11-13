@@ -22,6 +22,12 @@ const Map<String, String> stringsPt = {
   'difficulty.hard.desc': 'Oposição +30%, caminho mais duro',
   'difficulty.start': 'Começar',
   'difficulty.back': 'Voltar',
+  'citySize.title': 'Tamanho da cidade',
+  'citySize.village': 'Vilarejo',
+  'citySize.smallTown': 'Cidade pequena',
+  'citySize.town': 'Cidade',
+  'citySize.metropolis': 'Cidade grande',
+  'citySize.quarters': 'bairros',
   'difficulty.seed': 'Semente',
   'difficulty.seed.hint': 'aleatória',
 

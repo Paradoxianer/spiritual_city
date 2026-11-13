@@ -93,6 +93,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
       createdAt: now,
       difficulty: difficulty,
       seed: now.millisecondsSinceEpoch,
+      citySize: CityLayout.current.size, // the same size again
     );
     await getIt<MenuService>().writeSave(save);
     if (context.mounted) context.go('/game', extra: save);

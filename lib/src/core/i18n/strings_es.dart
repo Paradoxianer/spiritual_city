@@ -22,6 +22,12 @@ const Map<String, String> stringsEs = {
   'difficulty.hard.desc': 'Oposición +30 %, camino más duro',
   'difficulty.start': 'Empezar',
   'difficulty.back': 'Atrás',
+  'citySize.title': 'Tamaño de la ciudad',
+  'citySize.village': 'Pueblo',
+  'citySize.smallTown': 'Ciudad pequeña',
+  'citySize.town': 'Ciudad',
+  'citySize.metropolis': 'Gran ciudad',
+  'citySize.quarters': 'barrios',
   'difficulty.seed': 'Semilla',
   'difficulty.seed.hint': 'aleatoria',
 

@@ -13,12 +13,14 @@ import '../../../core/i18n/narrator.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/utils/seed_manager.dart';
 import '../../../core/utils/stable_hash.dart';
+import '../../../features/menu/domain/models/city_size.dart';
 import '../../../features/menu/domain/models/difficulty.dart';
 import '../../../features/menu/domain/models/game_save.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
 import '../domain/interior/interior_layout.dart';
+import '../domain/city_generation/city_layout.dart';
 import '../domain/city_generation/city_overview.dart';
 import '../domain/city_generation/special_building_registry.dart';
 import '../domain/city_generation/district_selector.dart';
@@ -163,7 +165,10 @@ class SpiritWorldGame extends FlameGame
   /// back to Hive when the player saves and quits.
   GameSave? gameSave;
 
-  SpiritWorldGame({this.difficulty = Difficulty.normal, this.gameSave});
+  SpiritWorldGame({this.difficulty = Difficulty.normal, this.gameSave}) {
+    // The city's size shapes everything generated from here on.
+    CityLayout.current = CityLayout(gameSave?.citySize ?? CitySize.metropolis);
+  }
   
   late final CityGrid grid;
   late final SeedManager seedManager;
@@ -225,7 +230,7 @@ class SpiritWorldGame extends FlameGame
   /// 🏠 compass and fainting home also work after loading a save far away,
   /// playtest 2026-10-21); once its chunk is generated, [ChunkManager]
   /// moves it to the exact door.
-  final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(Vector2(
+  late final ValueNotifier<Vector2?> pastorhousePosition = ValueNotifier(Vector2(
     (SpecialBuildingRegistry.pastorHouseCell.$1 + 0.5) * CellComponent.cellSize,
     (SpecialBuildingRegistry.pastorHouseCell.$2 + 1.5) * CellComponent.cellSize,
   ));
@@ -302,7 +307,7 @@ class SpiritWorldGame extends FlameGame
     if (_cityMapLoading || cityMapImage.value != null) return;
     _cityMapLoading = true;
     try {
-      final o = await compute(CityOverview.build, seedManager.seed);
+      final o = await compute(CityOverview.build, (seedManager.seed, CityLayout.current.size));
       cityOverview = o;
       ui.decodeImageFromPixels(o.pixels, CityOverview.size, CityOverview.size,
           ui.PixelFormat.rgba8888, (img) => cityMapImage.value = img);
@@ -318,7 +323,8 @@ class SpiritWorldGame extends FlameGame
   final ValueNotifier<ui.Image?> spiritMapImage = ValueNotifier(null);
 
   void refreshSpiritMap() {
-    const n = CityOverview.size, step = CityOverview.step, r = CityOverview.radius;
+    final n = CityOverview.size, r = CityOverview.radius;
+    const step = CityOverview.step;
     final sum = Float32List(n * n);
     final count = Uint16List(n * n);
     void add(int x, int y, double s) {
@@ -690,29 +696,6 @@ class SpiritWorldGame extends FlameGame
   double _winCheckTimer = 0.0;
   static const double _winCheckInterval = 5.0;
 
-  // City scope for global win checks.
-  // DistrictSelector uses _outskirtsRadius=650 and _ringNoiseAmp=40, so the
-  // city can extend to roughly 690 cells from origin.
-  static const double _cityScopeRadiusCells = 690.0;
-  static const double _cityScopeRadiusCellsSquared =
-      _cityScopeRadiusCells * _cityScopeRadiusCells;
-  // Issue #176: was `22`, computed as `ceil(690 / 32)` – but CityChunk.chunkSize
-  // is 16, not 32, so the scan only ever covered a ±352-cell box while the
-  // scope check itself (`_isCellWithinCityScope`) tested against the full
-  // 690-cell radius.  Chunks between ±352 and ±690 were never visited by the
-  // global scan, so cells/NPCs out there could never block (or complete) the
-  // win condition.
-  static const int _cityScopeChunkRadius = 44; // ceil(690 / CityChunk.chunkSize)
-
-  /// Chunks generated purely for the global win-check scan (Issue #176), kept
-  /// so repeated scans (the check re-runs on every conversion once the
-  /// player is close to winning) don't regenerate the same never-visited
-  /// chunk's terrain from scratch each time.  Entries become stale once a
-  /// chunk is actually loaded through normal play, but `_chunkForGlobalWinCheck`
-  /// always prefers the live chunk from [grid] first, so a stale entry here is
-  /// simply never read again for that key.
-  final Map<String, CityChunk> _winCheckChunkCache = {};
-
   // Hunger mechanics thresholds (as fractions of maxHunger)
   static const double hungerWarnThreshold     = 0.30; // < 30%: slower movement
   static const double hungerCriticalThreshold = 0.10; // < 10%: even slower + faith cost +50%
@@ -850,10 +833,10 @@ class SpiritWorldGame extends FlameGame
       }
 
       player = PlayerComponent(joystick: _createJoystick());
-      // Spawn on the boulevard at grid cell (220, 224) = pixel (7040, 7168).
-      // y=224 is always a boulevard road (224 % 32 == 0) so the cell is
-      // guaranteed walkable regardless of lot generation.  The pastor house is
-      // at (220, 222) — just 2 cells north — see SpecialBuildingRegistry.
+      // Spawn on a boulevard (in the 🌆 big city grid cell (220, 224) =
+      // pixel (7040, 7168)): every 32nd row is a boulevard road, so the cell
+      // is guaranteed walkable regardless of lot generation. The pastor
+      // house is just 2 cells north – see CityLayout.
       // (Previously (7000, 7000) = cell (218, 218) which ended up inside the
       // pastor-house lot block after the lot-wide special-building scan was
       // introduced, making the player spawn inside a solid building.)
@@ -862,7 +845,8 @@ class SpiritWorldGame extends FlameGame
               (savedState['playerX'] as num).toDouble(),
               (savedState['playerY'] as num).toDouble(),
             )
-          : Vector2(7040, 7168);
+          : Vector2(CityLayout.current.spawnCell.$1 * CellComponent.cellSize,
+              CityLayout.current.spawnCell.$2 * CellComponent.cellSize);
       if (hasSavedState) player.position = _walkableNear(player.position);
       await world.add(player);
 
@@ -1669,80 +1653,19 @@ class SpiritWorldGame extends FlameGame
     _checkWinCondition();
   }
 
-  /// Checks whether the win condition is met and fires [isWon] if so.
-  ///
-  /// Win condition (both must be true simultaneously):
-  /// 1. Every generated NPC in the whole city scope is Christian.
-  /// 2. Every generated city cell in the whole city scope is positive (> 0).
-  ///
-  /// We first run a cheap loaded-world pre-check and only then run the global
-  /// deterministic city-wide scan.
+  /// Checks whether the win condition is met and fires [isWon] if so: every
+  /// person in every neighbourhood of the city is a Christian (playtest
+  /// 2026-11-13; before, it scanned every cell and person of the 650
+  /// neighbourhoods of the one big city).
   void _checkWinCondition() {
     if (_winTriggered) return;
-
-    // Cheap pre-check: if loaded entities already fail, city-wide scan can be skipped.
-    final loadedNpcs = chunkManager.allNPCModels;
-    if (!loadedNpcs.every((n) => n.isChristian)) return;
-    for (final chunk in grid.getLoadedChunks()) {
-      for (final cell in chunk.cells.values) {
-        if (!_isCellWithinCityScope(cell.x, cell.y)) continue;
-        if (cell.spiritualState <= 0) return;
-      }
-    }
-
-    bool hasAnyNpc = false;
-
-    // Global deterministic scan across the full city scope.
-    for (int cy = -_cityScopeChunkRadius; cy <= _cityScopeChunkRadius; cy++) {
-      for (int cx = -_cityScopeChunkRadius; cx <= _cityScopeChunkRadius; cx++) {
-        final chunk = _chunkForGlobalWinCheck(cx, cy);
-
-        bool chunkTouchesCityScope = false;
-        for (final cell in chunk.cells.values) {
-          if (!_isCellWithinCityScope(cell.x, cell.y)) continue;
-          chunkTouchesCityScope = true;
-          if (cell.spiritualState <= 0) return;
-        }
-        if (!chunkTouchesCityScope) continue;
-
-        // Whether this call is the very first time this chunk's NPCs are
-        // generated (Issue #176).  NPCRegistry caches per chunk internally,
-        // so on every later scan `alreadyGenerated` is true and the NPCs
-        // returned below are the SAME live, possibly session-mutated model
-        // instances the player has been interacting with – applying the
-        // save on top of those would wipe out real progress.  Only truly
-        // fresh (never-visited-this-session) NPCs get the save applied.
-        final alreadyGenerated = chunkManager.npcRegistry.hasGeneratedChunk(cx, cy);
-        final npcs =
-            chunkManager.npcRegistry.getNPCsInChunk(cx, cy, chunk: chunk);
-        if (!alreadyGenerated) {
-          for (final npc in npcs) {
-            applySavedNPCState(npc);
-          }
-        }
-        for (final npc in npcs) {
-          final npcCellX = (npc.homePosition.x / 32).floor();
-          final npcCellY = (npc.homePosition.y / 32).floor();
-          if (!_isCellWithinCityScope(npcCellX, npcCellY)) continue;
-          hasAnyNpc = true;
-          if (!npc.isChristian) return;
-        }
-      }
-    }
-
-    if (!hasAnyNpc) return;
-
+    final quarters = CityLayout.current.quarters;
+    if (quarters.isEmpty) return;
+    if (!quarters.every((q) => progress.christianQuarters.contains(q.key))) return;
     _winTriggered = true;
     sessionPlayTime = DateTime.now().difference(_sessionStartTime);
     isWon.value = true;
-    _log.info(
-      'WIN CONDITION MET – all generated city NPCs are Christian and all city cells are positive',
-    );
-  }
-
-  bool _isCellWithinCityScope(int wx, int wy) {
-    final distSq = (wx * wx + wy * wy).toDouble();
-    return distSq <= _cityScopeRadiusCellsSquared;
+    _log.info('WIN – everyone in the city is a Christian');
   }
 
   /// Instantly triggers the win screen without checking the normal win
@@ -1755,29 +1678,6 @@ class SpiritWorldGame extends FlameGame
     sessionPlayTime = DateTime.now().difference(_sessionStartTime);
     isWon.value = true;
     _log.info('DEBUG – win screen forced via F9 shortcut');
-  }
-
-  /// Returns an existing loaded chunk or a temporary generated chunk for
-  /// deterministic city-wide win checks.
-  ///
-  /// Issue #176: a chunk the player never visited previously had no saved
-  /// cell state applied, so a loaded save could never satisfy the win
-  /// condition until every chunk in scope had been walked through at least
-  /// once.  The temporary chunk now goes through the same
-  /// [applySavedCellStatesToChunk] step [ChunkManager] uses for real loads.
-  /// Already-loaded chunks are returned as-is (never re-patched from the
-  /// save – their live, possibly session-mutated state is authoritative).
-  CityChunk _chunkForGlobalWinCheck(int chunkX, int chunkY) {
-    final loaded = grid.getLoadedChunk(chunkX, chunkY);
-    if (loaded != null) return loaded;
-    final key = '$chunkX,$chunkY';
-    final cached = _winCheckChunkCache[key];
-    if (cached != null) return cached;
-    final chunk = CityChunk(chunkX: chunkX, chunkY: chunkY);
-    generator.generateChunk(chunk);
-    applySavedCellStatesToChunk(chunk);
-    _winCheckChunkCache[key] = chunk;
-    return chunk;
   }
 
   void _checkAndApplyModifiers() {

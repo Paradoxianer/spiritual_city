@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import '../models/cell_object.dart';
+import '../../../menu/domain/models/city_size.dart';
+import 'city_layout.dart';
 import 'district_selector.dart';
 import 'special_building_registry.dart';
 
@@ -8,13 +10,14 @@ import 'special_building_registry.dart';
 /// plan is computed from the same noise as the generator, so the map shows
 /// places the pastor has never been to without generating their chunks.
 class CityOverview {
-  /// Half the side of the map in cells (city edge ~690 cells).
-  static const int radius = 720;
+  /// Half the side of the map in cells (720 for the 🌆 big city, whose
+  /// edge is ~690 cells; smaller cities a smaller map).
+  static int get radius => CityLayout.current.mapRadius;
 
   /// Cells per map pixel.
   static const int step = 4;
 
-  static const int size = radius * 2 ~/ step;
+  static int get size => radius * 2 ~/ step;
 
   /// RGBA pixels, [size] × [size]; pixel (0,0) is cell (-radius, -radius).
   final Uint8List pixels;
@@ -25,7 +28,11 @@ class CityOverview {
   CityOverview(this.pixels, this.landmarks);
 
   /// Heavy (~130 000 noise samples): run it off the UI thread.
-  static CityOverview build(int seed) {
+  /// Takes the seed and the city's size: in its own isolate the city
+  /// layout must be set again.
+  static CityOverview build((int, CitySize) args) {
+    final (seed, citySize) = args;
+    CityLayout.current = CityLayout(citySize);
     final districts = DistrictSelector(seed: seed);
     final px = Uint8List(size * size * 4);
     for (int j = 0; j < size; j++) {

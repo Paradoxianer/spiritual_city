@@ -77,7 +77,12 @@ class _QuarterCelebrationOverlayState extends State<_QuarterCelebrationOverlay>
                           const SizedBox(height: 10),
                           _WinStatRow(emoji: '📅', label: '', value: '${c.day}'),
                           const SizedBox(height: 10),
-                          _WinStatRow(emoji: '🏙️🌐🟩', label: '', value: '🏘️ × ${c.prayedFree}'),
+                          _WinStatRow(emoji: '🏙️🌐🟩', label: '', value: c.cityQuarters > 0 ? '🏘️ ${c.prayedFree} / ${c.cityQuarters}' : '🏘️ × ${c.prayedFree}'),
+                          if (c.cityQuarters > 0) ...[
+                            const SizedBox(height: 10),
+                            _WinStatRow(
+                                emoji: '🏙️✝️', label: '', value: '🏘️ ${c.allChristian} / ${c.cityQuarters}'),
+                          ],
                           if (c.awakened) ...[
                             const SizedBox(height: 10),
                             const _WinStatRow(emoji: '🏰💥', label: '', value: '🔥✝️'),

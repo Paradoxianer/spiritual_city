@@ -2,7 +2,10 @@ import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spiritual_city/src/features/game/domain/models/quarter.dart';
 import 'package:spiritual_city/src/features/game/presentation/spirit_world_game.dart';
+import 'package:spiritual_city/src/features/game/domain/city_generation/city_layout.dart';
+import 'package:spiritual_city/src/features/menu/domain/models/city_size.dart';
 import 'package:spiritual_city/src/features/menu/domain/models/difficulty.dart';
+import 'package:spiritual_city/src/features/menu/domain/models/game_save.dart';
 
 void main() {
   const all = Quarter.sizeCells * Quarter.sizeCells;
@@ -60,5 +63,40 @@ void main() {
     g.toggleWorld();
     expect(g.quarterCelebration.value, isNull, reason: 'only once');
     await tester.pump(const Duration(seconds: 5)); // narrator toasts
+  });
+
+  // Playtest 2026-11-13: the big goal – everyone in the city a Christian.
+  testWidgets('a village is won when the last neighbourhood is all Christian', (tester) async {
+    final save = GameSave(id: 'v', name: 'v', createdAt: DateTime(2026),
+        difficulty: Difficulty.normal, seed: 3, citySize: CitySize.village);
+    final g = SpiritWorldGame(difficulty: Difficulty.normal, gameSave: save);
+    await tester.runAsync(() async {
+      g.onGameResize(Vector2(800, 600));
+      // ignore: invalid_use_of_internal_member
+      await g.load();
+      // ignore: invalid_use_of_internal_member
+      g.mount();
+      g.update(0);
+      await g.ready();
+    });
+    expect(CityLayout.current.size, CitySize.village);
+    final q = g.currentQuarter;
+    final quarters = CityLayout.current.quarters;
+    expect(quarters, contains(q));
+    g.progress.christianQuarters.addAll([for (final o in quarters) if (o != q) o.key]);
+    g.gainFaith(500);
+    g.toggleWorld(); // a quarter check
+    expect(g.isWon.value, isFalse, reason: 'not everyone here is a Christian yet');
+    for (final npc in g.chunkManager.allNPCModels) {
+      if (q.containsCell((npc.homePosition.x / 32).floor(), (npc.homePosition.y / 32).floor())) {
+        npc.isConverted = true;
+      }
+    }
+    g.toggleWorld();
+    g.toggleWorld();
+    expect(g.progress.christianQuarters, contains(q.key));
+    expect(g.isWon.value, isTrue);
+    await tester.pump(const Duration(seconds: 5));
+    CityLayout.current = CityLayout(CitySize.metropolis);
   });
 }

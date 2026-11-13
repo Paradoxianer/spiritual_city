@@ -43,6 +43,7 @@ extension GameQuarters on SpiritWorldGame {
       quarterStatus.value = status;
     }
 
+    _checkQuarterAllChristian(status);
     if (isSpiritualWorld) _ensureStronghold(status);
     _updateCityProgress(q);
   }
@@ -123,6 +124,24 @@ extension GameQuarters on SpiritWorldGame {
     _toast('🏰💥 ➡️ 🏘️🔥✝️', 'awakened');
   }
 
+  /// Everyone who lives in this neighbourhood is a Christian – once all of
+  /// its houses are known (every chunk generated). A neighbourhood without
+  /// people (park, water) counts too. Christians are never lost, so it stays.
+  void _checkQuarterAllChristian(QuarterStatus status) {
+    final q = status.quarter;
+    if (progress.christianQuarters.contains(q.key)) return;
+    if (status.christians < status.people) return;
+    const side = Quarter.chunksPerSide;
+    for (var dy = 0; dy < side; dy++) {
+      for (var dx = 0; dx < side; dx++) {
+        if (!chunkManager.npcRegistry.hasGeneratedChunk(q.qx * side + dx, q.qy * side + dy)) return;
+      }
+    }
+    progress.christianQuarters.add(q.key);
+    if (status.people > 0) _toast('🏘️ ✝️✝️✝️ 🙌', 'allChristian');
+    _checkWinCondition();
+  }
+
   /// Back from the invisible world: is this neighbourhood prayed free
   /// (≥ 95 % green)? Then it is celebrated 🎉 – once per neighbourhood.
   void _checkQuarterPrayedFree() {
@@ -145,6 +164,8 @@ extension GameQuarters on SpiritWorldGame {
       day: progress.dayStats.day,
       awakened: status.awakened,
       prayedFree: progress.celebratedQuarters.length,
+      cityQuarters: CityLayout.current.quarters.length,
+      allChristian: progress.christianQuarters.length,
     );
     Narrator.say('celebrate', '🎉', '', HelpContent.toasts['prayedFree']?.text
         .replaceAll('{p}', '$percent')

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/i18n/app_strings.dart';
+import '../../game/domain/city_generation/city_layout.dart';
 import '../domain/menu_service.dart';
+import '../domain/models/city_size.dart';
 import 'widgets/menu_button.dart';
 
 final _random = Random();
@@ -22,6 +24,9 @@ class DifficultySelector extends StatefulWidget {
 class _DifficultySelectorState extends State<DifficultySelector> {
   final TextEditingController _seedController = TextEditingController();
   bool _isStarting = false;
+
+  /// The size of the new city (playtest 2026-11-13).
+  CitySize _size = CitySize.standard;
 
   @override
   void dispose() {
@@ -50,6 +55,7 @@ class _DifficultySelectorState extends State<DifficultySelector> {
         createdAt: now,
         difficulty: difficulty,
         seed: seed,
+        citySize: _size,
       );
       await widget.menuService.writeSave(save);
       if (mounted) context.go('/game', extra: save);
@@ -57,6 +63,14 @@ class _DifficultySelectorState extends State<DifficultySelector> {
       if (mounted) setState(() => _isStarting = false);
     }
   }
+
+  static final Map<CitySize, int> _quarters = {};
+
+  /// Neighbourhoods of a city of [size], rounded (the goal of the game).
+  static int _quarterCount(CitySize size) => _quarters.putIfAbsent(size, () {
+        final n = CityLayout(size).quarters.length;
+        return n < 20 ? n : (n / 10).round() * 10;
+      });
 
   /// Generates a human-readable default save name, e.g. "Spiel 17.04.2026".
   String _buildDefaultSaveName(DateTime dt) {
@@ -87,7 +101,35 @@ class _DifficultySelectorState extends State<DifficultySelector> {
                       letterSpacing: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+                  // City size: the goal is every neighbourhood prayed free.
+                  Text(
+                    AppStrings.get('citySize.title'),
+                    style: TextStyle(color: Colors.blueGrey.shade300, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: 300,
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final size in CitySize.values)
+                          ChoiceChip(
+                            selected: _size == size,
+                            onSelected: _isStarting ? null : (_) => setState(() => _size = size),
+                            avatar: Text(size.emoji),
+                            label: Text(
+                              '${AppStrings.get('citySize.${size.name}')} · '
+                              '~${_quarterCount(size)} ${AppStrings.get('citySize.quarters')}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   // Difficulty cards — clicking one immediately starts the game
                   _DifficultyCard(
                     difficulty: Difficulty.easy,

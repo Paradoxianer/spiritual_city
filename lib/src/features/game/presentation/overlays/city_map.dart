@@ -14,8 +14,9 @@ class CityMapOverlay extends StatefulWidget {
 }
 
 class _CityMapOverlayState extends State<CityMapOverlay> {
-  static const double _scale = 2.0; // logical px per map pixel at zoom 1
-  static const double _side = CityOverview.size * _scale;
+  // The map is 720 logical px wide at zoom 1, whatever the city's size.
+  static const double _side = 720.0;
+  static double get _scale => _side / CityOverview.size; // logical px per map pixel
 
   final TransformationController _ctrl = TransformationController();
   bool _placed = false;
@@ -143,7 +144,7 @@ class _CityMapPainter extends CustomPainter {
 
   _CityMapPainter({required this.game, required this.image, required this.zoom, this.spirit});
 
-  static const double _s = _CityMapOverlayState._scale;
+  static double get _s => _CityMapOverlayState._scale;
 
   /// World pixels → map pixels (before [_s]).
   static Offset toMap(Vector2 world) {
@@ -216,7 +217,7 @@ class _CityMapPainter extends CustomPainter {
     }
 
     final home = game.pastorhousePosition.value;
-    _emojiAt(canvas, '🏠', home != null ? toMap(home) * _s : _cell(220, 222), emojiSize * 1.5);
+    _emojiAt(canvas, '🏠', home != null ? toMap(home) * _s : _cell(CityLayout.current.pastorHouseCell.$1, CityLayout.current.pastorHouseCell.$2), emojiSize * 1.5);
 
     final target = game.trackedTargetPosition;
     if (target != null) _emojiAt(canvas, '📍', toMap(target) * _s - Offset(0, emojiSize), emojiSize * 1.8);
@@ -283,10 +284,11 @@ class _LessonLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = game.progress;
-    final lessons = <Lesson>{
+    // By skill: a mastery lesson is made anew for every mentor building.
+    final lessons = <Skill, Lesson>{
       for (final t in BuildingType.values)
-        ...Lessons.offeredAt(t, p.skills, awakenings: p.awakenedQuarters.length),
-    };
+        for (final l in Lessons.offeredAt(t, p.skills, awakenings: p.awakenedQuarters.length)) l.skill: l,
+    }.values;
     if (lessons.isEmpty) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
