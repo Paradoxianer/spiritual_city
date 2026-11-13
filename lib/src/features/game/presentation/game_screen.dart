@@ -53,6 +53,7 @@ import 'widgets/overlay_shell.dart';
 part 'hud/hud.dart';
 part 'hud/minimap.dart';
 part 'overlays/building_interior.dart';
+part 'overlays/celebration.dart';
 part 'overlays/church.dart';
 part 'overlays/help.dart';
 part 'overlays/city_map.dart';
@@ -449,6 +450,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               if (!isReady) return const SizedBox.shrink();
               return _WinScreenOverlay(game: _game);
             },
+          ),
+          // A neighbourhood prayed free 🎉 – under the narrator, who
+          // congratulates.
+          ValueListenableBuilder<QuarterCelebration?>(
+            valueListenable: _game.quarterCelebration,
+            builder: (context, c, _) => c == null
+                ? const SizedBox.shrink()
+                : _QuarterCelebrationOverlay(key: ValueKey(c.quarter), game: _game),
           ),
           // The narrator's speech bubble – the only text in the game screen.
           ValueListenableBuilder<bool>(

@@ -53,6 +53,15 @@ abstract final class Awakening {
   /// Extra daemon power per awakened neighbourhood (#178 scaling).
   static const int powerPerAwakening = 3;
 
+  /// Share of a neighbourhood's ground that must be prayed free (green) in
+  /// the invisible world to celebrate it 🎉 – the real goal of the game.
+  static const double celebrateShare = 0.95;
+
+  /// [cells] of a neighbourhood are prayed free. Ground never seen counts
+  /// as not free, so a half-explored neighbourhood is no celebration.
+  static bool prayedFree(Tally cells) =>
+      cells.free >= (Quarter.sizeCells * Quarter.sizeCells * celebrateShare).ceil();
+
   static bool strongholdOpen({required int christians, required int people}) =>
       christians >= minChristians && people > 0 && christians / people >= christianShare;
 
@@ -107,6 +116,28 @@ class QuarterStatus {
 
   @override
   int get hashCode => Object.hash(quarter, christians, people, awakened);
+}
+
+/// A neighbourhood prayed free (≥ [Awakening.celebrateShare] green): what
+/// the celebration screen shows.
+class QuarterCelebration {
+  final Quarter quarter;
+  final int percent;
+  final int christians;
+  final int people;
+  final int church;
+  final int day;
+  final bool awakened;
+
+  const QuarterCelebration({
+    required this.quarter,
+    required this.percent,
+    required this.christians,
+    required this.people,
+    required this.church,
+    required this.day,
+    required this.awakened,
+  });
 }
 
 /// `free` of `total` – liberated cells or Christians. For cells also how

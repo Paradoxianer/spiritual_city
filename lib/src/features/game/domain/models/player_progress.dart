@@ -124,6 +124,9 @@ class PlayerProgress extends ChangeNotifier {
   // --- Awakened neighbourhoods (Quarter keys "qx,qy", §3.3) ---
   final Set<String> awakenedQuarters = {};
 
+  // --- Neighbourhoods prayed free and celebrated 🎉 (keys "qx,qy") ---
+  final Set<String> celebratedQuarters = {};
+
   // --- Daemon scaling with grace period (#178, daemons_and_combat.md §5) ---
 
   /// Player power the daemons currently scale with. Lags behind the real
@@ -199,6 +202,7 @@ class PlayerProgress extends ChangeNotifier {
     'skills': skills.toJson(),
     'lesson': lesson.toJson(),
     'awakened': awakenedQuarters.toList(),
+    'celebrated': celebratedQuarters.toList(),
     'day': dayStats.toJson(),
     'church': church.toJson(),
     'graceVisitsLeft': graceVisitsLeft,
@@ -228,6 +232,9 @@ class PlayerProgress extends ChangeNotifier {
     awakenedQuarters
       ..clear()
       ..addAll([for (final k in (json['awakened'] as List?) ?? const []) '$k']);
+    celebratedQuarters
+      ..clear()
+      ..addAll([for (final k in (json['celebrated'] as List?) ?? const []) '$k']);
     graceVisitsLeft = (json['graceVisitsLeft'] as num?)?.toInt() ?? 0;
     final practiceRaw = json['practice'];
     practice.loadFromJson(

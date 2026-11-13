@@ -123,6 +123,34 @@ extension GameQuarters on SpiritWorldGame {
     _toast('🏰💥 ➡️ 🏘️🔥✝️', 'awakened');
   }
 
+  /// Back from the invisible world: is this neighbourhood prayed free
+  /// (≥ 95 % green)? Then it is celebrated 🎉 – once per neighbourhood.
+  void _checkQuarterPrayedFree() {
+    final q = currentQuarter;
+    if (progress.celebratedQuarters.contains(q.key)) return;
+    _updateQuarter();
+    final cells = cityProgress.value?.quarterCells ?? Tally.zero;
+    final status = quarterStatus.value;
+    if (status == null || !Awakening.prayedFree(cells)) return;
+    progress.celebratedQuarters.add(q.key);
+    progress.addInsight(Awakening.insightReward);
+    GameSound.play(Sfx.awakening, volume: 0.8);
+    final percent = (cells.free * 100 ~/ (Quarter.sizeCells * Quarter.sizeCells)).clamp(0, 100);
+    quarterCelebration.value = QuarterCelebration(
+      quarter: q,
+      percent: percent,
+      christians: status.christians,
+      people: status.people,
+      church: progress.church.members.length,
+      day: progress.dayStats.day,
+      awakened: status.awakened,
+    );
+    Narrator.say('celebrate', '🎉', '', HelpContent.toasts['prayedFree']?.text
+        .replaceAll('{p}', '$percent')
+        .replaceAll('{c}', '${status.christians}')
+        .replaceAll('{n}', '${status.people}'), force: true);
+  }
+
   /// 🏰 / 🏰🏰 / 🏯 of [q] – decided by the city (district, city hall, home).
   StrongholdKind strongholdKind(Quarter q) => StrongholdKind.of(
         q,

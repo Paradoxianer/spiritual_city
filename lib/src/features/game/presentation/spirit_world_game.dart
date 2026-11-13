@@ -610,6 +610,9 @@ class SpiritWorldGame extends FlameGame
   /// Overall progress for the second HUD bar (🌐 prayed free / 🏙️ ✝️).
   final ValueNotifier<CityProgress?> cityProgress = ValueNotifier(null);
 
+  /// A neighbourhood just prayed free – the celebration screen 🎉.
+  final ValueNotifier<QuarterCelebration?> quarterCelebration = ValueNotifier(null);
+
   /// Days of the invisible world so far (one per [SpiritualDynamicsSystem]
   /// tick) – world time, saved with the game (#194).
   int worldDay = 0;
@@ -1065,6 +1068,7 @@ class SpiritWorldGame extends FlameGame
     } else if (wasInSpiritWorld) {
       isFasting = false; // the fast ends with the battle
       tutorialService.onReturnedToCity();
+      _checkQuarterPrayedFree();
     }
 
     // Daemon strength follows the player's power, delayed by the grace
@@ -1617,6 +1621,7 @@ class SpiritWorldGame extends FlameGame
     conversionToastMessage.dispose();
     isFainting.dispose();
     isWon.dispose();
+    quarterCelebration.dispose();
     spiritMapImage.value?.dispose();
     spiritMapImage.dispose();
     wakeupMessage.dispose();
