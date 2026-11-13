@@ -80,6 +80,26 @@ class _DifficultySelectorState extends State<DifficultySelector> {
     return '$prefix $day.$month.${dt.year}';
   }
 
+  InputDecoration _fieldDecoration(String label, IconData icon, {String? hint}) {
+    OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: c, width: w),
+        );
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13),
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.blueGrey.shade600, fontSize: 13, fontStyle: FontStyle.italic),
+      prefixIcon: Icon(icon, color: Colors.blueGrey.shade400, size: 20),
+      filled: true,
+      fillColor: Colors.blueGrey.shade900,
+      border: border(Colors.blueGrey.shade700),
+      enabledBorder: border(Colors.blueGrey.shade700),
+      focusedBorder: border(Colors.blueGrey.shade400, 1.5),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,34 +122,6 @@ class _DifficultySelectorState extends State<DifficultySelector> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // City size: the goal is every neighbourhood prayed free.
-                  Text(
-                    AppStrings.get('citySize.title'),
-                    style: TextStyle(color: Colors.blueGrey.shade300, fontSize: 13),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: 300,
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        for (final size in CitySize.values)
-                          ChoiceChip(
-                            selected: _size == size,
-                            onSelected: _isStarting ? null : (_) => setState(() => _size = size),
-                            avatar: Text(size.emoji),
-                            label: Text(
-                              '${AppStrings.get('citySize.${size.name}')} · '
-                              '~${_quarterCount(size)} ${AppStrings.get('citySize.quarters')}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
                   // Difficulty cards — clicking one immediately starts the game
                   _DifficultyCard(
                     difficulty: Difficulty.easy,
@@ -152,58 +144,39 @@ class _DifficultySelectorState extends State<DifficultySelector> {
                     isLoading: _isStarting,
                   ),
                   const SizedBox(height: 20),
-                  // Seed input — shared for all difficulties, below the cards
+                  // The city: its size and its seed – together they make
+                  // the playable city (the goal: everyone in it a Christian).
+                  SizedBox(
+                    width: 280,
+                    child: DropdownButtonFormField<CitySize>(
+                      initialValue: _size,
+                      isExpanded: true,
+                      dropdownColor: Colors.blueGrey.shade900,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: _fieldDecoration(AppStrings.get('citySize.title'), Icons.location_city_outlined),
+                      items: [
+                        for (final size in CitySize.values)
+                          DropdownMenuItem(
+                            value: size,
+                            child: Text(
+                              '${size.emoji} ${AppStrings.get('citySize.${size.name}')} · '
+                              '~${_quarterCount(size)} ${AppStrings.get('citySize.quarters')}',
+                            ),
+                          ),
+                      ],
+                      onChanged: _isStarting ? null : (s) => setState(() => _size = s ?? _size),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   SizedBox(
                     width: 280,
                     child: TextField(
                       controller: _seedController,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: AppStrings.get('difficulty.seed'),
-                        labelStyle: TextStyle(
-                          color: Colors.blueGrey.shade400,
-                          fontSize: 13,
-                        ),
-                        hintText: AppStrings.get('difficulty.seed.hint'),
-                        hintStyle: TextStyle(
-                          color: Colors.blueGrey.shade600,
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.casino_outlined,
-                          color: Colors.blueGrey.shade400,
-                          size: 20,
-                        ),
-                        filled: true,
-                        fillColor: Colors.blueGrey.shade900,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.blueGrey.shade700),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.blueGrey.shade700),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: Colors.blueGrey.shade400,
-                            width: 1.5,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
-                      ),
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: _fieldDecoration(AppStrings.get('difficulty.seed'), Icons.casino_outlined,
+                          hint: AppStrings.get('difficulty.seed.hint')),
                     ),
                   ),
                   const SizedBox(height: 32),
