@@ -20,10 +20,30 @@ abstract final class CombatAbilities {
     return s == null || learned.has(s);
   }
 
-  /// Mastery lessons once lifted a level cap; there is no cap any more –
-  /// every level just costs more (playtest 2026-11-12). Kept empty so old
-  /// saves and texts still resolve.
-  static List<Skill> mastery(PrayerMode mode) => const [];
+  /// The skill that names [mode]'s mastery lessons (⭐, ⭐⭐, …).
+  static Skill masteryKey(PrayerMode mode) => switch (mode) {
+        PrayerMode.liberation => Skill.liberationMastery1,
+        PrayerMode.rebuke => Skill.rebukeMastery1,
+        PrayerMode.slow => Skill.slowMastery1,
+        PrayerMode.drain => Skill.drainMastery1,
+      };
+
+  /// The prayer mode whose mastery lessons [s] names, if any.
+  static PrayerMode? masteryMode(Skill s) =>
+      PrayerMode.values.where((m) => masteryKey(m) == s).firstOrNull;
+
+  /// Mastery lessons of [mode] passed so far.
+  static int masteryStage(PrayerMode mode, LearnedSkills learned) =>
+      learned.masteryOf(masteryKey(mode));
+
+  /// Highest mode level after [stage] mastery lessons: 3, 5, 10, 15, 20 …
+  /// – no top, but every step needs the next lesson from a mentor
+  /// (playtest 2026-11-13: buying on and on without learning was not the
+  /// plan). Up to 3 without a mentor.
+  static int capFor(int stage) => stage == 0 ? 3 : (stage == 1 ? 5 : 5 * stage);
+
+  static int levelCap(PrayerMode mode, LearnedSkills learned) =>
+      capFor(masteryStage(mode, learned));
 
   /// Mode level = sum of its radius/strength/duration/speed upgrades.
   static int modeLevel(CombatModifierSet s) =>

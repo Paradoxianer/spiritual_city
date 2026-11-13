@@ -27,6 +27,15 @@ class LessonOverlay extends StatelessWidget {
       if (CombatAbilities.modeSkill(m) == l.skill) {
         return (icon: m.icon, name: name, gain: '🔓', color: m.color);
       }
+      if (l.repeatable && CombatAbilities.masteryKey(m) == l.skill) {
+        final stage = CombatAbilities.masteryStage(m, game.progress.skills);
+        return (
+          icon: '${m.icon}${'⭐' * (stage + 1)}',
+          name: name,
+          gain: '🔓 ${CombatAbilities.capFor(stage + 1)}',
+          color: m.color,
+        );
+      }
     }
     final parts = l.unlocks.split('➡️');
     final full = LessonTexts.skillName(l.skill);

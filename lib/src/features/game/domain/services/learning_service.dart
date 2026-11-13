@@ -1,6 +1,7 @@
 import '../models/cell_object.dart';
 import '../models/prayer_combat.dart';
 import '../models/skills.dart';
+import 'combat_abilities.dart';
 
 /// What has to be done to finish a lesson.
 enum LessonTask {
@@ -63,6 +64,9 @@ class Lesson {
   /// Emoji sentence of what the lesson unlocks, e.g. `⚔️ ➡️ 🫸 ⏳ 🪫`.
   final String unlocks;
 
+  /// A mastery lesson: taken again and again, each time one step further.
+  final bool repeatable;
+
   const Lesson({
     required this.skill,
     required this.mentorAt,
@@ -73,13 +77,17 @@ class Lesson {
     this.requires = const {},
     this.minAwakenings = 0,
     this.verse,
+    this.repeatable = false,
   });
 
   String get verseKey => verse ?? 'lesson.${skill.name}.verse';
 
   /// Can be taken now (not learned, prerequisites met).
   bool isOpen(LearnedSkills learned, int awakenings) =>
-      !learned.has(skill) && requires.every(learned.has) && awakenings >= minAwakenings;
+      (repeatable || !learned.has(skill)) && requires.every(learned.has) && awakenings >= minAwakenings;
+
+  /// Learned for good (a mastery lesson never is – the next one follows).
+  bool learnedIn(LearnedSkills learned) => !repeatable && learned.has(skill);
 
   /// `🎓⚔️ 1/3 👹`
   String progressLabel(int progress) =>
@@ -163,21 +171,74 @@ abstract final class Lessons {
     ),
   ];
 
-  static Lesson of(Skill s) => all.firstWhere((l) => l.skill == s);
+  /// The lesson of [s] – for a mastery skill the next one of its chain
+  /// for a pastor who knows [learned].
+  static Lesson of(Skill s, [LearnedSkills? learned]) => maybeOf(s, learned)!;
 
-  /// [of], or null for a skill without a lesson (old mastery lessons).
-  static Lesson? maybeOf(Skill s) => all.where((l) => l.skill == s).firstOrNull;
+  /// [of], or null for a skill without a lesson (the old ⭐⭐ skills).
+  static Lesson? maybeOf(Skill s, [LearnedSkills? learned]) {
+    final fixed = all.where((l) => l.skill == s).firstOrNull;
+    if (fixed != null) return fixed;
+    final mode = CombatAbilities.masteryMode(s);
+    if (mode == null) return null;
+    return mastery(mode, learned == null ? 0 : CombatAbilities.masteryStage(mode, learned));
+  }
+
+  static const Map<PrayerMode, Set<BuildingType>> _masteryMentors = {
+    PrayerMode.liberation: {BuildingType.church, BuildingType.cemetery, BuildingType.cathedral},
+    PrayerMode.rebuke: {BuildingType.church, BuildingType.cathedral},
+    PrayerMode.slow: {BuildingType.library, BuildingType.cathedral},
+    PrayerMode.drain: {BuildingType.cemetery, BuildingType.cathedral},
+  };
+
+  static const Map<PrayerMode, String> _masteryReference = {
+    PrayerMode.liberation: 'Joh 8,36',
+    PrayerMode.rebuke: 'Jak 4,7',
+    PrayerMode.slow: 'Mk 3,27',
+    PrayerMode.drain: 'Lk 10,19',
+  };
+
+  /// The mastery lesson of [mode] after [stage] passed ones – an endless
+  /// chain: each lifts the upgrade cap one step ([CombatAbilities.capFor])
+  /// and asks for more (10, 20, 30 … 👹 with this prayer).
+  static Lesson mastery(PrayerMode mode, int stage) {
+    final needs = CombatAbilities.modeSkill(mode);
+    return Lesson(
+      skill: CombatAbilities.masteryKey(mode),
+      mentorAt: _masteryMentors[mode]!,
+      task: LessonTask.defeatWith(mode),
+      count: 10 * (stage + 1),
+      reference: _masteryReference[mode]!,
+      verse: 'lesson.mastery.${mode.id}.verse',
+      unlocks: '${mode.icon}${'⭐' * (stage + 1)} ➡️ 🔓${CombatAbilities.capFor(stage + 1)}',
+      requires: {if (needs != null) needs},
+      repeatable: true,
+    );
+  }
+
+  /// The next mastery lesson of every prayer mode.
+  static List<Lesson> masteryFor(LearnedSkills learned) => [
+        for (final m in PrayerMode.values) mastery(m, CombatAbilities.masteryStage(m, learned)),
+      ];
+
+  /// Every lesson there is now: the fixed ones and the next masteries.
+  static List<Lesson> allFor(LearnedSkills learned) => [...all, ...masteryFor(learned)];
 
   /// Lessons a mentor in [type] offers to a pastor who knows [learned]:
   /// not yet learned, prerequisites met.
   static List<Lesson> offeredAt(BuildingType type, LearnedSkills learned, {int awakenings = 0}) => [
-        for (final l in all)
+        for (final l in allFor(learned))
           if (l.mentorAt.contains(type) && l.isOpen(learned, awakenings)) l,
       ];
 }
 
 /// The active lesson and its progress (part of the player progress).
 class LessonState {
+  /// The pastor's skills – the step of a mastery lesson depends on them.
+  final LearnedSkills? _skills;
+
+  LessonState([this._skills]);
+
   Skill? active;
   int progress = 0;
 
@@ -189,7 +250,7 @@ class LessonState {
   /// of it; the rest is practised ("doers of the word", Jas 1:22).
   static const int studyInsightCost = 3;
 
-  Lesson? get lesson => active == null ? null : Lessons.maybeOf(active!);
+  Lesson? get lesson => active == null ? null : Lessons.maybeOf(active!, _skills);
 
   void start(Skill s) {
     active = s;
@@ -224,7 +285,11 @@ class LessonState {
   Skill? _step(Lesson l, LearnedSkills learned) {
     progress++;
     if (progress < l.count) return null;
-    learned.learn(l.skill);
+    if (l.repeatable) {
+      learned.raiseMastery(l.skill);
+    } else {
+      learned.learn(l.skill);
+    }
     active = null;
     progress = 0;
     studied = 0;
@@ -245,7 +310,7 @@ class LessonState {
     for (final s in Skill.values) {
       if (s.name == raw['active']) active = s;
     }
-    // An old save in a mastery lesson that no longer exists.
+    // An old save in a ⭐⭐ lesson that no longer exists.
     if (active != null && Lessons.maybeOf(active!) == null) active = null;
     progress = (raw['progress'] as num?)?.toInt() ?? 0;
     studied = (raw['studied'] as num?)?.toInt() ?? 0;

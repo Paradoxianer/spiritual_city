@@ -113,7 +113,7 @@ class PlayerProgress extends ChangeNotifier {
 
   // --- Learned skills (learning missions, release_roadmap.md §3.9) ---
   final LearnedSkills skills = LearnedSkills();
-  final LessonState lesson = LessonState();
+  late final LessonState lesson = LessonState(skills);
 
   // --- The current day and what happened in it (§3.3) ---
   final DayStats dayStats = DayStats();

@@ -75,7 +75,7 @@ extension GameMissionTracking on SpiritWorldGame {
     }
     if (key.startsWith('lesson:')) {
       final skill = Skill.values.where((s) => 'lesson:${s.name}' == key).firstOrNull;
-      final lesson = skill == null ? null : Lessons.maybeOf(skill);
+      final lesson = skill == null ? null : Lessons.maybeOf(skill, progress.skills);
       return lesson == null ? null : _nearestMentor(lesson);
     }
     if (key.startsWith('npc:')) {
@@ -109,7 +109,9 @@ extension GameMissionTracking on SpiritWorldGame {
     if (key.startsWith('lesson:')) {
       // Done once the skill is learned or its lesson has been accepted.
       final skill = Skill.values.where((s) => 'lesson:${s.name}' == key).firstOrNull;
-      if (skill == null || progress.skills.has(skill) || progress.lesson.active == skill) {
+      if (skill == null ||
+          (Lessons.maybeOf(skill, progress.skills)?.learnedIn(progress.skills) ?? true) ||
+          progress.lesson.active == skill) {
         trackedMission.value = null;
       }
       return;

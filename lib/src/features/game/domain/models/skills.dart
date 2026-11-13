@@ -67,12 +67,33 @@ class LearnedSkills {
 
   bool has(Skill s) => _learned.contains(s);
 
+  /// Mastery lessons passed per prayer mode, keyed by the mode's first
+  /// mastery skill – an endless chain, each lifts the mode's upgrade cap
+  /// (playtest 2026-11-13). Saves from before count the old ⭐ skills.
+  final Map<Skill, int> _mastery = {};
+
+  static const Map<Skill, List<Skill>> _oldMastery = {
+    Skill.liberationMastery1: [Skill.liberationMastery1, Skill.liberationMastery2, Skill.liberationMastery3],
+    Skill.rebukeMastery1: [Skill.rebukeMastery1, Skill.rebukeMastery2],
+    Skill.slowMastery1: [Skill.slowMastery1, Skill.slowMastery2],
+    Skill.drainMastery1: [Skill.drainMastery1, Skill.drainMastery2],
+  };
+
+  int masteryOf(Skill key) => _mastery[key] ?? (_oldMastery[key]?.where(has).length ?? 0);
+
+  void raiseMastery(Skill key) => _mastery[key] = masteryOf(key) + 1;
+
   /// Returns true when [s] was newly learned.
   bool learn(Skill s) => _learned.add(s);
 
   Iterable<Skill> get all => _learned;
 
-  List<String> toJson() => [for (final s in _learned) s.name];
+  List<String> toJson() => [
+        for (final s in _learned) s.name,
+        for (final e in _mastery.entries) '$_masteryTag${e.key.name}=${e.value}',
+      ];
+
+  static const String _masteryTag = 'mastery:';
 
   /// `null` (field missing in an old save) means [legacy].
   void loadFromJson(Object? raw) {
@@ -81,7 +102,16 @@ class LearnedSkills {
       _learned.addAll(legacy);
       return;
     }
+    _mastery.clear();
     for (final name in raw) {
+      if (name is String && name.startsWith(_masteryTag)) {
+        final kv = name.substring(_masteryTag.length).split('=');
+        final n = kv.length == 2 ? int.tryParse(kv[1]) : null;
+        for (final s in Skill.values) {
+          if (s.name == kv[0] && n != null) _mastery[s] = n;
+        }
+        continue;
+      }
       for (final s in Skill.values) {
         if (s.name == name) _learned.add(s);
       }

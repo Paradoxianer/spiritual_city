@@ -21,8 +21,14 @@ void main() {
           expect(t.contains('{'), isFalse, reason: '$lang ${l.skill}: $t');
         }
       }
-      final m = LessonTexts.explainMode(PrayerMode.rebuke, level: 3, modeName: 'X');
-      expect(m.contains('{'), isFalse, reason: m);
+      for (final level in [3, 5]) {
+        final m = LessonTexts.explainMode(PrayerMode.rebuke,
+            level: level, cap: 5, modeName: 'X', nextLesson: 'Y');
+        expect(m.contains('{'), isFalse, reason: m);
+      }
+      final mastery = Lessons.mastery(PrayerMode.slow, 2);
+      final t = LessonTexts.explain(mastery, learned: LearnedSkills({Skill.binding}), awakenings: 0);
+      expect(t.contains('{'), isFalse, reason: t);
     }
     AppStrings.setLanguage('de');
   });

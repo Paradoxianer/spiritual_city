@@ -62,15 +62,45 @@ void main() {
       expect(drain.isOpen(warrior, 1), isFalse, reason: 'needs ⏳ first');
     });
 
-    test('no top: no mentor gates the levels any more (playtest 2026-11-12)', () {
-      for (final m in PrayerMode.values) {
-        expect(CombatAbilities.mastery(m), isEmpty);
+    // Playtest 2026-11-13: no top, but every step past the cap is a
+    // lesson – the mastery chain never ends.
+    test('mastery lessons follow one another without end, each lifting the cap', () {
+      final learned = LearnedSkills({Skill.spiritualWarfare});
+      const m = PrayerMode.rebuke;
+      final caps = <int>[CombatAbilities.levelCap(m, learned)];
+      final counts = <int>[];
+      final state = LessonState(learned);
+      for (var stage = 0; stage < 5; stage++) {
+        final offer = Lessons.offeredAt(BuildingType.cathedral, learned)
+            .firstWhere((l) => l.skill == CombatAbilities.masteryKey(m));
+        expect(offer.isOpen(learned, 0), isTrue);
+        counts.add(offer.count);
+        state.start(offer.skill);
+        Skill? done;
+        for (var i = 0; i < offer.count; i++) {
+          done = state.record(LessonTask.defeatRebuke, learned);
+        }
+        expect(done, offer.skill);
+        caps.add(CombatAbilities.levelCap(m, learned));
       }
-      expect(Lessons.all.where((l) => l.task == LessonTask.defeatLiberation), isEmpty);
-      // Old saves in a mastery lesson start without one.
-      final s = LessonState()..loadFromJson({'active': 'liberationMastery1', 'progress': 4});
-      expect(s.active, isNull);
-      expect(s.lesson, isNull);
+      expect(caps, [3, 5, 10, 15, 20, 25]);
+      expect(counts, [10, 20, 30, 40, 50]);
+      // ⏳ is not learned yet: no ⏳ mastery.
+      expect(Lessons.offeredAt(BuildingType.cathedral, learned).map((l) => l.skill),
+          isNot(contains(Skill.slowMastery1)));
+    });
+
+    test('mastery survives a save, and old ⭐ skills count', () {
+      final learned = LearnedSkills({Skill.liberationMastery1, Skill.liberationMastery2, Skill.liberationMastery3});
+      expect(CombatAbilities.levelCap(PrayerMode.liberation, learned), 15);
+      learned.raiseMastery(Skill.liberationMastery1);
+      final back = LearnedSkills()..loadFromJson(learned.toJson());
+      expect(CombatAbilities.masteryStage(PrayerMode.liberation, back), 4);
+      expect(CombatAbilities.levelCap(PrayerMode.liberation, back), 20);
+      // A save in the middle of a mastery lesson keeps it.
+      final s = LessonState(back)..loadFromJson({'active': 'liberationMastery1', 'progress': 4});
+      expect(s.lesson?.count, 50);
+      expect(s.progress, 4);
     });
 
     test('every skill has a lesson (but the old mastery ones)', () {

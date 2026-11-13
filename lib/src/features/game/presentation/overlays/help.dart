@@ -245,8 +245,8 @@ class _HelpTasks extends StatelessWidget {
     final step = game.tutorialService.currentStep;
     final active = p.lesson.lesson;
     final open = [
-      for (final l in Lessons.all)
-        if (l.isOpen(p.skills, awakenings) && l != active) l,
+      for (final l in Lessons.allFor(p.skills))
+        if (l.isOpen(p.skills, awakenings) && l.skill != active?.skill) l,
     ];
     final learned = [
       for (final s in Skill.values)

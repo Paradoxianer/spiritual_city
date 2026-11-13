@@ -687,14 +687,14 @@ abstract final class HelpContent {
     Skill.intercession: Tr('Fürbitte: 🙏🏠 in Wohnhäusern.', 'Intercession: 🙏🏠 in homes.', es: 'Intercesión: 🙏🏠 en las casas.', fr: 'Intercession : 🙏🏠 dans les maisons.', pt: 'Intercessão: 🙏🏠 nas casas.'),
     Skill.fasting: Tr('Fasten: ➖🍞 im Pastorenhaus.', 'Fasting: ➖🍞 in the pastor house.', es: 'Ayuno: ➖🍞 en la casa pastoral.', fr: 'Jeûne : ➖🍞 dans la maison pastorale.', pt: 'Jejum: ➖🍞 na casa pastoral.'),
     Skill.preaching: Tr('Predigen: 📢 in Kirchen – und 📢🎺 Freiversammlung auf der Straße (Kreismenü 🖐️).', 'Preaching: 📢 in churches – and 📢🎺 open-air meetings in the street (circle menu 🖐️).', es: 'Predicación: 📢 en iglesias, y 📢🎺 reuniones al aire libre en la calle (menú circular 🖐️).', fr: 'Prédication : 📢 dans les églises – et 📢🎺 réunions en plein air dans la rue (menu circulaire 🖐️).', pt: 'Pregação: 📢 nas igrejas – e 📢🎺 reuniões ao ar livre na rua (menu circular 🖐️).'),
-    Skill.liberationMastery1: Tr('🕊️ Befreiung bis Stufe 5.', '🕊️ liberation up to level 5.', es: '🕊️ liberación hasta el nivel 5.', fr: '🕊️ libération jusqu’au niveau 5.', pt: '🕊️ libertação até o nível 5.'),
+    Skill.liberationMastery1: Tr('🕊️ Befreiung: die nächste Stufengrenze.', '🕊️ liberation: the next level cap.', es: '🕊️ liberación: el siguiente límite de nivel.', fr: '🕊️ libération : la limite de niveau suivante.', pt: '🕊️ libertação: o próximo limite de nível.'),
     Skill.liberationMastery2: Tr('🕊️ Befreiung bis Stufe 10.', '🕊️ liberation up to level 10.', es: '🕊️ liberación hasta el nivel 10.', fr: '🕊️ libération jusqu’au niveau 10.', pt: '🕊️ libertação até o nível 10.'),
     Skill.liberationMastery3: Tr('🕊️ Befreiung bis Stufe 15.', '🕊️ liberation up to level 15.', es: '🕊️ liberación hasta el nivel 15.', fr: '🕊️ libération jusqu’au niveau 15.', pt: '🕊️ libertação até o nível 15.'),
-    Skill.rebukeMastery1: Tr('🫸 bis Stufe 5.', '🫸 up to level 5.', es: '🫸 hasta el nivel 5.', fr: '🫸 jusqu’au niveau 5.', pt: '🫸 até o nível 5.'),
+    Skill.rebukeMastery1: Tr('🫸: die nächste Stufengrenze.', '🫸: the next level cap.', es: '🫸: el siguiente límite de nivel.', fr: '🫸 : la limite de niveau suivante.', pt: '🫸: o próximo limite de nível.'),
     Skill.rebukeMastery2: Tr('🫸 bis Stufe 10.', '🫸 up to level 10.', es: '🫸 hasta el nivel 10.', fr: '🫸 jusqu’au niveau 10.', pt: '🫸 até o nível 10.'),
-    Skill.slowMastery1: Tr('⏳ bis Stufe 5.', '⏳ up to level 5.', es: '⏳ hasta el nivel 5.', fr: '⏳ jusqu’au niveau 5.', pt: '⏳ até o nível 5.'),
+    Skill.slowMastery1: Tr('⏳: die nächste Stufengrenze.', '⏳: the next level cap.', es: '⏳: el siguiente límite de nivel.', fr: '⏳ : la limite de niveau suivante.', pt: '⏳: o próximo limite de nível.'),
     Skill.slowMastery2: Tr('⏳ bis Stufe 10.', '⏳ up to level 10.', es: '⏳ hasta el nivel 10.', fr: '⏳ jusqu’au niveau 10.', pt: '⏳ até o nível 10.'),
-    Skill.drainMastery1: Tr('🪫 bis Stufe 5.', '🪫 up to level 5.', es: '🪫 hasta el nivel 5.', fr: '🪫 jusqu’au niveau 5.', pt: '🪫 até o nível 5.'),
+    Skill.drainMastery1: Tr('🪫: die nächste Stufengrenze.', '🪫: the next level cap.', es: '🪫: el siguiente límite de nivel.', fr: '🪫 : la limite de niveau suivante.', pt: '🪫: o próximo limite de nível.'),
     Skill.drainMastery2: Tr('🪫 bis Stufe 10.', '🪫 up to level 10.', es: '🪫 hasta el nivel 10.', fr: '🪫 jusqu’au niveau 10.', pt: '🪫 até o nível 10.'),
   };
 
@@ -750,7 +750,7 @@ abstract final class HelpContent {
     (
       '⚔️',
       Tr('Verbessere deine Gebete', 'Improve your prayers', es: 'Mejora tus oraciones', fr: 'Améliore tes prières', pt: 'Melhore suas orações'),
-      Tr('Erkenntnis 📖 investierst du im Pastorenhaus 🏡 am ⚔️-Schrank. Jede Stufe kostet mehr als die davor – nach oben gibt es keine Grenze.', 'Spend insight 📖 at the ⚔️ cabinet in the pastor house 🏡. Each level costs more than the one before – there is no top.', es: 'Gasta la sabiduría 📖 en el armario ⚔️ de la casa pastoral 🏡. Cada nivel cuesta más que el anterior; no hay límite.', fr: 'Dépense ta sagesse 📖 à l’armoire ⚔️ de la maison pastorale 🏡. Chaque niveau coûte plus que le précédent – il n’y a pas de limite.', pt: 'Gaste a sabedoria 📖 no armário ⚔️ da casa pastoral 🏡. Cada nível custa mais que o anterior – não há limite.')
+      Tr('Erkenntnis 📖 investierst du im Pastorenhaus 🏡 am ⚔️-Schrank. Jede Stufe kostet mehr als die davor. Ist eine Gebetsart an ihrer Grenze 🔒, hebt die nächste Meisterschaft ⭐ bei einem Mentor sie an – 3, 5, 10, 15, 20 … ohne Ende.', 'Spend insight 📖 at the ⚔️ cabinet in the pastor house 🏡. Each level costs more than the one before. When a prayer is at its cap 🔒, the next mastery ⭐ with a mentor lifts it – 3, 5, 10, 15, 20 … without end.', es: 'Gasta la sabiduría 📖 en el armario ⚔️ de la casa pastoral 🏡. Cada nivel cuesta más que el anterior. Cuando una oración llega a su límite 🔒, la siguiente maestría ⭐ con un mentor lo sube: 3, 5, 10, 15, 20… sin fin.', fr: 'Dépense ta sagesse 📖 à l’armoire ⚔️ de la maison pastorale 🏡. Chaque niveau coûte plus que le précédent. Quand une prière atteint sa limite 🔒, la maîtrise suivante ⭐ auprès d’un mentor la relève – 3, 5, 10, 15, 20 … sans fin.', pt: 'Gaste a sabedoria 📖 no armário ⚔️ da casa pastoral 🏡. Cada nível custa mais que o anterior. Quando uma oração chega ao limite 🔒, a próxima maestria ⭐ com um mentor o eleva – 3, 5, 10, 15, 20 … sem fim.')
     ),
     (
       '🏘️🔥',

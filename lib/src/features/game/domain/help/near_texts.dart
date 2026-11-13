@@ -234,6 +234,14 @@ abstract final class NearTexts {
     ),
   };
 
+  /// ⚡ per prayer mode – what strength does for this mode.
+  static const Map<String, Tr> strengthOf = {
+    'liberation': Tr('Stärke: Deine Befreiungswelle trifft Dämonen härter und befreit den Boden schneller.', 'Strength: your liberation wave hits demons harder and frees the ground faster.', es: 'Fuerza: tu onda de liberación golpea más fuerte a los demonios y libera el suelo más rápido.', fr: 'Force : ton onde de libération frappe les démons plus fort et libère le sol plus vite.', pt: 'Força: sua onda de libertação atinge os demônios com mais força e liberta o chão mais rápido.'),
+    'rebuke': Tr('Stärke: Zurückdrängen schiebt Dämonen weiter von dir weg und hält sie länger auf Abstand.', 'Strength: rebuke pushes demons further away from you and keeps them at a distance longer.', es: 'Fuerza: reprender empuja a los demonios más lejos de ti y los mantiene a distancia por más tiempo.', fr: 'Force : repousser éloigne davantage les démons de toi et les tient plus longtemps à distance.', pt: 'Força: repreender empurra os demônios para mais longe de você e os mantém afastados por mais tempo.'),
+    'slow': Tr('Stärke: Binden bremst Dämonen stärker – sie kreisen und nähern sich viel langsamer.', 'Strength: binding slows demons more – they circle and approach much more slowly.', es: 'Fuerza: atar frena más a los demonios: giran y se acercan mucho más despacio.', fr: 'Force : lier freine davantage les démons – ils tournent et s’approchent bien plus lentement.', pt: 'Força: amarrar freia mais os demônios – eles giram e se aproximam bem mais devagar.'),
+    'drain': Tr('Stärke: Entwaffnen zieht mehr Kraft ab – ein entwaffneter Dämon gibt dir mehr Glauben 🙏 zurück.', 'Strength: disarming draws off more power – a disarmed demon gives you more faith 🙏 back.', es: 'Fuerza: desarmar quita más poder: un demonio desarmado te devuelve más fe 🙏.', fr: 'Force : désarmer retire plus de puissance – un démon désarmé te rend plus de foi 🙏.', pt: 'Força: desarmar tira mais poder – um demônio desarmado devolve mais fé 🙏 para você.'),
+  };
+
   /// ⚔️ upgrades: 'radius', 'strength', 'duration', 'speed', 'shield', 'helm'.
   static const Map<String, Tr> upgrades = {
     'radius': Tr('Radius: Deine Gebetswelle reicht weiter.', 'Radius: your prayer wave reaches further.', es: 'Radio: tu onda de oración llega más lejos.', fr: 'Rayon : ton onde de prière va plus loin.', pt: 'Raio: sua onda de oração alcança mais longe.'),

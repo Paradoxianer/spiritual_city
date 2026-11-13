@@ -16,8 +16,10 @@ class _UpgradePanelState extends State<_UpgradePanel> {
   CombatProfile get _profile => _progress.combatProfile;
 
   /// The narrator explains what an upgrade does.
-  void _narrate(String key, String emoji) => Narrator.say('upgrade.$key', emoji,
-      AppStrings.get('upgrade.$key'), NearTexts.upgrades[key]?.text);
+  void _narrate(String key, String emoji, [PrayerMode? mode]) => Narrator.say('upgrade.$key', emoji,
+      AppStrings.get('upgrade.$key'),
+      (key == 'strength' && mode != null ? NearTexts.strengthOf[mode.id] : null)?.text ??
+          NearTexts.upgrades[key]?.text);
 
   void _buy(int level, VoidCallback apply) {
     setState(() {
@@ -105,14 +107,21 @@ class _UpgradePanelState extends State<_UpgradePanel> {
     final skills = _progress.skills;
     final tier = CombatAbilities.tier(s);
     final level = CombatAbilities.modeLevel(s);
-    // Not learned yet: the next step is a 🎓 lesson. Learned: no top, every
-    // level just costs more (playtest 2026-11-12).
+    // Not learned yet, or at the cap: the next step is a 🎓 lesson. The
+    // mastery lessons never end – each lifts the cap one step (playtest
+    // 2026-11-13: buying on and on without learning was not the plan).
     final modeSkill = CombatAbilities.modeSkill(mode);
-    final Availability? lock =
-        !CombatAbilities.canUse(mode, skills) ? Locked('🎓${modeSkill!.emoji}') : null;
+    final usable = CombatAbilities.canUse(mode, skills);
+    final cap = CombatAbilities.levelCap(mode, skills);
+    final atCap = usable && level >= cap;
+    final Availability? lock = !usable
+        ? Locked('🎓${modeSkill!.emoji}')
+        : atCap
+            ? const Locked('🔒')
+            : null;
     // The mentor step is shown with what it still needs and a 📍 to follow
     // it (playtest 2026-10-19: the way on was not visible).
-    final teach = !CombatAbilities.canUse(mode, skills) ? modeSkill : null;
+    final teach = !usable ? modeSkill : (atCap ? CombatAbilities.masteryKey(mode) : null);
     _UpgradeTile tile(String emoji, String key, int level, double value, VoidCallback apply) =>
         _UpgradeTile(
           emoji: emoji,
@@ -122,7 +131,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
           insight: _progress.insight,
           lock: lock,
           onBuy: () {
-            _narrate(key, emoji);
+            _narrate(key, emoji, mode);
             _buy(level, apply);
           },
         );
@@ -131,7 +140,7 @@ class _UpgradePanelState extends State<_UpgradePanel> {
       icon: mode.icon,
       color: mode.color,
       title: modeName,
-      badge: 'Lv $level',
+      badge: '$level/$cap',
       // Tap: the narrator explains this prayer and how to build it up.
       onTap: () {
         if (modeSkill != null && !CombatAbilities.canUse(mode, skills)) {
@@ -142,7 +151,21 @@ class _UpgradePanelState extends State<_UpgradePanel> {
           'mode.${mode.id}',
           mode.icon,
           modeName,
-          LessonTexts.explainMode(mode, level: level, modeName: modeName),
+          LessonTexts.explainMode(
+            mode,
+            level: level,
+            cap: cap,
+            modeName: modeName,
+            nextLesson: atCap
+                ? LessonTexts.explain(
+                    Lessons.of(CombatAbilities.masteryKey(mode), skills),
+                    learned: skills,
+                    awakenings: widget.game.progress.awakenedQuarters.length,
+                    active: widget.game.progress.lesson.active,
+                    progress: widget.game.progress.lesson.progress,
+                  )
+                : null,
+          ),
           force: true,
         );
       },
@@ -185,7 +208,7 @@ class _NextLesson extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = game.progress;
-    final l = Lessons.of(skill);
+    final l = Lessons.of(skill, p.skills);
     final awakenings = p.awakenedQuarters.length;
     final key = GameMissionTracking.lessonKey(skill);
     final String status;
@@ -220,7 +243,7 @@ class _NextLesson extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
               onPressed: () {
-                if (tracked != key) game.explainLesson(Lessons.of(skill), force: true);
+                if (tracked != key) game.explainLesson(Lessons.of(skill, game.progress.skills), force: true);
                 game.toggleTrackedMission(key);
               },
               child: Text(tracked == key ? '📍✅' : '📍', style: const TextStyle(fontSize: 15)),

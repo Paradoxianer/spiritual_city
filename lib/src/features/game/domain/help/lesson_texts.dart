@@ -58,12 +58,19 @@ abstract final class LessonTexts {
     fr: 'Il faut aussi d’abord {n} quartiers réveillés 🏰🔥 (maintenant : {have}) : quand assez de gens d’un quartier sont chrétiens, vaincs sa forteresse dans le monde invisible.',
     pt: 'Além disso, primeiro {n} bairros precisam estar despertados 🏰🔥 (agora: {have}): quando houver cristãos suficientes num bairro, vença a fortaleza no mundo invisível.',
   );
+  static const Tr _capReached = Tr(
+    '{mode} ist auf der höchsten Stufe, die du gerade erreichen kannst ({level}/{cap}). Weiter geht es mit dem nächsten Mentor-Schritt:',
+    '{mode} is at the highest level you can reach right now ({level}/{cap}). The next mentor step takes you further:',
+    es: '{mode} está en el nivel más alto que puedes alcanzar ahora ({level}/{cap}). El siguiente paso con un mentor te lleva más lejos:',
+    fr: '{mode} est au niveau le plus haut que tu peux atteindre pour l’instant ({level}/{cap}). L’étape suivante avec un mentor te mène plus loin :',
+    pt: '{mode} está no nível mais alto que você pode alcançar agora ({level}/{cap}). O próximo passo com um mentor leva você mais longe:',
+  );
   static const Tr _canBuild = Tr(
-    '{mode}: Stufe {level}. Mit 📖 Weisheit kaufst du hier Stufen – jede kostet mehr als die davor, nach oben gibt es keine Grenze – 🎯 weiter, ⚡ stärker, ⏱️ länger, 💨 schneller. Weisheit bekommst du von besiegten Dämonen, Missionen und Bibelkreisen.',
-    '{mode}: level {level}. With 📖 insight you buy levels here – each costs more than the one before, there is no top – 🎯 further, ⚡ stronger, ⏱️ longer, 💨 faster. You get insight from defeated demons, missions and Bible groups.',
-    es: '{mode}: nivel {level}. Con sabiduría 📖 compras niveles aquí (cada uno cuesta más que el anterior, sin límite): 🎯 más lejos, ⚡ más fuerte, ⏱️ más tiempo, 💨 más rápido. La sabiduría la ganas venciendo demonios, con misiones y grupos bíblicos.',
-    fr: '{mode} : niveau {level}. Avec la sagesse 📖, tu achètes des niveaux ici (chacun coûte plus que le précédent, sans limite) – 🎯 plus loin, ⚡ plus fort, ⏱️ plus longtemps, 💨 plus vite. Tu gagnes de la sagesse en vainquant des démons, par les missions et les groupes bibliques.',
-    pt: '{mode}: nível {level}. Com sabedoria 📖 você compra níveis aqui (cada um custa mais que o anterior, sem limite) – 🎯 mais longe, ⚡ mais forte, ⏱️ mais tempo, 💨 mais rápido. Você ganha sabedoria vencendo demônios, com missões e grupos bíblicos.',
+    '{mode}: Stufe {level} von {cap}. Mit 📖 Weisheit kaufst du hier Stufen – jede kostet mehr als die davor – 🎯 weiter, ⚡ stärker, ⏱️ länger, 💨 schneller. Weiter als {cap} geht es mit der nächsten Meisterschaft bei einem Mentor – sie hört nie auf. Weisheit bekommst du von besiegten Dämonen, Missionen und Bibelkreisen.',
+    '{mode}: level {level} of {cap}. With 📖 insight you buy levels here – each costs more than the one before – 🎯 further, ⚡ stronger, ⏱️ longer, 💨 faster. Beyond {cap} the next mastery with a mentor takes you – it never ends. You get insight from defeated demons, missions and Bible groups.',
+    es: '{mode}: nivel {level} de {cap}. Con sabiduría 📖 compras niveles aquí (cada uno cuesta más que el anterior): 🎯 más lejos, ⚡ más fuerte, ⏱️ más tiempo, 💨 más rápido. Más allá de {cap} te lleva la siguiente maestría con un mentor, y nunca se acaba. La sabiduría la ganas venciendo demonios, con misiones y grupos bíblicos.',
+    fr: '{mode} : niveau {level} sur {cap}. Avec la sagesse 📖, tu achètes des niveaux ici (chacun coûte plus que le précédent) – 🎯 plus loin, ⚡ plus fort, ⏱️ plus longtemps, 💨 plus vite. Au-delà de {cap}, la maîtrise suivante auprès d’un mentor t’emmène plus loin – cela ne s’arrête jamais. Tu gagnes de la sagesse en vainquant des démons, par les missions et les groupes bibliques.',
+    pt: '{mode}: nível {level} de {cap}. Com sabedoria 📖 você compra níveis aqui (cada um custa mais que o anterior) – 🎯 mais longe, ⚡ mais forte, ⏱️ mais tempo, 💨 mais rápido. Além de {cap}, a próxima maestria com um mentor leva você adiante – isso nunca acaba. Você ganha sabedoria vencendo demônios, com missões e grupos bíblicos.',
   );
 
   /// Name of a skill: its help sentence up to the colon.
@@ -73,8 +80,6 @@ abstract final class LessonTexts {
     return '${s.emoji} ${colon > 0 ? t.substring(0, colon) : t.replaceAll('.', '')}';
   }
 
-  static bool _isMastery(Skill s) =>
-      PrayerMode.values.any((m) => CombatAbilities.mastery(m).contains(s));
 
   static String _places(Lesson l) => [
         for (final b in l.mentorAt)
@@ -100,14 +105,15 @@ abstract final class LessonTexts {
   }) {
     final how = HelpContent.taskHowTo[l.task]?.text ?? l.task.emoji;
     var what = HelpContent.skills[l.skill]?.text ?? l.unlocks;
-    if (_isMastery(l.skill)) {
-      final stars = '⭐' * (CombatAbilities.mastery(
-              PrayerMode.values.firstWhere((m) => CombatAbilities.mastery(m).contains(l.skill)))
-          .indexOf(l.skill) + 1);
-      what = _mastery.text.replaceAll('{stars}', stars).replaceAll('{what}', what);
+    final mode = l.repeatable ? CombatAbilities.masteryMode(l.skill) : null;
+    if (mode != null) {
+      final stage = CombatAbilities.masteryStage(mode, learned);
+      what = _mastery.text
+          .replaceAll('{stars}', '⭐' * (stage + 1))
+          .replaceAll('{what}', '$what 🔓 ${CombatAbilities.capFor(stage)} ➡️ ${CombatAbilities.capFor(stage + 1)}');
     }
     final parts = <String>[what];
-    if (learned.has(l.skill)) {
+    if (l.learnedIn(learned)) {
       parts.add(_learned.text);
     } else if (active == l.skill) {
       parts.add(_running.text
@@ -134,8 +140,16 @@ abstract final class LessonTexts {
 
   /// A prayer mode in the ⚔️ cabinet: what it is, its level, and how to
   /// go further.
-  static String explainMode(PrayerMode mode, {required int level, required String modeName}) {
+  static String explainMode(PrayerMode mode, {
+    required int level,
+    required int cap,
+    required String modeName,
+    String? nextLesson,
+  }) {
     final base = HelpContent.prayerModes[mode]?.text ?? '';
-    return '$base ${_canBuild.text.replaceAll('{mode}', modeName).replaceAll('{level}', '$level')}';
+    String fill(Tr t) =>
+        t.text.replaceAll('{mode}', modeName).replaceAll('{level}', '$level').replaceAll('{cap}', '$cap');
+    if (level >= cap && nextLesson != null) return '$base ${fill(_capReached)} $nextLesson';
+    return '$base ${fill(_canBuild)}';
   }
 }

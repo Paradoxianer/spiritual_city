@@ -237,16 +237,17 @@ class _LearningPath extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = game.progress;
     final awakenings = p.awakenedQuarters.length;
+    final lessons = Lessons.allFor(p.skills);
     return ValueListenableBuilder<String?>(
       valueListenable: game.trackedMission,
       builder: (context, tracked, _) => ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         shrinkWrap: true,
-        itemCount: Lessons.all.length,
+        itemCount: lessons.length,
         separatorBuilder: (_, __) => const Divider(color: Colors.white12),
         itemBuilder: (context, i) {
-          final l = Lessons.all[i];
-          final learned = p.skills.has(l.skill);
+          final l = lessons[i];
+          final learned = l.learnedIn(p.skills);
           final active = p.lesson.active == l.skill;
           final open = l.isOpen(p.skills, awakenings);
           final key = GameMissionTracking.lessonKey(l.skill);

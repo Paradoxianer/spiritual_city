@@ -171,7 +171,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // ── Advance orbit angle every frame ───────────────────────────────────────
     double effectiveAngularSpeed = _angularSpeed;
     if (_activeEffects.containsKey(PrayerMode.slow)) {
-      effectiveAngularSpeed *= 0.4; // Slow down movement
+      // ⚡ of ⏳ binds harder (playtest 2026-11-13: ⚡ only raised damage,
+      // which the control modes hardly do).
+      effectiveAngularSpeed *= (0.4 / _upgradeStrength(PrayerMode.slow)).clamp(0.1, 0.4);
     }
     _orbitAngle += effectiveAngularSpeed * dt;
 
@@ -182,13 +184,13 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         model.kind.speedFactor;
     
     if (_activeEffects.containsKey(PrayerMode.slow)) {
-      spiralSpeed *= 0.5; // Shrink slower
+      spiralSpeed *= (0.5 / _upgradeStrength(PrayerMode.slow)).clamp(0.15, 0.5); // Shrink slower
     }
 
     // Persistent Rebuke resistance (Option 2)
     if (_activeEffects.containsKey(PrayerMode.rebuke)) {
       // Base resistance + strength bonus. Higher faith/strength = stronger push
-      final resistance = 15.0 + (game.faith / 5.0);
+      final resistance = (15.0 + (game.faith / 5.0)) * _upgradeStrength(PrayerMode.rebuke);
       spiralSpeed -= resistance; // Reduces or reverses the approach speed
     }
 
@@ -315,7 +317,8 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         // Initial physical push, scaled by weight (heavier = harder to push).
         final weight = (model.initialEnergy.abs() / 50.0).clamp(1.0, 5.0);
         _knockbackVelocity =
-            (120.0 + (game.faith / 2.0)) / weight * hit.knockbackFactor;
+            (120.0 + (game.faith / 2.0)) / weight * hit.knockbackFactor *
+                _upgradeStrength(PrayerMode.rebuke); // ⚡ of 🫸 pushes further
       }
     }
     if (hit.chainCompleted) {
@@ -347,13 +350,18 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   /// Daemon killed by Drain: Pastor absorbs its energy as Faith – and, like
   /// every other player-caused kill, the area around it is cleansed too.
+  /// The ⚡ upgrade of [mode] (1.0 = none): for the control modes it
+  /// strengthens what they do, not their (small) damage.
+  double _upgradeStrength(PrayerMode mode) => game.progress.combatProfile.getFor(mode).strength;
+
   void _absorb() {
     model.dissolved = true;
     // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
     final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0) *
         ((game.combatAbilityTiers[PrayerMode.drain] ?? 0) >= 1
             ? CombatAbilities.drainKillFaith
-            : 1.0);
+            : 1.0) *
+        _upgradeStrength(PrayerMode.drain); // ⚡ of 🪫 draws more
     game.gainFaith(faithGain);
     game.progress.addInsight(_killInsightReward);
     game.onDaemonKilled(model, mode: PrayerMode.drain, helpers: _hitBy);
