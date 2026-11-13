@@ -144,6 +144,7 @@ extension GameQuarters on SpiritWorldGame {
       church: progress.church.members.length,
       day: progress.dayStats.day,
       awakened: status.awakened,
+      prayedFree: progress.celebratedQuarters.length,
     );
     Narrator.say('celebrate', '🎉', '', HelpContent.toasts['prayedFree']?.text
         .replaceAll('{p}', '$percent')

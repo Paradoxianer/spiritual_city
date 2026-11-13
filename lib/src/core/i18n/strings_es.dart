@@ -55,6 +55,7 @@ const Map<String, String> stringsEs = {
   'share.converted': 'personas encontraron a Jesús',
   'share.church': 'en mi iglesia',
   'share.awakened': 'barrios despertados',
+  'share.prayedFree': 'barrios liberados por la oración',
   'share.play': 'Juega tú también:',
   'game.pause.save': 'Guardar',
   'game.pause.saved': 'Guardado ✓',

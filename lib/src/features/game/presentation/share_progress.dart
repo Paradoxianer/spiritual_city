@@ -19,10 +19,12 @@ class ShareProgress {
     final p = g.progress;
     String t(String k) => AppStrings.get('share.$k');
     final awakened = p.awakenedQuarters.length;
+    final free = p.celebratedQuarters.length;
     return '🏙️✝️ ${t('title').replaceAll('{day}', '${p.dayStats.day}')}\n'
         '✝️ ${p.npcsConverted} ${t('converted')}\n'
         '⛪ ${p.church.members.length} ${t('church')}\n'
         '${awakened > 0 ? '🔥 $awakened ${t('awakened')}\n' : ''}'
+        '${free > 0 ? '🌐 $free ${t('prayedFree')}\n' : ''}'
         '${t('play')} $url';
   }
 

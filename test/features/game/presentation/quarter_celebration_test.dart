@@ -53,6 +53,7 @@ void main() {
     expect(c.percent, greaterThanOrEqualTo(95));
     expect(g.progress.insight, greaterThan(insight));
     expect(g.progress.celebratedQuarters, {q.key});
+    expect(c.prayedFree, 1);
 
     g.quarterCelebration.value = null;
     g.toggleWorld();

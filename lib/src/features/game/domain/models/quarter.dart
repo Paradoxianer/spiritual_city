@@ -129,6 +129,9 @@ class QuarterCelebration {
   final int day;
   final bool awakened;
 
+  /// Neighbourhoods of the city prayed free so far, this one included.
+  final int prayedFree;
+
   const QuarterCelebration({
     required this.quarter,
     required this.percent,
@@ -137,6 +140,7 @@ class QuarterCelebration {
     required this.church,
     required this.day,
     required this.awakened,
+    required this.prayedFree,
   });
 }
 

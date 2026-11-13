@@ -55,6 +55,7 @@ const Map<String, String> stringsPt = {
   'share.converted': 'pessoas encontraram Jesus',
   'share.church': 'na minha igreja',
   'share.awakened': 'bairros despertados',
+  'share.prayedFree': 'bairros libertos pela oração',
   'share.play': 'Jogue também:',
   'game.pause.save': 'Salvar',
   'game.pause.saved': 'Salvo ✓',
