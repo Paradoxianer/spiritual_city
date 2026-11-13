@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:spiritual_city/src/core/utils/game_time.dart';
 import 'package:spiritual_city/src/core/utils/seed_manager.dart';
 import 'package:spiritual_city/src/features/game/domain/city_generation/city_generator.dart';
+import 'package:spiritual_city/src/features/game/domain/city_generation/city_layout.dart';
 import 'package:spiritual_city/src/features/game/domain/city_generation/district_selector.dart';
 import 'package:spiritual_city/src/features/game/domain/city_generation/special_building_registry.dart';
 import 'package:spiritual_city/src/features/game/domain/models/cell_object.dart';
@@ -15,6 +16,7 @@ import 'package:spiritual_city/src/features/game/domain/models/stronghold_kind.d
 import 'package:spiritual_city/src/features/game/domain/npc_registry.dart';
 import 'package:spiritual_city/src/features/game/domain/services/npc_interaction_service.dart';
 import 'package:spiritual_city/src/features/game/domain/services/world_simulation.dart';
+import 'package:spiritual_city/src/features/menu/domain/models/city_size.dart';
 import 'package:spiritual_city/src/features/menu/domain/models/difficulty.dart';
 
 /// A headless playthrough (playtest 2026-11-03): a bot pastor converts the
@@ -84,6 +86,11 @@ class PlaythroughConfig {
   /// days – how long does it stay light among dark neighbours?
   final int holdDays;
 
+  /// A whole city of this size instead of [quarterRadius]: the bot works
+  /// all its quarters and wins as in the game – when everyone is a
+  /// Christian (playtest 2026-11-13).
+  final CitySize? citySize;
+
   const PlaythroughConfig({
     this.seed = 959865928,
     this.quarterRadius = 1,
@@ -102,6 +109,7 @@ class PlaythroughConfig {
     this.holdDays = 0,
     this.churches = false,
     this.fellowship = false,
+    this.citySize,
   });
 }
 
@@ -205,7 +213,9 @@ class Playthrough {
   int day = 0;
   String _doing = 'start';
 
-  Playthrough(this.config);
+  Playthrough(this.config) {
+    CityLayout.current = CityLayout(config.citySize ?? CitySize.metropolis);
+  }
 
   // ════════════════════════════════════════════════════════════════════════
   // Setup
@@ -214,9 +224,13 @@ class Playthrough {
   void _build() {
     final home = Quarter.ofCell(_home.$1, _home.$2);
     final r = config.quarterRadius;
-    for (var qy = home.qy - r; qy <= home.qy + r; qy++) {
-      for (var qx = home.qx - r; qx <= home.qx + r; qx++) {
-        quarters.add(Quarter(qx, qy));
+    if (config.citySize != null) {
+      quarters.addAll(CityLayout.current.quarters);
+    } else {
+      for (var qy = home.qy - r; qy <= home.qy + r; qy++) {
+        for (var qx = home.qx - r; qx <= home.qx + r; qx++) {
+          quarters.add(Quarter(qx, qy));
+        }
       }
     }
     // Nearest quarters first – the order the bot works them in.
@@ -393,7 +407,8 @@ class Playthrough {
 
   bool _won() =>
       people.every((p) => p.isChristian) &&
-      _chunks.every((c) => c.cells.values.every((cell) => Liberation.isFree(cell.spiritualState)));
+      (config.citySize != null ||
+      _chunks.every((c) => c.cells.values.every((cell) => Liberation.isFree(cell.spiritualState))));
 
   // ════════════════════════════════════════════════════════════════════════
   // The pastor's moves

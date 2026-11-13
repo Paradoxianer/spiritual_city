@@ -113,6 +113,23 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
                 icon: const Icon(Icons.close, color: Colors.white),
               ),
             ),
+            // 🏘️✝️ how many neighbourhoods are wholly Christian.
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '🏘️✝️ ${CityLayout.current.quarters.where((q) => g.progress.christianQuarters.contains(q.key)).length}'
+                  ' / ${CityLayout.current.quarters.length}',
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              ),
+            ),
             Positioned(
               bottom: 12,
               left: 12,
@@ -190,6 +207,7 @@ class _CityMapPainter extends CustomPainter {
       canvas.drawLine(l, r, road);
     }
 
+    _paintChristianQuarters(canvas);
     if (game.isSpiritualWorld || spirit != null) _paintQuarters(canvas);
 
     // Special buildings – tiny dots far out, emoji when zoomed in.
@@ -236,6 +254,27 @@ class _CityMapPainter extends CustomPainter {
           true,
         _ => false,
       };
+
+  /// The great goal on the plan: every neighbourhood of the city outlined,
+  /// those where everyone is a Christian filled green ✝️.
+  void _paintChristianQuarters(Canvas canvas) {
+    const q = Quarter.sizeCells;
+    final done = game.progress.christianQuarters;
+    final outline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8 / zoom.clamp(0.5, 4)
+      ..color = const Color(0x40FFFFFF);
+    final fill = Paint()..color = const Color(0x5566BB6A);
+    for (final quarter in CityLayout.current.quarters) {
+      final r = Rect.fromPoints(
+          _cell(quarter.qx * q, quarter.qy * q), _cell((quarter.qx + 1) * q, (quarter.qy + 1) * q));
+      if (done.contains(quarter.key)) {
+        canvas.drawRect(r, fill);
+        if (zoom >= 1.2) _emojiAt(canvas, '✝️', r.center, (11 / zoom).clamp(3.0, 11.0));
+      }
+      canvas.drawRect(r, outline);
+    }
+  }
 
   void _paintQuarters(Canvas canvas) {
     const q = Quarter.sizeCells;

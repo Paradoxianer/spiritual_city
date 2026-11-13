@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiritual_city/src/features/menu/domain/models/city_size.dart';
 import 'package:spiritual_city/src/features/menu/domain/models/difficulty.dart';
 
 import 'playthrough.dart';
@@ -16,7 +17,8 @@ import 'playthrough.dart';
 /// bot prays every Christian home fully holy), SIM_LIFE=1 (life talks
 /// after each conversion), SIM_BUS=1 (🚌 for longer ways), SIM_CHURCH=1
 /// (refill faith in the nearest church instead of at home), SIM_FELLOW=1
-/// (🙏👥 refill in any fully Christian household).
+/// (🙏👥 refill in any fully Christian household), SIM_CITY=village
+/// (a whole city of that size; won when everyone is a Christian).
 ///
 /// It prints a line every few game days and writes the whole run to
 /// build/sim/playthrough_<seed>_<quarters>_<difficulty>.csv.
@@ -60,6 +62,7 @@ void main() {
       bus: env['SIM_BUS'] != null,
       churches: env['SIM_CHURCH'] != null,
       fellowship: env['SIM_FELLOW'] != null,
+      citySize: CitySize.values.where((c) => c.name == env['SIM_CITY']).firstOrNull,
     );
     final watch = Stopwatch()..start();
     final sim = Playthrough(config);
