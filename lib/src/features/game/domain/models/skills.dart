@@ -98,11 +98,11 @@ class LearnedSkills {
   /// `null` (field missing in an old save) means [legacy].
   void loadFromJson(Object? raw) {
     _learned.clear();
+    _mastery.clear();
     if (raw is! List) {
       _learned.addAll(legacy);
       return;
     }
-    _mastery.clear();
     for (final name in raw) {
       if (name is String && name.startsWith(_masteryTag)) {
         final kv = name.substring(_masteryTag.length).split('=');

@@ -248,9 +248,13 @@ class _HelpTasks extends StatelessWidget {
       for (final l in Lessons.allFor(p.skills))
         if (l.isOpen(p.skills, awakenings) && l.skill != active?.skill) l,
     ];
-    final learned = [
+    // Mastery as its stars reached (🕊️⭐⭐⭐), not the old ⭐ skills.
+    final learned = <(String, Skill)>[
       for (final s in Skill.values)
-        if (p.skills.has(s)) s
+        if (CombatAbilities.masteryMode(s) != null && p.skills.masteryOf(s) > 0)
+          ('${s.emoji.replaceAll('⭐', '')}${'⭐' * p.skills.masteryOf(s)}', s)
+        else if (p.skills.has(s) && !s.name.contains('Mastery'))
+          (s.emoji, s),
     ];
 
     return ValueListenableBuilder<String?>(
@@ -299,9 +303,9 @@ class _HelpTasks extends StatelessWidget {
             ],
             if (learned.isNotEmpty) ...[
               _HelpHeading(HelpContent.title('learned')),
-              for (final s in learned)
+              for (final (emoji, s) in learned)
                 _HelpRow(
-                  emoji: s.emoji,
+                  emoji: emoji,
                   text: HelpContent.skills[s]!.text,
                   sub: _whereUsed(s),
                 ),
@@ -440,7 +444,7 @@ class _HelpGlossary extends StatelessWidget {
       (
         '🎓 ${HelpContent.title('lessons')}',
         [
-          for (final l in Lessons.all)
+          for (final l in Lessons.allFor(game.progress.skills))
             (
               emoji: l.skill.emoji,
               text: HelpContent.skills[l.skill]!.text,

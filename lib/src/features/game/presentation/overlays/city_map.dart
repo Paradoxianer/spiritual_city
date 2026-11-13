@@ -62,6 +62,11 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
   @override
   Widget build(BuildContext context) {
     final g = widget.game;
+    // 🎓 Where a mentor waits with something new – once, not every frame.
+    final mentors = {
+      for (final t in BuildingType.values)
+        if (Lessons.offeredAt(t, g.progress.skills, awakenings: g.progress.awakenedQuarters.length).isNotEmpty) t,
+    };
     return Material(
       color: const Color(0xF0101318),
       child: SafeArea(
@@ -90,6 +95,7 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
                           painter: _CityMapPainter(
                             game: g,
                             image: img,
+                            mentors: mentors,
                             spirit: _spirit ? g.spiritMapImage.value : null,
                             zoom: _ctrl.value.getMaxScaleOnAxis(),
                           ),
@@ -158,8 +164,10 @@ class _CityMapPainter extends CustomPainter {
   /// 🌐 The invisible world over the plan (null: the plan only).
   final ui.Image? spirit;
   final double zoom;
+  final Set<BuildingType> mentors;
 
-  _CityMapPainter({required this.game, required this.image, required this.zoom, this.spirit});
+  _CityMapPainter(
+      {required this.game, required this.image, required this.zoom, required this.mentors, this.spirit});
 
   static double get _s => _CityMapOverlayState._scale;
 
@@ -213,17 +221,10 @@ class _CityMapPainter extends CustomPainter {
     // Special buildings – tiny dots far out, emoji when zoomed in.
     final emojiSize = (13 / zoom).clamp(3.0, 13.0);
     final dot = Paint();
-    final mentorTypes = {
-      for (final t in BuildingType.values)
-        if (Lessons.offeredAt(t, game.progress.skills,
-                awakenings: game.progress.awakenedQuarters.length)
-            .isNotEmpty)
-          t,
-    };
     for (final (x, y, t) in game.cityOverview?.landmarks ?? const <(int, int, BuildingType)>[]) {
       final o = _cell(x, y);
       // 🎓 A mentor waits here with something new to learn.
-      if (mentorTypes.contains(t) && zoom >= 1.2) {
+      if (mentors.contains(t) && zoom >= 1.2) {
         _emojiAt(canvas, '🎓', o + Offset(emojiSize * 0.8, -emojiSize * 0.8), emojiSize * 0.9);
       }
       if (zoom < 1.2 && !_major(t)) {

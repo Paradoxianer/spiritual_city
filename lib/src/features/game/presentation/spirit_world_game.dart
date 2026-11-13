@@ -631,6 +631,8 @@ class SpiritWorldGame extends FlameGame
 
   /// Districts of the city, for the kind of each stronghold (lazily).
   DistrictSelector? _districts;
+  /// Chunks known to be open water (no houses) – see GameQuarters.
+  final Map<String, bool> _waterChunks = {};
 
   /// 🌱 Disciples praying along (#193).
   final DisciplePrayer disciplePrayer = DisciplePrayer();

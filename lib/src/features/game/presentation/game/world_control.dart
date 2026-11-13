@@ -91,9 +91,13 @@ extension GameWorld on SpiritWorldGame {
 
   /// Day of the last simulation per chunk, for the save: generated chunks
   /// are up to date, the others keep the day they were saved with.
-  Map<String, int> captureChunkDays() => {
-        ...?_savedChunkDays,
-        for (final c in grid.getLoadedChunks())
-          if (c.cells.isNotEmpty) c.id: worldDay,
-      };
+  /// Chunks still catching up keep the days they have not lived yet.
+  Map<String, int> captureChunkDays() {
+    final behind = {for (final (c, left) in _catchUps) c.id: worldDay - left};
+    return {
+      ...?_savedChunkDays,
+      for (final c in grid.getLoadedChunks())
+        if (c.cells.isNotEmpty) c.id: behind[c.id] ?? worldDay,
+    };
+  }
 }

@@ -121,7 +121,7 @@ class LessonOverlay extends StatelessWidget {
                 '„${AppStrings.get(lesson.verseKey)}“ – ${BibleRef.localized(lesson.reference)}',
                 style: const TextStyle(color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic, height: 1.4),
               ),
-              if (replaces != null && replaces != lesson) ...[
+              if (replaces != null && replaces.skill != lesson.skill) ...[
                 const SizedBox(height: 6),
                 Text(
                   '🎓${replaces.skill.emoji} ➡️ 🎓${lesson.skill.emoji}',

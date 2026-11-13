@@ -103,6 +103,20 @@ void main() {
       expect(s.progress, 4);
     });
 
+    test('an old save in a ⭐⭐ lesson goes on in the mastery chain', () {
+      final learned = LearnedSkills({Skill.liberationMastery1});
+      final s = LessonState(learned)..loadFromJson({'active': 'liberationMastery2', 'progress': 15});
+      expect(s.active, Skill.liberationMastery1);
+      expect(s.lesson?.count, 20, reason: 'stage 1, as the old ⭐⭐');
+      expect(s.progress, 15);
+    });
+
+    test('loading an old save without skills forgets earlier mastery', () {
+      final learned = LearnedSkills()..raiseMastery(Skill.rebukeMastery1);
+      learned.loadFromJson(null);
+      expect(learned.masteryOf(Skill.rebukeMastery1), 0);
+    });
+
     test('every skill has a lesson (but the old mastery ones)', () {
       final mastery = {for (final s in Skill.values) if (s.name.contains('Mastery')) s};
       expect(mastery, hasLength(9));

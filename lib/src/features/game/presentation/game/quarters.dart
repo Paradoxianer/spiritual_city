@@ -43,7 +43,7 @@ extension GameQuarters on SpiritWorldGame {
       quarterStatus.value = status;
     }
 
-    _checkQuarterAllChristian(status);
+    _checkCityQuarters();
     if (isSpiritualWorld) _ensureStronghold(status);
     _updateCityProgress(q);
   }
@@ -124,22 +124,60 @@ extension GameQuarters on SpiritWorldGame {
     _toast('🏰💥 ➡️ 🏘️🔥✝️', 'awakened');
   }
 
-  /// Everyone who lives in this neighbourhood is a Christian – once all of
-  /// its houses are known (every chunk generated). A neighbourhood without
-  /// people (park, water) counts too. Christians are never lost, so it stays.
-  void _checkQuarterAllChristian(QuarterStatus status) {
-    final q = status.quarter;
-    if (progress.christianQuarters.contains(q.key)) return;
-    if (status.christians < status.people) return;
+  /// Everyone who lives in a neighbourhood is a Christian – once all of
+  /// its houses are known (every chunk generated or open water). Every
+  /// quarter of the city, not only the pastor's: the last person may come
+  /// to faith elsewhere, and a quarter in a lake is never walked into. A
+  /// neighbourhood without people (park, water) counts too. Christians are
+  /// never lost, so it stays.
+  void _checkCityQuarters() {
+    final open = [
+      for (final q in CityLayout.current.quarters)
+        if (!progress.christianQuarters.contains(q.key)) q,
+    ];
+    if (open.isEmpty) return;
+    final people = <String, int>{};
+    final christians = <String, int>{};
+    for (final npc in chunkManager.allNPCModels) {
+      final key = Quarter.ofCell((npc.homePosition.x / CellComponent.cellSize).floor(),
+              (npc.homePosition.y / CellComponent.cellSize).floor())
+          .key;
+      people[key] = (people[key] ?? 0) + 1;
+      if (npc.isChristian) christians[key] = (christians[key] ?? 0) + 1;
+    }
+    var added = false;
+    for (final q in open) {
+      final n = people[q.key] ?? 0;
+      if ((christians[q.key] ?? 0) < n || !_quarterKnown(q)) continue;
+      progress.christianQuarters.add(q.key);
+      added = true;
+      if (n > 0) _toast('🏘️ ✝️✝️✝️ 🙌', 'allChristian');
+    }
+    if (added) _checkWinCondition();
+  }
+
+  /// All houses of [q] are known: each chunk generated, or open water.
+  bool _quarterKnown(Quarter q) {
     const side = Quarter.chunksPerSide;
     for (var dy = 0; dy < side; dy++) {
       for (var dx = 0; dx < side; dx++) {
-        if (!chunkManager.npcRegistry.hasGeneratedChunk(q.qx * side + dx, q.qy * side + dy)) return;
+        final cx = q.qx * side + dx, cy = q.qy * side + dy;
+        if (chunkManager.npcRegistry.hasGeneratedChunk(cx, cy)) continue;
+        if (!_waterChunks.putIfAbsent('$cx,$cy', () => _isWaterChunk(cx, cy))) return false;
       }
     }
-    progress.christianQuarters.add(q.key);
-    if (status.people > 0) _toast('🏘️ ✝️✝️✝️ 🙌', 'allChristian');
-    _checkWinCondition();
+    return true;
+  }
+
+  bool _isWaterChunk(int cx, int cy) {
+    final d = _districts ??= DistrictSelector(seed: seedManager.seed);
+    const n = CityChunk.chunkSize;
+    for (var y = cy * n; y < (cy + 1) * n; y++) {
+      for (var x = cx * n; x < (cx + 1) * n; x++) {
+        if (!d.isWater(x, y)) return false;
+      }
+    }
+    return true;
   }
 
   /// Back from the invisible world: is this neighbourhood prayed free

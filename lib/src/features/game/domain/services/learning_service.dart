@@ -310,8 +310,12 @@ class LessonState {
     for (final s in Skill.values) {
       if (s.name == raw['active']) active = s;
     }
-    // An old save in a ⭐⭐ lesson that no longer exists.
-    if (active != null && Lessons.maybeOf(active!) == null) active = null;
+    // An old save in a ⭐⭐ lesson that no longer exists: it goes on in the
+    // mode's mastery chain (same stage, same count).
+    if (active case final a? when Lessons.maybeOf(a) == null) {
+      final base = a.name.replaceAll(RegExp(r'\d+$'), '1');
+      active = Skill.values.where((s) => s.name == base && Lessons.maybeOf(s) != null).firstOrNull;
+    }
     progress = (raw['progress'] as num?)?.toInt() ?? 0;
     studied = (raw['studied'] as num?)?.toInt() ?? 0;
   }
