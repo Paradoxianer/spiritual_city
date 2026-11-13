@@ -1097,6 +1097,13 @@ class SpiritWorldGame extends FlameGame
 
   void handleActionDown() {
     if (isSpiritualWorld) {
+      if (faith < player.waveCost) {
+        // Out of faith ✝️ did nothing at all – after a while of fighting
+        // it seemed the button no longer worked (playtest 2026-11-13).
+        GameSound.play(Sfx.denied, volume: 0.5);
+        _toast('🙏 ${faith.floor()}/${player.waveCost.ceil()} ❌', 'prayDenied');
+        return;
+      }
       player.startChargingIntensity();
     }
   }
@@ -2106,6 +2113,13 @@ class HudButton extends PositionComponent with TapCallbacks {
       );
     }
   }
+
+  /// A hidden button takes no taps. The prayer modes stay where they were
+  /// in the invisible world, hidden – in portrait they lay over 🙏 and 🖐️
+  /// in the city and swallowed the taps once a few modes were learned
+  /// (playtest 2026-11-13; turning the phone helped, it laid out anew).
+  @override
+  bool containsLocalPoint(Vector2 point) => opacity > 0 && super.containsLocalPoint(point);
 
   @override
   void onTapDown(TapDownEvent event) {

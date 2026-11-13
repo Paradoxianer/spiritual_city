@@ -42,7 +42,6 @@ abstract final class KenneyCityRenderer {
   // ── Sheet coordinates (column, row) ──────────────────────────────────────
 
   static const (int, int) _pavement = (1, 20);
-  static const (int, int) _asphalt = (10, 20);
   static const (int, int) _grass = (0, 24);
   static const List<(int, int)> _bushes = [(31, 13), (32, 13), (33, 13), (34, 13), (36, 13)];
   static const (int, int) _tombstone = (28, 7);
@@ -113,7 +112,7 @@ abstract final class KenneyCityRenderer {
     if (data == null) {
       _tile(canvas, _pavement, rect);
     } else if (data is RoadData) {
-      _road(canvas, rect, data);
+      _road(canvas, rect, wx, wy, lookup);
     } else if (data is NatureData) {
       _nature(canvas, rect, data, wx, wy);
     } else if (data is BuildingData) {
@@ -123,21 +122,48 @@ abstract final class KenneyCityRenderer {
 
   // ── Ground ────────────────────────────────────────────────────────────────
 
-  static final Paint _laneLine = Paint()..color = const Color(0xFFE8E8E8);
+  // Playtest 2026-11-13: the sheet's asphalt tile carries its marking at
+  // the top and left edge – every street looked like half a ladder. Now
+  // plain asphalt, a kerb on every side without a connection, and a thin
+  // centre line on main roads only.
+  static final Paint _asphaltFill = Paint()..color = const Color(0xFF404040);
+  static final Paint _laneLine = Paint()..color = const Color(0x99E0E0E0);
+  static final Paint _kerb = Paint()..color = const Color(0xFFB9B9B9);
   static final Paint _water = Paint()..color = const Color(0xFF4FA4D9);
   static final Paint _waterRipple = Paint()..color = const Color(0x55FFFFFF);
 
-  static void _road(Canvas canvas, Rect r, RoadData road) {
-    _tile(canvas, _asphalt, r);
-    if (road.type == RoadType.small || road.isIntersection) return;
-    final c = road.connections;
-    final vertical = (c & 5) != 0 && (c & 10) == 0;
-    final horizontal = (c & 10) != 0 && (c & 5) == 0;
+  /// Streets run on the lot grid: every 8th row (horizontal) and column
+  /// (vertical); where both meet is a crossing. The direction comes from
+  /// the grid, so a street still looks right while its neighbour chunk is
+  /// not generated yet.
+  static void _road(Canvas canvas, Rect r, int wx, int wy, CityCell? Function(int, int) lookup) {
+    canvas.drawRect(r, _asphaltFill);
     final u = r.width / 16;
-    if (vertical) {
-      canvas.drawRect(Rect.fromLTWH(r.center.dx - u / 2, r.top + 3 * u, u, 10 * u), _laneLine);
-    } else if (horizontal) {
-      canvas.drawRect(Rect.fromLTWH(r.left + 3 * u, r.center.dy - u / 2, 10 * u, u), _laneLine);
+    final k = 1.5 * u;
+    final horizontal = wy % 8 == 0;
+    final vertical = wx % 8 == 0;
+    // A side gets a kerb unless the street goes on there. At a crossing a
+    // side may still be closed (a T-junction at a park): ask the neighbour.
+    bool open(int dx, int dy) {
+      final n = lookup(wx + dx, wy + dy);
+      return n == null || n.data is RoadData;
+    }
+
+    final n = vertical && (!horizontal || open(0, -1));
+    final s = vertical && (!horizontal || open(0, 1));
+    final w = horizontal && (!vertical || open(-1, 0));
+    final e = horizontal && (!vertical || open(1, 0));
+    if (!n) canvas.drawRect(Rect.fromLTWH(r.left, r.top, r.width, k), _kerb);
+    if (!s) canvas.drawRect(Rect.fromLTWH(r.left, r.bottom - k, r.width, k), _kerb);
+    if (!w) canvas.drawRect(Rect.fromLTWH(r.left, r.top, k, r.height), _kerb);
+    if (!e) canvas.drawRect(Rect.fromLTWH(r.right - k, r.top, k, r.height), _kerb);
+    final alongY = n || s, alongX = w || e;
+    if (alongX == alongY) return; // a real crossing: no centre line
+    // The centre line runs along the street, dashed across cell borders.
+    if (alongY) {
+      canvas.drawRect(Rect.fromLTWH(r.center.dx - u * 0.35, r.top + 4 * u, u * 0.7, 8 * u), _laneLine);
+    } else {
+      canvas.drawRect(Rect.fromLTWH(r.left + 4 * u, r.center.dy - u * 0.35, 8 * u, u * 0.7), _laneLine);
     }
   }
 
