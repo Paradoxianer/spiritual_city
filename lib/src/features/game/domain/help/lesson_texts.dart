@@ -10,11 +10,11 @@ import 'help_content.dart';
 /// combat strength – what to do, where and how").
 abstract final class LessonTexts {
   static const Tr _mastery = Tr(
-    'Meisterschaft {stars} – damit kannst du deine Gebete im ⚔️-Schrank weiter ausbauen: {what}',
-    'Mastery {stars} – with it you can build up your prayers further at the ⚔️ cabinet: {what}',
-    es: 'Maestría {stars}: con ella puedes seguir mejorando tus oraciones en el armario ⚔️: {what}',
-    fr: 'Maîtrise {stars} – elle te permet d’améliorer encore tes prières à l’armoire ⚔️ : {what}',
-    pt: 'Maestria {stars} – com ela você pode melhorar ainda mais suas orações no armário ⚔️: {what}',
+    'Meisterschaft {stars} – damit verbesserst du deine geistliche Kampfführung: {what}',
+    'Mastery {stars} – with it you grow in spiritual warfare: {what}',
+    es: 'Maestría {stars}: con ella mejoras tu guerra espiritual: {what}',
+    fr: 'Maîtrise {stars} – elle te fait progresser dans le combat spirituel : {what}',
+    pt: 'Maestria {stars} – com ela você melhora sua batalha espiritual: {what}',
   );
   static const Tr _learned = Tr('Das hast du schon gelernt ✅.', 'You have learned this already ✅.',
       es: 'Esto ya lo has aprendido ✅.', fr: 'Tu l’as déjà appris ✅.', pt: 'Você já aprendeu isso ✅.');
