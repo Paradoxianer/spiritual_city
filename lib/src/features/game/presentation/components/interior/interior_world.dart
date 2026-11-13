@@ -109,6 +109,7 @@ class InteriorWorld extends World with HasGameReference<SpiritWorldGame> {
       add(_Person(this, mentorPos!, 5, () => '🎓${lesson!.skill.emoji}', () => target is MentorTarget,
           () => MentorTarget(lesson!)));
     }
+    add(_DoorTap(this));
     add(_FindSparkle(this));
     if (!building.isHomebase) add(_WallStatus(this));
     pastor = InteriorPastor(this)..position = centerOf(layout.entry);
@@ -349,6 +350,23 @@ class _Person extends PositionComponent with TapCallbacks {
     _emoji(canvas, active ? '💬' : label(), Offset(size.x / 2, -8), active ? 16 : 12,
         bob: active);
   }
+}
+
+/// The door can be clicked like a station (playtest: everyone tries it):
+/// the pastor walks there and leaves.
+class _DoorTap extends PositionComponent with TapCallbacks {
+  final InteriorWorld room;
+
+  _DoorTap(this.room)
+      : super(
+          priority: 30,
+          position: Vector2((room.layout.door.$1 - 0.25) * InteriorWorld.cell,
+              (room.layout.door.$2 - 0.5) * InteriorWorld.cell),
+          size: Vector2(1.5 * InteriorWorld.cell, 1.5 * InteriorWorld.cell),
+        );
+
+  @override
+  void onTapUp(TapUpEvent event) => room.goAndAct(const DoorTarget());
 }
 
 /// Emoji bubble over a station: small and quiet, big and bobbing when the
