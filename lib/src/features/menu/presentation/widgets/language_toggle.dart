@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/i18n/app_language.dart';
 
-/// A DE / EN language toggle with flag-style buttons.
+/// Language choice: one flag per supported language ([AppLanguages]).
 class LanguageToggle extends StatelessWidget {
   final LanguageNotifier languageNotifier;
   final void Function(String lang)? onChanged;
@@ -17,28 +17,23 @@ class LanguageToggle extends StatelessWidget {
     return ValueListenableBuilder<String>(
       valueListenable: languageNotifier,
       builder: (_, lang, __) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
+        return Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          alignment: WrapAlignment.center,
           children: [
-            _LangButton(
-              flag: '🇩🇪',
-              code: 'de',
-              selected: lang == 'de',
-              onTap: () {
-                languageNotifier.setLanguage('de');
-                onChanged?.call('de');
-              },
-            ),
-            const SizedBox(width: 8),
-            _LangButton(
-              flag: '🇬🇧',
-              code: 'en',
-              selected: lang == 'en',
-              onTap: () {
-                languageNotifier.setLanguage('en');
-                onChanged?.call('en');
-              },
-            ),
+            for (final l in AppLanguages.all)
+              Tooltip(
+                message: l.name,
+                child: _LangButton(
+                  flag: l.flag,
+                  selected: lang == l.code,
+                  onTap: () {
+                    languageNotifier.setLanguage(l.code);
+                    onChanged?.call(l.code);
+                  },
+                ),
+              ),
           ],
         );
       },
@@ -48,13 +43,11 @@ class LanguageToggle extends StatelessWidget {
 
 class _LangButton extends StatelessWidget {
   final String flag;
-  final String code;
   final bool selected;
   final VoidCallback onTap;
 
   const _LangButton({
     required this.flag,
-    required this.code,
     required this.selected,
     required this.onTap,
   });
@@ -65,7 +58,7 @@ class _LangButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: selected
               ? Colors.blueGrey.shade700
@@ -75,12 +68,9 @@ class _LangButton extends StatelessWidget {
             color: selected ? Colors.blueGrey.shade300 : Colors.blueGrey.shade700,
           ),
         ),
-        child: Text(
-          '$flag $code',
-          style: TextStyle(
-            fontSize: 14,
-            color: selected ? Colors.white : Colors.blueGrey.shade400,
-          ),
+        child: Opacity(
+          opacity: selected ? 1.0 : 0.6,
+          child: Text(flag, style: const TextStyle(fontSize: 18)),
         ),
       ),
     );

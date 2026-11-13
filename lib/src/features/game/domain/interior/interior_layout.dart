@@ -148,6 +148,7 @@ class InteriorLayout {
         'practicalHelp' => FurnitureKind.sink,
         'discipleshipGroup' || churchOverview => FurnitureKind.diningTable,
         'blessHousehold' => FurnitureKind.fireplace,
+        'fellowship' => FurnitureKind.roundTable,
         'sundayService' || 'chapelService' || 'funeral' => FurnitureKind.altar,
         'worship' => FurnitureKind.piano,
         'preach' || 'valueLecture' || 'majorEvent' => FurnitureKind.lectern,

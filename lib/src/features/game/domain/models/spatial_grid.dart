@@ -26,12 +26,14 @@ class SpatialGrid<T extends PositionComponent> {
     }
   }
 
-  /// Returns all entities whose grid cell overlaps within [range] world units
-  /// of [pos].  The search is conservative (cell-level), so results may
-  /// include entities slightly outside the exact circular range.
+  /// Returns all entities within [range] world units of [pos]: the cells
+  /// around [pos] are searched, then each entity is checked against the
+  /// exact circular range (so nothing from a neighbouring cell that is
+  /// actually further away slips in).
   List<T> getNearby(Vector2 pos, double range) {
     final result = <T>[];
     final cellRange = (range / cellSize).ceil();
+    final range2 = range * range;
 
     final cx = (pos.x / cellSize).floor();
     final cy = (pos.y / cellSize).floor();
@@ -40,8 +42,9 @@ class SpatialGrid<T extends PositionComponent> {
       for (int dy = -cellRange; dy <= cellRange; dy++) {
         final key = '${cx + dx},${cy + dy}';
         final entities = _cellMap[key];
-        if (entities != null) {
-          result.addAll(entities);
+        if (entities == null) continue;
+        for (final e in entities) {
+          if (e.position.distanceToSquared(pos) <= range2) result.add(e);
         }
       }
     }

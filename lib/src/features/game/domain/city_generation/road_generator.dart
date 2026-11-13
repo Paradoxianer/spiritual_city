@@ -48,30 +48,13 @@ class RoadGenerator {
     if (district == DistrictType.park) return null;
     if (district == DistrictType.outskirts) return null;
 
-    // ---- Secondary street grid (pitch varies by district) -----------------
-    int interval;
-    switch (district) {
-      case DistrictType.downtown:
-      case DistrictType.commercial:
-        interval = 6; // dense city-block grid
-        break;
-      case DistrictType.slums:
-        interval = 6;
-        break;
-      case DistrictType.industrial:
-        interval = 10; // wider industrial blocks
-        break;
-      default:
-        interval = 8; // suburbs / waterfront
-    }
+    // ---- Secondary street grid -------------------------------------------
+    // Always on the lot grid (LotGenerator.lotBlock), which also divides the
+    // boulevard spacing: streets run along lots, never through them
+    // (playtest 2026-11-01). Industrial blocks are twice as wide.
+    final interval = district == DistrictType.industrial ? 16 : 8;
 
-    // Small organic jitter for suburbs and slums
-    final int jitterX =
-        (district == DistrictType.suburbs || district == DistrictType.slums)
-            ? (wx % 32 > 16 ? 1 : 0)
-            : 0;
-
-    if ((wx + jitterX) % interval == 0 || wy % interval == 0) {
+    if (wx % interval == 0 || wy % interval == 0) {
       final isHorizontal = wy % interval == 0;
       return RoadData(
         type: RoadType.small,

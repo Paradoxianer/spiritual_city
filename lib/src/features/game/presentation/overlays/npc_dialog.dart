@@ -56,7 +56,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
   /// optional action is hidden. Hidden or unavailable actions are skipped.
   void _onDialogKey() {
     final idx = widget.game.dialogActionIndex.value;
-    if (idx < 0 || _showLifeTab) return;
+    if (idx < 0 || _tab != _DialogTab.chat) return;
     final model = widget.game.activeDialog?.npcModel;
     if (model == null || idx >= NpcActions.chat.length) return;
     final action = NpcActions.chat[idx];
@@ -84,8 +84,9 @@ class _DialogOverlayState extends State<DialogOverlay> {
     _scrollToBottom();
   }
 
-  /// Which tab of the dialog is shown: the chat (💬) or the life story (📜).
-  bool _showLifeTab = false;
+  /// Which tab of the dialog is shown: the chat (💬), the life story (📜)
+  /// or, with Christians, discipleship (🌱).
+  _DialogTab _tab = _DialogTab.chat;
 
   void _handleInteraction(String type, String emoji) {
     if (_isWaiting || _isSessionOver || _isReadingBible) return;
@@ -222,7 +223,11 @@ class _DialogOverlayState extends State<DialogOverlay> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       color: const Color(0xFF1B4A1B).withValues(alpha: 0.85),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
         children: [
           const Text('📋', style: TextStyle(fontSize: 13)),
           const SizedBox(width: 6),
@@ -246,6 +251,8 @@ class _DialogOverlayState extends State<DialogOverlay> {
               fontSize: 11,
               fontWeight: FontWeight.bold,
             ),
+          ),
+        ],
           ),
         ],
       ),
@@ -294,15 +301,22 @@ class _DialogOverlayState extends State<DialogOverlay> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _DialogTabBar(
-                    showLifeTab: _showLifeTab,
+                    tab: _tab,
                     lifeLocked: !widget.game.progress.skills.has(Skill.pastoralCare),
-                    onSelect: (life) => setState(() => _showLifeTab = life),
+                    showGrow: model.isChristian,
+                    onSelect: (t) => setState(() => _tab = t),
                   ),
                   const SizedBox(height: 6),
                   Expanded(
-                    child: _showLifeTab
+                    child: _tab == _DialogTab.life
                         ? _NpcLifeTimeline(model: model)
-                        : Scrollbar(
+                        : _tab == _DialogTab.grow
+                            ? _DiscipleTab(
+                                model: model,
+                                game: widget.game,
+                                onTaught: () => setState(() {}),
+                              )
+                            : Scrollbar(
                             controller: _scrollController,
                             thumbVisibility: true,
                             child: ListView.builder(
@@ -315,7 +329,7 @@ class _DialogOverlayState extends State<DialogOverlay> {
                   ),
                   // The chat is hidden in the life tab, so its last reaction
                   // stays visible there.
-                  if (_showLifeTab && _messages.isNotEmpty) _ChatBubble(message: _messages.last),
+                  if (_tab != _DialogTab.chat && _messages.isNotEmpty) _ChatBubble(message: _messages.last),
                 ],
               ),
             ),
@@ -335,7 +349,9 @@ class _DialogOverlayState extends State<DialogOverlay> {
     if (_isReadingBible) {
       return _Countdown(emoji: NpcActions.bible.emoji, seconds: _bibleSecondsLeft);
     }
-    if (_showLifeTab) {
+    // 🌱 Teaching happens on the tiles of the tab itself.
+    if (_tab == _DialogTab.grow) return const SizedBox.shrink();
+    if (_tab == _DialogTab.life) {
       return _LifeTalkButton(
         model: model,
         game: widget.game,
@@ -410,25 +426,31 @@ class GameDialogData {
 
 /// Two-tab switch at the top of the NPC dialog: 💬 (chat + actions) and 📜
 /// (life story with the single 🗣️ life-talk action).
+enum _DialogTab { chat, life, grow }
+
 class _DialogTabBar extends StatelessWidget {
-  final bool showLifeTab;
+  final _DialogTab tab;
 
   /// 📜 needs the 🫂 pastoral-care lesson (mentor in a 🏥 hospital).
   final bool lifeLocked;
-  final void Function(bool life) onSelect;
+
+  /// 🌱 discipleship – only with Christians.
+  final bool showGrow;
+  final void Function(_DialogTab tab) onSelect;
 
   const _DialogTabBar({
-    required this.showLifeTab,
+    required this.tab,
     required this.lifeLocked,
+    required this.showGrow,
     required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
-    Widget tab(String emoji, bool life) {
-      final selected = showLifeTab == life;
+    Widget button(String emoji, _DialogTab t) {
+      final selected = tab == t;
       return GestureDetector(
-        onTap: () => onSelect(life),
+        onTap: () => onSelect(t),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           decoration: BoxDecoration(
@@ -442,7 +464,7 @@ class _DialogTabBar extends StatelessWidget {
 
     return Row(
       children: [
-        tab('💬', false),
+        button('💬', _DialogTab.chat),
         const SizedBox(width: 6),
         if (lifeLocked)
           // Locked: shows where to learn it instead of opening.
@@ -459,7 +481,11 @@ class _DialogTabBar extends StatelessWidget {
             ),
           )
         else
-          tab('📜', true),
+          button('📜', _DialogTab.life),
+        if (showGrow) ...[
+          const SizedBox(width: 6),
+          button('🌱', _DialogTab.grow),
+        ],
       ],
     );
   }
@@ -484,7 +510,7 @@ class _NpcLifeTimeline extends StatelessWidget {
     final revealed = backstory.revealedCount;
 
     final rows = <Widget>[
-      const _LifeLine(age: 0, story: '👶🎉'),
+      const _LifeLine(age: 0, story: '👶🎉', text: LifeTexts.born),
     ];
     var hidden = 0;
     for (var i = 0; i < backstory.events.length; i++) {
@@ -500,19 +526,20 @@ class _NpcLifeTimeline extends StatelessWidget {
         isCurrent: o == current,
         progress: o == current ? o.workProgress : null,
         faded: o.event.isNegative && o.processed,
+        text: LifeTexts.events[o.event.id],
       ));
     }
     if (hidden > 0) {
-      rows.add(const _LifeLine(story: '❓❓❓', faded: true));
+      rows.add(const _LifeLine(story: '❓❓❓', faded: true, text: LifeTexts.hidden));
     }
 
     // Recent life: what the pastor helped resolve, faith, then today.
     for (final o in backstory.resolvedChallenges) {
       if (o.phase == LifePhase.christ) continue;
-      rows.add(_LifeLine(story: '${o.event.glyph}➡️🌱'));
+      rows.add(_LifeLine(story: '${o.event.glyph}➡️🌱', text: LifeTexts.resolved));
     }
     if (model.isConverted) {
-      rows.add(const _LifeLine(story: '🙏✝️🕊️'));
+      rows.add(const _LifeLine(story: '🙏✝️🕊️', text: LifeTexts.converted));
     }
     for (final o in backstory.events) {
       if (o.phase != LifePhase.christ) continue;
@@ -520,9 +547,10 @@ class _NpcLifeTimeline extends StatelessWidget {
         story: o.event.story,
         isCurrent: o == current,
         progress: o == current ? o.workProgress : null,
+        text: LifeTexts.events[o.event.id],
       ));
     }
-    rows.add(_LifeLine(age: backstory.age, story: '📍'));
+    rows.add(_LifeLine(age: backstory.age, story: '📍', text: LifeTexts.today));
 
     return ListView(children: rows);
   }
@@ -537,12 +565,16 @@ class _LifeLine extends StatelessWidget {
   final int? progress;
   final bool faded;
 
+  /// The line in words (texts on).
+  final Tr? text;
+
   const _LifeLine({
     this.age,
     required this.story,
     this.isCurrent = false,
     this.progress,
     this.faded = false,
+    this.text,
   });
 
   @override
@@ -569,7 +601,18 @@ class _LifeLine extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(story, style: const TextStyle(fontSize: 18)),
+              // Tap: the narrator tells the line in words.
+              child: GestureDetector(
+                onTap: text == null
+                    ? null
+                    : () => Narrator.say(
+                          'life.${text!.en}',
+                          story,
+                          '',
+                          isCurrent ? '${text!.text} – ${LifeTexts.current.text}' : text!.text,
+                        ),
+                child: Text(story, style: const TextStyle(fontSize: 18)),
+              ),
             ),
             if (progress != null)
               Text(

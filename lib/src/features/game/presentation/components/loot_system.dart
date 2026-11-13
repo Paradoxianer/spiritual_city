@@ -1,3 +1,4 @@
+import '../../../../core/utils/text_cache.dart';
 import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -236,13 +237,7 @@ class LootSystem extends Component with HasGameReference<SpiritWorldGame> {
   void _renderPickup(Canvas canvas, _MaterialPickup p) {
     final offset = Offset(p.worldPos.x, p.worldPos.y);
     // Draw the emoji centered on the cell so it looks like it's lying on the road.
-    final tp = TextPainter(
-      text: TextSpan(
-        text: p.emoji,
-        style: const TextStyle(fontSize: 20),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    final tp = TextCache.get(p.emoji, const TextStyle(fontSize: 20));
     tp.paint(canvas, Offset(offset.dx - tp.width / 2, offset.dy - tp.height / 2));
   }
 

@@ -44,12 +44,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       setState(() {});
                     },
                   ),
+                  SwitchListTile(
+                    secondary: const Text('💬', style: TextStyle(fontSize: 24)),
+                    title: Text(LegalTexts.get('settings.texts')),
+                    subtitle: Text(LegalTexts.get('settings.texts.hint'),
+                        style: TextStyle(color: Colors.blueGrey.shade300, fontSize: 12)),
+                    value: widget.menuService.showTexts,
+                    onChanged: (on) async {
+                      await widget.menuService.setShowTexts(on);
+                      setState(() {});
+                    },
+                  ),
                   ListTile(
                     leading: const Text('🌐', style: TextStyle(fontSize: 24)),
                     title: Text(LegalTexts.get('settings.language')),
-                    trailing: LanguageToggle(
-                      languageNotifier: widget.menuService.languageNotifier,
-                      onChanged: widget.menuService.setLanguage,
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: LanguageToggle(
+                          languageNotifier: widget.menuService.languageNotifier,
+                          onChanged: (l) async {
+                            await widget.menuService.setLanguage(l);
+                            setState(() {});
+                          },
+                        ),
+                      ),
                     ),
                   ),
                   const Divider(),

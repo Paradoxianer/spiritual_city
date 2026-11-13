@@ -2,9 +2,12 @@ import 'dart:ui';
 
 import 'package:flame/cache.dart';
 
+import '../../../../core/utils/image_retry.dart';
+import '../../domain/city_generation/lot_generator.dart';
 import '../../domain/city_generation/district_selector.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/city_cell.dart';
+import 'red_shield_path.dart';
 
 /// Draws the physical city with the Kenney "Roguelike Modern City" tiles
 /// (CC0, assets/LICENSES.md; #18).
@@ -33,17 +36,12 @@ abstract final class KenneyCityRenderer {
 
   static Future<void> load(Images images) async {
     if (_sheet != null) return;
-    try {
-      _sheet = await images.load(asset);
-    } catch (_) {
-      _sheet = null;
-    }
+    await loadImageWithRetry(images, asset, (i) => _sheet = i);
   }
 
   // ── Sheet coordinates (column, row) ──────────────────────────────────────
 
   static const (int, int) _pavement = (1, 20);
-  static const (int, int) _asphalt = (10, 20);
   static const (int, int) _grass = (0, 24);
   static const List<(int, int)> _bushes = [(31, 13), (32, 13), (33, 13), (34, 13), (36, 13)];
   static const (int, int) _tombstone = (28, 7);
@@ -54,12 +52,24 @@ abstract final class KenneyCityRenderer {
   static const _Material _light = _Material(roof: (20, 2), plain: (22, 0), wall: [4, 5, 6, 7]);
   static const _Material _sand = _Material(roof: (28, 2), plain: (30, 0), wall: [8, 9, 10, 11]);
 
+  /// Roofs by kind (playtest 2026-10-31: homes, shops and high-rises could
+  /// not be told apart): homes red with a pitched roof, shops and offices
+  /// grey and flat with air conditioners, high-rises light with two floors.
   static _Material _materialFor(BuildingType t) => switch (t) {
-        BuildingType.house || BuildingType.pastorHouse || BuildingType.church || BuildingType.school => _red,
-        BuildingType.apartment || BuildingType.library || BuildingType.museum || BuildingType.cathedral => _sand,
-        BuildingType.shop || BuildingType.supermarket || BuildingType.mall || BuildingType.postOffice => _sand,
-        BuildingType.skyscraper ||
+        BuildingType.house ||
+        BuildingType.apartment ||
+        BuildingType.pastorHouse ||
+        BuildingType.church ||
+        BuildingType.school =>
+          _red,
+        BuildingType.library || BuildingType.museum || BuildingType.cathedral => _sand,
+        BuildingType.shop ||
+        BuildingType.supermarket ||
+        BuildingType.mall ||
         BuildingType.office ||
+        BuildingType.postOffice =>
+          _grey,
+        BuildingType.skyscraper ||
         BuildingType.hospital ||
         BuildingType.cityHall ||
         BuildingType.university ||
@@ -67,6 +77,10 @@ abstract final class KenneyCityRenderer {
           _light,
         _ => _grey,
       };
+
+  static bool _isHome(BuildingType t) => t == BuildingType.house || t == BuildingType.apartment;
+  static bool _isBusiness(BuildingType t) =>
+      t == BuildingType.shop || t == BuildingType.supermarket || t == BuildingType.mall || t == BuildingType.office;
 
   /// Window drawn on a facade cell (brown frame on brick, grey elsewhere).
   static (int, int) _windowFor(_Material m, int h) =>
@@ -98,7 +112,7 @@ abstract final class KenneyCityRenderer {
     if (data == null) {
       _tile(canvas, _pavement, rect);
     } else if (data is RoadData) {
-      _road(canvas, rect, data);
+      _road(canvas, rect, wx, wy, lookup);
     } else if (data is NatureData) {
       _nature(canvas, rect, data, wx, wy);
     } else if (data is BuildingData) {
@@ -108,21 +122,48 @@ abstract final class KenneyCityRenderer {
 
   // ── Ground ────────────────────────────────────────────────────────────────
 
-  static final Paint _laneLine = Paint()..color = const Color(0xFFE8E8E8);
+  // Playtest 2026-11-13: the sheet's asphalt tile carries its marking at
+  // the top and left edge – every street looked like half a ladder. Now
+  // plain asphalt, a kerb on every side without a connection, and a thin
+  // centre line on main roads only.
+  static final Paint _asphaltFill = Paint()..color = const Color(0xFF404040);
+  static final Paint _laneLine = Paint()..color = const Color(0x99E0E0E0);
+  static final Paint _kerb = Paint()..color = const Color(0xFFB9B9B9);
   static final Paint _water = Paint()..color = const Color(0xFF4FA4D9);
   static final Paint _waterRipple = Paint()..color = const Color(0x55FFFFFF);
 
-  static void _road(Canvas canvas, Rect r, RoadData road) {
-    _tile(canvas, _asphalt, r);
-    if (road.type == RoadType.small || road.isIntersection) return;
-    final c = road.connections;
-    final vertical = (c & 5) != 0 && (c & 10) == 0;
-    final horizontal = (c & 10) != 0 && (c & 5) == 0;
+  /// Streets run on the lot grid: every 8th row (horizontal) and column
+  /// (vertical); where both meet is a crossing. The direction comes from
+  /// the grid, so a street still looks right while its neighbour chunk is
+  /// not generated yet.
+  static void _road(Canvas canvas, Rect r, int wx, int wy, CityCell? Function(int, int) lookup) {
+    canvas.drawRect(r, _asphaltFill);
     final u = r.width / 16;
-    if (vertical) {
-      canvas.drawRect(Rect.fromLTWH(r.center.dx - u / 2, r.top + 3 * u, u, 10 * u), _laneLine);
-    } else if (horizontal) {
-      canvas.drawRect(Rect.fromLTWH(r.left + 3 * u, r.center.dy - u / 2, 10 * u, u), _laneLine);
+    final k = 1.5 * u;
+    final horizontal = wy % 8 == 0;
+    final vertical = wx % 8 == 0;
+    // A side gets a kerb unless the street goes on there. At a crossing a
+    // side may still be closed (a T-junction at a park): ask the neighbour.
+    bool open(int dx, int dy) {
+      final n = lookup(wx + dx, wy + dy);
+      return n == null || n.data is RoadData;
+    }
+
+    final n = vertical && (!horizontal || open(0, -1));
+    final s = vertical && (!horizontal || open(0, 1));
+    final w = horizontal && (!vertical || open(-1, 0));
+    final e = horizontal && (!vertical || open(1, 0));
+    if (!n) canvas.drawRect(Rect.fromLTWH(r.left, r.top, r.width, k), _kerb);
+    if (!s) canvas.drawRect(Rect.fromLTWH(r.left, r.bottom - k, r.width, k), _kerb);
+    if (!w) canvas.drawRect(Rect.fromLTWH(r.left, r.top, k, r.height), _kerb);
+    if (!e) canvas.drawRect(Rect.fromLTWH(r.right - k, r.top, k, r.height), _kerb);
+    final alongY = n || s, alongX = w || e;
+    if (alongX == alongY) return; // a real crossing: no centre line
+    // The centre line runs along the street, dashed across cell borders.
+    if (alongY) {
+      canvas.drawRect(Rect.fromLTWH(r.center.dx - u * 0.35, r.top + 4 * u, u * 0.7, 8 * u), _laneLine);
+    } else {
+      canvas.drawRect(Rect.fromLTWH(r.left + 4 * u, r.center.dy - u * 0.35, 8 * u, u * 0.7), _laneLine);
     }
   }
 
@@ -190,6 +231,22 @@ abstract final class KenneyCityRenderer {
     final pitch = _lotPitch(cell.district);
     final (rootX, rootY) = _lotRoot(data.buildingId, wx, wy, pitch);
     final isFacade = !s && n; // south side of a building at least 2 deep
+    // High-rises show a second floor of windows above the facade.
+    final twoFloors = type == BuildingType.skyscraper;
+    final isUpperFloor = twoFloors && s && !same(0, 2) && n;
+    if (isUpperFloor) {
+      final fw = same(-1, 0) && !same(-1, 1);
+      final fe = same(1, 0) && !same(1, 1);
+      final col = switch ((fw, fe)) {
+        (false, false) => m.wall[0],
+        (false, true) => m.wall[1],
+        (true, true) => m.wall[2],
+        (true, false) => m.wall[3],
+      };
+      _tile(canvas, (col, 10), r);
+      _tile(canvas, _windowFor(m, h + 1), r.deflate(r.width * 0.12).translate(0, -r.height * 0.1));
+      return;
+    }
 
     if (isFacade) {
       // Facade row: wall tiles with a pavement base, windows, one door.
@@ -212,8 +269,13 @@ abstract final class KenneyCityRenderer {
 
     // Roof: the rim follows the outline; a facade below closes it.
     final top = !n, left = !w, right = !e;
-    final bottom = !s || !same(0, 2); // below is the facade row
+    final bottom = !s || !same(0, twoFloors ? 3 : 2); // below are the facade rows
     _roof(canvas, r, m, top: top, left: left, right: right, bottom: bottom);
+    if (_isHome(type)) {
+      _pitch(canvas, r, lookup, wx, wy, data.buildingId);
+    } else if (_isBusiness(type) && !top && !left && !right && !bottom && h % 3 == 0) {
+      _airCon(canvas, r, h);
+    }
     if (!top && !left && !right && !bottom && h % 9 == 0) {
       _tile(canvas, _roofDecor[(h >> 4) % _roofDecor.length], r);
     }
@@ -228,10 +290,75 @@ abstract final class KenneyCityRenderer {
       if (right) canvas.drawLine(g.topRight, g.bottomRight, _goldRim);
     }
 
-    // One landmark symbol in the middle of the roof.
+    // The landmark symbol is drawn afterwards ([renderLandmark]): a later
+    // cell would cover the part that reaches beyond this one.
+  }
+
+  /// Second pass after all cells of a chunk: the symbol in the middle of a
+  /// landmark's roof (cross, red shield …) on top of the neighbouring cells
+  /// (playtest 2026-10-31: the bigger shield's tip was cut off).
+  static void renderLandmark(
+    Canvas canvas,
+    Rect r,
+    CityCell cell,
+    int wx,
+    int wy,
+    BuildingType Function(BuildingData data) typeOf,
+  ) {
+    final data = cell.data;
+    if (data is! BuildingData) return;
+    final pitch = _lotPitch(cell.district);
+    final (rootX, rootY) = _lotRoot(data.buildingId, wx, wy, pitch);
     if (wx - rootX == pitch ~/ 2 && wy - rootY == (pitch - 1) ~/ 2) {
-      _landmark(canvas, r, type);
+      _landmark(canvas, r, typeOf(data));
     }
+  }
+
+  static final Paint _slopeLight = Paint()..color = const Color(0x22FFFFFF);
+  static final Paint _slopeDark = Paint()..color = const Color(0x33000000);
+  static final Paint _ridge = Paint()..color = const Color(0x88401010);
+  static final Paint _acBody = Paint()..color = const Color(0xFFCFD8DC);
+  static final Paint _acEdge = Paint()
+    ..color = const Color(0xFF78909C)
+    ..style = PaintingStyle.stroke;
+  static final Paint _acFan = Paint()..color = const Color(0xFF546E7A);
+
+  /// A pitched roof: the northern slope catches the light, the southern is
+  /// in shade, with the ridge between them.
+  static void _pitch(Canvas canvas, Rect r, CityCell? Function(int, int) lookup, int wx, int wy, String id) {
+    bool same(int dy) {
+      final d = lookup(wx, wy + dy)?.data;
+      return d is BuildingData && d.buildingId == id;
+    }
+
+    var up = 0, down = 0;
+    while (up < 12 && same(-(up + 1))) {
+      up++;
+    }
+    while (down < 12 && same(down + 1)) {
+      down++;
+    }
+    // The bottom row of the building is the facade – the roof ends above.
+    final roofDown = down - 1;
+    final north = up < roofDown || (up == roofDown && up == 0);
+    canvas.drawRect(r, north ? _slopeLight : _slopeDark);
+    if (up == roofDown + 1 || (up == roofDown && up > 0)) {
+      canvas.drawRect(Rect.fromLTWH(r.left, r.top - r.height * 0.06, r.width, r.height * 0.12), _ridge);
+    }
+  }
+
+  /// An air conditioner on a flat business roof.
+  static void _airCon(Canvas canvas, Rect r, int h) {
+    final u = r.width / 16;
+    final box = Rect.fromCenter(
+        center: r.center.translate(((h >> 2) % 3 - 1) * 2 * u, ((h >> 4) % 3 - 1) * 2 * u),
+        width: 9 * u,
+        height: 7 * u);
+    canvas.drawRect(box.translate(u, u), _symbolShadow);
+    canvas.drawRect(box, _acBody);
+    _acEdge.strokeWidth = 0.6 * u;
+    canvas.drawRect(box, _acEdge);
+    canvas.drawCircle(box.center, 2.4 * u, _acFan);
   }
 
   /// Composes a roof cell from the quarters of the material's 2×2 block so
@@ -263,6 +390,9 @@ abstract final class KenneyCityRenderer {
 
   static final Paint _symbolGold = Paint()..color = const Color(0xFFFFC107);
   static final Paint _symbolRed = Paint()..color = const Color(0xFFE53935);
+
+  /// Salvation Army red (Pantone 485).
+  static final Paint _shieldRed = Paint()..color = const Color(0xFFDA291C);
   static final Paint _symbolWhite = Paint()..color = const Color(0xFFFFFFFF);
   static final Paint _symbolBlue = Paint()..color = const Color(0xFF1E3A8A);
   static final Paint _symbolShadow = Paint()..color = const Color(0x66000000);
@@ -279,8 +409,25 @@ abstract final class KenneyCityRenderer {
       canvas.drawRect(hz, p);
     }
 
+    // The Salvation Army's red shield (the game's home is a corps, used with
+    // permission): the original outline (docs/art), red, with the inner rim
+    // as a thick white line; no lettering at this size.
+    void redShield() {
+      final h = 21 * u;
+      canvas.drawPath(RedShieldPath.outer(r.center.translate(u, u), h), _symbolShadow);
+      canvas.drawPath(RedShieldPath.outer(r.center, h), _shieldRed);
+      canvas.drawPath(
+        RedShieldPath.inner(r.center, h),
+        Paint()
+          ..color = const Color(0xFFFFFFFF)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.3 * u,
+      );
+    }
+
     switch (type) {
       case BuildingType.pastorHouse:
+        redShield();
       case BuildingType.church:
       case BuildingType.cathedral:
         cross(_symbolGold, tall: type == BuildingType.cathedral ? 16 : 14);
@@ -300,7 +447,7 @@ abstract final class KenneyCityRenderer {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /// Lot pitch per district (mirrors `LotGenerator._gridPitch`).
+  /// Lot pitch per district (the same as `LotGenerator.gridPitch`).
   /// Whether the facade at ([wx], [wy]) shows the lot's door – walking
   /// into it enters the building (playtest 2026-10-18).
   static bool isDoor(CityCell? Function(int wx, int wy) lookup, int wx, int wy) {
@@ -319,11 +466,7 @@ abstract final class KenneyCityRenderer {
     return wx - rootX == pitch ~/ 2;
   }
 
-  static int _lotPitch(DistrictType? d) => switch (d) {
-        DistrictType.slums => 6,
-        DistrictType.outskirts => 10,
-        _ => 8,
-      };
+  static int _lotPitch(DistrictType? d) => LotGenerator.gridPitch(d ?? DistrictType.suburbs);
 
   /// Lot root from the building id (`b_<x>_<y>`), else from the pitch.
   static (int, int) _lotRoot(String id, int wx, int wy, int pitch) {
@@ -332,7 +475,7 @@ abstract final class KenneyCityRenderer {
       final x = int.tryParse(parts[1]), y = int.tryParse(parts[2]);
       if (x != null && y != null) return (x, y);
     }
-    return ((wx ~/ pitch) * pitch, (wy ~/ pitch) * pitch);
+    return (wx - wx % pitch, wy - wy % pitch);
   }
 
   /// Well-mixed per-cell hash (neighbouring cells differ).

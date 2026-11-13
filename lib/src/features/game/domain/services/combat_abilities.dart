@@ -20,24 +20,30 @@ abstract final class CombatAbilities {
     return s == null || learned.has(s);
   }
 
-  /// Mastery lessons of [mode] (⭐, ⭐⭐).
-  static (Skill, Skill) mastery(PrayerMode mode) => switch (mode) {
-        PrayerMode.liberation => (Skill.liberationMastery1, Skill.liberationMastery2),
-        PrayerMode.rebuke => (Skill.rebukeMastery1, Skill.rebukeMastery2),
-        PrayerMode.slow => (Skill.slowMastery1, Skill.slowMastery2),
-        PrayerMode.drain => (Skill.drainMastery1, Skill.drainMastery2),
+  /// The skill that names [mode]'s mastery lessons (⭐, ⭐⭐, …).
+  static Skill masteryKey(PrayerMode mode) => switch (mode) {
+        PrayerMode.liberation => Skill.liberationMastery1,
+        PrayerMode.rebuke => Skill.rebukeMastery1,
+        PrayerMode.slow => Skill.slowMastery1,
+        PrayerMode.drain => Skill.drainMastery1,
       };
 
-  /// Highest mode level the pastor may buy (sum of the four upgrades):
-  /// 2 without a mentor, 5 after ⭐, 10 after ⭐⭐ (playtest 2026-10-18).
-  static const List<int> levelCaps = [2, 5, 10];
+  /// The prayer mode whose mastery lessons [s] names, if any.
+  static PrayerMode? masteryMode(Skill s) =>
+      PrayerMode.values.where((m) => masteryKey(m) == s).firstOrNull;
 
-  static int levelCap(PrayerMode mode, LearnedSkills learned) {
-    final (m1, m2) = mastery(mode);
-    if (learned.has(m2)) return levelCaps[2];
-    if (learned.has(m1)) return levelCaps[1];
-    return levelCaps[0];
-  }
+  /// Mastery lessons of [mode] passed so far.
+  static int masteryStage(PrayerMode mode, LearnedSkills learned) =>
+      learned.masteryOf(masteryKey(mode));
+
+  /// Highest mode level after [stage] mastery lessons: 3, 5, 10, 15, 20 …
+  /// – no top, but every step needs the next lesson from a mentor
+  /// (playtest 2026-11-13: buying on and on without learning was not the
+  /// plan). Up to 3 without a mentor.
+  static int capFor(int stage) => stage == 0 ? 3 : (stage == 1 ? 5 : 5 * stage);
+
+  static int levelCap(PrayerMode mode, LearnedSkills learned) =>
+      capFor(masteryStage(mode, learned));
 
   /// Mode level = sum of its radius/strength/duration/speed upgrades.
   static int modeLevel(CombatModifierSet s) =>

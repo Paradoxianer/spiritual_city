@@ -18,12 +18,16 @@ class AppSettings {
   /// Version of the first-start notice the player accepted (#153).
   int consentVersion;
 
+  /// Texts besides the emoji (see TextMode).
+  bool showTexts;
+
   AppSettings({
     this.language = 'de',
     this.lastDifficulty = Difficulty.normal,
     this.tutorialCompleted = false,
     this.soundOn = true,
     this.consentVersion = 0,
+    this.showTexts = true,
   });
 
   Map<String, dynamic> toMap() => {
@@ -32,6 +36,7 @@ class AppSettings {
         'tutorialCompleted': tutorialCompleted,
         'soundOn': soundOn,
         'consentVersion': consentVersion,
+        'showTexts': showTexts,
       };
 
   factory AppSettings.fromMap(Map<dynamic, dynamic> map) => AppSettings(
@@ -41,6 +46,7 @@ class AppSettings {
         tutorialCompleted: map['tutorialCompleted'] as bool? ?? false,
         soundOn: map['soundOn'] as bool? ?? true,
         consentVersion: map['consentVersion'] as int? ?? 0,
+        showTexts: map['showTexts'] as bool? ?? true,
       );
 }
 

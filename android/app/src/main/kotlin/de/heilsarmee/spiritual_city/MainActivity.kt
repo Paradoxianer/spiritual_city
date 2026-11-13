@@ -1,4 +1,4 @@
-package com.example.spiritual_city
+package de.heilsarmee.spiritual_city
 
 import io.flutter.embedding.android.FlutterActivity
 

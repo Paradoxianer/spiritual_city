@@ -14,16 +14,29 @@ class CityMapOverlay extends StatefulWidget {
 }
 
 class _CityMapOverlayState extends State<CityMapOverlay> {
-  static const double _scale = 2.0; // logical px per map pixel at zoom 1
-  static const double _side = CityOverview.size * _scale;
+  // The map is 720 logical px wide at zoom 1, whatever the city's size.
+  static const double _side = 720.0;
+  static double get _scale => _side / CityOverview.size; // logical px per map pixel
 
   final TransformationController _ctrl = TransformationController();
   bool _placed = false;
+
+  /// 🌐 In the invisible world the plan shows it (what was discovered).
+  bool get _spirit => widget.game.isSpiritualWorld;
 
   @override
   void initState() {
     super.initState();
     widget.game.loadCityMap();
+    if (_spirit) widget.game.refreshSpiritMap();
+  }
+
+  /// 📍 A tap on the map marks the place to go (again: removes it).
+  void _tap(Offset local) {
+    final x = (local.dx / _scale * CityOverview.step - CityOverview.radius).floor();
+    final y = (local.dy / _scale * CityOverview.step - CityOverview.radius).floor();
+    widget.game.togglePin(x, y);
+    setState(() {});
   }
 
   @override
@@ -49,6 +62,11 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
   @override
   Widget build(BuildContext context) {
     final g = widget.game;
+    // 🎓 Where a mentor waits with something new – once, not every frame.
+    final mentors = {
+      for (final t in BuildingType.values)
+        if (Lessons.offeredAt(t, g.progress.skills, awakenings: g.progress.awakenedQuarters.length).isNotEmpty) t,
+    };
     return Material(
       color: const Color(0xF0101318),
       child: SafeArea(
@@ -68,14 +86,19 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
                     minScale: 0.3,
                     maxScale: 8,
                     boundaryMargin: const EdgeInsets.all(400),
-                    child: AnimatedBuilder(
-                      animation: _ctrl,
-                      builder: (context, _) => CustomPaint(
-                        size: const Size(_side, _side),
-                        painter: _CityMapPainter(
-                          game: g,
-                          image: img,
-                          zoom: _ctrl.value.getMaxScaleOnAxis(),
+                    child: GestureDetector(
+                      onTapUp: (d) => _tap(d.localPosition),
+                      child: AnimatedBuilder(
+                        animation: Listenable.merge([_ctrl, g.spiritMapImage]),
+                        builder: (context, _) => CustomPaint(
+                          size: const Size(_side, _side),
+                          painter: _CityMapPainter(
+                            game: g,
+                            image: img,
+                            mentors: mentors,
+                            spirit: _spirit ? g.spiritMapImage.value : null,
+                            zoom: _ctrl.value.getMaxScaleOnAxis(),
+                          ),
                         ),
                       ),
                     ),
@@ -94,6 +117,23 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
                   side: const BorderSide(color: Colors.white38),
                 ),
                 icon: const Icon(Icons.close, color: Colors.white),
+              ),
+            ),
+            // 🏘️✝️ how many neighbourhoods are wholly Christian.
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '🏘️✝️ ${CityLayout.current.quarters.where((q) => g.progress.christianQuarters.contains(q.key)).length}'
+                  ' / ${CityLayout.current.quarters.length}',
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                ),
               ),
             ),
             Positioned(
@@ -120,11 +160,16 @@ class _CityMapOverlayState extends State<CityMapOverlay> {
 class _CityMapPainter extends CustomPainter {
   final SpiritWorldGame game;
   final ui.Image image;
+
+  /// 🌐 The invisible world over the plan (null: the plan only).
+  final ui.Image? spirit;
   final double zoom;
+  final Set<BuildingType> mentors;
 
-  _CityMapPainter({required this.game, required this.image, required this.zoom});
+  _CityMapPainter(
+      {required this.game, required this.image, required this.zoom, required this.mentors, this.spirit});
 
-  static const double _s = _CityMapOverlayState._scale;
+  static double get _s => _CityMapOverlayState._scale;
 
   /// World pixels → map pixels (before [_s]).
   static Offset toMap(Vector2 world) {
@@ -149,6 +194,15 @@ class _CityMapPainter extends CustomPainter {
       dst,
       Paint()..filterQuality = FilterQuality.none,
     );
+    final s = spirit;
+    if (s != null) {
+      canvas.drawImageRect(
+        s,
+        Rect.fromLTWH(0, 0, s.width.toDouble(), s.height.toDouble()),
+        dst,
+        Paint()..filterQuality = FilterQuality.none,
+      );
+    }
 
     // Boulevards every 32 cells.
     final road = Paint()
@@ -161,22 +215,16 @@ class _CityMapPainter extends CustomPainter {
       canvas.drawLine(l, r, road);
     }
 
-    if (game.isSpiritualWorld) _paintQuarters(canvas);
+    _paintChristianQuarters(canvas);
+    if (game.isSpiritualWorld || spirit != null) _paintQuarters(canvas);
 
     // Special buildings – tiny dots far out, emoji when zoomed in.
     final emojiSize = (13 / zoom).clamp(3.0, 13.0);
     final dot = Paint();
-    final mentorTypes = {
-      for (final t in BuildingType.values)
-        if (Lessons.offeredAt(t, game.progress.skills,
-                awakenings: game.progress.awakenedQuarters.length)
-            .isNotEmpty)
-          t,
-    };
     for (final (x, y, t) in game.cityOverview?.landmarks ?? const <(int, int, BuildingType)>[]) {
       final o = _cell(x, y);
       // 🎓 A mentor waits here with something new to learn.
-      if (mentorTypes.contains(t) && zoom >= 1.2) {
+      if (mentors.contains(t) && zoom >= 1.2) {
         _emojiAt(canvas, '🎓', o + Offset(emojiSize * 0.8, -emojiSize * 0.8), emojiSize * 0.9);
       }
       if (zoom < 1.2 && !_major(t)) {
@@ -188,7 +236,7 @@ class _CityMapPainter extends CustomPainter {
     }
 
     final home = game.pastorhousePosition.value;
-    _emojiAt(canvas, '🏠', home != null ? toMap(home) * _s : _cell(220, 222), emojiSize * 1.5);
+    _emojiAt(canvas, '🏠', home != null ? toMap(home) * _s : _cell(CityLayout.current.pastorHouseCell.$1, CityLayout.current.pastorHouseCell.$2), emojiSize * 1.5);
 
     final target = game.trackedTargetPosition;
     if (target != null) _emojiAt(canvas, '📍', toMap(target) * _s - Offset(0, emojiSize), emojiSize * 1.8);
@@ -207,6 +255,27 @@ class _CityMapPainter extends CustomPainter {
           true,
         _ => false,
       };
+
+  /// The great goal on the plan: every neighbourhood of the city outlined,
+  /// those where everyone is a Christian filled green ✝️.
+  void _paintChristianQuarters(Canvas canvas) {
+    const q = Quarter.sizeCells;
+    final done = game.progress.christianQuarters;
+    final outline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8 / zoom.clamp(0.5, 4)
+      ..color = const Color(0x40FFFFFF);
+    final fill = Paint()..color = const Color(0x5566BB6A);
+    for (final quarter in CityLayout.current.quarters) {
+      final r = Rect.fromPoints(
+          _cell(quarter.qx * q, quarter.qy * q), _cell((quarter.qx + 1) * q, (quarter.qy + 1) * q));
+      if (done.contains(quarter.key)) {
+        canvas.drawRect(r, fill);
+        if (zoom >= 1.2) _emojiAt(canvas, '✝️', r.center, (11 / zoom).clamp(3.0, 11.0));
+      }
+      canvas.drawRect(r, outline);
+    }
+  }
 
   void _paintQuarters(Canvas canvas) {
     const q = Quarter.sizeCells;
@@ -255,10 +324,11 @@ class _LessonLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = game.progress;
-    final lessons = <Lesson>{
+    // By skill: a mastery lesson is made anew for every mentor building.
+    final lessons = <Skill, Lesson>{
       for (final t in BuildingType.values)
-        ...Lessons.offeredAt(t, p.skills, awakenings: p.awakenedQuarters.length),
-    };
+        for (final l in Lessons.offeredAt(t, p.skills, awakenings: p.awakenedQuarters.length)) l.skill: l,
+    }.values;
     if (lessons.isEmpty) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

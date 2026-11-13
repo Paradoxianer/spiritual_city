@@ -56,6 +56,11 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/game',
+      // The save only travels as `extra`, which a browser reload or a web
+      // update (page reloaded at /#/game) does not keep: the game then ran
+      // without a save behind it and 💾 silently did nothing (playtest
+      // 2026-10-19). Back to the menu instead, to load the save again.
+      redirect: (context, state) => state.extra == null ? '/menu' : null,
       builder: (context, state) {
         final extra = state.extra;
         if (extra is GameSave) {

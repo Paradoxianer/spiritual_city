@@ -21,7 +21,7 @@ void main() {
     });
 
     test('labels are emoji and numbers only', () {
-      final s = QuarterStatus(quarter: const Quarter(0, 0), christians: 4, people: 40, awakened: false);
+      const s = QuarterStatus(quarter: Quarter(0, 0), christians: 4, people: 40, awakened: false);
       expect(s.label, '🏘️ ✝️ 4/40  🏰🔒6');
       expect(RegExp(r'[A-Za-z]').hasMatch(s.label), isFalse);
     });

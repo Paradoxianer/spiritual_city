@@ -30,9 +30,10 @@ Dieses Dokument definiert die Aktionen, Kosten und Auswirkungen für die verschi
 - **Jede erfolgreiche Aktion** in jedem Gebäudetyp erhöht den Interaktionszähler des Gebäudes (mindestens +1; Aktionen mit größerem Aufwand mehr).
 - **Jeder Gebäudetyp** hat mindestens eine Aktion, die den Glauben des Gebäudes bzw. der Bewohner erhöht (Prüfung der Tabellen unten, Lücken gehören in die Issue #168).
 
-**Ist-Stand (Code):**
-- `BuildingModel.combinedFaith` (Gebäude + Summe der Bewohner) existiert, wird aber **nirgends benutzt**: Der Glaube der Bewohner wirkt derzeit **nicht** auf den Haus-Glauben.
-- Wohngebäude (`_residentialAction`): Alle Aktionen erhöhen den Zähler, ggf. mit Bedingungen; die übrigen Typen sind noch zu prüfen.
+**Umsetzung (Code, 2026-10-19):**
+- `BuildingModel.holiness` = Gebäude-Glaube + ½ × Durchschnitt der Bewohner (−100…100). Der ✝️-Balken im Raum zeigt diesen Wert, und an der Tür öffnet ein heiliges Haus leichter (`accessChance` ± 20 %).
+- Jede erfolgreiche Aktion zählt mindestens +1 Interaktion; zusätzlich `BuildingModel.effortBonus`: +1 ab 25 🙏 Kosten oder 6 s, +2 ab 50 🙏 oder 10 s. Fürbitte +2, Predigen +3.
+- Jeder Gebäudetyp hat eine Aktion, die den Gebäude-Glauben hebt; dem Bahnhof fehlte sie (nur 🚆), jetzt gibt es dort auch 🙏.
 - Kirchen starten mit 50 % Glauben, das Pastorenhaus mit 100 %; Kirchen/Kathedralen-NPCs sind zu 25 % vorbekehrt, alle anderen zu 3 %.
 
 ### Offene Anpassungen (Issues #144, #129)

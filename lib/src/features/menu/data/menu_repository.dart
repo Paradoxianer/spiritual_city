@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
 import 'package:logging/logging.dart';
+import '../../../core/i18n/app_language.dart';
 import '../domain/models/app_settings.dart';
 import '../domain/models/game_save.dart';
 
@@ -47,7 +48,8 @@ class MenuRepository {
 
   Future<AppSettings> loadSettings() async {
     final box = await _settingsBox();
-    return box.get(_settingsKey) ?? AppSettings();
+    // First start: the device's language if the game speaks it.
+    return box.get(_settingsKey) ?? AppSettings(language: AppLanguages.fromDevice());
   }
 
   Future<void> saveSettings(AppSettings settings) async {

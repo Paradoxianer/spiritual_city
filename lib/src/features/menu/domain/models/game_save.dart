@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'city_size.dart';
 import 'difficulty.dart';
 
 /// Represents a saved game state stored in Hive.
@@ -17,12 +18,16 @@ class GameSave {
   /// created before seed support was added (they fall back to 42).
   final int? seed;
 
+  /// Size of the city; null for saves from before sizes – the 🌆 big city.
+  final CitySize? citySize;
+
   GameSave({
     required this.id,
     required this.name,
     required this.createdAt,
     required this.difficulty,
     this.seed,
+    this.citySize,
     DateTime? lastPlayed,
     this.gameState = const {},
   }) : lastPlayed = lastPlayed ?? createdAt;
@@ -34,6 +39,7 @@ class GameSave {
         createdAt: createdAt,
         difficulty: difficulty,
         seed: seed,
+        citySize: citySize,
         lastPlayed: DateTime.now(),
         gameState: newState,
       );
@@ -45,6 +51,7 @@ class GameSave {
         createdAt: createdAt,
         difficulty: difficulty,
         seed: seed,
+        citySize: citySize,
         lastPlayed: lastPlayed,
         gameState: gameState,
       );
@@ -56,6 +63,7 @@ class GameSave {
         'lastPlayed': lastPlayed.toIso8601String(),
         'difficulty': difficulty.index,
         if (seed != null) 'seed': seed,
+        if (citySize != null) 'citySize': citySize!.name,
         'gameState': gameState,
       };
 
@@ -68,6 +76,7 @@ class GameSave {
             : null,
         difficulty: Difficulty.values[map['difficulty'] as int],
         seed: map['seed'] as int?,
+        citySize: CitySize.values.where((s) => s.name == map['citySize']).firstOrNull,
         gameState: (map['gameState'] as Map?)?.cast<String, dynamic>() ?? {},
       );
 }

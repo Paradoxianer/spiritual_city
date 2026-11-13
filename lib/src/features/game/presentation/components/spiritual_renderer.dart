@@ -131,6 +131,8 @@ class SpiritualRenderer extends PositionComponent
 
   @override
   void onRemove() {
+    _basePicture?.dispose();
+    _basePicture = null;
     _stateImage?.dispose();
     _stateImage = null;
     _shader?.dispose();
@@ -138,17 +140,22 @@ class SpiritualRenderer extends PositionComponent
     super.onRemove();
   }
 
-  /// Encodes the cells (plus a one-cell border from the neighbouring
-  /// chunks) as an 18×18 image: R = darkness, G = light.
+  /// Cells of the neighbouring chunks around the state image – two, so the
+  /// shader's smooth (bicubic) lookup and the warped borders never run out
+  /// of data at a chunk edge.
+  static const int _stateBorder = 2;
+
+  /// Encodes the cells (plus a [_stateBorder]-cell border from the
+  /// neighbouring chunks) as a 20×20 image: R = darkness, G = light.
   void _buildStateImage() {
-    const n = CityChunk.chunkSize + 2;
+    const n = CityChunk.chunkSize + 2 * _stateBorder;
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
     final ox = chunk.chunkX * CityChunk.chunkSize;
     final oy = chunk.chunkY * CityChunk.chunkSize;
     for (int y = 0; y < n; y++) {
       for (int x = 0; x < n; x++) {
-        final cell = game.grid.getCell(ox + x - 1, oy + y - 1);
+        final cell = game.grid.getCell(ox + x - _stateBorder, oy + y - _stateBorder);
         final st = (cell?.spiritualState ?? 0.0).clamp(-1.0, 1.0);
         _statePaint.color = Color.fromARGB(
           255,
@@ -227,6 +234,7 @@ class SpiritualRenderer extends PositionComponent
     _baseRebuildTimer += dt;
     if (_baseRebuildTimer >= _baseRebuildInterval) {
       _baseRebuildTimer = 0.0;
+      _basePicture?.dispose();
       _basePicture = null; // mark dirty; rebuilt in render()
       _stateImage?.dispose();
       _stateImage = null;
@@ -330,8 +338,12 @@ class SpiritualRenderer extends PositionComponent
         ..setFloat(4, position.y + (parent as PositionComponent).position.y)
         ..setFloat(5, CityChunk.chunkSize.toDouble())
         ..setImageSampler(0, _stateImage!, filterQuality: FilterQuality.low);
-      _shaderPaint.shader = shader;
-      canvas.drawRect(size.toRect(), _shaderPaint);
+      _shaderPaint
+        ..shader = shader
+        ..isAntiAlias = false;
+      // One pixel of overlap with the neighbours: anti-aliased chunk edges
+      // left a hairline seam between chunks (playtest 2026-10-31).
+      canvas.drawRect(size.toRect().inflate(1), _shaderPaint);
       _particleService.render(canvas);
       return;
     }

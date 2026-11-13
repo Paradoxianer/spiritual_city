@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../../../core/audio/game_sound.dart';
+import '../../../../core/i18n/narrator.dart';
+import '../../domain/help/help_content.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../../domain/actions/game_action.dart';
 import '../../domain/actions/practice.dart';
@@ -75,16 +77,23 @@ class ActionButton extends StatelessWidget {
     String? emoji,
   }) {
     final d = action.discipline;
+    final shown = emoji ?? action.emoji;
+    final caption = HelpContent.actionNames[action.id]?.text;
     return ActionButton(
       key: key,
-      emoji: emoji ?? action.emoji,
+      emoji: shown,
       hint: action.hint(difficulty),
       availability: action.availability(subject, wallet, difficulty),
       enabled: enabled,
       keyIndex: keyIndex,
       practiceLevel: d == null ? 0 : practice.level(d),
       highlighted: highlighted,
-      onTap: onTap,
+      // The narrator explains what the action does (until closed).
+      onTap: () {
+        Narrator.say('action.${action.id.name}', shown, caption ?? '',
+            HelpContent.explanations[action.id]?.text);
+        onTap();
+      },
     );
   }
 
@@ -114,7 +123,7 @@ class ActionButton extends StatelessWidget {
       border = Colors.transparent;
     }
 
-    return Opacity(
+    final button = Opacity(
       opacity: active || !available ? 1.0 : 0.5,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -177,6 +186,7 @@ class ActionButton extends StatelessWidget {
         ],
       ),
     );
+    return button;
   }
 }
 

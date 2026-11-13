@@ -7,6 +7,32 @@ extension GameLearning on SpiritWorldGame {
   void openLesson(Lesson lesson) {
     activeLessonOffer = lesson;
     overlays.add('LessonOverlay');
+    explainLesson(lesson);
+  }
+
+  /// The narrator tells what [lesson] teaches, where and how – [force]
+  /// when the player tapped it (then even a closed explanation comes).
+  void explainLesson(Lesson lesson, {bool force = false}) {
+    Narrator.say(
+      'lesson.${lesson.skill.name}',
+      '🎓${lesson.skill.emoji}',
+      LessonTexts.skillName(lesson.skill),
+      LessonTexts.explain(
+        lesson,
+        learned: progress.skills,
+        awakenings: progress.awakenedQuarters.length,
+        active: progress.lesson.active,
+        progress: progress.lesson.progress,
+      ),
+      force: force,
+    );
+  }
+
+  /// Shows another lesson of the same mentor on the card.
+  void switchLesson(Lesson lesson) {
+    activeLessonOffer = lesson;
+    lessonNotifier.value++;
+    explainLesson(lesson);
   }
 
   void closeLesson() {
@@ -19,33 +45,58 @@ extension GameLearning on SpiritWorldGame {
     progress.lesson.start(lesson.skill);
     lessonNotifier.value++;
     closeLesson();
-    _toast(lesson.progressLabel(0));
+    _toast(lesson.progressLabel(0), 'lessonStarted');
+  }
+
+  /// 📖 Studies one step of [lesson] with the mentor (starting it if it
+  /// is not the active one); the lesson card stays open.
+  void studyLesson(Lesson lesson) {
+    const cost = LessonState.studyInsightCost;
+    if (progress.lesson.studyLeft(lesson) <= 0) return;
+    if (!progress.spendInsight(cost)) {
+      GameSound.play(Sfx.denied);
+      return;
+    }
+    GameSound.play(Sfx.book);
+    final learned = progress.lesson.study(lesson, progress.skills);
+    _onLessonStep(lesson, learned);
+    if (learned != null) closeLesson();
   }
 
   /// Counts one practice [task] towards the active lesson.
   void recordLessonTask(LessonTask task) {
     final active = progress.lesson.lesson;
     if (active == null || active.task != task) return;
-    final learned = progress.lesson.record(task, progress.skills);
+    _onLessonStep(active, progress.lesson.record(task, progress.skills));
+  }
+
+  void _onLessonStep(Lesson active, Skill? learned) {
     lessonNotifier.value++;
     if (learned == null) {
-      _toast(active.progressLabel(progress.lesson.progress));
+      _toast(active.progressLabel(progress.lesson.progress), 'lessonStep');
       return;
     }
     dayStats.lessonsLearned++;
     GameSound.play(Sfx.learned);
-    _toast('🎓✨ ${learned.emoji}');
+    // A mastery lesson: its stars as reached now (🕊️⭐⭐⭐).
+    final stars = progress.skills.masteryOf(learned);
+    _toast('🎓✨ ${active.repeatable ? learned.emoji.replaceAll('⭐', '') + '⭐' * stars : learned.emoji}', 'learned');
     // A new prayer mode shows up in the dock right away.
     _updateHudVisibility();
   }
 
   /// Short centred emoji message (e.g. a newly unlocked ability).
-  void announce(String msg) {
+  void announce(String msg, [String? text]) {
     GameSound.play(Sfx.learned);
-    _toast(msg);
+    _toast(msg, text);
   }
 
-  void _toast(String msg) {
+  /// Shows [msg] (emoji); the narrator tells what happened in words
+  /// ([text] is a key of [HelpContent.toasts]).
+  void _toast(String msg, [String? text]) {
+    if (text != null) {
+      Narrator.say('toast.$text', msg.split(' ').first, '', HelpContent.toasts[text]?.text);
+    }
     missionCompleteMessage.value = msg;
     Future.delayed(const Duration(seconds: 3), () {
       if (missionCompleteMessage.value == msg) missionCompleteMessage.value = null;

@@ -137,6 +137,10 @@ extension GameSaveState on SpiritWorldGame {
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
     if (saved['possessed'] is bool) npc.possessed = saved['possessed'] as bool;
     npc.possessionWeakened = saved['possWeak'] as bool? ?? false;
+    if (saved['disciple'] is Map) {
+      npc.discipleProfile =
+          CombatProfile.fromJson((saved['disciple'] as Map).cast<String, dynamic>());
+    }
     // NPC backstory (docs/game_design/npc_backstory.md): re-trigger in case
     // the save says converted but the fresh spawn roll didn't (idempotent –
     // a no-op if NPCRegistry already unlocked it for a pre-converted spawn).
@@ -225,7 +229,8 @@ extension GameSaveState on SpiritWorldGame {
       final npc = npcComp.model;
       if (npc.faith != 0.0 ||
           npc.interactionCount != 0 ||
-          npc.isConverted) {
+          npc.isConverted ||
+          npc.isDisciple) {
         final backstoryProgress = npc.captureBackstoryProgress();
         npcStates[npc.id] = {
           'faith': npc.faith.clamp(-100.0, 100.0),
@@ -236,6 +241,7 @@ extension GameSaveState on SpiritWorldGame {
           if (npc.faith < NPCModel.possessionFaithThreshold || !npc.possessed)
             'possessed': npc.possessed,
           if (npc.possessionWeakened)    'possWeak': true,
+          if (npc.isDisciple)            'disciple': npc.discipleProfile.toJson(),
           'posX': npcComp.position.x,
           'posY': npcComp.position.y,
           if (npc.activeMission != null) 'mission': npc.activeMission!.toJson(),
@@ -292,6 +298,8 @@ extension GameSaveState on SpiritWorldGame {
       'npcs':               npcStates,
       'buildings':          buildingStates,
       'loot':               lootSystem.captureState(),
+      'worldDay':           worldDay,
+      'chunkDays':          captureChunkDays(),
     };
   }
 }

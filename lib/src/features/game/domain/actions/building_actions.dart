@@ -23,11 +23,11 @@ abstract final class BuildingActions {
 
   // ── Pastor house ────────────────────────────────────────────────────────
 
-  static final readBible = GameAction<BuildingModel>(
+  static const readBible = GameAction<BuildingModel>(
     id: ActionId.readBible,
     type: 'readBible',
     emoji: '📖',
-    effect: '🙏+${BuildingInteractionService.pastorHouseReadBibleFaith.round()}',
+    effect: '🙏+⅓',
     baseSeconds: BuildingInteractionService.pastorHouseReadBibleSeconds,
     discipline: Discipline.bible,
   );
@@ -45,11 +45,11 @@ abstract final class BuildingActions {
     effect: '❤️+50',
     baseSeconds: BuildingInteractionService.pastorHouseSleepSeconds,
   );
-  static final homePray = GameAction<BuildingModel>(
+  static const homePray = GameAction<BuildingModel>(
     id: ActionId.homePray,
     type: 'pray',
     emoji: '🙏',
-    effect: '🙏+${BuildingInteractionService.pastorHousePrayFaith.round()}🌍',
+    effect: '🙏+½🌍',
     baseSeconds: BuildingInteractionService.pastorHousePraySeconds,
     discipline: Discipline.prayer,
   );
@@ -97,6 +97,19 @@ abstract final class BuildingActions {
     lockedBy: (b) =>
         _needsVisits(b, 20) ??
         (b.residents.any((n) => n.isChristian) ? null : '🔒✝️'),
+  );
+  /// 🙏👥 Praying with the brothers and sisters in a house where everyone
+  /// is a Christian (Mt 18:20, Acts 2:46): faith like at home – a converted
+  /// household becomes a place to draw strength (playtest 2026-11-03: the
+  /// way home to refill was most of the walking).
+  static final fellowship = GameAction<BuildingModel>(
+    id: ActionId.fellowship,
+    type: 'fellowship',
+    emoji: '🙏👥',
+    effect: '🙏⬆️',
+    baseSeconds: BuildingInteractionService.fellowshipSeconds,
+    discipline: Discipline.prayer,
+    lockedBy: (b) => BuildingInteractionService.isChristianHousehold(b) ? null : '🔒✝️',
   );
   static final blessHousehold = GameAction<BuildingModel>(
     id: ActionId.blessHousehold,
@@ -468,7 +481,7 @@ abstract final class BuildingActions {
   static List<GameAction<BuildingModel>> forType(BuildingType type) =>
       switch (type) {
         BuildingType.pastorHouse => [readBible, eat, sleep, homePray, missions, fast],
-        BuildingType.house => [practicalHelp, housePray, houseVisit, discipleshipGroup, intercede],
+        BuildingType.house => [practicalHelp, housePray, houseVisit, discipleshipGroup, intercede, fellowship],
         BuildingType.apartment => [
             practicalHelp,
             housePray,
@@ -476,6 +489,7 @@ abstract final class BuildingActions {
             discipleshipGroup,
             blessHousehold,
             intercede,
+            fellowship,
           ],
         BuildingType.church || BuildingType.cathedral => [sundayService, worship, preach],
         BuildingType.hospital => [medicalHelp, counseling, chapelService],
@@ -488,7 +502,7 @@ abstract final class BuildingActions {
         BuildingType.cemetery => [funeral, comfort],
         BuildingType.policeStation => [blessPolice, genericPray, witness],
         BuildingType.cityHall => [mayorAudience, prayForPoliticians],
-        BuildingType.trainStation => [travel],
+        BuildingType.trainStation => [travel, genericPray],
         BuildingType.stadium => [majorEvent],
         BuildingType.shop ||
         BuildingType.supermarket ||

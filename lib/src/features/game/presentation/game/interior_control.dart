@@ -31,6 +31,14 @@ extension GameInterior on SpiritWorldGame {
     );
     final lessons = Lessons.offeredAt(building.type, progress.skills,
         awakenings: progress.awakenedQuarters.length);
+    // The one the pastor follows (📍) or has begun comes first.
+    int rank(Lesson l) => trackedMission.value == GameMissionTracking.lessonKey(l.skill)
+        ? 0
+        : progress.lesson.active == l.skill
+            ? 1
+            : 2;
+    lessons.sort((a, b) => rank(a).compareTo(rank(b)));
+    lessonChoices = lessons;
     final room = InteriorWorld(
       building: building,
       layout: layout,
@@ -138,6 +146,11 @@ extension GameInterior on SpiritWorldGame {
     }
     final b = room.building;
     final a = BuildingActions.find(b.type, action);
+    // The narrator tells what this station does (tap or walk + E).
+    if (a != null) {
+      Narrator.say('action.${a.id.name}', a.emoji, HelpContent.actionNames[a.id]?.text ?? '',
+          HelpContent.explanations[a.id]?.text);
+    }
     if (a != null) {
       final av = a.availability(b, this, difficulty);
       if (!av.isOk) {

@@ -113,7 +113,7 @@ class PlayerProgress extends ChangeNotifier {
 
   // --- Learned skills (learning missions, release_roadmap.md §3.9) ---
   final LearnedSkills skills = LearnedSkills();
-  final LessonState lesson = LessonState();
+  late final LessonState lesson = LessonState(skills);
 
   // --- The current day and what happened in it (§3.3) ---
   final DayStats dayStats = DayStats();
@@ -123,6 +123,13 @@ class PlayerProgress extends ChangeNotifier {
 
   // --- Awakened neighbourhoods (Quarter keys "qx,qy", §3.3) ---
   final Set<String> awakenedQuarters = {};
+
+  // --- Neighbourhoods prayed free and celebrated 🎉 (keys "qx,qy") ---
+  final Set<String> celebratedQuarters = {};
+
+  // --- Neighbourhoods where everyone is a Christian ✝️ – all of the city's
+  //     is the big goal (playtest 2026-11-13) ---
+  final Set<String> christianQuarters = {};
 
   // --- Daemon scaling with grace period (#178, daemons_and_combat.md §5) ---
 
@@ -199,6 +206,8 @@ class PlayerProgress extends ChangeNotifier {
     'skills': skills.toJson(),
     'lesson': lesson.toJson(),
     'awakened': awakenedQuarters.toList(),
+    'celebrated': celebratedQuarters.toList(),
+    'christianQuarters': christianQuarters.toList(),
     'day': dayStats.toJson(),
     'church': church.toJson(),
     'graceVisitsLeft': graceVisitsLeft,
@@ -228,6 +237,12 @@ class PlayerProgress extends ChangeNotifier {
     awakenedQuarters
       ..clear()
       ..addAll([for (final k in (json['awakened'] as List?) ?? const []) '$k']);
+    celebratedQuarters
+      ..clear()
+      ..addAll([for (final k in (json['celebrated'] as List?) ?? const []) '$k']);
+    christianQuarters
+      ..clear()
+      ..addAll([for (final k in (json['christianQuarters'] as List?) ?? const []) '$k']);
     graceVisitsLeft = (json['graceVisitsLeft'] as num?)?.toInt() ?? 0;
     final practiceRaw = json['practice'];
     practice.loadFromJson(

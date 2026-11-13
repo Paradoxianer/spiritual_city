@@ -15,6 +15,10 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
   static const double cellSize = CellComponent.cellSize;
 
   Picture? _cachedPicture;
+
+  /// Whether [_cachedPicture] was drawn with the Kenney sheet – a chunk
+  /// drawn with the fallback shapes is redrawn once the sheet arrives.
+  bool _cachedWithSheet = false;
   late final SpiritualRenderer _spiritualRenderer;
 
   // Pre-allocated paint for the glow overlay (never allocate in render/update).
@@ -57,6 +61,23 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
         CityTileRenderer.renderDistrictTint(canvas, rect, cell.district, cell.data);
       }
     }
+    // Roof symbols last, so no neighbouring cell covers them.
+    if (KenneyCityRenderer.ready) {
+      for (int y = 0; y < CityChunk.chunkSize; y++) {
+        for (int x = 0; x < CityChunk.chunkSize; x++) {
+          final cell = chunk.at(x, y);
+          if (cell == null) continue;
+          KenneyCityRenderer.renderLandmark(
+            canvas,
+            Rect.fromLTWH(x * cellSize, y * cellSize, cellSize, cellSize),
+            cell,
+            chunk.getWorldX(x),
+            chunk.getWorldY(y),
+            _buildingType,
+          );
+        }
+      }
+    }
     _cachedPicture = recorder.endRecording();
   }
 
@@ -81,6 +102,14 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
     }
   }
 
+  @override
+  void onRemove() {
+    // Unloaded chunks free their drawing at once, not whenever the GC runs.
+    _cachedPicture?.dispose();
+    _cachedPicture = null;
+    super.onRemove();
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   @override
@@ -88,8 +117,10 @@ class ChunkComponent extends PositionComponent with HasGameReference<SpiritWorld
     // Wenn wir in der unsichtbaren Welt sind, rendert der SpiritualRenderer (als Child)
     // Wir rendern hier nur die physische Welt, falls sichtbar oder transparent
     if (!game.isSpiritualWorld) {
-      if (_cachedPicture == null) {
+      if (_cachedPicture == null || (!_cachedWithSheet && KenneyCityRenderer.ready)) {
+        _cachedPicture?.dispose();
         _createCache();
+        _cachedWithSheet = KenneyCityRenderer.ready;
       }
       if (_cachedPicture != null) {
         canvas.drawPicture(_cachedPicture!);

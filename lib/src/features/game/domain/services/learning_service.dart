@@ -1,6 +1,7 @@
 import '../models/cell_object.dart';
 import '../models/prayer_combat.dart';
 import '../models/skills.dart';
+import 'combat_abilities.dart';
 
 /// What has to be done to finish a lesson.
 enum LessonTask {
@@ -63,6 +64,9 @@ class Lesson {
   /// Emoji sentence of what the lesson unlocks, e.g. `⚔️ ➡️ 🫸 ⏳ 🪫`.
   final String unlocks;
 
+  /// A mastery lesson: taken again and again, each time one step further.
+  final bool repeatable;
+
   const Lesson({
     required this.skill,
     required this.mentorAt,
@@ -73,13 +77,17 @@ class Lesson {
     this.requires = const {},
     this.minAwakenings = 0,
     this.verse,
+    this.repeatable = false,
   });
 
   String get verseKey => verse ?? 'lesson.${skill.name}.verse';
 
   /// Can be taken now (not learned, prerequisites met).
   bool isOpen(LearnedSkills learned, int awakenings) =>
-      !learned.has(skill) && requires.every(learned.has) && awakenings >= minAwakenings;
+      (repeatable || !learned.has(skill)) && requires.every(learned.has) && awakenings >= minAwakenings;
+
+  /// Learned for good (a mastery lesson never is – the next one follows).
+  bool learnedIn(LearnedSkills learned) => !repeatable && learned.has(skill);
 
   /// `🎓⚔️ 1/3 👹`
   String progressLabel(int progress) =>
@@ -161,112 +169,109 @@ abstract final class Lessons {
       unlocks: '📢⛪ ➡️ 👥✝️',
       requires: {Skill.spiritualWarfare},
     ),
-    // ── Mastery per prayer mode: lifts the upgrade cap (2 → 5 → 10) ──
-    Lesson(
-      skill: Skill.liberationMastery1,
-      mentorAt: {BuildingType.church, BuildingType.cemetery},
-      task: LessonTask.defeatLiberation,
-      count: 10,
-      reference: 'Joh 8,36',
-      verse: 'lesson.mastery.liberation.verse',
-      unlocks: '🕊️⭐ ➡️ 🔓5 🕊️💥',
-    ),
-    Lesson(
-      skill: Skill.liberationMastery2,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatLiberation,
-      count: 20,
-      reference: 'Joh 8,36',
-      verse: 'lesson.mastery.liberation.verse',
-      unlocks: '🕊️⭐⭐ ➡️ 🔓10 🕊️✨',
-      requires: {Skill.liberationMastery1},
-      minAwakenings: 2,
-    ),
-    Lesson(
-      skill: Skill.rebukeMastery1,
-      mentorAt: {BuildingType.church, BuildingType.cathedral},
-      task: LessonTask.defeatRebuke,
-      count: 10,
-      reference: 'Jak 4,7',
-      verse: 'lesson.mastery.rebuke.verse',
-      unlocks: '🫸⭐ ➡️ 🔓5 🫸💪',
-      requires: {Skill.spiritualWarfare},
-    ),
-    Lesson(
-      skill: Skill.rebukeMastery2,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatRebuke,
-      count: 20,
-      reference: 'Jak 4,7',
-      verse: 'lesson.mastery.rebuke.verse',
-      unlocks: '🫸⭐⭐ ➡️ 🔓10 🫸⚡',
-      requires: {Skill.rebukeMastery1},
-      minAwakenings: 2,
-    ),
-    Lesson(
-      skill: Skill.slowMastery1,
-      mentorAt: {BuildingType.library, BuildingType.cathedral},
-      task: LessonTask.defeatSlow,
-      count: 10,
-      reference: 'Mk 3,27',
-      verse: 'lesson.mastery.slow.verse',
-      unlocks: '⏳⭐ ➡️ 🔓5 ⏳⏳',
-      requires: {Skill.binding},
-    ),
-    Lesson(
-      skill: Skill.slowMastery2,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatSlow,
-      count: 20,
-      reference: 'Mk 3,27',
-      verse: 'lesson.mastery.slow.verse',
-      unlocks: '⏳⭐⭐ ➡️ 🔓10 ⏳💥',
-      requires: {Skill.slowMastery1},
-      minAwakenings: 2,
-    ),
-    Lesson(
-      skill: Skill.drainMastery1,
-      mentorAt: {BuildingType.cathedral, BuildingType.cemetery},
-      task: LessonTask.defeatDrain,
-      count: 10,
-      reference: 'Lk 10,19',
-      verse: 'lesson.mastery.drain.verse',
-      unlocks: '🪫⭐ ➡️ 🔓5 🪫🙏',
-      requires: {Skill.disarming},
-    ),
-    Lesson(
-      skill: Skill.drainMastery2,
-      mentorAt: {BuildingType.cathedral},
-      task: LessonTask.defeatDrain,
-      count: 20,
-      reference: 'Lk 10,19',
-      verse: 'lesson.mastery.drain.verse',
-      unlocks: '🪫⭐⭐ ➡️ 🔓10 🪫⚡',
-      requires: {Skill.drainMastery1},
-      minAwakenings: 2,
-    ),
   ];
 
-  static Lesson of(Skill s) => all.firstWhere((l) => l.skill == s);
+  /// The lesson of [s] – for a mastery skill the next one of its chain
+  /// for a pastor who knows [learned].
+  static Lesson of(Skill s, [LearnedSkills? learned]) => maybeOf(s, learned)!;
+
+  /// [of], or null for a skill without a lesson (the old ⭐⭐ skills).
+  static Lesson? maybeOf(Skill s, [LearnedSkills? learned]) {
+    final fixed = all.where((l) => l.skill == s).firstOrNull;
+    if (fixed != null) return fixed;
+    final mode = CombatAbilities.masteryMode(s);
+    if (mode == null) return null;
+    return mastery(mode, learned == null ? 0 : CombatAbilities.masteryStage(mode, learned));
+  }
+
+  static const Map<PrayerMode, Set<BuildingType>> _masteryMentors = {
+    PrayerMode.liberation: {BuildingType.church, BuildingType.cemetery, BuildingType.cathedral},
+    PrayerMode.rebuke: {BuildingType.church, BuildingType.cathedral},
+    PrayerMode.slow: {BuildingType.library, BuildingType.cathedral},
+    PrayerMode.drain: {BuildingType.cemetery, BuildingType.cathedral},
+  };
+
+  static const Map<PrayerMode, String> _masteryReference = {
+    PrayerMode.liberation: 'Joh 8,36',
+    PrayerMode.rebuke: 'Jak 4,7',
+    PrayerMode.slow: 'Mk 3,27',
+    PrayerMode.drain: 'Lk 10,19',
+  };
+
+  /// The mastery lesson of [mode] after [stage] passed ones – an endless
+  /// chain: each lifts the upgrade cap one step ([CombatAbilities.capFor])
+  /// and asks for more (10, 20, 30 … 👹 with this prayer).
+  static Lesson mastery(PrayerMode mode, int stage) {
+    final needs = CombatAbilities.modeSkill(mode);
+    return Lesson(
+      skill: CombatAbilities.masteryKey(mode),
+      mentorAt: _masteryMentors[mode]!,
+      task: LessonTask.defeatWith(mode),
+      count: 10 * (stage + 1),
+      reference: _masteryReference[mode]!,
+      verse: 'lesson.mastery.${mode.id}.verse',
+      unlocks: '${mode.icon}${'⭐' * (stage + 1)} ➡️ 🔓${CombatAbilities.capFor(stage + 1)}',
+      requires: {if (needs != null) needs},
+      repeatable: true,
+    );
+  }
+
+  /// The next mastery lesson of every prayer mode.
+  static List<Lesson> masteryFor(LearnedSkills learned) => [
+        for (final m in PrayerMode.values) mastery(m, CombatAbilities.masteryStage(m, learned)),
+      ];
+
+  /// Every lesson there is now: the fixed ones and the next masteries.
+  static List<Lesson> allFor(LearnedSkills learned) => [...all, ...masteryFor(learned)];
 
   /// Lessons a mentor in [type] offers to a pastor who knows [learned]:
   /// not yet learned, prerequisites met.
   static List<Lesson> offeredAt(BuildingType type, LearnedSkills learned, {int awakenings = 0}) => [
-        for (final l in all)
+        for (final l in allFor(learned))
           if (l.mentorAt.contains(type) && l.isOpen(learned, awakenings)) l,
       ];
 }
 
 /// The active lesson and its progress (part of the player progress).
 class LessonState {
+  /// The pastor's skills – the step of a mastery lesson depends on them.
+  final LearnedSkills? _skills;
+
+  LessonState([this._skills]);
+
   Skill? active;
   int progress = 0;
 
-  Lesson? get lesson => active == null ? null : Lessons.of(active!);
+  /// Steps of the active lesson bought with 📖 at the mentor.
+  int studied = 0;
+
+  /// 📖 studying with the mentor (playtest 2026-10-31: insight piled up):
+  /// one step of the lesson for [studyInsightCost] 📖 – but at most half
+  /// of it; the rest is practised ("doers of the word", Jas 1:22).
+  static const int studyInsightCost = 3;
+
+  Lesson? get lesson => active == null ? null : Lessons.maybeOf(active!, _skills);
 
   void start(Skill s) {
     active = s;
     progress = 0;
+    studied = 0;
+  }
+
+  /// Steps of [l] that can still be studied (it need not be active yet).
+  int studyLeft(Lesson l) {
+    final max = l.count ~/ 2;
+    if (active != l.skill) return max;
+    return (max - studied).clamp(0, l.count - progress);
+  }
+
+  /// Studies one step of [l] (starting it if needed); returns the learned
+  /// skill when this finished it. Paying is the caller's job.
+  Skill? study(Lesson l, LearnedSkills learned) {
+    if (studyLeft(l) <= 0) return null;
+    if (active != l.skill) start(l.skill);
+    studied++;
+    return _step(l, learned);
   }
 
   /// Counts one [task]; returns the learned skill when this finished the
@@ -274,26 +279,44 @@ class LessonState {
   Skill? record(LessonTask task, LearnedSkills learned) {
     final l = lesson;
     if (l == null || l.task != task) return null;
+    return _step(l, learned);
+  }
+
+  Skill? _step(Lesson l, LearnedSkills learned) {
     progress++;
     if (progress < l.count) return null;
-    learned.learn(l.skill);
+    if (l.repeatable) {
+      learned.raiseMastery(l.skill);
+    } else {
+      learned.learn(l.skill);
+    }
     active = null;
     progress = 0;
+    studied = 0;
     return l.skill;
   }
 
   Map<String, dynamic> toJson() => {
         if (active != null) 'active': active!.name,
         'progress': progress,
+        if (studied > 0) 'studied': studied,
       };
 
   void loadFromJson(Object? raw) {
     active = null;
     progress = 0;
+    studied = 0;
     if (raw is! Map) return;
     for (final s in Skill.values) {
       if (s.name == raw['active']) active = s;
     }
+    // An old save in a ⭐⭐ lesson that no longer exists: it goes on in the
+    // mode's mastery chain (same stage, same count).
+    if (active case final a? when Lessons.maybeOf(a) == null) {
+      final base = a.name.replaceAll(RegExp(r'\d+$'), '1');
+      active = Skill.values.where((s) => s.name == base && Lessons.maybeOf(s) != null).firstOrNull;
+    }
     progress = (raw['progress'] as num?)?.toInt() ?? 0;
+    studied = (raw['studied'] as num?)?.toInt() ?? 0;
   }
 }

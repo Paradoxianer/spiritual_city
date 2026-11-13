@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flame_noise/flame_noise.dart';
 
+import 'city_layout.dart';
+
 enum DistrictType {
   /// Central business district – skyscrapers, offices, civic buildings.
   downtown,
@@ -43,13 +45,20 @@ class DistrictSelector {
   // ---- Ring radii (in world cells, 1 cell ≈ 10 m) -------------------------
   // A 500 000-inhabitant city has roughly 125–170 km² ≈ radius ~6.5 km
   // → ~650 cells radius.  We size rings proportionally:
-  static const double _downtownRadius    =  80.0;  // ~0.8 km
-  static const double _commercialRadius  = 200.0;  // ~2 km
-  static const double _suburbsRadius     = 420.0;  // ~4.2 km
-  static const double _outskirtsRadius   = 650.0;  // ~6.5 km
+  // The 🌆 big city: 80 / 200 / 420 / 650 cells and ±40 noise; smaller
+  // cities scale them down (CityLayout, playtest 2026-11-13).
+  final CityLayout _layout = CityLayout.current;
+  double get _downtownRadius => _layout.downtownRadius;
+  double get _commercialRadius => _layout.commercialRadius;
+  double get _suburbsRadius => _layout.suburbsRadius;
+  double get _outskirtsRadius => _layout.outskirtsRadius;
 
   // Noise amplitude that "blurs" ring boundaries (in cells)
-  static const double _ringNoiseAmp      = 40.0;
+  double get _ringNoiseAmp => _layout.ringNoiseAmp;
+
+  /// Water, parks, industry and slums come in smaller pieces in a smaller
+  /// city (a village was half lake); 1 in the 🌆 big city.
+  late final double _detail = 1 / _layout.zoneScale;
 
   // Noise thresholds. The noises run at frequency 1 so the coordinate
   // factors below are the real scales; values spread about ±0.9 (fixed
@@ -62,8 +71,9 @@ class DistrictSelector {
   static const double _slumsThreshold      = 0.36; // ~8 % of the transition
 
   /// No water at the pastor's house and the spawn point.
-  static bool _nearHome(int wx, int wy) {
-    final dx = wx - 220, dy = wy - 223;
+  bool _nearHome(int wx, int wy) {
+    final home = _layout.pastorHouseCell;
+    final dx = wx - home.$1, dy = wy - home.$2 - 1;
     return dx * dx + dy * dy < 24 * 24;
   }
 
@@ -89,19 +99,19 @@ class DistrictSelector {
 
     // 3. Industrial pockets in mid-ring (commercial → suburbs band)
     if (dist > _downtownRadius && dist < _suburbsRadius) {
-      final double iVal = _industrialNoise.getNoise2(wx * 0.008, wy * 0.008);
+      final double iVal = _industrialNoise.getNoise2(wx * 0.008 * _detail, wy * 0.008 * _detail);
       if (iVal > _industrialThreshold) return DistrictType.industrial;
     }
 
     // 4. Park pockets – scattered everywhere outside downtown
     if (dist > _commercialRadius) {
-      final double pVal = _parkNoise.getNoise2(wx * 0.012, wy * 0.012);
+      final double pVal = _parkNoise.getNoise2(wx * 0.012 * _detail, wy * 0.012 * _detail);
       if (pVal > _parkThreshold) return DistrictType.park;
     }
 
     // 5. Slum pockets in the commercial-to-suburbs transition
     if (dist > _commercialRadius && dist < _suburbsRadius + 50) {
-      final double sVal = _slumsNoise.getNoise2(wx * 0.01, wy * 0.01);
+      final double sVal = _slumsNoise.getNoise2(wx * 0.01 * _detail, wy * 0.01 * _detail);
       if (sVal > _slumsThreshold) return DistrictType.slums;
     }
 
@@ -116,7 +126,7 @@ class DistrictSelector {
   bool isWater(int wx, int wy) {
     // True open water: higher threshold than waterfront
     if (_nearHome(wx, wy)) return false;
-    return _riverNoise.getNoise2(wx * 0.008, wy * 0.008) > _waterThreshold;
+    return _riverNoise.getNoise2(wx * 0.008 * _detail, wy * 0.008 * _detail) > _waterThreshold;
   }
 
   // ---- Helpers ------------------------------------------------------------
@@ -131,6 +141,6 @@ class DistrictSelector {
 
   bool _isRiverCell(int wx, int wy) {
     if (_nearHome(wx, wy)) return false;
-    return _riverNoise.getNoise2(wx * 0.008, wy * 0.008) > _riverThreshold;
+    return _riverNoise.getNoise2(wx * 0.008 * _detail, wy * 0.008 * _detail) > _riverThreshold;
   }
 }

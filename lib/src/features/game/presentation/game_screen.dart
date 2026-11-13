@@ -7,17 +7,31 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/audio/game_sound.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/i18n/bible_ref.dart';
+import '../../../core/i18n/narrator.dart';
+import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/services/combat_abilities.dart';
 import '../domain/models/skills.dart';
+import '../domain/actions/building_actions.dart';
 import '../domain/actions/game_action.dart';
 import '../domain/actions/npc_actions.dart';
 import '../domain/actions/practice.dart';
+import '../domain/actions/resource.dart';
+import '../domain/help/help_content.dart';
+import '../domain/help/life_texts.dart';
+import '../domain/help/mission_texts.dart';
+import '../domain/help/near_texts.dart';
+import '../domain/help/lesson_texts.dart';
+import '../domain/models/mission_model.dart';
 import '../domain/models/base_interactable_entity.dart';
+import '../domain/city_generation/city_layout.dart';
 import '../domain/city_generation/city_overview.dart';
 import '../domain/models/building_model.dart';
 import '../domain/models/cell_object.dart';
+import '../domain/models/daemon_kind.dart';
+import '../domain/models/discipleship.dart';
 import '../domain/models/game_keymap.dart';
 import '../domain/models/npc_backstory.dart';
 import '../domain/models/npc_model.dart';
@@ -32,6 +46,7 @@ import 'components/cell_component.dart';
 import 'components/daemon_component.dart';
 import 'components/npc_component.dart';
 import 'components/stronghold_component.dart';
+import 'share_progress.dart';
 import 'spirit_world_game.dart';
 import 'widgets/action_button.dart';
 import 'widgets/overlay_shell.dart';
@@ -39,12 +54,16 @@ import 'widgets/overlay_shell.dart';
 part 'hud/hud.dart';
 part 'hud/minimap.dart';
 part 'overlays/building_interior.dart';
+part 'overlays/celebration.dart';
 part 'overlays/church.dart';
+part 'overlays/help.dart';
 part 'overlays/city_map.dart';
 part 'overlays/lesson.dart';
 part 'overlays/look.dart';
 part 'overlays/missions.dart';
 part 'overlays/npc_dialog.dart';
+part 'overlays/disciple.dart';
+part 'overlays/narrator.dart';
 part 'overlays/pause.dart';
 part 'overlays/shared.dart';
 part 'overlays/tutorial.dart';
@@ -72,6 +91,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late final SpiritWorldGame _game;
   bool _isSaving = false;
 
+  /// What sharing photographs: the game with its HUD.
+  final GlobalKey _shotKey = GlobalKey();
+
+  /// Autosave (playtest 2026-10-19: closing the app or an update lost
+  /// everything since the last manual 💾): every minute and whenever the
+  /// app leaves the foreground. Writing the save takes a moment, so the
+  /// minute's save waits until the player stands still (walking stuttered,
+  /// playtest 2026-10-21) – at the latest after three minutes.
+  Timer? _autosaveTimer;
+  bool _autoSaving = false;
+  final Stopwatch _sinceAutosave = Stopwatch()..start();
+  static const _autosaveCheck = Duration(seconds: 5);
+  static const _autosaveInterval = Duration(seconds: 60);
+  static const _autosaveLatest = Duration(minutes: 3);
+
+  void _maybeAutoSave() {
+    final due = _sinceAutosave.elapsed;
+    if (due < _autosaveInterval) return;
+    final walking = _game.isWorldReady.value && !_game.player.moveInput.isZero();
+    if (walking && due < _autosaveLatest) return;
+    _autoSave();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -89,11 +131,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (getIt<MenuService>().isTutorialCompleted) {
       _game.tutorialService.isTutorialCompleted = true;
     }
+    _autosaveTimer = Timer.periodic(_autosaveCheck, (_) => _maybeAutoSave());
+  }
+
+  /// Saves quietly in the background; skipped until the world is loaded
+  /// (an empty world must never overwrite a real save).
+  Future<void> _autoSave() async {
+    final save = _game.gameSave;
+    if (save == null || _autoSaving || _isSaving || !_game.isWorldReady.value) return;
+    _autoSaving = true;
+    _sinceAutosave.reset();
+    try {
+      await getIt<MenuService>().updateSaveState(save.id, _game.captureGameState());
+    } catch (_) {
+      // Next tick tries again; a manual 💾 still works.
+    } finally {
+      _autoSaving = false;
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _autosaveTimer?.cancel();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     GameAmbience.stop();
     super.dispose();
@@ -104,6 +164,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) GameAmbience.stop();
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _autoSave();
+    }
   }
 
   /// Captures the current game state, persists it to Hive and returns to the
@@ -123,6 +187,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         setState(() => _isSaving = false);
         context.go('/menu');
       }
+    }
+  }
+
+  /// Share a picture of the city and the progress. The pause menu closes
+  /// first so it is not in the picture.
+  Future<void> _share() async {
+    _game.closePauseMenu();
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    final size = MediaQuery.sizeOf(context);
+    try {
+      await ShareProgress.share(_game, shot: _shotKey,
+          origin: Rect.fromCenter(center: size.center(Offset.zero), width: 1, height: 1));
+    } catch (_) {
+      // No share sheet (e.g. an old browser): nothing to do.
     }
   }
 
@@ -169,7 +249,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _game.handleEscape();
       },
       child: Scaffold(
-        body: Stack(
+        body: RepaintBoundary(
+        key: _shotKey,
+        child: Stack(
         children: [
           GameWidget(
             game: _game,
@@ -183,12 +265,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   MissionBoardOverlay(game: _game),
               'LessonOverlay': (context, game) => LessonOverlay(game: _game),
               'ChurchOverlay': (context, game) => ChurchOverlay(game: _game),
-              'KeymapOverlay': (context, game) =>
-                  KeymapOverlay(game: _game),
               'PauseMenuOverlay': (context, game) => PauseMenuOverlay(
                     game: _game,
                     isSaving: _isSaving,
                     onSave: _saveOnly,
+                    onShare: _share,
                     onSaveAndQuit: _saveAndQuit,
                   ),
             },
@@ -234,10 +315,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) {
               if (!isReady) return const SizedBox.shrink();
+              // Same SafeArea as the pause button: on phones with a camera
+              // cutout a fixed offset slid the map over the button.
               return Positioned(
-                top: 68,
+                top: 12,
                 right: 12,
-                child: _Minimap(game: _game),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 56),
+                    child: _Minimap(game: _game),
+                  ),
+                ),
               );
             },
           ),
@@ -364,7 +452,37 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               return _WinScreenOverlay(game: _game);
             },
           ),
+          // A neighbourhood prayed free 🎉 – under the narrator, who
+          // congratulates.
+          ValueListenableBuilder<QuarterCelebration?>(
+            valueListenable: _game.quarterCelebration,
+            builder: (context, c, _) => c == null
+                ? const SizedBox.shrink()
+                : _QuarterCelebrationOverlay(key: ValueKey(c.quarter), game: _game),
+          ),
+          // The narrator's speech bubble – the only text in the game screen.
+          ValueListenableBuilder<bool>(
+            valueListenable: TextMode.enabled,
+            builder: (context, on, _) => !on
+                ? ValueListenableBuilder<bool>(
+                    // The handle only in the game itself, not over the loading screen.
+                    valueListenable: _game.isWorldReady,
+                    builder: (context, ready, _) => ready ? const _NarratorHandle() : const SizedBox.shrink(),
+                  )
+                : ValueListenableBuilder<NarratorLine?>(
+                    valueListenable: Narrator.current,
+                    builder: (context, line, _) => line == null
+                        ? const SizedBox.shrink()
+                        : _NarratorBubble(key: ValueKey(line.key), line: line),
+                  ),
+          ),
+          // ❓ Help – topmost, so no HUD element covers it.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.helpOpen,
+            builder: (context, open, _) => open ? HelpOverlay(game: _game) : const SizedBox.shrink(),
+          ),
         ],
+        ),
         ),
       ),
     );

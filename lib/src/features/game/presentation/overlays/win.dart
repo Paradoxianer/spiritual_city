@@ -93,6 +93,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
       createdAt: now,
       difficulty: difficulty,
       seed: now.millisecondsSinceEpoch,
+      citySize: CityLayout.current.size, // the same size again
     );
     await getIt<MenuService>().writeSave(save);
     if (context.mounted) context.go('/game', extra: save);
@@ -250,6 +251,24 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Share the victory (the picture is this screen).
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => ShareProgress.share(game,
+                                shot: context.findAncestorStateOfType<_GameScreenState>()?._shotKey)
+                            .catchError((_) {}),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.amber.withValues(alpha: 0.5)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Icon(Icons.adaptive.share, color: Colors.amber),
                       ),
                     ),
                     const SizedBox(height: 12),

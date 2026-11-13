@@ -232,7 +232,7 @@ class PlayerComponent extends PositionComponent
     if (event is KeyUpEvent &&
         (event.logicalKey == GameKeymap.keymapOverlay ||
             event.logicalKey == GameKeymap.keymapOverlayAlt)) {
-      game.toggleKeymapOverlay();
+      game.toggleHelp();
     }
 
     // ── Mission board (M) ─────────────────────────────────────────────────────
@@ -275,8 +275,15 @@ class PlayerComponent extends PositionComponent
     return true;
   }
 
+  /// Faith one prayer wave costs (more when hungry or fasting).
+  double get waveCost =>
+      5.0 *
+      game.modifiers.faithCostMultiplier *
+      game.hungerFaithCostMultiplier *
+      (game.isFasting ? SpiritWorldGame.fastingWaveCostFactor : 1.0);
+
   void startChargingIntensity() {
-    if (!_isChargingIntensity && game.faith > 1.0) {
+    if (!_isChargingIntensity && game.faith >= waveCost) {
       _isChargingIntensity = true;
       _timeSinceLastShockwave = _shockwaveInterval; // Start immediately
     }
@@ -298,11 +305,8 @@ class PlayerComponent extends PositionComponent
       game.faith,
     );
 
-    // Faith cost per wave (higher cost for stronger waves; +50% if hunger critical)
-    final cost = 5.0 *
-        game.modifiers.faithCostMultiplier *
-        game.hungerFaithCostMultiplier *
-        (game.isFasting ? SpiritWorldGame.fastingWaveCostFactor : 1.0);
+    // Faith cost per wave (+50% if hunger critical)
+    final cost = waveCost;
     if (game.faith < cost) {
       _isChargingIntensity = false;
       return;
@@ -310,6 +314,7 @@ class PlayerComponent extends PositionComponent
     game.faith -= cost;
 
     GameSound.playWave(_currentMode.id);
+    game.disciplePrayer.joinPastorWave();
     game.world.add(ShockwaveComponent(
       position: position.clone(),
       maxRadius: stats.radius,

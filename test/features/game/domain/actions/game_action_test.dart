@@ -89,7 +89,9 @@ void main() {
           // Handled by the game, not the service: the mission board and
           // learned abilities (🙏🏠 ➖🍞 📢, see GameBuildingActions).
           if (action.type == 'missions' || action.needsSkill != null) continue;
-          final christian = _npc('c_${type.name}')..isConverted = true;
+          final christian = _npc('c_${type.name}')
+            ..isConverted = true
+            ..faith = 80;
           final b = BuildingModel(
             buildingId: 'b_${type.name}',
             type: type,

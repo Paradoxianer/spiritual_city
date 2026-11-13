@@ -1,21 +1,20 @@
+import 'dart:typed_data';
 import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/utils/game_time.dart';
 import '../../../../core/utils/stable_hash.dart';
+import '../../../../core/utils/text_cache.dart';
 import '../../domain/actions/npc_actions.dart';
 import '../../domain/models/church.dart';
 import '../../domain/services/learning_service.dart';
 import 'character_sprites.dart';
 import 'daemon_component.dart';
-import '../../domain/models/building_model.dart';
 import '../../domain/models/npc_model.dart';
+import '../../domain/models/discipleship.dart';
 import '../../domain/models/cell_object.dart';
 import '../../domain/models/interactions.dart';
-import '../../domain/services/influence_service.dart';
 import '../../domain/services/npc_interaction_service.dart';
-import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
 
@@ -56,6 +55,15 @@ class NPCComponent extends PositionComponent
 
   double _currentSpeed = 40.0;
   Vector2? _targetPosition;
+
+  /// 📢🎺 Seconds left in the prayer circle around the pastor after an
+  /// open-air meeting (disciples only, see Discipleship.gatherSeconds).
+  double gatherLeft = 0;
+  bool get isGathered => gatherLeft > 0;
+
+  /// Their place in the circle: a fixed angle per person.
+  late final double _circleAngle = (stableStringHash(model.id) % 360) * pi / 180;
+  static const double _circleRadius = 52;
   double _aiUpdateTimer = 0;
   static const double _aiUpdateInterval = 2.0;
   // If no wander target can be found for this long, we treat the NPC as
@@ -65,12 +73,6 @@ class NPCComponent extends PositionComponent
   // Search radius for trapped-NPC recovery. If no safe tile is found, the NPC
   // keeps its current position and retries on the next recovery cycle.
   static const int _recoverySearchRadius = 6;
-
-  // Timer for daily NPC spiritual influence on cells (Lastenheft §6.3)
-  double _spiritualInfluenceTimer = 0.0;
-
-  /// One in-game day = [GameTime.gameDaySeconds] real seconds.
-  static const double _spiritualInfluenceInterval = GameTime.gameDaySeconds;
 
   // ─── Pre-allocated paints (never create Paint() in render()) ─────────────
 
@@ -112,7 +114,6 @@ class NPCComponent extends PositionComponent
     _model = newModel;
     _figure = CharacterSprites.figureFor(stableStringHash(newModel.id));
     position.setFrom(newModel.homePosition);
-    _spiritualInfluenceTimer = 0.0;
     _targetPosition = null;
     _aiUpdateTimer = 0;
     _stuckTimer = 0.0;
@@ -123,7 +124,6 @@ class NPCComponent extends PositionComponent
   /// graph if it still has a parent and resets all per-session state so a
   /// future [assignModel] call gets a clean slate.
   void deactivateForPool() {
-    _spiritualInfluenceTimer = 0.0;
     _stuckTimer = 0.0;
     detailLevel = NPCDetailLevel.high;
     removeFromParent();
@@ -139,6 +139,7 @@ class NPCComponent extends PositionComponent
   Vector2 get interactionPosition => position;
 
   String _getNPCEmoji() {
+    if (model.isShakenChristian) return '✝️💔'; // #194: needs a visit
     if (model.isChristian) return '✝️'; // Geändert von 🕊️ zu ✝️
     if (model.faith < -30) return '😠';
     if (model.faith < 30) return '👤';
@@ -178,6 +179,9 @@ class NPCComponent extends PositionComponent
       playerHealth: game.health,
       playerMaterials: game.materials,
       practiceMultiplier: game.progress.practice.multiplier(discipline) * _intercessionFactor,
+      christianFaith: model.isChristian && !model.isShakenChristian
+          ? NpcInteractionService.prayWithChristianFaith(game.progress.maxFaith, game.baseStabilityOf(model))
+          : 0.0,
     );
 
     if (r.playerFaithDelta != 0) game.gainFaith(r.playerFaithDelta);
@@ -248,7 +252,13 @@ class NPCComponent extends PositionComponent
   void update(double dt) {
     super.update(dt);
     _anim.update(dt, position);
+    if (_flash != null && (_flashLeft -= dt) <= 0) _flash = null;
     if (game.paused) return;
+
+    if (isGathered) {
+      _followPastor(dt);
+      return;
+    }
 
     // ── Spiritual world: cheap movement-only pass ─────────────────────────
     // NPCs keep gliding toward their last waypoint so they still visibly
@@ -263,11 +273,10 @@ class NPCComponent extends PositionComponent
     // ── Normal world: full AI ─────────────────────────────────────────────
 
     switch (detailLevel) {
+      // Their influence on the ground runs once a day for everyone in the
+      // world simulation (#194), not here.
       case NPCDetailLevel.high:
-        _updateAI(dt);
-        _updateSpiritualInfluence(dt);
       case NPCDetailLevel.medium:
-        // Simplified: only wander, skip expensive spiritual influence
         _updateAI(dt);
       case NPCDetailLevel.low:
         // Static placeholder – no logic executed
@@ -295,74 +304,6 @@ class NPCComponent extends PositionComponent
         .whereType<DaemonComponent>()
         .any((d) => d.model.hostNpcId == model.id && !d.model.dissolved);
     if (!hasOne) game.spiritualDynamics.spawnPossessor(position, model.id);
-  }
-
-  /// Daily: NPC faith state influences the cell they are standing on (Lastenheft §6.3)
-  ///
-  /// Converted NPCs additionally call [InfluenceService.applyAoE] so their
-  /// passive influence is tracked by the same system as building actions
-  /// (Issue #59 – NPC-Influence-Integration).
-  void _updateSpiritualInfluence(double dt) {
-    _spiritualInfluenceTimer += dt;
-    if (_spiritualInfluenceTimer < _spiritualInfluenceInterval) return;
-    _spiritualInfluenceTimer = 0.0;
-
-    final gx = (position.x / CellComponent.cellSize).floor();
-    final gy = (position.y / CellComponent.cellSize).floor();
-    final cell = game.grid.getCell(gx, gy);
-    if (cell == null) return;
-
-    if (model.isChristian) {
-      // Converted Christians radiate positive influence on the cell they
-      // occupy and on the four directly adjacent cells. The per-faith-point
-      // multipliers are tuned per difficulty so that, at max faith (100),
-      // the centre-cell delta is easy=0.7 / normal=0.5 / hard=0.3 and
-      // the adjacent-cell delta is easy=0.3 / normal=0.25 / hard=0.2.
-      final (centreK, adjacentK) = switch (game.difficulty) {
-        Difficulty.easy => (0.0150, 0.0075),
-        Difficulty.normal => (0.0100, 0.0050),
-        Difficulty.hard => (0.0050, 0.0025),
-      };
-      cell.spiritualState =
-          (cell.spiritualState + model.faith * centreK).clamp(-1.0, 1.0);
-      // Adjacent cells receive a slightly weaker push.
-      for (final offset in const [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1]
-      ]) {
-        final neighbour = game.grid.getCell(gx + offset[0], gy + offset[1]);
-        if (neighbour != null) {
-          neighbour.spiritualState =
-              (neighbour.spiritualState + model.faith * adjacentK)
-                  .clamp(-1.0, 1.0);
-        }
-      }
-      // Small faith decay: without ongoing care their fervour slowly cools.
-      // Floor at 50 so they remain Christian but their influence weakens.
-      model.faith = (model.faith - 0.15).clamp(50.0, 100.0);
-
-      // Passive AoE via InfluenceService (Issue #59 – NPC-Influence-Integration).
-      // Converted NPCs emit a permanent per-tick influence pulse so their
-      // spiritual footprint is visible and decays like other building actions.
-      game.influenceService.applyAoE(
-        grid: game.grid,
-        originX: gx,
-        originY: gy,
-        delta: BuildingInfluenceConstants.deltaNpcPassive,
-        radius: BuildingInfluenceConstants.radiusNpcPassive,
-        durationType: InfluenceDurationType.permanent,
-        buildingMultiplier: BuildingInfluenceConstants.multiplierSmall,
-      );
-    } else if (model.faith > 50) {
-      // Sympathetic NPCs provide a weak positive nudge
-      cell.spiritualState = (cell.spiritualState + 0.05).clamp(-1.0, 1.0);
-    } else if (model.faith < -50) {
-      // Very hostile NPCs reinforce darkness
-      cell.spiritualState =
-          (cell.spiritualState - model.faith.abs() * 0.002).clamp(-1.0, 1.0);
-    }
   }
 
   void _updateAI(double dt) {
@@ -427,6 +368,97 @@ class NPCComponent extends PositionComponent
       }
     }
     return null;
+  }
+
+  /// Walks to their place in the circle around the pastor and stays there.
+  void _followPastor(double dt) {
+    gatherLeft -= dt;
+    const cs = CellComponent.cellSize;
+    bool walkable(Vector2 p) => game.grid.isWalkable((p.x / cs).floor(), (p.y / cs).floor());
+    var spot = game.player.position + Vector2(cos(_circleAngle), sin(_circleAngle)) * _circleRadius;
+    // Their place in the circle lies in a house (the pastor walks along
+    // one): they come to the pastor instead – never glide through walls
+    // (playtest 2026-11-12: they hovered behind at a fixed distance).
+    final toPastor = !walkable(spot);
+    if (toPastor) spot = game.player.position.clone();
+    final d = (spot - position).length;
+    if (d >= (toPastor ? _circleRadius : 3)) {
+      // Hurry from far away, step along once close.
+      final speed = d > 200 ? 160.0 : 90.0;
+      final next = position + (spot - position).normalized() * min(d, speed * dt);
+      if (d <= cs * 1.5 && walkable(next)) {
+        // The last steps into the circle.
+        _gatherPath = null;
+        position.setFrom(next);
+      } else {
+        // Along streets and lawns, not over the roofs (playtest 2026-11-03).
+        _replanIn -= dt;
+        if (_gatherPath == null || _replanIn <= 0) {
+          _gatherPath = _walkablePath(position, spot);
+          _replanIn = 2.0;
+        }
+        final path = _gatherPath;
+        if (path != null && path.isNotEmpty) {
+          final step = path.first - position;
+          if (step.length <= speed * dt) {
+            position.setFrom(path.first);
+            path.removeAt(0);
+          } else {
+            position.add(step.normalized() * speed * dt);
+          }
+        }
+      }
+    }
+    if (!isGathered) {
+      _gatherPath = null;
+      _targetPosition = null;
+      _aiUpdateTimer = 0;
+    }
+  }
+
+  /// Way to the open-air meeting, cell centre by cell centre.
+  List<Vector2>? _gatherPath;
+  double _replanIn = 0;
+
+  /// Shortest way over walkable cells from [from] to (next to) [to] – a
+  /// breadth-first search in the box around both (gatherRadius ≈ 40
+  /// cells, so at most ~10 000 cells); null if there is none.
+  List<Vector2>? _walkablePath(Vector2 from, Vector2 to) {
+    const cs = CellComponent.cellSize;
+    final sx = (from.x / cs).floor(), sy = (from.y / cs).floor();
+    final tx = (to.x / cs).floor(), ty = (to.y / cs).floor();
+    const margin = 8;
+    final x0 = min(sx, tx) - margin, y0 = min(sy, ty) - margin;
+    final w = (sx - tx).abs() + 2 * margin + 1, h = (sy - ty).abs() + 2 * margin + 1;
+    if (w * h > 20000) return null;
+    final prev = Int32List(w * h)..fillRange(0, w * h, -2);
+    int idx(int x, int y) => (y - y0) * w + (x - x0);
+    final queue = <int>[idx(sx, sy)];
+    prev[queue.first] = -1;
+    int? goal;
+    for (var head = 0; head < queue.length; head++) {
+      final i = queue[head];
+      final x = x0 + i % w, y = y0 + i ~/ w;
+      // Next to the spot is enough: it may be a house the pastor stands by.
+      if ((x - tx).abs() + (y - ty).abs() <= 1) {
+        goal = i;
+        break;
+      }
+      for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+        final nx = x + dx, ny = y + dy;
+        if (nx < x0 || ny < y0 || nx >= x0 + w || ny >= y0 + h) continue;
+        final n = idx(nx, ny);
+        if (prev[n] != -2 || !game.grid.isWalkable(nx, ny)) continue;
+        prev[n] = i;
+        queue.add(n);
+      }
+    }
+    if (goal == null) return null;
+    final path = <Vector2>[];
+    for (var i = goal; prev[i] != -1; i = prev[i]) {
+      path.add(Vector2((x0 + i % w + 0.5) * cs, (y0 + i ~/ w + 0.5) * cs));
+    }
+    return path.reversed.toList();
   }
 
   void _moveTowardsTarget(double dt) {
@@ -575,6 +607,23 @@ class NPCComponent extends PositionComponent
       canvas.drawCircle(
           Offset(cx, cy + 2.5), 0.8, Paint()..color = const Color(0xFF5A3A00));
     }
+
+    // A short reaction over the head (e.g. at an open-air meeting).
+    if (_flash != null) {
+      final tp = TextCache.get(_flash!, const TextStyle(fontSize: 14));
+      final rise = (1 - _flashLeft / _flashSeconds) * 8;
+      tp.paint(canvas, Offset(size.x / 2 - tp.width / 2, -tp.height - 4 - rise));
+    }
+  }
+
+  String? _flash;
+  double _flashLeft = 0;
+  static const double _flashSeconds = 2.5;
+
+  /// Shows [emoji] over the head for a moment.
+  void flash(String emoji) {
+    _flash = emoji;
+    _flashLeft = _flashSeconds;
   }
 
   void _renderSpiritualAura(Canvas canvas) {
@@ -583,6 +632,22 @@ class NPCComponent extends PositionComponent
     _auraPaint.color = Color.lerp(Colors.red, Colors.green, faithFactor)!
         .withValues(alpha: 0.3 + (faithFactor * 0.4));
     canvas.drawCircle((size / 2).toOffset(), size.x * 0.8, _auraPaint);
+
+    // 🌱 A disciple: a ring in the colour of what they pray, thicker the
+    // more they have been taught (#193).
+    final gift = Discipleship.strongest(model.discipleProfile);
+    if (gift != null) {
+      final p = model.discipleProfile;
+      _discipleRing
+        ..color = gift.color.withValues(alpha: 0.85)
+        ..strokeWidth = (1.0 + Discipleship.totalLevel(p) / 2).clamp(1.0, 5.0);
+      canvas.drawCircle((size / 2).toOffset(), size.x * 0.95, _discipleRing);
+    }
+
+    // ✝️💔 A shaken Christian (#194): a small broken heart above them.
+    if (model.isShakenChristian) {
+      _shakenGlyph.paint(canvas, Offset(size.x / 2 - _shakenGlyph.width / 2, -14));
+    }
 
     // Possessed: a dark ring; with 👁️ discernment also the possessor's sign.
     if (model.possessed) {
@@ -593,10 +658,17 @@ class NPCComponent extends PositionComponent
     }
   }
 
+  final Paint _discipleRing = Paint()..style = PaintingStyle.stroke;
+
   final Paint _possessedPaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2.5
     ..color = const Color(0xDD000000);
+
+  static final TextPainter _shakenGlyph = TextPainter(
+    text: const TextSpan(text: '💔', style: TextStyle(fontSize: 11)),
+    textDirection: TextDirection.ltr,
+  )..layout();
 
   static final TextPainter _possessedGlyph = TextPainter(
     text: const TextSpan(text: '👁️', style: TextStyle(fontSize: 10)),
