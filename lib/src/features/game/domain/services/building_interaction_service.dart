@@ -168,33 +168,38 @@ class BuildingInteractionService {
   // are where it is refilled – so these give a lot and cost no Health
   // (user feedback: Health had become about as important as Faith because
   // even the spiritual home actions drained it).
-  static const double pastorHouseReadBibleFaith = 40.0;
+  static const double pastorHouseReadBibleFaith = 20.0;
 
   /// 🙏👥 Prayer with the Christians of a converted household.
-  static const double fellowshipFaith = 30.0;
+  static const double fellowshipFaith = 10.0;
   static const int fellowshipSeconds = 5;
 
   /// Everyone who lives here is a Christian (not a shaken one).
   static bool isChristianHousehold(BuildingModel b) =>
       b.residents.isNotEmpty && b.residents.every((n) => n.isChristian && !n.isShakenChristian);
-  static const double pastorHousePrayFaith = 30.0;
+  static const double pastorHousePrayFaith = 25.0;
 
-  // Faith from home and from fellowship grows with the pastor: at faith
-  // level 9 (max 260) the fixed +30 took four prayers to fill up again
-  // (playtest 2026-11-13). The constants above stay the minimum.
+  // Faith from home and from fellowship grows with the pastor: a share of
+  // the maximum, so refilling takes the same few prayers at every level.
+  // With full practice (×1.5) one prayer gives at most about a third –
+  // filling up always takes three or more (playtest 2026-11-13). The
+  // constants above stay the minimum.
 
-  /// 🙏 at home: half of the pastor's faith.
-  static double homePrayFaith(double maxFaith) => max(pastorHousePrayFaith, maxFaith / 2);
+  /// 🙏 at home: a quarter of the pastor's faith.
+  static double homePrayFaith(double maxFaith) => max(pastorHousePrayFaith, maxFaith / 4);
 
-  /// 📖 at home: a third.
-  static double homeBibleFaith(double maxFaith) => max(pastorHouseReadBibleFaith, maxFaith / 3);
+  /// 🤲 worship in a church: a quarter, like praying at home.
+  static double worshipFaith(double maxFaith) => max(worshipSeconds * worshipFaithPerSecond, maxFaith / 4);
+
+  /// 📖 at home: a fifth.
+  static double homeBibleFaith(double maxFaith) => max(pastorHouseReadBibleFaith, maxFaith / 5);
 
   /// 🙏👥 with a Christian household: more the more stable they are – care
   /// (👂, 📜), church and discipleship make Christians who carry others
   /// (Ex 17:12). [stability] 0 … 0.9 (WorldSimulation.baseStability).
   static double fellowshipFaithFor(double maxFaith, double stability) =>
-      max(fellowshipFaith, maxFaith * (0.1 + 0.5 * stability.clamp(0.0, 1.0)));
-  static const double worshipFaithPerSecond = 8.0;
+      max(fellowshipFaith, maxFaith * (0.05 + 0.2 * stability.clamp(0.0, 1.0)));
+  static const double worshipFaithPerSecond = 3.5;
   static const double sundayServiceFaith = 40.0;
   static const double sundayServiceHealthCost = 25.0;
 

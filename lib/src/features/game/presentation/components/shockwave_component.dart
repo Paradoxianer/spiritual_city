@@ -21,6 +21,10 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
   /// Who prayed this wave ('pastor', 'disciple:<id>') – people praying
   /// together at a stronghold count (StrongholdKind).
   final String source;
+
+  /// [source] of a 🌊 breakthrough – it greens the land, but never counts
+  /// against a stronghold.
+  static const String breakthrough = 'breakthrough';
   
   double _currentRadius = 0;
   
@@ -126,6 +130,7 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
   }
 
   void _checkStrongholds() {
+    if (source == breakthrough) return;
     for (final s in game.world.children.whereType<StrongholdComponent>()) {
       final id = 'fort_${s.quarter.key}';
       if (_hitIds.contains(id)) continue;

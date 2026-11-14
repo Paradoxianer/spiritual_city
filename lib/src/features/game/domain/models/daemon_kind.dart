@@ -4,35 +4,42 @@ import 'dart:ui' show Color;
 import 'prayer_combat.dart';
 
 /// Daemon types (docs/game_design/daemons_and_combat.md §3, #178). Each has
-/// its own look, size and trail and exactly one weakness.
+/// its own look, size and trail, exactly one weakness and at most one
+/// resistance – broken while its weakness is on it (§4a).
 enum DaemonKind {
-  /// Fast, little energy, comes in numbers; thin trail. Weak to Slow.
+  /// Fast, little energy, comes in numbers; thin trail. Weak to Slow,
+  /// slips away from Rebuke.
   lurker(
     glyph: '🐍',
     color: Color(0xFF2E7D32),
     weakness: PrayerMode.slow,
+    resistance: PrayerMode.rebuke,
     energyFactor: 0.6,
     speedFactor: 1.5,
     sizeFactor: 0.8,
     trailFactor: 0.6,
   ),
 
-  /// Slow, lots of energy, wide trail. Weak to Rebuke.
+  /// Slow, lots of energy, wide trail. Weak to Rebuke; a heart of stone
+  /// (Ezek 36:26) that Liberation hardly moves.
   brute(
     glyph: '🪨',
     color: Color(0xFF6D4C41),
     weakness: PrayerMode.rebuke,
+    resistance: PrayerMode.liberation,
     energyFactor: 1.8,
     speedFactor: 0.6,
     sizeFactor: 1.4,
     trailFactor: 1.6,
   ),
 
-  /// Pulls faith from the pastor while close. Weak to Drain.
+  /// Pulls faith from the pastor while close. Weak to Drain, flies off
+  /// from Slow.
   leech(
     glyph: '🦇',
     color: Color(0xFF6A1B9A),
     weakness: PrayerMode.drain,
+    resistance: PrayerMode.slow,
     energyFactor: 1.0,
     speedFactor: 1.0,
     sizeFactor: 1.0,
@@ -54,6 +61,9 @@ enum DaemonKind {
   final String glyph;
   final Color color;
   final PrayerMode weakness;
+
+  /// Half effect – unless the weakness is on it right now.
+  final PrayerMode? resistance;
   final double energyFactor;
   final double speedFactor;
   final double sizeFactor;
@@ -63,6 +73,7 @@ enum DaemonKind {
     required this.glyph,
     required this.color,
     required this.weakness,
+    this.resistance,
     required this.energyFactor,
     required this.speedFactor,
     required this.sizeFactor,

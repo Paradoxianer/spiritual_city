@@ -120,6 +120,14 @@ class _QuarterCelebrationOverlayState extends State<_QuarterCelebrationOverlay>
                         ),
                       ],
                     ),
+                    // The words of the post, small – what friends will read
+                    // (playtest 2026-11-14).
+                    const SizedBox(height: 14),
+                    Text(
+                      ShareProgress.text(widget.game),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.4),
+                    ),
                   ],
                 ),
               ),

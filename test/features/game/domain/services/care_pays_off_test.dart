@@ -22,8 +22,18 @@ void main() {
     expect(firm / fresh, greaterThan(6));
   });
 
-  test('home prayer fills half the faith, never less than before', () {
-    expect(BuildingInteractionService.homePrayFaith(maxFaith), 130);
+  test('filling up faith takes three prayers or more, even with full practice', () {
+    expect(BuildingInteractionService.homePrayFaith(maxFaith), 65);
+    for (final max in [100.0, maxFaith, 600.0]) {
+      for (final gain in [
+        BuildingInteractionService.homePrayFaith(max),
+        BuildingInteractionService.homeBibleFaith(max),
+        BuildingInteractionService.worshipFaith(max),
+        BuildingInteractionService.fellowshipFaithFor(max, 0.9),
+      ]) {
+        expect(gain * 1.5, lessThanOrEqualTo(max * 0.4), reason: 'max $max');
+      }
+    }
     expect(BuildingInteractionService.homePrayFaith(40), BuildingInteractionService.pastorHousePrayFaith);
   });
 

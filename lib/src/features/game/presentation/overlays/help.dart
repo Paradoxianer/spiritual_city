@@ -438,7 +438,7 @@ class _HelpGlossary extends StatelessWidget {
         [
           for (final m in PrayerMode.values) (emoji: m.icon, text: HelpContent.prayerModes[m]!.text, sub: null),
           for (final k in DaemonKind.values)
-            (emoji: k.glyph, text: HelpContent.daemons[k]!.text, sub: '💥 ${k.weakness.icon}'),
+            (emoji: k.glyph, text: HelpContent.daemons[k]!.text, sub: '💥 ${k.weakness.icon}${k.resistance == null ? '' : '   🛡️ ${k.resistance!.icon}'}'),
         ],
       ),
       (

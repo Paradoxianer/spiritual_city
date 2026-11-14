@@ -50,6 +50,7 @@ extension GameBuildingActions on SpiritWorldGame {
       final scaled = switch (actionType) {
         'pray' when b.type == BuildingType.pastorHouse =>
           BuildingInteractionService.homePrayFaith(progress.maxFaith),
+        'worship' => BuildingInteractionService.worshipFaith(progress.maxFaith),
         'readBible' when b.type == BuildingType.pastorHouse =>
           BuildingInteractionService.homeBibleFaith(progress.maxFaith),
         'fellowship' => BuildingInteractionService.fellowshipFaithFor(progress.maxFaith,

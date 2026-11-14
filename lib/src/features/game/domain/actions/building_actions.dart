@@ -27,7 +27,7 @@ abstract final class BuildingActions {
     id: ActionId.readBible,
     type: 'readBible',
     emoji: '📖',
-    effect: '🙏+⅓',
+    effect: '🙏+⅕',
     baseSeconds: BuildingInteractionService.pastorHouseReadBibleSeconds,
     discipline: Discipline.bible,
   );
@@ -49,7 +49,7 @@ abstract final class BuildingActions {
     id: ActionId.homePray,
     type: 'pray',
     emoji: '🙏',
-    effect: '🙏+½🌍',
+    effect: '🙏+¼🌍',
     baseSeconds: BuildingInteractionService.pastorHousePraySeconds,
     discipline: Discipline.prayer,
   );
@@ -134,11 +134,11 @@ abstract final class BuildingActions {
     baseSeconds: BuildingInteractionService.sundayServiceSeconds,
     discipline: Discipline.worship,
   );
-  static final worship = GameAction<BuildingModel>(
+  static const worship = GameAction<BuildingModel>(
     id: ActionId.worship,
     type: 'worship',
     emoji: '🤲',
-    effect: '🙏+${(BuildingInteractionService.worshipSeconds * BuildingInteractionService.worshipFaithPerSecond).round()}',
+    effect: '🙏+¼',
     baseSeconds: BuildingInteractionService.worshipSeconds,
     discipline: Discipline.worship,
   );

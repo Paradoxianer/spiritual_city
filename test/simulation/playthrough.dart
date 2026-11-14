@@ -30,7 +30,7 @@ import 'package:spiritual_city/src/features/menu/domain/models/difficulty.dart';
 /// Rebuilt from the game's numbers where they live in Flame components:
 /// walking (100 px/s along streets), prayer waves (every 1.8 s, 5 🙏,
 /// strength 25 × faith × hold bonus, radius 140 px), the stronghold fight,
-/// reading the Bible at home (5 s, +40 🙏).
+/// reading the Bible at home (5 s, +20 🙏).
 ///
 /// Not modelled (yet): daemons, disciples and open-air meetings, life
 /// talks, missions, hunger and health, houses' holiness, people walking
@@ -74,12 +74,12 @@ class PlaythroughConfig {
   final double busSpeedFactor;
   final double busWaitSeconds;
 
-  /// Refill faith in the nearest church (🎶 worship, 7 s, +56 🙏) instead
+  /// Refill faith in the nearest church (🎶 worship, 7 s, +25 🙏) instead
   /// of always walking home.
   final bool churches;
 
   /// 🙏👥 Prayer with the brothers and sisters: a house whose residents
-  /// are all Christians refills faith (+30 in 5 s) like the pastor house.
+  /// are all Christians refills faith (+15 in 5 s, a middling household) like the pastor house.
   final bool fellowship;
 
   /// Holding test: the bot wins only the home quarter, then rests this many
@@ -195,7 +195,7 @@ class Playthrough {
   static const double waveCost = 5;
   static const double enterSpiritCost = 10;
   static const double bibleAtHomeSeconds = 5;
-  static const double bibleAtHomeFaith = 40;
+  static const double bibleAtHomeFaith = 20;
   static const double maxFaith = 100;
 
   late final (int, int) _home = SpecialBuildingRegistry.pastorHouseCell;
@@ -445,7 +445,7 @@ class Playthrough {
         _walkTo(best, activity: 'heimweg');
         while (faith < maxFaith) {
           _spend(5, 'zuhause');
-          faith = math.min(maxFaith, faith + 30);
+          faith = math.min(maxFaith, faith + 15);
         }
         _buyUpgrades();
         _walkTo(back, activity: 'heimweg');
@@ -460,7 +460,7 @@ class Playthrough {
         _walkTo(church, activity: 'heimweg');
         while (faith < maxFaith) {
           _spend(7, 'zuhause');
-          faith = math.min(maxFaith, faith + 56);
+          faith = math.min(maxFaith, faith + 25);
         }
         // Health only at home – if low, go there too.
         if (health >= 50) {

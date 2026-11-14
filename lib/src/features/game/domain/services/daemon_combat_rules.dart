@@ -20,12 +20,16 @@ class DaemonHit {
   /// Slow → Drain → Rebuke chain ("Kettenblitz").
   final bool chainCompleted;
 
+  /// The daemon resisted this mode (half effect).
+  final bool resisted;
+
   const DaemonHit({
     required this.damage,
     required this.effectDuration,
     this.knockbackFactor = 1.0,
     this.weaknessHit = false,
     this.chainCompleted = false,
+    this.resisted = false,
   });
 }
 
@@ -46,6 +50,14 @@ abstract final class DaemonCombatRules {
 
   /// Drain on a leech, or Liberation on a possessor: 1.5× damage.
   static const double damageWeakness = 1.5;
+
+  // ── Resistance (§4a) ────────────────────────────────────────────────────
+  /// A resisted mode does half – damage, effect time and push alike.
+  static const double resistanceFactor = 0.5;
+
+  /// The resistance holds unless the weakness is on the daemon right now.
+  static bool resists(DaemonKind kind, PrayerMode mode, Set<PrayerMode> active) =>
+      kind.resistance == mode && !active.contains(kind.weakness);
 
   // ── Combo ───────────────────────────────────────────────────────────────
   /// Drain on a slowed target lasts 25 % longer.
@@ -107,12 +119,20 @@ abstract final class DaemonCombatRules {
         }
     }
 
+    final resisted = resists(kind, mode, active);
+    if (resisted) {
+      dmg *= resistanceFactor;
+      dur *= resistanceFactor;
+      knock *= resistanceFactor;
+    }
+
     return DaemonHit(
       damage: dmg,
       effectDuration: dur,
       knockbackFactor: knock,
       weaknessHit: weak,
       chainCompleted: chain,
+      resisted: resisted,
     );
   }
 
