@@ -49,6 +49,26 @@ void main() {
       expect(slow.damage + drain.damage + rebuke.damage, greaterThan(2 * plain));
     });
 
+    test('resistance: each ordinary kind resists another mode than its '
+        'weakness – half effect until the weakness is on it (§4a)', () {
+      for (final k in [DaemonKind.lurker, DaemonKind.brute, DaemonKind.leech]) {
+        final r = k.resistance!;
+        expect(r, isNot(k.weakness));
+        final plain = _hit(DaemonKind.possessor, r);
+        final resisted = _hit(k, r);
+        expect(resisted.resisted, isTrue);
+        expect(resisted.effectDuration, lessThan(_hit(k, r, active: {k.weakness}).effectDuration));
+        final broken = _hit(k, r, active: {k.weakness});
+        expect(broken.resisted, isFalse);
+        expect(plain.resisted, isFalse);
+      }
+      // 🪨 heart of stone: liberation does half – until it was rebuked.
+      expect(_hit(DaemonKind.brute, PrayerMode.liberation).damage,
+          _hit(DaemonKind.leech, PrayerMode.liberation).damage / 2);
+      expect(_hit(DaemonKind.brute, PrayerMode.liberation, active: {PrayerMode.rebuke}).damage,
+          _hit(DaemonKind.leech, PrayerMode.liberation, active: {PrayerMode.rebuke}).damage);
+    });
+
     test('other orders are weaker (no chain)', () {
       final r = _hit(DaemonKind.brute, PrayerMode.rebuke, active: {PrayerMode.slow});
       expect(r.chainCompleted, isFalse);

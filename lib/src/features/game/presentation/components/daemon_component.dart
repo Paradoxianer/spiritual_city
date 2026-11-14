@@ -103,6 +103,9 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     ..style = PaintingStyle.stroke
     ..strokeWidth = 3.0
     ..color = const Color(0xCC000000);
+  final Paint _resistPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3.0;
   final Paint _arcPaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2.0;
@@ -488,6 +491,16 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     if (discern) {
       final g = _glyphFor(model.kind);
       g.paint(canvas, center - Offset(g.width / 2, g.height / 2));
+    }
+
+    // 🛡️ Its resistance as a ring in that prayer's colour (playtest
+    // 2026-11-14): while the weakness is on it the ring breaks – faint,
+    // under our effect rings.
+    final res = model.kind.resistance;
+    if (discern && res != null) {
+      final broken = !DaemonCombatRules.resists(model.kind, res, _activeEffects.keys.toSet());
+      _resistPaint.color = res.color.withValues(alpha: broken ? 0.15 : 0.9);
+      canvas.drawCircle(center, _daemonSize * 0.62, _resistPaint);
     }
 
     // Not yet vulnerable (possessor): a closed dark ring.
