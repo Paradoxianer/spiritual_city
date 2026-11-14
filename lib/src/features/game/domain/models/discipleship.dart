@@ -42,6 +42,10 @@ enum CombatStat {
 /// invisible world a disciple near the pastor prays along with small waves
 /// of what they know. Possible in every neighbourhood.
 abstract final class Discipleship {
+  /// Faith a disciple loses when a daemon runs over them (playtest
+  /// 2026-11-14) – once per daemon; a few and they are ✝️💔 shaken.
+  static const double daemonTouchFaith = 3;
+
   /// Prayer modes the pastor can pass on: only what they can pray.
   static List<PrayerMode> teachable(LearnedSkills learned) =>
       [for (final m in PrayerMode.values) if (CombatAbilities.canUse(m, learned)) m];

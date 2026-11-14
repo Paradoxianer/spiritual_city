@@ -69,6 +69,7 @@ import 'components/chunk_manager.dart';
 import 'components/loot_system.dart';
 import 'components/npc_component.dart';
 import 'components/shockwave_component.dart';
+import '../domain/services/spirit_waves.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
 import 'components/spiritual_dynamics_system.dart';
@@ -83,6 +84,7 @@ part 'game/overlay_control.dart';
 part 'game/building_actions.dart';
 part 'game/interior_control.dart';
 part 'game/mission_tracking.dart';
+part 'game/spirit_waves_control.dart';
 
 /// Whether keyboard shortcut hint badges should be shown on HUD buttons.
 /// True on desktop (Windows / Linux / macOS) and web; false on mobile.
@@ -1076,7 +1078,8 @@ class SpiritWorldGame extends FlameGame
       if (tutorialCalmSpirit) {
         spiritualDynamics.spawnTutorialDaemon();
       } else {
-        spiritualDynamics.spawnDaemonsAroundPlayer(entryCount);
+        spiritualDynamics.startWaves(entryCount);
+        _toast('🌊1', 'wave');
       }
     }
   }

@@ -10,7 +10,7 @@ Werte sind **Startwerte**, per Playtest zu justieren (zentral in `GameBalance`, 
 
 - **Gebetskampf:** Halten erzeugt alle 1,8 s eine Schockwelle (`PlayerComponent`), Kosten 5 Glauben je Welle. Stärke = `base.strength × Kraft × faithFactor(faith/100, 0.1–2.0) × (1 + 0.2·Haltezeit) × 25`; Radius `base.radius × 140`; Geschwindigkeit `base.speed × 90` (`ModifierManager.getEffectiveCombatStats`).
 - **Vier Modi:** Liberation, Rebuke (Rückstoß), Slow, Drain. Auf **Zellen** wirkt Liberation mit Faktor 1.0, die anderen mit 0.15 (`ShockwaveComponent`); auf **Dämonen** wirkt jede Welle mit `strength × 5 × falloff`. Liberation stoppt zusätzlich das Verdunkeln der Zelle durch den Dämon (`DaemonComponent`), Slow halbiert die Spiral-Geschwindigkeit.
-- **Dämonen:** ein einziger Typ; `DaemonModel` hat nur `energy`. Maximalzahl 10/15/20 (easy/normal/hard), Start-Energie −180/−300/−420, Dauer-Spawn alle 3–12 s, Gebets-Attraktion 30 s (`SpiritualDynamicsSystem`). Die Stärke skaliert **nur mit der Schwierigkeit**, nicht mit dem Spielerstand.
+- **Dämonen:** ein einziger Typ; `DaemonModel` hat nur `energy`. Maximalzahl 10/15/20 (easy/normal/hard), Start-Energie −180/−300/−420, Dauer-Spawn alle 3–12 s (seit §4b ersetzt durch Wellen), Gebets-Attraktion 30 s (`SpiritualDynamicsSystem`). Die Stärke skaliert **nur mit der Schwierigkeit**, nicht mit dem Spielerstand.
 - **Upgrades:** `+0.1` je Level und Modifier (Radius, Stärke, Dauer, Tempo), Kosten `max(1, floor(1.5^Level))` Insight (`prayer_combat.dart`).
 
 ## 2. Problem
@@ -41,6 +41,34 @@ Kette **Slow → Drain → Rebuke** innerhalb eines Zeitfensters auf dasselbe Zi
 - Vollständige Kette: kurzer "Kettenblitz"-Effekt als sichtbares Feedback (Sound, Partikel).
 
 Andere Reihenfolgen funktionieren, sind aber schwächer – so gibt es eine effektivste Reihenfolge, die man entdecken kann (Frage aus #129).
+
+## 4a. Resistenzen (Playtest 2026-11-14)
+
+Jeder normale Typ widersteht einem Gebet: **halbe Wirkung** (Schaden, Effektdauer, Rückstoß) – außer seine Schwäche liegt gerade auf ihm. Also: erst die Schwäche treffen, dann zuschlagen.
+
+| Typ | Schwäche | Resistenz | Bild |
+| :--- | :--- | :--- | :--- |
+| 🐍 | Binden | Zurückweisen | glitschig, entwischt |
+| 🪨 | Zurückweisen | Befreiung | steinernes Herz (Hes 36,26) |
+| 🦇 | Entwaffnen | Binden | fliegt davon |
+| 👁️ | Befreiung | – | – |
+
+Darstellung (mit 👁️ Unterscheidung der Geister): ein Ring in der Farbe des widerstandenen Gebets; liegt die Schwäche auf dem Dämon, wird er blass und unsere Effektringe liegen darüber. Code: `DaemonKind.resistance`, `DaemonCombatRules.resists`.
+
+## 4b. Wellen & Durchbruch (Playtest 2026-11-14)
+
+Frage: *Was bringt es, länger durchzuhalten?* Vorher nichts – Dämonen kamen gleichmäßig zufällig, zehnmal kurz war so gut wie einmal lang.
+
+- Die Dämonen kommen in **Wellen 🌊**: 4 / 6 / 8 (leicht/normal/schwer), jede Welle 2 mehr und +15 % Energie. Welle 1 ist eine Art, Welle 2 zwei, ab Welle 3 alle drei.
+- Ist eine Welle besiegt (alle ihre Dämonen weg), rollt der **Durchbruch**: eine dicke grüne Welle vom Pastor aus, Radius 6 Felder × Welle (höchstens ein halbes Viertel), Stärke 50 + 10 × Welle. Sie macht das Land grün, und Menschen darin werden offener (+2 Glauben × Welle, höchstens +12). Bollwerke trifft sie nicht.
+- Danach 5 s Atempause, dann die nächste Welle.
+- Rausgehen ist jederzeit möglich, das Erreichte bleibt; der nächste Besuch beginnt wieder bei 🌊1. Das Risiko sind 🙏 und 🍞.
+- Biblisch: Mose hält die Arme hoch, gestützt von Aaron und Hur (2. Mose 17); „Könnt ihr nicht eine Stunde mit mir wachen?“ (Mt 26,40).
+- Code: `SpiritWaves`, `SpiritualDynamicsSystem.startWaves`, `GameSpiritWaves.onWaveCleared`. Die Langzeit-Simulation modelliert keine Dämonen; die Werte sind Startwerte für Playtests.
+
+## 4c. Jünger im Kampf
+
+Jünger beten nahe beim Pastor mit (`discipleship_control.dart`); aufstellen lassen sie sich über die 📢 Freiversammlung. Läuft ein Dämon über einen Jünger, verliert dieser einmal je Dämon 3 Glauben (`Discipleship.daemonTouchFaith`) – nach einigen ist er ✝️💔 erschüttert und betet nicht mehr mit, bis der Pastor ihn besucht. Dämonen greifen weiter nur den Pastor an; Häuser bleiben außen vor (bewusst nicht umgesetzt).
 
 ## 5. Tier & sichtbare Stärke
 

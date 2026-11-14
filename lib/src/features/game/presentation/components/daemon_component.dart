@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../../domain/models/daemon_kind.dart';
+import '../../domain/models/discipleship.dart';
 import '../../domain/models/daemon_model.dart';
 import '../../domain/services/combat_abilities.dart';
 import '../../domain/services/daemon_combat_rules.dart';
@@ -229,6 +230,13 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
       game.spendFaith(leechFaithPerSecond * dt);
     }
 
+    // ── Running over disciples shakes them a little ───────────────────────
+    _touchTimer += dt;
+    if (_touchTimer >= 0.25) {
+      _touchTimer = 0.0;
+      _touchDisciples();
+    }
+
     // ── Energy tick ───────────────────────────────────────────────────────────
     _energyTimer += dt;
     if (_energyTimer >= _energyInterval) {
@@ -257,6 +265,25 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
                     DaemonCombatRules.tierSize(model.tier) *
                     dt)
             .clamp(-1.0, 1.0);
+  }
+
+  double _touchTimer = 0.0;
+
+  /// Disciples this daemon already ran over (once each).
+  final Set<String> _touched = {};
+
+  /// A daemon running over a disciple costs them a little faith (playtest
+  /// 2026-11-14) – a few and they are ✝️💔 shaken until the pastor visits.
+  void _touchDisciples() {
+    final reach = _daemonSize / 2 + 10;
+    for (final c in game.chunkManager.allActiveNPCs) {
+      final m = c.model;
+      if (!m.isDisciple || m.isShakenChristian || _touched.contains(m.id)) continue;
+      if (c.position.distanceToSquared(position) > reach * reach) continue;
+      _touched.add(m.id);
+      m.faith -= Discipleship.daemonTouchFaith;
+      if (m.isShakenChristian) game.onDiscipleShaken();
+    }
   }
 
   // ── Energy tick ────────────────────────────────────────────────────────────
