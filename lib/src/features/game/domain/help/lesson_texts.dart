@@ -26,25 +26,25 @@ abstract final class LessonTexts {
     pt: 'Você está praticando: {p} de {n} feitos. É assim: {how}',
   );
   static const Tr _where = Tr(
-    'So lernst du es: Geh zu einem Mentor – {places}. Tippe 📍, dann zeigen dir Karte und Pfeil den Weg, und nimm dort die Lektion an (🎓✅).',
-    'How to learn it: go to a mentor – {places}. Tap 📍 and the map and the arrow show you the way; accept the lesson there (🎓✅).',
-    es: 'Así lo aprendes: ve a un mentor – {places}. Toca 📍 y el mapa y la flecha te mostrarán el camino; acepta allí la lección (🎓✅).',
-    fr: 'Pour l’apprendre : va voir un mentor – {places}. Touche 📍, la carte et la flèche te montrent le chemin ; accepte la leçon sur place (🎓✅).',
-    pt: 'Como aprender: vá até um mentor – {places}. Toque em 📍 e o mapa e a seta mostram o caminho; aceite a lição lá (🎓✅).',
+    'Lerne es bei einem Mentor: {places} – 📍 zeigt dir den Weg.',
+    'Learn it from a mentor: {places} – 📍 shows you the way.',
+    es: 'Apréndelo con un mentor: {places}; 📍 te muestra el camino.',
+    fr: 'Apprends-le auprès d’un mentor : {places} – 📍 te montre le chemin.',
+    pt: 'Aprenda com um mentor: {places} – 📍 mostra o caminho.',
   );
   static const Tr _practice = Tr(
-    'Danach übst du {n}×: {how}',
-    'Then you practise {n}×: {how}',
-    es: 'Después practicas {n} veces: {how}',
-    fr: 'Ensuite tu t’exerces {n} fois : {how}',
-    pt: 'Depois você pratica {n} vezes: {how}',
+    'Dann {n}×: {how}',
+    'Then {n}×: {how}',
+    es: 'Luego {n} veces: {how}',
+    fr: 'Puis {n} fois : {how}',
+    pt: 'Depois {n} vezes: {how}',
   );
   static const Tr _study = Tr(
-    'Mit dem Knopf 📖 {cost} lernst du einen Schritt durch Weisheit statt durch Übung – bis zu {half} von {n}. Den Rest musst du wirklich in der Praxis erfahren.',
-    'With the 📖 {cost} button you learn a step through insight instead of practice – up to {half} of {n}. The rest you really have to experience in practice.',
-    es: 'Con el botón 📖 {cost} aprendes un paso por la sabiduría en lugar de la práctica, hasta {half} de {n}. El resto tienes que vivirlo de verdad en la práctica.',
-    fr: 'Avec le bouton 📖 {cost}, tu apprends une étape par la sagesse plutôt que par l’exercice – jusqu’à {half} sur {n}. Le reste, tu dois vraiment le vivre dans la pratique.',
-    pt: 'Com o botão 📖 {cost} você aprende um passo pela sabedoria em vez da prática – até {half} de {n}. O resto você precisa mesmo experimentar na prática.',
+    'Mit 📖 {cost} überspringst du bis zu {half} davon.',
+    'With 📖 {cost} you can skip up to {half} of them.',
+    es: 'Con 📖 {cost} te saltas hasta {half}.',
+    fr: 'Avec 📖 {cost}, tu peux en sauter jusqu’à {half}.',
+    pt: 'Com 📖 {cost} você pula até {half}.',
   );
 
 
@@ -59,18 +59,18 @@ abstract final class LessonTexts {
     pt: 'Além disso, primeiro {n} bairros precisam estar despertados 🏰🔥 (agora: {have}): quando houver cristãos suficientes num bairro, vença a fortaleza no mundo invisível.',
   );
   static const Tr _capReached = Tr(
-    '{mode} ist auf der höchsten Stufe, die du gerade erreichen kannst ({level}/{cap}). Weiter geht es mit dem nächsten Mentor-Schritt:',
-    '{mode} is at the highest level you can reach right now ({level}/{cap}). The next mentor step takes you further:',
-    es: '{mode} está en el nivel más alto que puedes alcanzar ahora ({level}/{cap}). El siguiente paso con un mentor te lleva más lejos:',
-    fr: '{mode} est au niveau le plus haut que tu peux atteindre pour l’instant ({level}/{cap}). L’étape suivante avec un mentor te mène plus loin :',
-    pt: '{mode} está no nível mais alto que você pode alcançar agora ({level}/{cap}). O próximo passo com um mentor leva você mais longe:',
+    '{mode} {level}/{cap} 🔒 – weiter geht es mit dem Mentor:',
+    '{mode} {level}/{cap} 🔒 – a mentor takes you further:',
+    es: '{mode} {level}/{cap} 🔒: un mentor te lleva más lejos:',
+    fr: '{mode} {level}/{cap} 🔒 – un mentor t’emmène plus loin :',
+    pt: '{mode} {level}/{cap} 🔒 – um mentor leva você adiante:',
   );
   static const Tr _canBuild = Tr(
-    '{mode}: Stufe {level} von {cap}. Mit 📖 Weisheit kaufst du hier Stufen – jede kostet mehr als die davor – 🎯 weiter, ⚡ stärker, ⏱️ länger, 💨 schneller. Weiter als {cap} geht es mit der nächsten Meisterschaft bei einem Mentor – sie hört nie auf. Weisheit bekommst du von besiegten Dämonen, Missionen und Bibelkreisen.',
-    '{mode}: level {level} of {cap}. With 📖 insight you buy levels here – each costs more than the one before – 🎯 further, ⚡ stronger, ⏱️ longer, 💨 faster. Beyond {cap} the next mastery with a mentor takes you – it never ends. You get insight from defeated demons, missions and Bible groups.',
-    es: '{mode}: nivel {level} de {cap}. Con sabiduría 📖 compras niveles aquí (cada uno cuesta más que el anterior): 🎯 más lejos, ⚡ más fuerte, ⏱️ más tiempo, 💨 más rápido. Más allá de {cap} te lleva la siguiente maestría con un mentor, y nunca se acaba. La sabiduría la ganas venciendo demonios, con misiones y grupos bíblicos.',
-    fr: '{mode} : niveau {level} sur {cap}. Avec la sagesse 📖, tu achètes des niveaux ici (chacun coûte plus que le précédent) – 🎯 plus loin, ⚡ plus fort, ⏱️ plus longtemps, 💨 plus vite. Au-delà de {cap}, la maîtrise suivante auprès d’un mentor t’emmène plus loin – cela ne s’arrête jamais. Tu gagnes de la sagesse en vainquant des démons, par les missions et les groupes bibliques.',
-    pt: '{mode}: nível {level} de {cap}. Com sabedoria 📖 você compra níveis aqui (cada um custa mais que o anterior) – 🎯 mais longe, ⚡ mais forte, ⏱️ mais tempo, 💨 mais rápido. Além de {cap}, a próxima maestria com um mentor leva você adiante – isso nunca acaba. Você ganha sabedoria vencendo demônios, com missões e grupos bíblicos.',
+    '{mode}: Stufe {level}/{cap}. Mit Erkenntnis 📖 kaufst du 🎯 Reichweite, ⚡ Stärke, ⏱️ Dauer und 💨 Tempo. Über {cap} hinaus hilft die nächste Meisterschaft ⭐ bei einem Mentor.',
+    '{mode}: level {level}/{cap}. With insight 📖 you buy 🎯 range, ⚡ strength, ⏱️ duration and 💨 speed. Beyond {cap}, the next mastery ⭐ with a mentor helps.',
+    es: '{mode}: nivel {level}/{cap}. Con sabiduría 📖 compras 🎯 alcance, ⚡ fuerza, ⏱️ duración y 💨 rapidez. Más allá de {cap} te ayuda la siguiente maestría ⭐ con un mentor.',
+    fr: '{mode} : niveau {level}/{cap}. Avec la sagesse 📖, tu achètes 🎯 portée, ⚡ force, ⏱️ durée et 💨 vitesse. Au-delà de {cap}, la maîtrise suivante ⭐ auprès d’un mentor t’aide.',
+    pt: '{mode}: nível {level}/{cap}. Com sabedoria 📖 você compra 🎯 alcance, ⚡ força, ⏱️ duração e 💨 velocidade. Além de {cap}, a próxima maestria ⭐ com um mentor ajuda.',
   );
 
   /// Name of a skill: its help sentence up to the colon.
@@ -149,7 +149,7 @@ abstract final class LessonTexts {
     final base = HelpContent.prayerModes[mode]?.text ?? '';
     String fill(Tr t) =>
         t.text.replaceAll('{mode}', modeName).replaceAll('{level}', '$level').replaceAll('{cap}', '$cap');
-    if (level >= cap && nextLesson != null) return '$base ${fill(_capReached)} $nextLesson';
+    if (level >= cap && nextLesson != null) return '${fill(_capReached)} $nextLesson';
     return '$base ${fill(_canBuild)}';
   }
 }
