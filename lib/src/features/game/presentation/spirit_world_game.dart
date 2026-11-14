@@ -195,6 +195,10 @@ class SpiritWorldGame extends FlameGame
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> missionCompleteMessage = ValueNotifier(null);
 
+  /// Narrator explanations given once per game (🌊 waves, playtest
+  /// 2026-11-14: too many toasts).
+  final Set<String> _explained = {};
+
   /// Brief conversion toast shown when an NPC is converted (e.g. "+1 ✝").
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> conversionToastMessage = ValueNotifier(null);
@@ -1079,7 +1083,7 @@ class SpiritWorldGame extends FlameGame
         spiritualDynamics.spawnTutorialDaemon();
       } else {
         spiritualDynamics.startWaves(entryCount);
-        _toast('🌊1', 'wave');
+        onWavesBegin();
       }
     }
   }

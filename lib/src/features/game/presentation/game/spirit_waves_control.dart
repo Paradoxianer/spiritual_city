@@ -4,9 +4,13 @@ part of '../spirit_world_game.dart';
 /// a beaten wave breaks through as a thick green wave from the pastor –
 /// bigger the longer they hold out.
 extension GameSpiritWaves on SpiritWorldGame {
-  void onWaveStarted(int wave) {
-    GameSound.play(Sfx.tap, volume: 0.5);
-    _toast('🌊$wave');
+  /// A new wave comes: only a sound – the toasts were too many (playtest
+  /// 2026-11-14); the breakthrough shows the number.
+  void onWaveStarted(int wave) => GameSound.play(Sfx.tap, volume: 0.5);
+
+  /// On entering: the narrator explains the waves once per game.
+  void onWavesBegin() {
+    if (_explained.add('wave')) Narrator.say('toast.wave', '🌊', '', HelpContent.toasts['wave']?.text);
   }
 
   void onWaveCleared(int wave) {
@@ -31,8 +35,8 @@ extension GameSpiritWaves on SpiritWorldGame {
       m.faith = min(100.0, m.faith + open);
     }
     GameSound.play(Sfx.awakening, volume: 0.6);
-    // The narrator explains it at the first breakthrough of a visit.
-    _toast('🌊$wave ✅ 💥🟩', wave == 1 ? 'breakthrough' : null);
+    // The narrator explains it once per game.
+    _toast('🌊$wave ✅', _explained.add('breakthrough') ? 'breakthrough' : null);
   }
 
   /// A daemon ran over a disciple until they were shaken.
