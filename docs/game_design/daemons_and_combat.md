@@ -68,7 +68,7 @@ Frage: *Was bringt es, länger durchzuhalten?* Vorher nichts – Dämonen kamen 
 
 ## 4c. Jünger im Kampf
 
-Jünger beten nahe beim Pastor mit (`discipleship_control.dart`); aufstellen lassen sie sich über die 📢 Freiversammlung. Läuft ein Dämon über einen Jünger, verliert dieser einmal je Dämon 3 Glauben (`Discipleship.daemonTouchFaith`) – nach einigen ist er ✝️💔 erschüttert und betet nicht mehr mit, bis der Pastor ihn besucht. Dämonen greifen weiter nur den Pastor an; Häuser bleiben außen vor (bewusst nicht umgesetzt).
+Jünger beten nahe beim Pastor mit (`discipleship_control.dart`); aufstellen lassen sie sich über die 📢 Freiversammlung. Läuft ein Dämon über einen Jünger, verliert dieser einmal je Dämon Glauben: 4 × (1 − Festigkeit), also 4 ohne Seelsorge und 0,4 bei voller Festigkeit (`Discipleship.daemonTouchLoss`; Festigkeit vor allem aus Seelsorge 👂📜) – nach einigen ist er ✝️💔 erschüttert und betet nicht mehr mit, bis der Pastor ihn besucht. Dämonen greifen weiter nur den Pastor an; Häuser bleiben außen vor (bewusst nicht umgesetzt).
 
 ## 5. Tier & sichtbare Stärke
 

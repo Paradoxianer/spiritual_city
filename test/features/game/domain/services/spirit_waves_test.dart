@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiritual_city/src/features/game/domain/models/discipleship.dart';
 import 'package:spiritual_city/src/features/game/domain/models/quarter.dart';
 import 'package:spiritual_city/src/features/game/domain/services/spirit_waves.dart';
 import 'package:spiritual_city/src/features/menu/domain/models/difficulty.dart';
@@ -45,5 +46,11 @@ void main() {
       expect(w.wave, 1);
       expect(w.pause, 0);
     });
+  });
+
+  test('a cared-for disciple is hardly shaken by daemons', () {
+    expect(Discipleship.daemonTouchLoss(0), Discipleship.daemonTouchFaith);
+    expect(Discipleship.daemonTouchLoss(0.9), closeTo(Discipleship.daemonTouchFaith / 10, 1e-9));
+    expect(Discipleship.daemonTouchLoss(0.45), lessThan(Discipleship.daemonTouchLoss(0.1)));
   });
 }

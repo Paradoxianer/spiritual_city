@@ -273,7 +273,8 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   final Set<String> _touched = {};
 
   /// A daemon running over a disciple costs them a little faith (playtest
-  /// 2026-11-14) – a few and they are ✝️💔 shaken until the pastor visits.
+  /// 2026-11-14) – less the better they are cared for; a few and they are
+  /// ✝️💔 shaken until the pastor visits.
   void _touchDisciples() {
     final reach = _daemonSize / 2 + 10;
     for (final c in game.chunkManager.allActiveNPCs) {
@@ -281,7 +282,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
       if (!m.isDisciple || m.isShakenChristian || _touched.contains(m.id)) continue;
       if (c.position.distanceToSquared(position) > reach * reach) continue;
       _touched.add(m.id);
-      m.faith -= Discipleship.daemonTouchFaith;
+      m.faith -= Discipleship.daemonTouchLoss(game.baseStabilityOf(m));
       if (m.isShakenChristian) game.onDiscipleShaken();
     }
   }
