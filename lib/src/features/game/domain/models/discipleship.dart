@@ -42,9 +42,15 @@ enum CombatStat {
 /// invisible world a disciple near the pastor prays along with small waves
 /// of what they know. Possible in every neighbourhood.
 abstract final class Discipleship {
-  /// Faith a disciple loses when a daemon runs over them (playtest
-  /// 2026-11-14) – once per daemon; a few and they are ✝️💔 shaken.
-  static const double daemonTouchFaith = 3;
+  /// Faith a disciple without any care loses when a daemon runs over them
+  /// (playtest 2026-11-14) – once per daemon; a few and they are ✝️💔 shaken.
+  static const double daemonTouchFaith = 4;
+
+  /// What a daemon running over a disciple costs, by their [stability]
+  /// (0 … 0.9, mostly from care 👂📜): a well cared-for disciple is hardly
+  /// shaken – 0.4 instead of 4 (playtest 2026-11-14).
+  static double daemonTouchLoss(double stability) =>
+      daemonTouchFaith * (1 - stability.clamp(0.0, 0.9));
 
   /// Prayer modes the pastor can pass on: only what they can pray.
   static List<PrayerMode> teachable(LearnedSkills learned) =>
