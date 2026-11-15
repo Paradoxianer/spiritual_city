@@ -77,11 +77,13 @@ class NpcInteractionService {
   static const double lifeTalkInsightOnChristGrowth = 0.3;
   static const double lifeTalkInsightOnFullyResolved = 0.5;
 
-  /// Faith 🙏 with a Christian gives the pastor: a share of his faith,
-  /// more the more stable they are – care (👂, 📜), church, discipleship
-  /// (playtest 2026-11-13: at faith level 9 a prayer together gave ~8).
+  /// Faith 🙏 with a Christian gives the pastor: a share of his faith that
+  /// grows steeply with how stable they are – care (👂, 📜), church,
+  /// discipleship. Barely cared for (stability ≈ 0.2) it is little, a
+  /// well cared-for person gives many times as much (playtest 2026-11-15:
+  /// ~16 without care was far too much; 2026-11-13: ~8 was fine).
   static double prayWithChristianFaith(double maxFaith, double stability) =>
-      (maxFaith * (0.02 + 0.15 * stability.clamp(0.0, 1.0))).roundToDouble();
+      (maxFaith * 0.15 * pow(stability.clamp(0.0, 1.0), 1.5)).roundToDouble();
 
   /// NPC faith gained per severity point once a challenge is worked through.
   static const double lifeTalkFaithPerSeverity = 2.0;

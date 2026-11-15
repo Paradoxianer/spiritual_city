@@ -11,6 +11,8 @@ import '../../domain/services/faith_calculator_service.dart';
 import '../../domain/models/prayer_combat.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
+import 'strike_burst_component.dart';
+import '../../../../core/audio/game_sound.dart';
 
 /// Visual and logic component for a Daemon NPC in the invisible world.
 ///
@@ -426,6 +428,16 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     game.spendHealth(hpDamage);
     game.spendFaith(faithDamage);
     game.spendHunger(hungerDamage);
+
+    // Visible: the daemon bursts in red shards, the red edge flares
+    // (playtest 2026-11-15: a hit was not to be seen at all).
+    game.world.add(StrikeBurstComponent(
+      position: game.player.position.clone(),
+      daemonAt: position.clone(),
+      radius: 4 * CellComponent.cellSize,
+    ));
+    game.hitFlash.value++;
+    GameSound.play(Sfx.denied, volume: 0.6);
 
     // Paint a 4-cell radius around the player dark red (negative influence).
     final gx = (game.player.position.x / CellComponent.cellSize).floor();

@@ -63,6 +63,7 @@ part 'overlays/look.dart';
 part 'overlays/missions.dart';
 part 'overlays/npc_dialog.dart';
 part 'overlays/disciple.dart';
+part 'overlays/edge_glow.dart';
 part 'overlays/narrator.dart';
 part 'overlays/pause.dart';
 part 'overlays/shared.dart';
@@ -273,6 +274,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     onSaveAndQuit: _saveAndQuit,
                   ),
             },
+          ),
+          // Red edge: pulses with hunger 🍞, flares when a daemon strikes.
+          ValueListenableBuilder<bool>(
+            valueListenable: _game.isWorldReady,
+            builder: (context, isReady, _) =>
+                isReady ? _EdgeGlow(game: _game) : const SizedBox.shrink(),
           ),
           // Loading overlay – shown until the world is ready
           ValueListenableBuilder<bool>(

@@ -193,6 +193,10 @@ class SpiritWorldGame extends FlameGame
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> missionCompleteMessage = ValueNotifier(null);
 
+  /// Counts up when a daemon strikes the pastor – the red edge flares
+  /// ([_EdgeGlow]).
+  final ValueNotifier<int> hitFlash = ValueNotifier(0);
+
   /// Brief conversion toast shown when an NPC is converted (e.g. "+1 ✝").
   /// Set to null after the toast has been dismissed.
   final ValueNotifier<String?> conversionToastMessage = ValueNotifier(null);
@@ -1611,6 +1615,7 @@ class SpiritWorldGame extends FlameGame
   void onRemove() {
     resources.dispose();
     missionCompleteMessage.dispose();
+    hitFlash.dispose();
     conversionToastMessage.dispose();
     isFainting.dispose();
     isWon.dispose();
