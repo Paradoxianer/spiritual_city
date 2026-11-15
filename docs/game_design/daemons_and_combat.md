@@ -52,7 +52,8 @@ Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, u
 - **Vorschau auf die nächste Welle:** welche Arten kommen (`🐍🐍🪨 …`), damit man sich auf Gebetsarten und Jünger vorbereiten kann – das ist der eigentliche Tower-Defense-Teil.
 - **Nichts läuft nach, während eine Welle läuft:** Die Zahl der Dämonen ist fest. Kein Hintergrund-Spawn, keine Dämonen von außen, bis die Welle vorbei ist.
 - **Echte Pause nach der besiegten Welle:** Erst wenn die Welle komplett besiegt ist, kommt der Durchbruch – die dicke grüne Welle soll man sichtbar vom Pastor aus loslaufen sehen (nicht nur als Zahl oder Toast). Während der Pause kommt nichts; dann beginnt die nächste Welle, wieder mit Anzeige und Vorschau.
-- **Die ersten Wellen sind super einfach** (wenige, schwache Dämonen, eine Art, keine Resistenzen). Erst mit wachsender Wellenzahl wird es schwieriger – dafür wird der Durchbruchs-Ring (die grüne Welle) **stärker und größer**. Das hilft im späteren Spiel, ganze Viertel schneller zu befreien: Wer weit kommt, wird fürs Durchhalten spürbar belohnt.
+- **Die ersten Wellen sind super einfach** (wenige, schwache Dämonen, eine Art, keine Resistenzen). Erst mit wachsender Wellenzahl wird es schwieriger – dafür wird der Durchbruchs-Ring (die grüne Welle) **stärker und größer** – ohne Obergrenze. Das hilft im späteren Spiel, ganze Viertel schneller zu befreien: Wer weit kommt, wird fürs Durchhalten spürbar belohnt.
+- **Kein Deckel beim Durchbruch.** Radius, Stärke und Offenheit wachsen mit jeder Welle ohne Obergrenze. Begründung: Kampfkraft kaufen wird immer teurer, und die Wellen werden immer schwerer – wer ewig durchhält und das zu seiner Strategie macht, soll dafür nicht bestraft werden. (Technisch wirkt die Welle ohnehin nur dort, wo die Welt schon erzeugt ist; Kosten pro Welle müssen beim Bau gemessen werden, ggf. über mehrere Bilder verteilen, aber nicht per Deckel begrenzen.)
 - Resistenzen erst danach und nur, wenn der Spieler sie vorher sehen kann (Vorschau/Ring) und die Schwäche sie aufhebt – ohne dass Dämonen „unbesiegbar“ wirken.
 - Ein 👁️ Besetzer (schwarzer Ring) darf nicht früh und unerklärt auftauchen; sein Ring sollte zeigen, was fehlt (🙏👂 Seelsorge am Menschen).
 
@@ -74,7 +75,7 @@ Darstellung (mit 👁️ Unterscheidung der Geister): ein Ring in der Farbe des 
 Frage: *Was bringt es, länger durchzuhalten?* Vorher nichts – Dämonen kamen gleichmäßig zufällig, zehnmal kurz war so gut wie einmal lang.
 
 - Die Dämonen kommen in **Wellen 🌊**: 4 / 6 / 8 (leicht/normal/schwer), jede Welle 2 mehr und +15 % Energie. Welle 1 ist eine Art, Welle 2 zwei, ab Welle 3 alle drei.
-- Ist eine Welle besiegt (alle ihre Dämonen weg), rollt der **Durchbruch**: eine dicke grüne Welle vom Pastor aus, Radius 6 Felder × Welle (höchstens ein halbes Viertel), Stärke 50 + 10 × Welle. Sie macht das Land grün, und Menschen darin werden offener (+2 Glauben × Welle, höchstens +12). Bollwerke trifft sie nicht.
+- Ist eine Welle besiegt (alle ihre Dämonen weg), rollt der **Durchbruch**: eine dicke grüne Welle vom Pastor aus, Radius 6 Felder × Welle, Stärke 50 + 10 × Welle. Sie macht das Land grün, und Menschen darin werden offener (+2 Glauben × Welle). **Kein Deckel** (Playtest 2026-11-15, siehe unten). Bollwerke trifft sie nicht.
 - Danach 5 s Atempause, dann die nächste Welle.
 - Rausgehen ist jederzeit möglich, das Erreichte bleibt; der nächste Besuch beginnt wieder bei 🌊1. Das Risiko sind 🙏 und 🍞.
 - Biblisch: Mose hält die Arme hoch, gestützt von Aaron und Hur (2. Mose 17); „Könnt ihr nicht eine Stunde mit mir wachen?“ (Mt 26,40).
