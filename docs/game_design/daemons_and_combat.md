@@ -52,6 +52,7 @@ Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, u
 - **Vorschau auf die nächste Welle:** welche Arten kommen (`🐍🐍🪨 …`), damit man sich auf Gebetsarten und Jünger vorbereiten kann – das ist der eigentliche Tower-Defense-Teil.
 - **Nichts läuft nach, während eine Welle läuft:** Die Zahl der Dämonen ist fest. Kein Hintergrund-Spawn, keine Dämonen von außen, bis die Welle vorbei ist.
 - **Echte Pause nach der besiegten Welle:** Erst wenn die Welle komplett besiegt ist, kommt der Durchbruch – die dicke grüne Welle soll man sichtbar vom Pastor aus loslaufen sehen (nicht nur als Zahl oder Toast). Während der Pause kommt nichts; dann beginnt die nächste Welle, wieder mit Anzeige und Vorschau.
+- **Die ersten Wellen sind super einfach** (wenige, schwache Dämonen, eine Art, keine Resistenzen). Erst mit wachsender Wellenzahl wird es schwieriger – dafür wird der Durchbruchs-Ring (die grüne Welle) **stärker und größer**. Das hilft im späteren Spiel, ganze Viertel schneller zu befreien: Wer weit kommt, wird fürs Durchhalten spürbar belohnt.
 - Resistenzen erst danach und nur, wenn der Spieler sie vorher sehen kann (Vorschau/Ring) und die Schwäche sie aufhebt – ohne dass Dämonen „unbesiegbar“ wirken.
 - Ein 👁️ Besetzer (schwarzer Ring) darf nicht früh und unerklärt auftauchen; sein Ring sollte zeigen, was fehlt (🙏👂 Seelsorge am Menschen).
 
