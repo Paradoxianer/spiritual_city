@@ -44,6 +44,17 @@ Andere Reihenfolgen funktionieren, sind aber schwächer – so gibt es eine effe
 
 > **Zurückgenommen (Playtest 2026-11-15)** – §4a–§4c waren umgesetzt, wurden aber wieder aus dem Code entfernt (Commits 87e041d, ccd65f0, ba5f97f, cdf0736 in der Git-Historie). Gründe: Dämonen waren plötzlich sehr schwer zu besiegen, ein schwarzer Ring (Besetzer) tauchte früh auf und ließ sich nicht besiegen, und die Idee „Tower Defense“ war im Spiel nicht erkennbar (keine Vorschau, welche Art als Nächstes kommt). Wenn wir es wieder angehen: zuerst die Vorschau der nächsten Dämonen, dann erst Resistenzen/Wellen – und alles in kleinen, einzeln spielbaren Schritten.
 
+### Notizen für einen zweiten Anlauf (Playtest 2026-11-15)
+
+Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, und nirgends war zu sehen, wie viele Dämonen noch kommen oder was als Nächstes folgt. Wellen müssen deshalb **lesbar** sein, ähnlich wie die Missionen:
+
+- **Anzeige wie bei den Missionen:** Ein fester Zähler zeigt, wie viele Dämonen der Welle noch kommen/übrig sind (nur Emoji, z. B. `🌊2  👹 5/8`).
+- **Vorschau auf die nächste Welle:** welche Arten kommen (`🐍🐍🪨 …`), damit man sich auf Gebetsarten und Jünger vorbereiten kann – das ist der eigentliche Tower-Defense-Teil.
+- **Nichts läuft nach, während eine Welle läuft:** Die Zahl der Dämonen ist fest. Kein Hintergrund-Spawn, keine Dämonen von außen, bis die Welle vorbei ist.
+- **Echte Pause nach der besiegten Welle:** Erst wenn die Welle komplett besiegt ist, kommt der Durchbruch – die dicke grüne Welle soll man sichtbar vom Pastor aus loslaufen sehen (nicht nur als Zahl oder Toast). Während der Pause kommt nichts; dann beginnt die nächste Welle, wieder mit Anzeige und Vorschau.
+- Resistenzen erst danach und nur, wenn der Spieler sie vorher sehen kann (Vorschau/Ring) und die Schwäche sie aufhebt – ohne dass Dämonen „unbesiegbar“ wirken.
+- Ein 👁️ Besetzer (schwarzer Ring) darf nicht früh und unerklärt auftauchen; sein Ring sollte zeigen, was fehlt (🙏👂 Seelsorge am Menschen).
+
 ## 4a. Resistenzen (Playtest 2026-11-14)
 
 Jeder normale Typ widersteht einem Gebet: **halbe Wirkung** (Schaden, Effektdauer, Rückstoß) – außer seine Schwäche liegt gerade auf ihm. Also: erst die Schwäche treffen, dann zuschlagen.
