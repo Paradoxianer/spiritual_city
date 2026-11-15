@@ -65,7 +65,10 @@ class _EdgeGlowState extends State<_EdgeGlow> with TickerProviderStateMixin {
         child: AnimatedBuilder(
           animation: Listenable.merge([_pulse, _flash]),
           builder: (context, _) {
-            final hunger = _hunger * (0.35 + 0.65 * _pulse.value);
+            // Clearly there from the first warning; the pulse only
+            // breathes between strong and full (playtest 2026-11-15: it was
+            // hardly to be seen).
+            final hunger = _hunger > 0 ? 0.65 + 0.35 * _pulse.value : 0.0;
             final hit = _flash.isAnimating ? 1 - _flash.value : 0.0;
             if (hunger <= 0 && hit <= 0) return const SizedBox.expand();
             return CustomPaint(
@@ -89,15 +92,23 @@ class _EdgeGlowPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     if (hunger > 0) {
-      // Thick: 10 px at the first warning, 26 px when nearly empty.
-      final w = 10 + 16 * urgency;
+      // A real red line round the screen: 10 px at the first warning,
+      // 20 px when empty – sharp, with a soft glow inside it.
+      final w = 10 + 10 * urgency;
+      canvas.drawRect(
+        rect.deflate(w),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w * 1.6
+          ..color = const Color(0xFFFF1744).withValues(alpha: 0.45 * hunger)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.8),
+      );
       canvas.drawRect(
         rect.deflate(w / 2),
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = w
-          ..color = const Color(0xFFE53935).withValues(alpha: (0.25 + 0.7 * hunger).clamp(0.0, 0.95))
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.45),
+          ..color = const Color(0xFFE00000).withValues(alpha: hunger),
       );
     }
     if (hit > 0) {
