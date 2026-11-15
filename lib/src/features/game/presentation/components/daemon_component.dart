@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../../domain/models/daemon_kind.dart';
-import '../../domain/models/discipleship.dart';
 import '../../domain/models/daemon_model.dart';
 import '../../domain/services/combat_abilities.dart';
 import '../../domain/services/daemon_combat_rules.dart';
@@ -12,6 +11,8 @@ import '../../domain/services/faith_calculator_service.dart';
 import '../../domain/models/prayer_combat.dart';
 import '../spirit_world_game.dart';
 import 'cell_component.dart';
+import 'strike_burst_component.dart';
+import '../../../../core/audio/game_sound.dart';
 
 /// Visual and logic component for a Daemon NPC in the invisible world.
 ///
@@ -104,9 +105,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     ..style = PaintingStyle.stroke
     ..strokeWidth = 3.0
     ..color = const Color(0xCC000000);
-  final Paint _resistPaint = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 3.0;
   final Paint _arcPaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2.0;
@@ -230,13 +228,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
       game.spendFaith(leechFaithPerSecond * dt);
     }
 
-    // ── Running over disciples shakes them a little ───────────────────────
-    _touchTimer += dt;
-    if (_touchTimer >= 0.25) {
-      _touchTimer = 0.0;
-      _touchDisciples();
-    }
-
     // ── Energy tick ───────────────────────────────────────────────────────────
     _energyTimer += dt;
     if (_energyTimer >= _energyInterval) {
@@ -265,26 +256,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
                     DaemonCombatRules.tierSize(model.tier) *
                     dt)
             .clamp(-1.0, 1.0);
-  }
-
-  double _touchTimer = 0.0;
-
-  /// Disciples this daemon already ran over (once each).
-  final Set<String> _touched = {};
-
-  /// A daemon running over a disciple costs them a little faith (playtest
-  /// 2026-11-14) – less the better they are cared for; a few and they are
-  /// ✝️💔 shaken until the pastor visits.
-  void _touchDisciples() {
-    final reach = _daemonSize / 2 + 10;
-    for (final c in game.chunkManager.allActiveNPCs) {
-      final m = c.model;
-      if (!m.isDisciple || m.isShakenChristian || _touched.contains(m.id)) continue;
-      if (c.position.distanceToSquared(position) > reach * reach) continue;
-      _touched.add(m.id);
-      m.faith -= Discipleship.daemonTouchLoss(game.baseStabilityOf(m));
-      if (m.isShakenChristian) game.onDiscipleShaken();
-    }
   }
 
   // ── Energy tick ────────────────────────────────────────────────────────────
@@ -458,6 +429,16 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     game.spendFaith(faithDamage);
     game.spendHunger(hungerDamage);
 
+    // Visible: the daemon bursts in red shards, the red edge flares
+    // (playtest 2026-11-15: a hit was not to be seen at all).
+    game.world.add(StrikeBurstComponent(
+      position: game.player.position.clone(),
+      daemonAt: position.clone(),
+      radius: 4 * CellComponent.cellSize,
+    ));
+    game.hitFlash.value++;
+    GameSound.play(Sfx.denied, volume: 0.6);
+
     // Paint a 4-cell radius around the player dark red (negative influence).
     final gx = (game.player.position.x / CellComponent.cellSize).floor();
     final gy = (game.player.position.y / CellComponent.cellSize).floor();
@@ -519,16 +500,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     if (discern) {
       final g = _glyphFor(model.kind);
       g.paint(canvas, center - Offset(g.width / 2, g.height / 2));
-    }
-
-    // 🛡️ Its resistance as a ring in that prayer's colour (playtest
-    // 2026-11-14): while the weakness is on it the ring breaks – faint,
-    // under our effect rings.
-    final res = model.kind.resistance;
-    if (discern && res != null) {
-      final broken = !DaemonCombatRules.resists(model.kind, res, _activeEffects.keys.toSet());
-      _resistPaint.color = res.color.withValues(alpha: broken ? 0.15 : 0.9);
-      canvas.drawCircle(center, _daemonSize * 0.62, _resistPaint);
     }
 
     // Not yet vulnerable (possessor): a closed dark ring.

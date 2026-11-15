@@ -42,6 +42,8 @@ Kette **Slow → Drain → Rebuke** innerhalb eines Zeitfensters auf dasselbe Zi
 
 Andere Reihenfolgen funktionieren, sind aber schwächer – so gibt es eine effektivste Reihenfolge, die man entdecken kann (Frage aus #129).
 
+> **Zurückgenommen (Playtest 2026-11-15)** – §4a–§4c waren umgesetzt, wurden aber wieder aus dem Code entfernt (Commits 87e041d, ccd65f0, ba5f97f, cdf0736 in der Git-Historie). Gründe: Dämonen waren plötzlich sehr schwer zu besiegen, ein schwarzer Ring (Besetzer) tauchte früh auf und ließ sich nicht besiegen, und die Idee „Tower Defense“ war im Spiel nicht erkennbar (keine Vorschau, welche Art als Nächstes kommt). Wenn wir es wieder angehen: zuerst die Vorschau der nächsten Dämonen, dann erst Resistenzen/Wellen – und alles in kleinen, einzeln spielbaren Schritten.
+
 ## 4a. Resistenzen (Playtest 2026-11-14)
 
 Jeder normale Typ widersteht einem Gebet: **halbe Wirkung** (Schaden, Effektdauer, Rückstoß) – außer seine Schwäche liegt gerade auf ihm. Also: erst die Schwäche treffen, dann zuschlagen.

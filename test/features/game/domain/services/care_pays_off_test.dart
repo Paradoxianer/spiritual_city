@@ -17,8 +17,11 @@ void main() {
   });
 
   test('prayer with a firm Christian gives several times as much', () {
-    final fresh = NpcInteractionService.prayWithChristianFaith(maxFaith, 0);
+    // Barely cared for (church + a few chats ≈ 0.2): little – with the 3
+    // every prayer gives, about 7 at faith level 9.
+    final fresh = NpcInteractionService.prayWithChristianFaith(maxFaith, 0.2);
     final firm = NpcInteractionService.prayWithChristianFaith(maxFaith, 0.9);
+    expect(fresh + 3, lessThanOrEqualTo(8));
     expect(firm / fresh, greaterThan(6));
   });
 
