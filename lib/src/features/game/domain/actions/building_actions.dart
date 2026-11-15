@@ -492,9 +492,10 @@ abstract final class BuildingActions {
             fellowship,
           ],
         BuildingType.church || BuildingType.cathedral => [sundayService, worship, preach],
-        BuildingType.hospital => [medicalHelp, counseling, chapelService],
+        BuildingType.hospital => [medicalHelp, genericPray, counseling, chapelService],
         BuildingType.school || BuildingType.university => [
             letterToManagement,
+            genericPray,
             talkDirector,
             valueLecture,
             prayerCircle,
@@ -503,7 +504,7 @@ abstract final class BuildingActions {
         BuildingType.policeStation => [blessPolice, genericPray, witness],
         BuildingType.cityHall => [mayorAudience, prayForPoliticians],
         BuildingType.trainStation => [travel, genericPray],
-        BuildingType.stadium => [majorEvent],
+        BuildingType.stadium => [genericPray, witness, majorEvent],
         BuildingType.shop ||
         BuildingType.supermarket ||
         BuildingType.mall ||

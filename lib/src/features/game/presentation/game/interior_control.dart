@@ -186,8 +186,9 @@ extension GameInterior on SpiritWorldGame {
   void _runStation(InteriorWorld room, String action) {
     final result = handleBuildingAction(action);
     room.float(result.reactionEmoji);
-    // Session limit reached: the visit ends, the pastor is shown out.
-    if (result.success && room.building.isReadyToLeave) {
+    // Session limit reached (a rejected try counts too): the visit ends,
+    // the pastor is shown out.
+    if (!room.leaving && room.building.isReadyToLeave) {
       room.leaving = true;
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (interior == room) leaveInterior();
