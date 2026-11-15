@@ -106,16 +106,22 @@ class _EdgeGlowPainter extends CustomPainter {
   /// One line [inset] px from the edge; returns how wide it is.
   double _line(Canvas canvas, Rect rect, double inset, double urgency, Color color) {
     // Thin but solid (playtest 2026-11-15: 10–20 px was far too thick):
-    // 3 px at the first warning, 6 px when empty, a faint glow inwards.
+    // 3 px at the first warning, 6 px when empty …
     final w = 3 + 3 * urgency;
-    canvas.drawRect(
-      rect.deflate(inset + w * 1.5),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 2
-        ..color = color.withValues(alpha: 0.25 * beat)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w),
-    );
+    // … and behind it a soft gradient fading into the game, 50 → 90 px.
+    final depth = 50 + 40 * urgency;
+    final inner = rect.deflate(inset);
+    final from = color.withValues(alpha: 0.35 * beat);
+    final to = color.withValues(alpha: 0);
+    void side(Rect band, Alignment begin, Alignment end) => canvas.drawRect(
+        band,
+        Paint()..shader = LinearGradient(begin: begin, end: end, colors: [from, to]).createShader(band));
+    side(Rect.fromLTWH(inner.left, inner.top, inner.width, depth), Alignment.topCenter, Alignment.bottomCenter);
+    side(Rect.fromLTWH(inner.left, inner.bottom - depth, inner.width, depth), Alignment.bottomCenter,
+        Alignment.topCenter);
+    side(Rect.fromLTWH(inner.left, inner.top, depth, inner.height), Alignment.centerLeft, Alignment.centerRight);
+    side(Rect.fromLTWH(inner.right - depth, inner.top, depth, inner.height), Alignment.centerRight,
+        Alignment.centerLeft);
     canvas.drawRect(
       rect.deflate(inset + w / 2),
       Paint()
