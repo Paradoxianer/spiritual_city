@@ -54,6 +54,13 @@ void main() {
       expect(r.chainCompleted, isFalse);
     });
 
+    test('bigger daemons strike harder (kind × tier)', () {
+      expect(DaemonCombatRules.strikeFactor(DaemonKind.brute, 3),
+          greaterThan(DaemonCombatRules.strikeFactor(DaemonKind.brute, 1)));
+      expect(DaemonCombatRules.strikeFactor(DaemonKind.brute, 1),
+          greaterThan(DaemonCombatRules.strikeFactor(DaemonKind.lurker, 1)));
+    });
+
     test('tier is visible in size and grows energy', () {
       expect(DaemonCombatRules.tierSize(1), 1.0);
       expect(DaemonCombatRules.tierSize(3), 1.5);
