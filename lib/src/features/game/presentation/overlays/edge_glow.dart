@@ -1,9 +1,11 @@
 part of '../game_screen.dart';
 
-/// A thick red line along the screen's edge (playtest 2026-11-15):
-/// - it pulses while the provisions 🍞 run low – faster and thicker the
-///   emptier they are – so hunger can no longer be overlooked;
-/// - it flashes when a daemon strikes the pastor ([SpiritWorldGame.hitFlash]).
+/// Lines along the screen's edge (playtest 2026-11-15) in the colour of
+/// the bar that runs low, so neither can be overlooked:
+/// - red like ❤️ while life is below 25 %, orange like 🍞 while the
+///   provisions are below 30 % (both: red outside, orange inside) – thicker
+///   and faster pulsing the emptier;
+/// - a blood-red flare when a daemon strikes ([SpiritWorldGame.hitFlash]).
 class _EdgeGlow extends StatefulWidget {
   final SpiritWorldGame game;
   const _EdgeGlow({required this.game});
@@ -18,7 +20,8 @@ class _EdgeGlowState extends State<_EdgeGlow> with TickerProviderStateMixin {
   late final AnimationController _flash =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
 
-  /// 0 = fine … 1 = empty: how urgent the hunger is.
+  /// 0 = fine … 1 = empty.
+  double _health = 0;
   double _hunger = 0;
 
   SpiritWorldGame get _g => widget.game;
@@ -26,17 +29,24 @@ class _EdgeGlowState extends State<_EdgeGlow> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _g.hungerNotifier.addListener(_onHunger);
+    _g.hungerNotifier.addListener(_onLevels);
+    _g.healthNotifier.addListener(_onLevels);
     _g.hitFlash.addListener(_onHit);
-    _onHunger();
+    _onLevels();
   }
 
-  void _onHunger() {
-    final frac = (_g.hungerNotifier.value / _g.progress.maxHunger).clamp(0.0, 1.0);
-    const warn = SpiritWorldGame.hungerWarnThreshold;
-    final urgency = frac >= warn ? 0.0 : (1 - frac / warn).clamp(0.0, 1.0);
-    if (urgency == _hunger) return;
-    _hunger = urgency;
+  static double _low(double value, double max, double warn) {
+    final frac = (value / max).clamp(0.0, 1.0);
+    return frac >= warn ? 0.0 : (1 - frac / warn).clamp(0.0, 1.0);
+  }
+
+  void _onLevels() {
+    final health = _low(_g.healthNotifier.value, _g.progress.maxHealth, SpiritWorldGame.healthAlarmThreshold);
+    final hunger = _low(_g.hungerNotifier.value, _g.progress.maxHunger, SpiritWorldGame.hungerWarnThreshold);
+    if (health == _health && hunger == _hunger) return;
+    _health = health;
+    _hunger = hunger;
+    final urgency = health > hunger ? health : hunger;
     if (urgency > 0) {
       // The emptier, the faster the pulse.
       _pulse.duration = Duration(milliseconds: (1200 - 700 * urgency).round());
@@ -51,7 +61,8 @@ class _EdgeGlowState extends State<_EdgeGlow> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _g.hungerNotifier.removeListener(_onHunger);
+    _g.hungerNotifier.removeListener(_onLevels);
+    _g.healthNotifier.removeListener(_onLevels);
     _g.hitFlash.removeListener(_onHit);
     _pulse.dispose();
     _flash.dispose();
@@ -65,15 +76,14 @@ class _EdgeGlowState extends State<_EdgeGlow> with TickerProviderStateMixin {
         child: AnimatedBuilder(
           animation: Listenable.merge([_pulse, _flash]),
           builder: (context, _) {
-            // Clearly there from the first warning; the pulse only
-            // breathes between strong and full (playtest 2026-11-15: it was
-            // hardly to be seen).
-            final hunger = _hunger > 0 ? 0.65 + 0.35 * _pulse.value : 0.0;
+            // Clearly there from the first warning; the pulse only breathes
+            // between strong and full.
+            final beat = 0.65 + 0.35 * _pulse.value;
             final hit = _flash.isAnimating ? 1 - _flash.value : 0.0;
-            if (hunger <= 0 && hit <= 0) return const SizedBox.expand();
+            if (_health <= 0 && _hunger <= 0 && hit <= 0) return const SizedBox.expand();
             return CustomPaint(
               size: Size.infinite,
-              painter: _EdgeGlowPainter(hunger: hunger, urgency: _hunger, hit: hit),
+              painter: _EdgeGlowPainter(health: _health, hunger: _hunger, beat: beat, hit: hit),
             );
           },
         ),
@@ -83,34 +93,44 @@ class _EdgeGlowState extends State<_EdgeGlow> with TickerProviderStateMixin {
 }
 
 class _EdgeGlowPainter extends CustomPainter {
+  final double health;
   final double hunger;
-  final double urgency;
+  final double beat;
   final double hit;
-  _EdgeGlowPainter({required this.hunger, required this.urgency, required this.hit});
+  _EdgeGlowPainter({required this.health, required this.hunger, required this.beat, required this.hit});
+
+  /// The colours of the ❤️ and 🍞 bars.
+  static const Color _healthColor = Colors.redAccent;
+  static const Color _hungerColor = Colors.orange;
+
+  /// One line [inset] px from the edge; returns how wide it is.
+  double _line(Canvas canvas, Rect rect, double inset, double urgency, Color color) {
+    // 10 px at the first warning, 20 px when empty – sharp, glowing inwards.
+    final w = 10 + 10 * urgency;
+    canvas.drawRect(
+      rect.deflate(inset + w),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 1.6
+        ..color = color.withValues(alpha: 0.45 * beat)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.8),
+    );
+    canvas.drawRect(
+      rect.deflate(inset + w / 2),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w
+        ..color = color.withValues(alpha: beat),
+    );
+    return w;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    if (hunger > 0) {
-      // A real red line round the screen: 10 px at the first warning,
-      // 20 px when empty – sharp, with a soft glow inside it.
-      final w = 10 + 10 * urgency;
-      canvas.drawRect(
-        rect.deflate(w),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = w * 1.6
-          ..color = const Color(0xFFFF1744).withValues(alpha: 0.45 * hunger)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.8),
-      );
-      canvas.drawRect(
-        rect.deflate(w / 2),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = w
-          ..color = const Color(0xFFE00000).withValues(alpha: hunger),
-      );
-    }
+    var inset = 0.0;
+    if (health > 0) inset += _line(canvas, rect, inset, health, _healthColor);
+    if (hunger > 0) _line(canvas, rect, inset, hunger, _hungerColor);
     if (hit > 0) {
       // The strike: the whole edge flares up blood red, fading out.
       canvas.drawRect(
@@ -125,5 +145,6 @@ class _EdgeGlowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_EdgeGlowPainter o) => o.hunger != hunger || o.urgency != urgency || o.hit != hit;
+  bool shouldRepaint(_EdgeGlowPainter o) =>
+      o.health != health || o.hunger != hunger || o.beat != beat || o.hit != hit;
 }
