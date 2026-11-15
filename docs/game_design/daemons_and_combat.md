@@ -57,6 +57,17 @@ Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, u
 - Resistenzen erst danach und nur, wenn der Spieler sie vorher sehen kann (Vorschau/Ring) und die Schwäche sie aufhebt – ohne dass Dämonen „unbesiegbar“ wirken.
 - Ein 👁️ Besetzer (schwarzer Ring) darf nicht früh und unerklärt auftauchen; sein Ring sollte zeigen, was fehlt (🙏👂 Seelsorge am Menschen).
 
+### Zweiter Anlauf – umgesetzt (2026-11-15)
+
+- **Anzeige** oben links unter den Balken, wie bei den Missionen: `🌊2  👹 3/5   ➡️ 🪨2 🐍1` – übrig/gesamt und die **nächste Welle**. Die Arten nur mit 👁️ Unterscheidung der Geister, sonst nur die Zahl (`👹4`).
+- Eine Welle kommt **komplett auf einmal** rings um den Pastor (220–320 px). Während der Wellen entsteht nichts nach – kein Hintergrund-Spawn, kein Dauer-Spawn. Reste von früher und 🏰-Wächter/👁️-Besetzer zählen nicht mit.
+- **Größe:** 2 / 3 / 4 (leicht/normal/schwer), +1 je Welle. **Stärke:** 40 % in Welle 1, +15 % je Welle (volle Stärke ab Welle 5, danach weiter). **Arten:** Welle 1 nur 🪨 (langsam, gut zu treffen), Welle 2 dazu 🐍, ab 3 auch 🦇.
+- **Besiegt:** grüne Welle vom Pastor aus (Radius 6 Felder × Welle, Stärke 50 + 10 × Welle, Menschen +2 × Welle offener) – **ohne Deckel**. Dann **6 s Pause** mit Countdown `⏳` und Vorschau; dann kommt die angekündigte Welle.
+- Der Erzähler erklärt Wellen und Durchbruch je einmal pro Spiel; sonst keine Einblendungen (nur Ton).
+- Keine Resistenzen, kein Jünger-Schaden (siehe unten, zurückgenommen).
+- 👁️ Besetzer: über dem schwarzen Ring steht `👂🙏` – Seelsorge oder Gebet mit dem Menschen in der sichtbaren Welt macht ihn angreifbar.
+- Code: `SpiritWaves`, `WaveStatus`, `SpiritualDynamicsSystem.startWaves`, `GameSpiritWaves`, `_WaveHud`.
+
 ## 4a. Resistenzen (Playtest 2026-11-14)
 
 Jeder normale Typ widersteht einem Gebet: **halbe Wirkung** (Schaden, Effektdauer, Rückstoß) – außer seine Schwäche liegt gerade auf ihm. Also: erst die Schwäche treffen, dann zuschlagen.

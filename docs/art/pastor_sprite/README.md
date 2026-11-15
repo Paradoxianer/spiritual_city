@@ -12,3 +12,10 @@ Figur 2 (Ausschnitt x 368–431, y 96–143).
 
 Für einen Heilsarmee-Offizier bitte dieselbe Aufteilung (64 × 48 px, 16 × 16 pro Bild,
 PNG mit Transparenz) zurückgeben – dann kann sie direkt eingebaut werden.
+
+## Heilsarmee-Offizier (Feier-Sprecher)
+
+`assets/images/officer_front_16px.png` – 16 × 16 px, nur die Vorderansicht. Abgeleitet von Kenneys
+Figur 5 (glatzköpfiger Mann, RPG Urban Pack, CC0): Uniform und Hose dunkelblau, Schirmmütze mit
+rotem Band und goldenem Abzeichen, rote Kragenabzeichen. Er spricht in der Erzähler-Blase, wenn ein
+Viertel freigebetet ist. Eine echte Vorlage im selben Format ersetzt die Datei einfach.

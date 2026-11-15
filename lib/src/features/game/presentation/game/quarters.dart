@@ -2,6 +2,11 @@ part of '../spirit_world_game.dart';
 
 /// Neighbourhoods as stage goals (§3.3, #125): status for the HUD, the
 /// 🏰 stronghold in the invisible world and the awakening.
+/// The Salvation Army officer who congratulates on a neighbourhood prayed
+/// free (playtest 2026-11-14): Kenney's bald figure in navy uniform with
+/// the red-banded cap, docs/art/pastor_sprite/README.md.
+const String officerFigure = 'assets/images/officer_front_16px.png';
+
 extension GameQuarters on SpiritWorldGame {
   Quarter get currentQuarter => Quarter.ofCell(
         (player.position.x / CellComponent.cellSize).floor(),
@@ -208,7 +213,8 @@ extension GameQuarters on SpiritWorldGame {
     Narrator.say('celebrate', '🎉', '', HelpContent.toasts['prayedFree']?.text
         .replaceAll('{p}', '$percent')
         .replaceAll('{c}', '${status.christians}')
-        .replaceAll('{n}', '${status.people}'), force: true);
+        .replaceAll('{n}', '${status.people}'),
+        force: true, figure: officerFigure);
   }
 
   /// 🏰 / 🏰🏰 / 🏯 of [q] – decided by the city (district, city hall, home).

@@ -69,6 +69,7 @@ import 'components/chunk_manager.dart';
 import 'components/loot_system.dart';
 import 'components/npc_component.dart';
 import 'components/shockwave_component.dart';
+import '../domain/services/spirit_waves.dart';
 import 'components/player_component.dart';
 import 'components/radial_menu.dart';
 import 'components/spiritual_dynamics_system.dart';
@@ -83,6 +84,7 @@ part 'game/overlay_control.dart';
 part 'game/building_actions.dart';
 part 'game/interior_control.dart';
 part 'game/mission_tracking.dart';
+part 'game/spirit_waves_control.dart';
 
 /// Whether keyboard shortcut hint badges should be shown on HUD buttons.
 /// True on desktop (Windows / Linux / macOS) and web; false on mobile.
@@ -196,6 +198,12 @@ class SpiritWorldGame extends FlameGame
   /// Counts up when a daemon strikes the pastor – the red edge flares
   /// ([_EdgeGlow]).
   final ValueNotifier<int> hitFlash = ValueNotifier(0);
+
+  /// 🌊 What the HUD shows of the waves (null outside them).
+  final ValueNotifier<WaveStatus?> waveStatus = ValueNotifier(null);
+
+  /// What the narrator already explained in this game (once each).
+  final Set<String> _explained = {};
 
   /// Brief conversion toast shown when an NPC is converted (e.g. "+1 ✝").
   /// Set to null after the toast has been dismissed.
@@ -684,12 +692,6 @@ class SpiritWorldGame extends FlameGame
     }
   }
 
-  /// Number of daemons spawned around the player on spiritual-world entry.
-  /// Reduced so new players aren't overwhelmed immediately.
-  static const int _entryDaemonsEasy   = 2;
-  static const int _entryDaemonsNormal = 3;
-  static const int _entryDaemonsHard   = 5;
-
   // Passive resource timers
   double _hungerDrainTimer = 0.0;
   static const double hungerDrainInterval = 30.0; // drain 1 hunger every 30 seconds
@@ -1069,19 +1071,16 @@ class SpiritWorldGame extends FlameGame
       _updateQuarter();
     }
 
-    // Immediately spawn daemons around the player when entering the spiritual
-    // world so they are visible from the first moment (difficulty-scaled count).
+    // Entering: the tutorial fight, or 🌊1 comes at once around the pastor.
     if (isSpiritualWorld) {
-      final entryCount = switch (difficulty) {
-        Difficulty.easy   => _entryDaemonsEasy,
-        Difficulty.normal => _entryDaemonsNormal,
-        Difficulty.hard   => _entryDaemonsHard,
-      };
       if (tutorialCalmSpirit) {
         spiritualDynamics.spawnTutorialDaemon();
       } else {
-        spiritualDynamics.spawnDaemonsAroundPlayer(entryCount);
+        spiritualDynamics.startWaves();
+        onWavesBegin();
       }
+    } else {
+      spiritualDynamics.endWaves();
     }
   }
 
@@ -1616,6 +1615,7 @@ class SpiritWorldGame extends FlameGame
     resources.dispose();
     missionCompleteMessage.dispose();
     hitFlash.dispose();
+    waveStatus.dispose();
     conversionToastMessage.dispose();
     isFainting.dispose();
     isWon.dispose();

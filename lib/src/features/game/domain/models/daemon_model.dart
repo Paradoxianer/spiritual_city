@@ -29,6 +29,9 @@ class DaemonModel {
   /// Visible strength 1–3: bigger body and trail, more energy.
   final int tier;
 
+  /// The 🌊 wave it belongs to (SpiritWaves); 0 = not part of one.
+  int wave;
+
   /// For a [DaemonKind.possessor]: id of the possessed NPC it came from.
   final String? hostNpcId;
 
@@ -39,5 +42,6 @@ class DaemonModel {
     this.kind = DaemonKind.leech,
     this.tier = 1,
     this.hostNpcId,
+    this.wave = 0,
   }) : initialEnergy = energy;
 }

@@ -123,7 +123,10 @@ class _NarratorBubbleState extends State<_NarratorBubble> {
                       Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(line.emoji, style: const TextStyle(fontSize: 24)),
+                      if (line.figure case final f?)
+                        Image.asset(f, width: 40, height: 40, filterQuality: FilterQuality.none)
+                      else
+                        Text(line.emoji, style: const TextStyle(fontSize: 24)),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
