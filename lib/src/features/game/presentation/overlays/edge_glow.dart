@@ -77,8 +77,8 @@ class _EdgeGlowState extends State<_EdgeGlow> with TickerProviderStateMixin {
           animation: Listenable.merge([_pulse, _flash]),
           builder: (context, _) {
             // Clearly there from the first warning; the pulse only breathes
-            // between strong and full.
-            final beat = 0.65 + 0.35 * _pulse.value;
+            // between nearly and fully opaque.
+            final beat = 0.8 + 0.2 * _pulse.value;
             final hit = _flash.isAnimating ? 1 - _flash.value : 0.0;
             if (_health <= 0 && _hunger <= 0 && hit <= 0) return const SizedBox.expand();
             return CustomPaint(
@@ -105,15 +105,16 @@ class _EdgeGlowPainter extends CustomPainter {
 
   /// One line [inset] px from the edge; returns how wide it is.
   double _line(Canvas canvas, Rect rect, double inset, double urgency, Color color) {
-    // 10 px at the first warning, 20 px when empty – sharp, glowing inwards.
-    final w = 10 + 10 * urgency;
+    // Thin but solid (playtest 2026-11-15: 10–20 px was far too thick):
+    // 3 px at the first warning, 6 px when empty, a faint glow inwards.
+    final w = 3 + 3 * urgency;
     canvas.drawRect(
-      rect.deflate(inset + w),
+      rect.deflate(inset + w * 1.5),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 1.6
-        ..color = color.withValues(alpha: 0.45 * beat)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.8),
+        ..strokeWidth = w * 2
+        ..color = color.withValues(alpha: 0.25 * beat)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w),
     );
     canvas.drawRect(
       rect.deflate(inset + w / 2),
