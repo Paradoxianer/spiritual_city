@@ -530,6 +530,51 @@ class _TrackedMissionHud extends StatelessWidget {
   }
 }
 
+/// 🌊 The waves, readable like a mission (playtest 2026-11-15): how many of
+/// the wave are left and what comes next – `🌊2  👹 3/5  ➡️ 🪨2 🐍1`; in the
+/// pause after a breakthrough `🌊2 ✅  ⏳5 ➡️ …`. The kinds only with 👁️
+/// discernment, otherwise just how many.
+class _WaveHud extends StatelessWidget {
+  final SpiritWorldGame game;
+  const _WaveHud({required this.game});
+
+  String _preview(List<DaemonKind> kinds) {
+    if (!game.canDiscernSpirits) return '👹${kinds.length}';
+    return [
+      for (final k in SpiritWaves.joining)
+        if (kinds.contains(k)) '${k.glyph}${kinds.where((x) => x == k).length}',
+    ].join(' ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<WaveStatus?>(
+      valueListenable: game.waveStatus,
+      builder: (context, w, _) {
+        if (w == null) return const SizedBox.shrink();
+        final text = w.pause > 0
+            ? '🌊${w.wave - 1} ✅   ⏳${w.pause} ➡️ ${_preview(w.next)}'
+            : '🌊${w.wave}  👹 ${w.left}/${w.total}   ➡️ ${_preview(w.next)}';
+        return Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF66BB6A).withValues(alpha: 0.8)),
+            ),
+            child: Text(
+              text,
+              style: const TextStyle(color: Color(0xFFA5D6A7), fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 // ── Resource HUD (Flutter overlay) ──────────────────────────────────────────
 
 /// Flutter-based resource-bar panel positioned at the top-left of the screen.

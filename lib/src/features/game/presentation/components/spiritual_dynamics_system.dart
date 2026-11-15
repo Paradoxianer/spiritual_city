@@ -10,6 +10,7 @@ import '../../domain/models/daemon_kind.dart';
 import '../../domain/models/daemon_model.dart';
 import '../../domain/services/world_simulation.dart';
 import '../../domain/services/daemon_combat_rules.dart';
+import '../../domain/services/spirit_waves.dart';
 import 'daemon_component.dart';
 import 'cell_component.dart';
 
@@ -34,16 +35,11 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
 
   double _timer = 0.0;
 
-  /// Counts up while the player is in the invisible world.
+  /// Counts up while the tutorial fight runs in the invisible world.
   double _continuousSpawnTimer = 0.0;
 
-  /// Next spawn fires after this many real seconds (re-randomised on each spawn).
-  double _nextSpawnInterval = 5.0;
-
-  /// Reduced min/max spawn interval so the world feels populated but not
-  /// overwhelming, especially at the start of a prayer session.
-  static const double _continuousSpawnMin = 3.0; // s
-  static const double _continuousSpawnMax = 12.0; // s
+  /// How often the tutorial looks whether its daemon got away.
+  static const double _tutorialCheck = 3.0; // s
 
   // ── Daemon spawning ───────────────────────────────────────────────────────
 
@@ -108,20 +104,104 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       _tick();
     }
 
-    // ── Continuous spawn while in the invisible world ─────────────────────────
+    // ── In the invisible world: the tutorial daemon, or the 🌊 waves ─────────
     if (game.isSpiritualWorld) {
-      _continuousSpawnTimer += dt;
-      if (_continuousSpawnTimer >= _nextSpawnInterval) {
-        _continuousSpawnTimer = 0.0;
-        _nextSpawnInterval = _continuousSpawnMin +
-            _rng.nextDouble() * (_continuousSpawnMax - _continuousSpawnMin);
-        if (game.tutorialCalmSpirit) {
+      if (game.tutorialCalmSpirit) {
+        _continuousSpawnTimer += dt;
+        if (_continuousSpawnTimer >= _tutorialCheck) {
+          _continuousSpawnTimer = 0.0;
           _keepTutorialDaemon();
-        } else {
-          _maybeContinuousSpawn();
         }
+      } else {
+        _updateWaves(dt);
       }
     }
+  }
+
+  // ── 🌊 Waves (playtest 2026-11-15, SpiritWaves) ───────────────────────────
+
+  /// The waves of this visit to the invisible world.
+  final SpiritWaves waves = SpiritWaves();
+
+  /// Seconds until the next look at what is left of the wave.
+  double _waveCheck = 0.0;
+
+  /// On entering: 🌊1 comes at once. Daemons left from earlier belong to
+  /// no wave.
+  void startWaves() {
+    for (final d in game.world.children.whereType<DaemonComponent>()) {
+      d.model.wave = 0;
+    }
+    waves.start(game.difficulty, _rng);
+    _spawnWave();
+    _waveCheck = 0.0;
+  }
+
+  /// Leaving: the waves end; the next visit starts at 🌊1.
+  void endWaves() {
+    waves.current = const [];
+    game.waveStatus.value = null;
+  }
+
+  void _updateWaves(double dt) {
+    // The tutorial fight just ended inside: the waves begin.
+    if (waves.current.isEmpty) return startWaves();
+    if (waves.pause > 0) {
+      final before = waves.pause.ceil();
+      waves.pause -= dt;
+      if (waves.pause <= 0) {
+        waves.pause = 0;
+        _spawnWave();
+        game.onWaveStarted(waves.wave);
+      } else if (waves.pause.ceil() != before) {
+        _publish(0);
+      }
+      return;
+    }
+    _waveCheck -= dt;
+    if (_waveCheck > 0) return;
+    _waveCheck = 0.5;
+    final left = game.world.children
+        .whereType<DaemonComponent>()
+        .where((d) => d.model.wave == waves.wave && !d.model.dissolved)
+        .length;
+    if (left > 0) {
+      _publish(left);
+      return;
+    }
+    final beaten = waves.wave;
+    waves.cleared(game.difficulty, _rng);
+    _publish(0);
+    game.onWaveCleared(beaten);
+  }
+
+  /// Tells the HUD: while a wave runs the next one is the preview, in the
+  /// pause the one coming.
+  void _publish(int left) {
+    final pausing = waves.pause > 0;
+    game.waveStatus.value = WaveStatus(
+      waves.wave,
+      left,
+      waves.current.length,
+      pausing ? waves.current : waves.next,
+      pausing ? waves.pause.ceil() : 0,
+    );
+  }
+
+  /// All daemons of the wave at once, spread around the pastor.
+  void _spawnWave() {
+    final p = game.player.position;
+    final n = waves.current.length;
+    final turn = _rng.nextDouble() * math.pi * 2;
+    for (var i = 0; i < n; i++) {
+      final a = turn + i / n * math.pi * 2;
+      final d = 220.0 + _rng.nextDouble() * 100.0;
+      final pos = Vector2(p.x + math.cos(a) * d, p.y + math.sin(a) * d);
+      final id = 'daemon_wave_${_daemonIdCounter++}';
+      game.world.add(DaemonComponent(
+          _newDaemon(id, pos, kind: waves.current[i], wave: waves.wave)));
+    }
+    _publish(n);
   }
 
   /// The day being simulated, a few chunks per frame.
@@ -143,7 +223,10 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
       anchors: game.houseAnchors(),
       tuning: game.worldTuning,
     );
-    if (!game.tutorialCalmSpirit) _maybeSpawnDaemons(game.grid.getLoadedChunks());
+    // During the 🌊 waves nothing comes from outside – only the wave.
+    if (!game.tutorialCalmSpirit && !game.isSpiritualWorld) {
+      _maybeSpawnDaemons(game.grid.getLoadedChunks());
+    }
   }
 
   void _continueDay() {
@@ -201,60 +284,6 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     _log.fine('Spawned daemon $id at (${cell.x}, ${cell.y})');
   }
 
-  /// Spawns a single daemon near the player, weighted by cell darkness.
-  ///
-  /// Called every [_nextSpawnInterval] seconds while the player is in the
-  /// invisible world.  Dark cells (state < −0.3) are preferred so daemons
-  /// tend to emerge from shadow rather than light.
-  void _maybeContinuousSpawn() {
-    final maxDaemons = switch (game.difficulty) {
-      Difficulty.easy   => _maxDaemonsEasy,
-      Difficulty.normal => _maxDaemonsNormal,
-      Difficulty.hard   => _maxDaemonsHard,
-    };
-    if (game.world.children.whereType<DaemonComponent>().length >= maxDaemons) {
-      return;
-    }
-
-    final playerPos = game.player.position;
-    final pgx = (playerPos.x / CellComponent.cellSize).floor();
-    final pgy = (playerPos.y / CellComponent.cellSize).floor();
-
-    // Collect candidate cells weighted by darkness within a 20-cell radius.
-    final List<CityCell> candidates = [];
-    final List<double> weights = [];
-    const int searchR = 20;
-
-    for (int dy = -searchR; dy <= searchR; dy += 2) {
-      for (int dx = -searchR; dx <= searchR; dx += 2) {
-        if (dx * dx + dy * dy > searchR * searchR) continue;
-        final cell = game.grid.getCell(pgx + dx, pgy + dy);
-        if (cell == null) continue;
-        if (cell.spiritualState < -0.3) {
-          candidates.add(cell);
-          weights.add(-cell.spiritualState); // darker → higher weight
-        }
-      }
-    }
-
-    if (candidates.isEmpty) return;
-
-    // Weighted random pick.
-    double totalWeight = weights.fold(0.0, (a, b) => a + b);
-    double pick = _rng.nextDouble() * totalWeight;
-    CityCell chosen = candidates.last;
-    for (int i = 0; i < candidates.length; i++) {
-      pick -= weights[i];
-      if (pick <= 0) {
-        chosen = candidates[i];
-        break;
-      }
-    }
-
-    _spawnDaemon(chosen);
-    _log.fine('Continuous spawn at (${chosen.x}, ${chosen.y})');
-  }
-
   /// Returns difficulty-scaled initial energy for a newly spawned daemon.
   double _initialEnergy() => switch (game.difficulty) {
     Difficulty.easy   => _daemonEnergyEasy,
@@ -265,17 +294,22 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   /// A new daemon of a random kind (#178). Its tier follows the player's
   /// grace-delayed power; one in four spawns is a tier weaker, so a fight
   /// always mixes strengths a little.
-  DaemonModel _newDaemon(String id, Vector2 position, {DaemonKind? kind, String? host}) {
+  /// A daemon of a 🌊 [wave] is weaker in the first waves, stronger later.
+  DaemonModel _newDaemon(String id, Vector2 position, {DaemonKind? kind, String? host, int wave = 0}) {
     final k = kind ?? DaemonKind.randomSpawn(_rng);
     var tier = game.daemonTier;
     if (tier > 1 && _rng.nextDouble() < 0.25) tier--;
     return DaemonModel(
       id: id,
       position: position,
-      energy: _initialEnergy() * k.energyFactor * DaemonCombatRules.tierEnergy(tier),
+      energy: _initialEnergy() *
+          k.energyFactor *
+          DaemonCombatRules.tierEnergy(tier) *
+          (wave > 0 ? SpiritWaves.energy(wave) : 1.0),
       kind: k,
       tier: tier,
       hostNpcId: host,
+      wave: wave,
     );
   }
 
@@ -312,30 +346,4 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     game.world.add(DaemonComponent(
         _newDaemon(id, position.clone(), kind: DaemonKind.possessor, host: hostNpcId)));
   }
-
-  /// Spawns [count] daemons in a random ring (100–300 px) around the player.
-  ///
-  /// Called when the player enters the invisible world so that daemons are
-  /// immediately visible rather than waiting for the next tick.
-  void spawnDaemonsAroundPlayer(int count) {
-    final playerPos = game.player.position;
-    const double minDist = 100.0;
-    const double maxDist = 300.0;
-    for (int i = 0; i < count; i++) {
-      // Spread daemons evenly around the player (+ small random jitter)
-      final baseAngle = (i / count) * math.pi * 2;
-      final angle = baseAngle + (_rng.nextDouble() - 0.5) * (math.pi / count);
-      final dist = minDist + _rng.nextDouble() * (maxDist - minDist);
-
-      final spawnPos = Vector2(
-        playerPos.x + math.cos(angle) * dist,
-        playerPos.y + math.sin(angle) * dist,
-      );
-
-      final id = 'daemon_entry_${_daemonIdCounter++}';
-      game.world.add(DaemonComponent(_newDaemon(id, spawnPos)));
-      _log.fine('Entry-spawned daemon $id around player');
-    }
-  }
-
 }

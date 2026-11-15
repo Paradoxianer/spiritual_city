@@ -13,6 +13,7 @@ import '../../../core/i18n/app_language.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/services/combat_abilities.dart';
+import '../domain/services/spirit_waves.dart';
 import '../domain/models/skills.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/actions/game_action.dart';
@@ -356,6 +357,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         _ResourceHud(gameRef: _game),
                         _PastorhouseHud(game: _game),
                         _TrackedMissionHud(game: _game),
+                        _WaveHud(game: _game),
                         _LessonChip(game: _game),
                       ],
                     ),

@@ -8,7 +8,11 @@ class NarratorLine {
   final String emoji;
   final String title;
   final String text;
-  const NarratorLine(this.key, this.emoji, this.title, this.text);
+
+  /// A picture of who speaks instead of [emoji] (asset path), e.g. the
+  /// Salvation Army officer who congratulates on a neighbourhood.
+  final String? figure;
+  const NarratorLine(this.key, this.emoji, this.title, this.text, {this.figure});
 }
 
 /// The narrator (playtests 2026-10-31): the only text in the game screen –
@@ -30,7 +34,7 @@ abstract final class Narrator {
   /// [passingGap] – walking along a street must not restart the
   /// typewriter again and again (playtest 2026-10-31).
   static void say(String key, String emoji, String title, String? text,
-      {bool force = false, bool passing = false}) {
+      {bool force = false, bool passing = false, String? figure}) {
     if (!TextMode.on || text == null || text.isEmpty) return;
     if (current.value?.key == key && current.value?.text == text) return;
     if (passing) {
@@ -39,7 +43,7 @@ abstract final class Narrator {
       if (now.difference(_lastPassing) < passingGap) return;
       _lastPassing = now;
     }
-    current.value = NarratorLine(key, emoji, title, text);
+    current.value = NarratorLine(key, emoji, title, text, figure: figure);
   }
 
   static const Duration passingGap = Duration(seconds: 8);

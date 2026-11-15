@@ -475,6 +475,13 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         )..layout(),
       );
 
+  /// Hint above a shielded 👁️ possessor: its host needs 👂 or 🙏 in the
+  /// visible world first.
+  static final TextPainter _hostHint = TextPainter(
+    text: const TextSpan(text: '👂🙏', style: TextStyle(fontSize: 10)),
+    textDirection: TextDirection.ltr,
+  )..layout();
+
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) return;
@@ -507,6 +514,8 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // Not yet vulnerable (possessor): a closed dark ring.
     if (!isVulnerable) {
       canvas.drawCircle(center, _daemonSize * 0.6, _shieldPaint);
+      _hostHint.paint(canvas,
+          center - Offset(_hostHint.width / 2, _daemonSize * 0.6 + _hostHint.height + 2));
     }
 
     // Active Effect Auras (Issue #9)
