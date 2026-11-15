@@ -106,8 +106,8 @@ class _EdgeGlowPainter extends CustomPainter {
   /// One line [inset] px from the edge; returns how wide it is.
   double _line(Canvas canvas, Rect rect, double inset, double urgency, Color color) {
     // Thin but solid (playtest 2026-11-15: 10–20 px was far too thick):
-    // 3 px at the first warning, 6 px when empty …
-    final w = 3 + 3 * urgency;
+    // 1.5 px at the first warning, 3 px when empty …
+    final w = 1.5 + 1.5 * urgency;
     // … and behind it a soft gradient fading into the game, 50 → 90 px.
     final depth = 50 + 40 * urgency;
     final inner = rect.deflate(inset);
