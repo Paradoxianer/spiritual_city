@@ -192,6 +192,70 @@ abstract final class KenneyCityRenderer {
   static final Paint _pitchLine = Paint()..color = const Color(0xCCFFFFFF);
   static final Paint _stripe = Paint()..color = const Color(0x22000000);
 
+  static final Paint _stand = Paint()..color = const Color(0xFF9E9E9E);
+  static final Paint _seat = Paint()..color = const Color(0xFFC62828);
+  static final Paint _standRoof = Paint()..color = const Color(0xFF455A64);
+  static final Paint _mast = Paint()..color = const Color(0xFF37474F);
+  static final Paint _flood = Paint()..color = const Color(0xFFFFF59D);
+  static final Paint _circle = Paint()
+    ..color = const Color(0xCCFFFFFF)
+    ..style = PaintingStyle.stroke;
+
+  /// The stadium (playtest 2026-11-15: from outside it was only grass):
+  /// stands with red seat rows and a roof all round, floodlights at the
+  /// corners, the pitch in the middle with touchlines, halfway line and
+  /// centre circle.
+  static void _stadium(Canvas canvas, Rect r, bool n, bool s, bool w, bool e,
+      bool Function(int dx, int dy) same) {
+    final u = r.width / 16;
+    if (!n || !s || !w || !e) {
+      // Stands: concrete, seat rows parallel to the pitch, roof outside.
+      canvas.drawRect(r, _stand);
+      for (var i = 0; i < 3; i++) {
+        final d = (4 + i * 4) * u; // distance from the outer edge
+        if (!n) canvas.drawRect(Rect.fromLTWH(r.left, r.top + d, r.width, 2 * u), _seat);
+        if (!s) canvas.drawRect(Rect.fromLTWH(r.left, r.bottom - d - 2 * u, r.width, 2 * u), _seat);
+        if (!w) canvas.drawRect(Rect.fromLTWH(r.left + d, r.top, 2 * u, r.height), _seat);
+        if (!e) canvas.drawRect(Rect.fromLTWH(r.right - d - 2 * u, r.top, 2 * u, r.height), _seat);
+      }
+      if (!n) canvas.drawRect(Rect.fromLTWH(r.left, r.top, r.width, 3 * u), _standRoof);
+      if (!s) canvas.drawRect(Rect.fromLTWH(r.left, r.bottom - 3 * u, r.width, 3 * u), _standRoof);
+      if (!w) canvas.drawRect(Rect.fromLTWH(r.left, r.top, 3 * u, r.height), _standRoof);
+      if (!e) canvas.drawRect(Rect.fromLTWH(r.right - 3 * u, r.top, 3 * u, r.height), _standRoof);
+      // Floodlight masts at the corners.
+      if ((!n || !s) && (!w || !e)) {
+        final c = Offset(!w ? r.left + 4 * u : r.right - 4 * u, !n ? r.top + 4 * u : r.bottom - 4 * u);
+        canvas.drawCircle(c, 3 * u, _mast);
+        canvas.drawCircle(c, 2 * u, _flood);
+      }
+      return;
+    }
+    // The pitch.
+    _tile(canvas, _grass, r);
+    if (same(0, 0) && (r.left ~/ r.width).isEven) canvas.drawRect(r, _stripe);
+    // Touchlines where the stands begin.
+    if (!same(0, -2)) canvas.drawRect(Rect.fromLTWH(r.left, r.top + u, r.width, u), _pitchLine);
+    if (!same(0, 2)) canvas.drawRect(Rect.fromLTWH(r.left, r.bottom - 2 * u, r.width, u), _pitchLine);
+    if (!same(-2, 0)) canvas.drawRect(Rect.fromLTWH(r.left + u, r.top, u, r.height), _pitchLine);
+    if (!same(2, 0)) canvas.drawRect(Rect.fromLTWH(r.right - 2 * u, r.top, u, r.height), _pitchLine);
+    // Halfway line and centre circle in the middle column / cell.
+    int run(int dx, int dy) {
+      var k = 0;
+      while (k < 8 && same(dx * (k + 1), dy * (k + 1))) {
+        k++;
+      }
+      return k;
+    }
+
+    final midX = run(-1, 0) == run(1, 0);
+    final midY = run(0, -1) == run(0, 1);
+    if (midX) canvas.drawRect(Rect.fromLTWH(r.center.dx - u / 2, r.top, u, r.height), _pitchLine);
+    if (midX && midY) {
+      _circle.strokeWidth = u;
+      canvas.drawCircle(r.center, r.width * 0.42, _circle);
+    }
+  }
+
   static void _building(
     Canvas canvas,
     Rect r,
@@ -217,13 +281,7 @@ abstract final class KenneyCityRenderer {
       return;
     }
     if (type == BuildingType.stadium) {
-      _tile(canvas, _grass, r);
-      if (wx.isEven) canvas.drawRect(r, _stripe);
-      final u = r.width / 16;
-      if (!n) canvas.drawRect(Rect.fromLTWH(r.left, r.top + u, r.width, u), _pitchLine);
-      if (!s) canvas.drawRect(Rect.fromLTWH(r.left, r.bottom - 2 * u, r.width, u), _pitchLine);
-      if (!w) canvas.drawRect(Rect.fromLTWH(r.left + u, r.top, u, r.height), _pitchLine);
-      if (!e) canvas.drawRect(Rect.fromLTWH(r.right - 2 * u, r.top, u, r.height), _pitchLine);
+      _stadium(canvas, r, n, s, w, e, same);
       return;
     }
 
