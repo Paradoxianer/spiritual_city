@@ -275,7 +275,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
             },
           ),
-          // Red edge: pulses with hunger 🍞, flares when a daemon strikes.
+          // Red edge: pulses with low ❤️ or 🍞, flares when a daemon strikes.
           ValueListenableBuilder<bool>(
             valueListenable: _game.isWorldReady,
             builder: (context, isReady, _) =>
@@ -386,14 +386,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             builder: (context, isReady, _) {
               if (!isReady) return const SizedBox.shrink();
               return _MissionCompleteToast(game: _game);
-            },
-          ),
-          // Health alarm – red pulsing edge overlay when health < 15%
-          ValueListenableBuilder<bool>(
-            valueListenable: _game.isWorldReady,
-            builder: (context, isReady, _) {
-              if (!isReady) return const SizedBox.shrink();
-              return _HealthAlarmOverlay(game: _game);
             },
           ),
           // Faint overlay – full-screen blackout during faint animation
