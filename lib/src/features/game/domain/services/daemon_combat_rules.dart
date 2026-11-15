@@ -119,6 +119,10 @@ abstract final class DaemonCombatRules {
   // ── Tier (visible strength) ─────────────────────────────────────────────
   static const int maxTier = 3;
 
+  /// How hard a daemon strikes the pastor: as big as it is – kind × tier
+  /// (🐍 0.8 … 🪨 tier 3 2.1). Its remaining life scales it further.
+  static double strikeFactor(DaemonKind kind, int tier) => kind.sizeFactor * tierSize(tier);
+
   /// Size grows by 25 % per tier above 1.
   static double tierSize(int tier) => 1.0 + 0.25 * (tier - 1);
 

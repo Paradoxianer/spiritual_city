@@ -416,8 +416,10 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     final strength =
         (model.energy.abs() / model.initialEnergy.abs()).clamp(0.0, 1.0);
 
-    // Difficulty amplifier: hard daemons hit harder.
-    final amp = _cellDrainMultiplier; // easy=0.67, normal=1.0, hard=2.0
+    // Difficulty amplifier: hard daemons hit harder – and bigger ones too
+    // (kind × tier, playtest 2026-11-15: a 🪨 tier 3 hit like a small 🐍).
+    final amp = _cellDrainMultiplier * // easy=0.67, normal=1.0, hard=2.0
+        DaemonCombatRules.strikeFactor(model.kind, model.tier);
 
     final hpDamage     = (8.0 * strength * amp).clamp(1.0, 30.0);
     final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0) *
@@ -434,7 +436,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     game.world.add(StrikeBurstComponent(
       position: game.player.position.clone(),
       daemonAt: position.clone(),
-      radius: 4 * CellComponent.cellSize,
+      radius: 4 * CellComponent.cellSize * DaemonCombatRules.strikeFactor(model.kind, model.tier).clamp(0.7, 2.0),
     ));
     game.hitFlash.value++;
     GameSound.play(Sfx.denied, volume: 0.6);

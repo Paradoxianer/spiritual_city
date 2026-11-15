@@ -547,11 +547,10 @@ class BuildingInteractionService {
           reactionEmoji: '⛪🙏🎶🕊️',
         );
 
+      // 🙏 and the other everyday steps (playtest 2026-11-15: the
+      // first visit needs something to do).
       default:
-        return const BuildingInteractionResult(
-          reactionEmoji: '❓',
-          success: false,
-        );
+        return _genericAction(actionType, building);
     }
   }
 
@@ -624,11 +623,10 @@ class BuildingInteractionService {
           reactionEmoji: '⭕🙏🔥👥',
         );
 
+      // 🙏 and the other everyday steps (playtest 2026-11-15: the
+      // first visit needs something to do).
       default:
-        return const BuildingInteractionResult(
-          reactionEmoji: '❓',
-          success: false,
-        );
+        return _genericAction(actionType, building);
     }
   }
 

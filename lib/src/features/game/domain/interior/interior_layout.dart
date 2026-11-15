@@ -13,7 +13,9 @@ import '../models/cell_object.dart';
 /// the 😴 bed to sleep, to the ⛪ altar to hold a service.
 enum InteriorTile { wall, wallFace, floor, door }
 
-enum FloorStyle { wood, stone, tiles }
+/// [pitch]: the stadium – turf with white lines, open air (playtest
+/// 2026-11-15: it looked like a house inside).
+enum FloorStyle { wood, stone, tiles, pitch }
 
 /// Furniture in cells (w × h). Floor-level pieces (rugs, carpet) don't
 /// block; wall decor hangs on the wall-face row.
@@ -357,6 +359,7 @@ class _Builder {
       BuildingType.cityHall || BuildingType.museum || BuildingType.trainStation ||
       BuildingType.cemetery || BuildingType.university =>
         FloorStyle.stone,
+      BuildingType.stadium => FloorStyle.pitch,
       _ => FloorStyle.wood,
     };
     _shell(
@@ -493,13 +496,8 @@ class _Builder {
           row(FurnitureKind.bench, y, step: 3);
         }
       case BuildingType.stadium:
-        // Event hall: a stage with a big rug at the front, stands behind.
-        if (_fits(FurnitureKind.rug, doorX - 1, 3)) {
-          items.add(Furniture(FurnitureKind.rug, doorX - 1, 3));
-        }
-        for (int y = 7; y < h - 3; y += 2) {
-          row(FurnitureKind.pew, y, step: 5);
-        }
+        // The pitch stays free; the stands run along the back.
+        row(FurnitureKind.bench, 2, step: 2);
       case BuildingType.policeStation:
         row(FurnitureKind.desk, 5, step: 4);
         row(FurnitureKind.chair, 6, step: 4);

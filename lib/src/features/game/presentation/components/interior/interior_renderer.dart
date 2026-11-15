@@ -43,6 +43,7 @@ abstract final class InteriorRenderer {
         _tile(canvas, l, x, y);
       }
     }
+    if (l.floor == FloorStyle.pitch) _pitchLines(canvas, l);
     // Floor-level pieces first, then furniture, then wall decor.
     for (final f in l.furniture.where((f) => !f.kind.blocks && !f.kind.onWall)) {
       _furniture(canvas, f, highlightGreen: f.action == 'prayerCircle');
@@ -54,6 +55,18 @@ abstract final class InteriorRenderer {
       _furniture(canvas, f);
     }
     return recorder.endRecording();
+  }
+
+  /// The stadium's markings: touchlines, halfway line, centre circle.
+  static void _pitchLines(Canvas c, InteriorLayout l) {
+    final line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = const Color(0xCCFFFFFF);
+    final field = Rect.fromLTRB(1.5 * cell, 3.5 * cell, (l.width - 1.5) * cell, (l.height - 1.5) * cell);
+    c.drawRect(field, line);
+    c.drawLine(Offset(field.left, field.center.dy), Offset(field.right, field.center.dy), line);
+    c.drawCircle(field.center, 1.5 * cell, line);
   }
 
   static Rect _rect(int x, int y, [int w = 1, int h = 1]) =>
@@ -94,10 +107,18 @@ abstract final class InteriorRenderer {
   }
 
   static void _floor(Canvas c, FloorStyle style, Rect r) {
+    if (style == FloorStyle.pitch) {
+      // Turf, mown in stripes two cells wide.
+      final stripe = ((r.left / cell).floor() ~/ 2).isEven;
+      _fill.color = stripe ? const Color(0xFF43A047) : const Color(0xFF388E3C);
+      c.drawRect(r, _fill);
+      return;
+    }
     final (col, row) = switch (style) {
       FloorStyle.wood => (8, 2),
       FloorStyle.stone => (7, 2),
       FloorStyle.tiles => (6, 2),
+      FloorStyle.pitch => (8, 2),
     };
     if (!_sprite(c, _rpg, col, row, 1, 1, r)) {
       _fill.color = const Color(0xFFB08458);

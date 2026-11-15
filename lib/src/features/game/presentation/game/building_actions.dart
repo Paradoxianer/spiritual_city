@@ -38,11 +38,16 @@ extension GameBuildingActions on SpiritWorldGame {
     final special = _learnedAbility(actionType, data.building);
     if (special != null) return special;
 
+    final countBefore = data.building.interactionCount;
     var result = buildingInteractionService.performAction(
       actionType,
       data.building,
       faith,
     );
+    // Tried but it did not work out (e.g. 🙏 rejected): it still was a step
+    // of the visit – the same point on the wall as the counter that unlocks
+    // the next actions (playtest 2026-11-15: they did not match).
+    final tried = result.success || data.building.interactionCount > countBefore;
 
     // Faith that grows with the pastor (playtest 2026-11-13).
     if (result.success) {
@@ -145,8 +150,8 @@ extension GameBuildingActions on SpiritWorldGame {
     // Increment session interaction counter for buildings (mirrors NPC dialog
     // behaviour).  The homebase has an unlimited limit so this counter never
     // triggers an auto-leave there.
+    if (tried) data.building.currentSessionInteractions++;
     if (result.success) {
-      data.building.currentSessionInteractions++;
       if (action != null) {
         data.building.interactionCount += BuildingModel.effortBonus(
           faithCost: action.cost(difficulty).of(Resource.faith),
