@@ -208,11 +208,20 @@ class NPCRegistry {
   /// NPCs still spawn close to their home/work place.
   List<int>? _findWalkableNeighbour(
       CityChunk chunk, List<List<int>> buildingCells) {
+    return _nearestRoad(chunk, buildingCells, _isSafeSpawnCell) ??
+        // Only a road along the chunk's edge (it goes on next door): any
+        // road will do – a house must never stay empty (playtest
+        // 2026-11-17: its 🔒✝️ actions could never open).
+        _nearestRoad(chunk, buildingCells, _isRoadChunkCell);
+  }
+
+  List<int>? _nearestRoad(CityChunk chunk, List<List<int>> buildingCells,
+      bool Function(CityChunk chunk, int x, int y) usable) {
     List<int>? bestCell;
     var bestDistance = _maxDistanceSentinel;
     for (int y = 0; y < CityChunk.chunkSize; y++) {
       for (int x = 0; x < CityChunk.chunkSize; x++) {
-        if (!_isSafeSpawnCell(chunk, x, y)) continue;
+        if (!usable(chunk, x, y)) continue;
         final distance = _distanceToNearestBuildingCell(x, y, buildingCells);
         if (distance < bestDistance) {
           bestDistance = distance;

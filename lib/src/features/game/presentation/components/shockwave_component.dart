@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../spirit_world_game.dart';
@@ -149,16 +150,14 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
     if (_currentRadius < 5.0) return; // Hide very small start to avoid blob
 
     final progress = (_currentRadius / maxRadius).clamp(0.01, 1.0);
-    // A 🌊 breakthrough is far thicker and stays bright longer than any
-    // prayer wave – unmistakable (playtest 2026-11-17).
-    final big = source == breakthrough;
-    final alpha = (1.0 - progress) * (big ? 0.85 : 0.5);
+    if (source == breakthrough) return _renderBreakthrough(canvas, progress);
+    final alpha = (1.0 - progress) * 0.5;
     
     // Main shockwave body
     final paint = Paint()
       ..color = color.withValues(alpha: alpha * 0.7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = big ? 60.0 + progress * 140.0 : 5.0 + (progress * 55.0);
+      ..strokeWidth = 5.0 + (progress * 55.0);
     
     // Blur grows with expansion to avoid "static aura" at start
     final blurAmount = (5.0 + progress * 25.0) * (1.0 - progress);
@@ -172,7 +171,26 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
     final edgePaint = Paint()
       ..color = color.withValues(alpha: alpha * 1.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = big ? 6.0 + progress * 4.0 : 1.0 + (progress * 2.0);
+      ..strokeWidth = 1.0 + (progress * 2.0);
     canvas.drawCircle(Offset.zero, _currentRadius, edgePaint);
+  }
+
+  /// A 🌊 breakthrough: one wide band, strongest along its middle and
+  /// fading out to both sides – like a wave crest, no blurred aura
+  /// (playtest 2026-11-17). Far wider than any prayer wave.
+  void _renderBreakthrough(Canvas canvas, double progress) {
+    final r = _currentRadius;
+    final half = math.min(r, 40.0 + progress * 60.0);
+    final outer = r + half;
+    final c = color.withValues(alpha: 0.9 * (1.0 - progress * 0.7));
+    final clear = color.withValues(alpha: 0);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = half * 2
+      ..shader = RadialGradient(
+        colors: [clear, c, clear],
+        stops: [(r - half) / outer, r / outer, 1.0],
+      ).createShader(Rect.fromCircle(center: Offset.zero, radius: outer));
+    canvas.drawCircle(Offset.zero, r, paint);
   }
 }
