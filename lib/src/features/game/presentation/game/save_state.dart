@@ -136,7 +136,7 @@ extension GameSaveState on SpiritWorldGame {
     npc.interactionCount  = (saved['conv']    as num?)?.toInt()    ?? npc.interactionCount;
     npc.isConverted       = saved['converted'] as bool? ?? npc.isConverted;
     if (saved['possessed'] is bool) npc.possessed = saved['possessed'] as bool;
-    npc.possessionWeakened = saved['possWeak'] as bool? ?? false;
+    npc.delivered = saved['delivered'] as bool? ?? false;
     if (saved['disciple'] is Map) {
       npc.discipleProfile =
           CombatProfile.fromJson((saved['disciple'] as Map).cast<String, dynamic>());
@@ -240,7 +240,7 @@ extension GameSaveState on SpiritWorldGame {
           // stays free even while still hostile.
           if (npc.faith < NPCModel.possessionFaithThreshold || !npc.possessed)
             'possessed': npc.possessed,
-          if (npc.possessionWeakened)    'possWeak': true,
+          if (npc.delivered)             'delivered': true,
           if (npc.isDisciple)            'disciple': npc.discipleProfile.toJson(),
           'posX': npcComp.position.x,
           'posY': npcComp.position.y,

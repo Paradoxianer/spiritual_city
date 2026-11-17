@@ -32,7 +32,7 @@ So erkennt der Spieler beim Kämpfen, **wer** für Dunkelheit oder Licht verantw
 
 - Sehr feindliche NPCs (Startwert: Faith < −60) können **besetzt** sein (Chance seed-basiert, deterministisch).
 - Ein besetzter NPC ist als solcher erkennbar (Aura mit Dämonen-Symbol) und **spawnt Dämonen vom Typ Besetzer** an seiner Position (`daemons_and_combat.md`).
-- **Befreiung braucht beide Welten:** In der realen Welt Seelsorge/Gebet (hebt Faith über die Schwelle, öffnet die Besessenheit), in der unsichtbaren Welt den Besetzer-Dämon besiegen. Nur eines von beidem reicht nicht.
+- **Befreiung durch Gebet, Fürsorge danach** (Playtest 2026-11-16, ersetzt „Befreiung braucht beide Welten“): Der 👁️ Besetzer ist immer angreifbar – zäh, aber Befreiung ist seine Schwäche. Besiegt ist der Mensch frei (+40 Glauben, Einsicht) und es kommt kein neuer Besetzer. Danach zählt 👂 Seelsorge an ihm doppelt (Mk 1,25; Lk 10,17; Mk 5,15–19). Die frühere Sperre (erst Seelsorge, dann angreifbar) war unsichtbar und frustrierend – und biblisch falsch herum. Mögliche Erweiterung, bewusst nicht umgesetzt: das „leere Haus“ (Lk 11,24–26).
 - Belohnung: NPC-Faith springt hoch, Cell-Puls, Insight-Bonus, Missionsfortschritt.
 
 ## 4. Bekehrte stützen befreite Zellen (#180)

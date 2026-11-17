@@ -154,11 +154,11 @@ abstract final class HelpContent {
       pt: 'Vocês conversam. Quem se conhece confia – a pessoa se abre para Deus e a barra ✝️ sobe. Cada visita aprofunda o relacionamento.',
     ),
     ActionId.counsel: Tr(
-      'Du hörst zu und begleitest seelsorgerlich. Das kostet dich Kraft (❤️), bewegt aber viel: Der Glaube der Person wächst deutlich, eure Beziehung wird tiefer. Bei Besessenen ist es der erste Schritt zur Befreiung.',
-      'You listen and give pastoral care. It costs you strength (❤️) but moves a lot: the person\'s faith grows clearly and your relationship deepens. With possessed people it is the first step towards freedom.',
-      es: 'Escuchas y acompañas. Te cuesta fuerzas (❤️), pero mueve mucho: la fe de la persona crece claramente y vuestra relación se hace más profunda. Con los poseídos es el primer paso hacia la libertad.',
-      fr: 'Tu écoutes et accompagnes. Cela te coûte des forces (❤️), mais fait beaucoup : la foi de la personne grandit nettement et votre relation s’approfondit. Avec les possédés, c’est le premier pas vers la délivrance.',
-      pt: 'Você ouve e aconselha. Custa forças (❤️), mas move muito: a fé da pessoa cresce bastante e o relacionamento se aprofunda. Com pessoas possessas é o primeiro passo para a libertação.',
+      'Du hörst zu und begleitest seelsorgerlich. Das kostet dich Kraft (❤️), bewegt aber viel: Der Glaube der Person wächst deutlich, eure Beziehung wird tiefer. Wer gerade von einem Besetzer befreit wurde, braucht sie am meisten – dann wirkt sie doppelt.',
+      'You listen and give pastoral care. It costs you strength (❤️) but moves a lot: the person\'s faith grows clearly and your relationship deepens. Someone just set free from a possessor needs it most – then it counts double.',
+      es: 'Escuchas y acompañas. Te cuesta fuerzas (❤️), pero mueve mucho: la fe de la persona crece claramente y vuestra relación se hace más profunda. Quien acaba de ser liberado de un poseedor es quien más lo necesita: entonces cuenta el doble.',
+      fr: 'Tu écoutes et accompagnes. Cela te coûte des forces (❤️), mais fait beaucoup : la foi de la personne grandit nettement et votre relation s’approfondit. Celui qui vient d’être délivré d’un possesseur en a le plus besoin – alors cela compte double.',
+      pt: 'Você ouve e aconselha. Custa forças (❤️), mas move muito: a fé da pessoa cresce bastante e o relacionamento se aprofunda. Quem acabou de ser liberto de um possessor é quem mais precisa – aí vale o dobro.',
     ),
     ActionId.pray: Tr(
       'Du bietest an, mit der Person zu beten (−🙏). Nimmt sie an, wächst ihr Glaube – und die unsichtbare Welt um euch wird ein wenig heller.',
@@ -675,7 +675,7 @@ abstract final class HelpContent {
     DaemonKind.lurker: Tr('Lauerer: schnell, schwach, kommt in Gruppen.', 'Lurker: fast, weak, comes in groups.', es: 'Acechador: rápido, débil, viene en grupos.', fr: 'Rôdeur : rapide, faible, vient en groupe.', pt: 'Espreitador: rápido, fraco, vem em grupos.'),
     DaemonKind.brute: Tr('Koloss: langsam, sehr viel Kraft.', 'Brute: slow, lots of strength.', es: 'Bruto: lento, con mucha fuerza.', fr: 'Brute : lent, très fort.', pt: 'Brutamontes: lento, muita força.'),
     DaemonKind.leech: Tr('Sauger: zieht dir in der Nähe Glauben ab.', 'Leech: drains your faith while close.', es: 'Sanguijuela: te quita fe mientras está cerca.', fr: 'Sangsue : aspire ta foi quand elle est proche.', pt: 'Sanguessuga: suga sua fé enquanto está perto.'),
-    DaemonKind.possessor: Tr('Besetzer: sitzt in einem Menschen. Erst besiegbar, wenn dieser Mensch in der Stadt Seelsorge bekommen hat.', 'Possessor: sits in a person. Only beatable once that person was cared for in the city.', es: 'Poseedor: habita en una persona. Solo se puede vencer cuando esa persona fue cuidada en la ciudad.', fr: 'Possesseur : habite une personne. On ne peut le vaincre qu’après avoir pris soin de cette personne en ville.', pt: 'Possessor: habita numa pessoa. Só pode ser vencido depois que essa pessoa for cuidada na cidade.'),
+    DaemonKind.possessor: Tr('Besetzer: sitzt in einem Menschen und ist zäh. Befreiung trifft ihn am stärksten – besiegt, ist der Mensch frei.', 'Possessor: sits in a person and is tough. Liberation hits it hardest – once beaten, the person is free.', es: 'Poseedor: habita en una persona y es resistente. La liberación lo golpea con más fuerza; vencido, la persona queda libre.', fr: 'Possesseur : habite une personne et est coriace. La délivrance le frappe le plus fort – vaincu, la personne est libre.', pt: 'Possessor: habita numa pessoa e é resistente. A libertação o atinge com mais força – vencido, a pessoa fica livre.'),
   };
 
   static const Map<Skill, Tr> skills = {

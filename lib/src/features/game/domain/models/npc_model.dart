@@ -100,10 +100,9 @@ class NPCModel extends BaseInteractableEntity {
   late bool possessed =
       faith < possessionFaithThreshold && stableStringHash('$id#possessed').isEven;
 
-  /// Cared for in the real world (👂 counselling or 🙏 accepted prayer):
-  /// the possessor becomes beatable in the invisible world. Freedom needs
-  /// both – care *and* prayer (Mark 9:29).
-  bool possessionWeakened = false;
+  /// Set free from a 👁️ possessor by prayer in the invisible world. Care
+  /// comes after (Mark 5:15–19): 👂 counselling them counts double.
+  bool delivered = false;
 
   /// ✝️💔 A Christian whose faith fell this low (dark surroundings, no
   /// care) is shaken: they no longer protect the ground or pray along until
