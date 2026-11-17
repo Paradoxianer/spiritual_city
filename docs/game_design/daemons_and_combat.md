@@ -65,7 +65,7 @@ Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, u
 - **Besiegt:** grüne Welle vom Pastor aus (Radius 6 Felder × Welle, Stärke 50 + 10 × Welle, Menschen +2 × Welle offener) – **ohne Deckel**. Dann **6 s Pause** mit Countdown `⏳` und Vorschau; dann kommt die angekündigte Welle.
 - Der Erzähler erklärt Wellen und Durchbruch je einmal pro Spiel; sonst keine Einblendungen (nur Ton).
 - Keine Resistenzen, kein Jünger-Schaden (siehe unten, zurückgenommen).
-- 👁️ Besetzer: über dem schwarzen Ring steht `👂🙏` – Seelsorge oder Gebet mit dem Menschen in der sichtbaren Welt macht ihn angreifbar.
+- 👁️ Besetzer: kein schwarzer Ring mehr – immer angreifbar, Befreiung ist seine Schwäche; besiegt ist der Mensch frei (npc_influence.md §3, Playtest 2026-11-16).
 - Code: `SpiritWaves`, `WaveStatus`, `SpiritualDynamicsSystem.startWaves`, `GameSpiritWaves`, `_WaveHud`.
 
 ## 4a. Resistenzen (Playtest 2026-11-14)

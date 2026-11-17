@@ -165,19 +165,24 @@ void main() {
       expect(again.possessed, isTrue);
     });
 
-    test('counselling loosens the possession (real-world half)', () {
-      final npc = possessed();
-      final r = NpcInteractionService(difficulty: Difficulty.normal).perform(
-        'counsel',
-        npc,
-        spiritualState: 0,
-        playerFaith: 100,
-        playerHealth: 100,
-        playerMaterials: 100,
-      );
-      expect(r.possessionWeakened, isTrue);
-      expect(npc.possessionWeakened, isTrue);
-      expect(npc.possessed, isTrue, reason: 'still needs the invisible-world half');
+    // Playtest 2026-11-16: the possessor is beaten by prayer alone; care
+    // comes after – counselling a delivered person counts double (Mk 5,15).
+    test('counselling a delivered person counts double', () {
+      double counsel(bool delivered) {
+        final npc = possessed()
+          ..possessed = false
+          ..delivered = delivered;
+        NpcInteractionService(difficulty: Difficulty.normal).perform(
+          'counsel',
+          npc,
+          spiritualState: 0,
+          playerFaith: 100,
+          playerHealth: 100,
+          playerMaterials: 100,
+        );
+        return npc.lastNpcFaithDelta;
+      }
+      expect(counsel(true), counsel(false) * 2);
     });
   });
 

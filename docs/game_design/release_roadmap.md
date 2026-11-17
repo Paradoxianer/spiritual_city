@@ -223,7 +223,7 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | :--- | :--- | :--- |
 | Dämonentypen (#178) | ✅ 🐍 Schleicher (schwach gegen ⏳), 🪨 Brocken (🫸), 🦇 Sauger (🪫, zieht Glauben), 👁️ Besetzer. Stufe 1–3 an Größe und Schleimspur sichtbar, skaliert mit Upgrades und Erweckungen; Gnadenfrist 3 Besuche nach einem Upgrade. | Eph 6,12 – der Kampf ist geistlich |
 | Kombos | ✅ ⏳ → 🪫 → 🫸: längeres Entziehen, stärkerer Rückstoß, Kettenblitz (50 % der Dämonen-Energie). Reine Regeln in `DaemonCombatRules`, getestet. | |
-| Besessenheit (#180) | ✅ Sehr feindliche Menschen können besetzt sein. Frei werden sie nur, wenn beides geschieht: 👂 Seelsorge oder angenommenes 🙏 Gebet in der realen Welt **und** der besiegte 👁️ Besetzer in der unsichtbaren Welt. | Mk 9,29 |
+| Besessenheit (#180) | ✅ Sehr feindliche Menschen können besetzt sein. Frei werden sie, wenn der 👁️ Besetzer in der unsichtbaren Welt besiegt ist; danach zählt 👂 Seelsorge an ihnen doppelt (Playtest 2026-11-16). | Mk 1,25; Mk 5,15 |
 | Bekehrte stützen Zellen | ✅ Weniger Rückfall in der Nähe von Christen, mit abnehmendem Ertrag. | Mt 5,14 – Licht der Welt |
 | Lern-Missionen (§3.9) | ✅ Rahmen + 🫂 Seelsorge (🏥), ⚔️ Kampf (⛪), 👁️ Unterscheidung (📚/🏛️). Lektion = Emoji-Satz + Bibelvers (einziger Text, gemeinfreie Übersetzungen) + Aufgabe. Fürbitte/Fasten/Predigen sind angelegt, ihre Wirkung kommt in M3. | 2 Kor 1,4 · Eph 6,12 · 1 Joh 4,1 |
 | Viertel + Bollwerk (#125) | ✅ Viertel = 3×3 Chunks. 🏰 öffnet sich ab 25 % Christen (mind. 3), fällt nur durch anhaltendes Befreiungsgebet, regeneriert ohne Gebet, schickt Wachen. Erweckung: +3 📖, helles Gebiet. Die 50 % aus `core_loop_and_retention.md` waren für eine Session zu viel. | 2 Kor 10,4 |

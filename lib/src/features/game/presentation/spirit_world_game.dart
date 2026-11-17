@@ -554,26 +554,17 @@ class SpiritWorldGame extends FlameGame
   /// 👁️ Discernment of spirits learned: daemon kinds are shown.
   bool get canDiscernSpirits => progress.skills.has(Skill.discernment);
 
-  /// A 👁️ possessor can only be fought once its host was cared for in the
-  /// real world (Mark 9:29 – prayer *and* care, npc_influence.md).
-  bool isPossessorVulnerable(DaemonModel daemon) {
-    final host = daemon.hostNpcId;
-    if (host == null) return true;
-    final npc = chunkManager.findNpcModel(host);
-    return npc == null || npc.possessionWeakened;
-  }
-
   /// Insight for freeing a possessed person.
   static const double possessionReleaseInsight = 0.5;
 
   /// Faith a person gains when freed from possession.
   static const double possessionReleaseFaith = 40.0;
 
-  /// Both worlds came together: the possessor was beaten after the person
-  /// was cared for. The person is free and much more open (#180).
+  /// The possessor was beaten by prayer: the person is free and much more
+  /// open (#180); 👂 care afterwards counts double ([NPCModel.delivered]).
   void _releaseFromPossession(NPCModel npc) {
     npc.possessed = false;
-    npc.possessionWeakened = false;
+    npc.delivered = true;
     npc.applyInfluence(possessionReleaseFaith);
     progress.addInsight(possessionReleaseInsight);
     final comp = chunkManager.findNpcComponent(npc.id);
@@ -688,7 +679,7 @@ class SpiritWorldGame extends FlameGame
     }
     if (daemon.hostNpcId != null) {
       final npc = chunkManager.findNpcModel(daemon.hostNpcId!);
-      if (npc != null && npc.possessionWeakened) _releaseFromPossession(npc);
+      if (npc != null && npc.possessed) _releaseFromPossession(npc);
     }
   }
 

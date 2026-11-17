@@ -101,10 +101,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Aura paint – colour is updated each render() call; maskFilter set once.
   late final Paint _auraPaint;
   final Paint _corePaint = Paint();
-  final Paint _shieldPaint = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 3.0
-    ..color = const Color(0xCC000000);
   final Paint _arcPaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2.0;
@@ -283,18 +279,11 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   // ── Combat ─────────────────────────────────────────────────────────────────
 
-  /// Whether prayer can hurt this daemon right now. A 👁️ possessor is
-  /// only vulnerable once its host was cared for in the real world
-  /// (npc_influence.md: both worlds are needed).
-  bool get isVulnerable =>
-      model.kind != DaemonKind.possessor || game.isPossessorVulnerable(model);
-
   /// Called by the prayer combat system when this daemon is within range.
   /// Weakness and combo rules: [DaemonCombatRules.hit].
   void takeDamage(double amount, {PrayerMode? mode, double duration = 0}) {
     if (model.dissolved) return;
     _hitFlickerTimer = _hitFlickerDuration;
-    if (!isVulnerable) return;
 
     if (mode == null) {
       model.energy += amount;
@@ -475,13 +464,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         )..layout(),
       );
 
-  /// Hint above a shielded 👁️ possessor: its host needs 👂 or 🙏 in the
-  /// visible world first.
-  static final TextPainter _hostHint = TextPainter(
-    text: const TextSpan(text: '👂🙏', style: TextStyle(fontSize: 10)),
-    textDirection: TextDirection.ltr,
-  )..layout();
-
   @override
   void render(Canvas canvas) {
     if (!game.isSpiritualWorld) return;
@@ -509,13 +491,6 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     if (discern) {
       final g = _glyphFor(model.kind);
       g.paint(canvas, center - Offset(g.width / 2, g.height / 2));
-    }
-
-    // Not yet vulnerable (possessor): a closed dark ring.
-    if (!isVulnerable) {
-      canvas.drawCircle(center, _daemonSize * 0.6, _shieldPaint);
-      _hostHint.paint(canvas,
-          center - Offset(_hostHint.width / 2, _daemonSize * 0.6 + _hostHint.height + 2));
     }
 
     // Active Effect Auras (Issue #9)
