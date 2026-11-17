@@ -263,13 +263,14 @@ class NpcInteractionService {
       case 'help':
         if (playerMaterials < NpcActions.helpMaterialsCost) return refused('🚫📦');
         final g = gain(_calc.calculateGiftGain(), 'help');
-        npc.interactionCount++;
+        // Help in need opens a relationship like several talks (1. Joh 3,18).
+        npc.interactionCount += 3;
         npc.hadGiftThisSession = true;
         npc.wantsGift = false;
         npc.applyInfluence(g);
         npc.recordAction('help');
         npc.lastNpcFaithDelta = g;
-        playerFaith0 += 5.0;
+        playerFaith0 += 8.0;
         npc.lastPlayerFaithDelta = playerFaith0;
         npc.lastMaterialsDelta = -NpcActions.helpMaterialsCost;
         return NpcInteractionResult(
