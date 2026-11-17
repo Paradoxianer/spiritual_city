@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spiritual_city/src/features/game/domain/models/prayer_combat.dart';
@@ -172,7 +174,8 @@ void main() {
         final npc = possessed()
           ..possessed = false
           ..delivered = delivered;
-        NpcInteractionService(difficulty: Difficulty.normal).perform(
+        // The same dice for both, so only [delivered] differs.
+        NpcInteractionService(difficulty: Difficulty.normal, rng: Random(5)).perform(
           'counsel',
           npc,
           spiritualState: 0,
