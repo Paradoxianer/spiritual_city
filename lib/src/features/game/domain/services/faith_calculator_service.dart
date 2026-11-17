@@ -18,9 +18,11 @@ class FaithCalculatorService {
     return _applyMultiplier(base);
   }
 
-  /// Giving a gift / helping an NPC: base gain 1–3.
+  /// Giving a gift / helping an NPC: base gain 6–9 – the strongest single
+  /// step, because the need comes only now and then and costs 📦
+  /// (playtest 2026-11-17).
   int calculateGiftGain() {
-    final base = 1 + _random.nextInt(3); // 1, 2, or 3
+    final base = 6 + _random.nextInt(4); // 6, 7, 8, or 9
     return _applyMultiplier(base);
   }
 

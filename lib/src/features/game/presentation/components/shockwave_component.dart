@@ -149,13 +149,16 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
     if (_currentRadius < 5.0) return; // Hide very small start to avoid blob
 
     final progress = (_currentRadius / maxRadius).clamp(0.01, 1.0);
-    final alpha = (1.0 - progress) * 0.5;
+    // A 🌊 breakthrough is far thicker and stays bright longer than any
+    // prayer wave – unmistakable (playtest 2026-11-17).
+    final big = source == breakthrough;
+    final alpha = (1.0 - progress) * (big ? 0.85 : 0.5);
     
     // Main shockwave body
     final paint = Paint()
       ..color = color.withValues(alpha: alpha * 0.7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 5.0 + (progress * 55.0);
+      ..strokeWidth = big ? 60.0 + progress * 140.0 : 5.0 + (progress * 55.0);
     
     // Blur grows with expansion to avoid "static aura" at start
     final blurAmount = (5.0 + progress * 25.0) * (1.0 - progress);
@@ -169,7 +172,7 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
     final edgePaint = Paint()
       ..color = color.withValues(alpha: alpha * 1.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0 + (progress * 2.0);
+      ..strokeWidth = big ? 6.0 + progress * 4.0 : 1.0 + (progress * 2.0);
     canvas.drawCircle(Offset.zero, _currentRadius, edgePaint);
   }
 }
