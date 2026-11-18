@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spiritual_city/src/features/game/domain/models/daemon_kind.dart';
+import 'package:spiritual_city/src/features/game/domain/services/combat_abilities.dart';
 import 'package:spiritual_city/src/features/game/domain/services/spirit_waves.dart';
 import 'package:spiritual_city/src/features/menu/domain/models/difficulty.dart';
 
@@ -37,5 +38,17 @@ void main() {
     expect(SpiritWaves.breakthroughCells(20), greaterThan(SpiritWaves.breakthroughCells(10)));
     expect(SpiritWaves.breakthroughStrength(20), greaterThan(SpiritWaves.breakthroughStrength(10)));
     expect(SpiritWaves.openness(20), greaterThan(SpiritWaves.openness(10)));
+  });
+
+  test('every beaten wave gives more wisdom, without a cap', () {
+    expect(SpiritWaves.insight(1), 0.25);
+    expect(SpiritWaves.insight(9), 2.25);
+    expect(SpiritWaves.insight(30), greaterThan(SpiritWaves.insight(20)));
+  });
+
+  test('🪫 tires within a visit, down to 40 %', () {
+    expect(CombatAbilities.drainFatigue(0), 1.0);
+    expect(CombatAbilities.drainFatigue(10), closeTo(0.6, 0.01));
+    expect(CombatAbilities.drainFatigue(100), 0.4);
   });
 }

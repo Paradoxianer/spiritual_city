@@ -551,6 +551,10 @@ class SpiritWorldGame extends FlameGame
   /// Tier of new spawns, fixed when entering the spirit world.
   int daemonTier = 1;
 
+  /// 🪫 absorbs in this visit to the invisible world – drain tires
+  /// ([CombatAbilities.drainFatigue]); reset on entering.
+  int drainedThisVisit = 0;
+
   /// 👁️ Discernment of spirits learned: daemon kinds are shown.
   bool get canDiscernSpirits => progress.skills.has(Skill.discernment);
 
@@ -1057,6 +1061,7 @@ class SpiritWorldGame extends FlameGame
     // Daemon strength follows the player's power, delayed by the grace
     // period after an upgrade (#178).
     if (isSpiritualWorld) {
+      drainedThisVisit = 0;
       daemonTier = DaemonCombatRules.tierFor(
           progress.onSpiritWorldEntered(extraPower: awakeningPower));
       _updateQuarter();
