@@ -561,8 +561,11 @@ class NPCComponent extends PositionComponent
   @override
   void render(Canvas canvas) {
     Color bodyColor;
+    // Christians: a golden ring – unmistakable even when the people around
+    // are almost as open (playtest 2026-11-18: after many 🌊 breakthroughs
+    // light blue looked like white). Shaken ones a paler gold.
     if (model.isChristian) {
-      bodyColor = Colors.white;
+      bodyColor = model.isShakenChristian ? Colors.amber[200]! : Colors.amber;
     } else if (model.faith < 0) {
       bodyColor =
           Color.lerp(Colors.red[900]!, Colors.grey, (model.faith + 100) / 100)!;
@@ -581,7 +584,7 @@ class NPCComponent extends PositionComponent
     }
 
     if (model.isChristian && !drewSprite) {
-      _crossPaint.color = Colors.amber;
+      _crossPaint.color = Colors.white;
       final center = (size / 2).toOffset();
       canvas.drawLine(center + const Offset(0, -4), center + const Offset(0, 4),
           _crossPaint);
