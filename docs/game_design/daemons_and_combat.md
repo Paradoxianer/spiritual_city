@@ -64,7 +64,7 @@ Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, u
 - **Größe:** 2 / 3 / 4 (leicht/normal/schwer), +1 je Welle. **Stärke:** 40 % in Welle 1, +15 % je Welle (volle Stärke ab Welle 5, danach weiter). **Arten:** Welle 1 nur 🪨 (langsam, gut zu treffen), Welle 2 dazu 🐍, ab 3 auch 🦇.
 - **Besiegt:** grüne Welle vom Pastor aus (Radius 6 Felder × Welle, Stärke 50 + 10 × Welle, Menschen +2 × Welle offener) – **ohne Deckel**. Dann **6 s Pause** mit Countdown `⏳` und Vorschau; dann kommt die angekündigte Welle.
 - Der Erzähler erklärt Wellen und Durchbruch je einmal pro Spiel; sonst keine Einblendungen (nur Ton).
-- **Weisheit je Welle** (Playtest 2026-11-18): 📖 0,33 × Welle (🌊9: 2,97; erst 0,25, angehoben, weil spätere Upgrades über 100 📖 kosten), ohne Deckel – Durchhalten lohnt sich.
+- **Weisheit je Welle** (Playtest 2026-11-18): 📖 0,77 × Welle (🌊9: 6,93; erst 0,25, dann 0,33 – angehoben, weil spätere Upgrades über 100 📖 kosten), ohne Deckel – Durchhalten lohnt sich.
 - **🪫 ermüdet** (Playtest 2026-11-18): Mit vielen Christen ringsum ließ sich der Glaube per Entziehen endlos nachladen. Jeder Entzug im selben Besuch gibt 5 % weniger Glauben, bis auf 40 %; Rausgehen und Wiederkommen setzt es zurück (2. Mose 17,12). `CombatAbilities.drainFatigue`.
 - Keine Resistenzen, kein Jünger-Schaden (siehe unten, zurückgenommen).
 - 👁️ Besetzer: kein schwarzer Ring mehr – immer angreifbar, Befreiung ist seine Schwäche; besiegt ist der Mensch frei (npc_influence.md §3, Playtest 2026-11-16).
