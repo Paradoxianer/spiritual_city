@@ -44,6 +44,10 @@ abstract final class CombatAbilities {
   /// plan). Up to 3 without a mentor.
   static int capFor(int stage) => stage == 0 ? 3 : (stage == 1 ? 5 : 5 * stage);
 
+  /// [n] mastery stars, compact from four on (`⭐×12`) – a row of stars
+  /// ran out of the window on a phone (playtest 2026-11-18).
+  static String stars(int n) => n <= 3 ? '⭐' * n : '⭐×$n';
+
   static int levelCap(PrayerMode mode, LearnedSkills learned) =>
       capFor(masteryStage(mode, learned));
 
