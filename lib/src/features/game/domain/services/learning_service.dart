@@ -210,7 +210,7 @@ abstract final class Lessons {
       count: 10 * (stage + 1),
       reference: _masteryReference[mode]!,
       verse: 'lesson.mastery.${mode.id}.verse',
-      unlocks: '${mode.icon}${'⭐' * (stage + 1)} ➡️ 🔓${CombatAbilities.capFor(stage + 1)}',
+      unlocks: '${mode.icon}${CombatAbilities.stars(stage + 1)} ➡️ 🔓${CombatAbilities.capFor(stage + 1)}',
       requires: {if (needs != null) needs},
       repeatable: true,
     );

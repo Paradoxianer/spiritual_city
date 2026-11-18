@@ -109,7 +109,7 @@ abstract final class LessonTexts {
     if (mode != null) {
       final stage = CombatAbilities.masteryStage(mode, learned);
       what = _mastery.text
-          .replaceAll('{stars}', '⭐' * (stage + 1))
+          .replaceAll('{stars}', CombatAbilities.stars(stage + 1))
           .replaceAll('{what}', '$what 🔓 ${CombatAbilities.capFor(stage)} ➡️ ${CombatAbilities.capFor(stage + 1)}');
     }
     final parts = <String>[what];

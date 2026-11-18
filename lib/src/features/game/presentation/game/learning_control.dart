@@ -80,7 +80,7 @@ extension GameLearning on SpiritWorldGame {
     GameSound.play(Sfx.learned);
     // A mastery lesson: its stars as reached now (🕊️⭐⭐⭐).
     final stars = progress.skills.masteryOf(learned);
-    _toast('🎓✨ ${active.repeatable ? learned.emoji.replaceAll('⭐', '') + '⭐' * stars : learned.emoji}', 'learned');
+    _toast('🎓✨ ${active.repeatable ? learned.emoji.replaceAll('⭐', '') + CombatAbilities.stars(stars) : learned.emoji}', 'learned');
     // A new prayer mode shows up in the dock right away.
     _updateHudVisibility();
   }

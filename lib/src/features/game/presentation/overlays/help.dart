@@ -252,7 +252,7 @@ class _HelpTasks extends StatelessWidget {
     final learned = <(String, Skill)>[
       for (final s in Skill.values)
         if (CombatAbilities.masteryMode(s) != null && p.skills.masteryOf(s) > 0)
-          ('${s.emoji.replaceAll('⭐', '')}${'⭐' * p.skills.masteryOf(s)}', s)
+          ('${s.emoji.replaceAll('⭐', '')}${CombatAbilities.stars(p.skills.masteryOf(s))}', s)
         else if (p.skills.has(s) && !s.name.contains('Mastery'))
           (s.emoji, s),
     ];

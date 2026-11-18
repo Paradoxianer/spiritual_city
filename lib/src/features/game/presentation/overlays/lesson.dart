@@ -30,7 +30,7 @@ class LessonOverlay extends StatelessWidget {
       if (l.repeatable && CombatAbilities.masteryKey(m) == l.skill) {
         final stage = CombatAbilities.masteryStage(m, game.progress.skills);
         return (
-          icon: '${m.icon}${'⭐' * (stage + 1)}',
+          icon: '${m.icon}${CombatAbilities.stars(stage + 1)}',
           name: name,
           gain: '🔓 ${CombatAbilities.capFor(stage + 1)}',
           color: m.color,
