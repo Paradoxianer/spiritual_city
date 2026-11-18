@@ -86,7 +86,10 @@ class _LootToastState extends State<_LootToast> with SingleTickerProviderStateMi
   void _dismiss() {
     _dismissTimer?.cancel();
     _ctrl.reverse().then((_) {
+      // Gone, not just transparent: an invisible toast still caught the
+      // taps under it (playtest 2026-11-18: the 🌱 ⚡ tile).
       if (mounted) {
+        setState(() => _message = null);
         widget.game.lootPickupMessage.value = null;
       }
     });
@@ -177,7 +180,10 @@ class _MissionCompleteToastState extends State<_MissionCompleteToast> with Singl
   void _dismiss() {
     _dismissTimer?.cancel();
     _ctrl.reverse().then((_) {
+      // Gone, not just transparent: an invisible toast still caught the
+      // taps under it (playtest 2026-11-18: the 🌱 ⚡ tile).
       if (mounted) {
+        setState(() => _message = null);
         widget.game.missionCompleteMessage.value = null;
       }
     });
@@ -356,7 +362,10 @@ class _WakeupToastState extends State<_WakeupToast> with SingleTickerProviderSta
   void _dismiss() {
     _dismissTimer?.cancel();
     _ctrl.reverse().then((_) {
-      if (mounted) widget.game.wakeupMessage.value = null;
+      if (mounted) {
+        setState(() => _message = null);
+        widget.game.wakeupMessage.value = null;
+      }
     });
   }
 
