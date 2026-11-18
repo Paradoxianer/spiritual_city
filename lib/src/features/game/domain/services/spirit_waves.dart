@@ -56,9 +56,9 @@ class SpiritWaves {
   static double breakthroughStrength(int wave) => 50.0 + 10 * wave;
 
   /// Wisdom 📖 for beating [wave] – more for every wave held, no cap
-  /// (playtests 2026-11-18): 0.33 for 🌊1, 2.97 for 🌊9 – later upgrades
+  /// (playtests 2026-11-18): 0.77 for 🌊1, 6.93 for 🌊9 – later upgrades
   /// cost 100 📖 and more.
-  static double insight(int wave) => 0.33 * wave;
+  static double insight(int wave) => 0.77 * wave;
 
   /// Faith people in the breakthrough gain – more open for the gospel.
   static double openness(int wave) => 2.0 * wave;

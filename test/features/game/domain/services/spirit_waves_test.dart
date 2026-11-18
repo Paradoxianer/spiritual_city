@@ -41,8 +41,8 @@ void main() {
   });
 
   test('every beaten wave gives more wisdom, without a cap', () {
-    expect(SpiritWaves.insight(1), closeTo(0.33, 1e-9));
-    expect(SpiritWaves.insight(9), closeTo(2.97, 1e-9));
+    expect(SpiritWaves.insight(1), closeTo(0.77, 1e-9));
+    expect(SpiritWaves.insight(9), closeTo(6.93, 1e-9));
     expect(SpiritWaves.insight(30), greaterThan(SpiritWaves.insight(20)));
   });
 
