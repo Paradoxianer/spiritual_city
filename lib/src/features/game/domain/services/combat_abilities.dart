@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../models/prayer_combat.dart';
 import '../models/skills.dart';
 
@@ -76,4 +78,10 @@ abstract final class CombatAbilities {
   static const double slowedDamage = 1.3;
   static const double drainKillFaith = 2.0;
   static const double drainDamage = 1.3;
+
+  /// 🪫 tires within one visit to the invisible world (playtest
+  /// 2026-11-18: with many Christians around, draining refilled faith
+  /// for ever). Each absorb gives 5 % less, down to 40 %; leaving and
+  /// coming back rests it (Ex 17:12 – even Moses' arms grew tired).
+  static double drainFatigue(int absorbed) => max(0.4, pow(0.95, absorbed).toDouble());
 }

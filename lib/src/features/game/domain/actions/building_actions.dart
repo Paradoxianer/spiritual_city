@@ -42,7 +42,7 @@ abstract final class BuildingActions {
     id: ActionId.sleep,
     type: 'sleep',
     emoji: '😴',
-    effect: '❤️+50',
+    effect: '❤️100 %',
     baseSeconds: BuildingInteractionService.pastorHouseSleepSeconds,
   );
   static const homePray = GameAction<BuildingModel>(

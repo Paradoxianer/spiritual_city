@@ -92,7 +92,11 @@ extension GameBuildingActions on SpiritWorldGame {
     } else if (result.playerMaterialsDelta < 0) {
       spendMaterials(-result.playerMaterialsDelta);
     }
-    if (result.playerHealthDelta > 0) {
+    // Sleeping at home rests fully – never less than a coffee visit
+    // (playtest 2026-11-18).
+    if (actionType == 'sleep' && result.success) {
+      gainHealth(progress.maxHealth - health);
+    } else if (result.playerHealthDelta > 0) {
       gainHealth(result.playerHealthDelta);
     } else if (result.playerHealthDelta < 0) {
       spendHealth(-result.playerHealthDelta);

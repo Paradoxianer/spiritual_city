@@ -33,6 +33,9 @@ extension GameSpiritWaves on SpiritWorldGame {
       if (m.isConverted || c.position.distanceToSquared(center) > r2) continue;
       m.faith = min(100.0, m.faith + open);
     }
+    final wisdom = SpiritWaves.insight(wave);
+    progress.addInsight(wisdom);
+    lootPickupMessage.value = '🌊$wave ✅ 📖+${wisdom.toStringAsFixed(2).replaceFirst(RegExp(r'0$'), '')}';
     GameSound.play(Sfx.awakening, volume: 0.6);
     // The narrator explains it once per game.
     if (_explained.add('breakthrough')) {
