@@ -355,6 +355,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
         _upgradeStrength(PrayerMode.drain) * // ⚡ of 🪫 draws more
         CombatAbilities.drainFatigue(game.drainedThisVisit++);
     game.gainFaith(faithGain);
+    game.spendHunger(CombatAbilities.drainHunger);
     game.progress.addInsight(_killInsightReward);
     game.onDaemonKilled(model, mode: PrayerMode.drain, helpers: _hitBy);
     _cleanseAroundDeathPoint();

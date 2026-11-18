@@ -35,18 +35,20 @@ class SpiritWaves {
   /// then the quick 🐍, from wave 3 the 🦇 that drains faith.
   static const List<DaemonKind> joining = [DaemonKind.brute, DaemonKind.lurker, DaemonKind.leech];
 
-  /// Daemons in [wave]: 2 / 3 / 4 to start, one more each wave.
+  /// Daemons in [wave]: 1 / 2 / 3 to start, growing with the square
+  /// (playtest 2026-11-18: easier at first, much harder later) –
+  /// normal: 2 2 2 3 4 6 8 10 12 … 22 in 🌊12.
   static int size(int wave, Difficulty d) =>
       switch (d) {
-        Difficulty.easy => 2,
-        Difficulty.normal => 3,
-        Difficulty.hard => 4,
+        Difficulty.easy => 1,
+        Difficulty.normal => 2,
+        Difficulty.hard => 3,
       } +
-      (wave - 1);
+      (wave - 1) * (wave - 1) ~/ 6;
 
-  /// Energy factor of the daemons in [wave]: 40 % in the first (very easy),
-  /// full strength from wave 5, then on growing.
-  static double energy(int wave) => 0.4 + 0.15 * (wave - 1);
+  /// Energy factor of the daemons in [wave]: 30 % in the first, +25 % each
+  /// wave – about full strength in 🌊6, 1.8× in 🌊9, 3.5× in 🌊12.
+  static double energy(int wave) => 0.3 * pow(1.25, wave - 1);
 
   /// Radius (cells) of the breakthrough after [wave] – no cap: whoever
   /// holds out long is rewarded, never punished.
@@ -55,10 +57,10 @@ class SpiritWaves {
   /// How much it greens the ground.
   static double breakthroughStrength(int wave) => 50.0 + 10 * wave;
 
-  /// Wisdom 📖 for beating [wave] – more for every wave held, no cap
-  /// (playtests 2026-11-18): 0.77 for 🌊1, 6.93 for 🌊9 – later upgrades
-  /// cost 100 📖 and more.
-  static double insight(int wave) => 0.77 * wave;
+  /// Wisdom 📖 for beating [wave] – growing with the waves' steepness, no
+  /// cap (playtests 2026-11-18): 0.77 for 🌊1, 20.8 for 🌊9, about 85 up to
+  /// there – later upgrades cost 100 📖 and more.
+  static double insight(int wave) => 0.77 * pow(wave, 1.5);
 
   /// Faith people in the breakthrough gain – more open for the gospel.
   static double openness(int wave) => 2.0 * wave;
