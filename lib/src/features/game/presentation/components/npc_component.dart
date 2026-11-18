@@ -295,6 +295,10 @@ class NPCComponent extends PositionComponent
   /// Possessed people only act when the pastor is this close (px).
   static const double possessorReach = 420.0;
 
+  /// Cells a person wanders freely around their home; beyond it they head
+  /// back.
+  static const double homeRange = 8;
+
   void _updatePossessor(double dt) {
     _possessorTimer += dt;
     if (_possessorTimer < possessorInterval) return;
@@ -357,6 +361,16 @@ class NPCComponent extends PositionComponent
       final isRoadB = cellB?.data is RoadData ? 1 : 0;
       return isRoadB.compareTo(isRoadA);
     });
+    // Far from home (wandered off, or left behind after an open-air
+    // meeting): mostly steps homeward. A random walk alone drifted people
+    // out of their quarter – and its light with them (playtest 2026-11-18).
+    final home = model.homePosition;
+    const cs = CellComponent.cellSize;
+    if (position.distanceTo(home) > homeRange * cs && _random.nextDouble() < 0.8) {
+      double toHome(Vector2 d) =>
+          Vector2((gx + d.x + 0.5) * cs, (gy + d.y + 0.5) * cs).distanceTo(home);
+      directions.sort((a, b) => toHome(a).compareTo(toHome(b)));
+    }
     for (final dir in directions) {
       final tx = gx + dir.x.toInt();
       final ty = gy + dir.y.toInt();
