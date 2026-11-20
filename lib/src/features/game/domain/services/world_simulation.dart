@@ -38,10 +38,10 @@ class WorldTuning {
   /// Strength of people's influence on the ground (easy 1.5 … hard 0.5).
   final double personFactor;
 
-  /// 🌱 Wachstum modifier: spread between cells.
+  /// 🌱 Wachstum modifier: how fast green heals the shallow red it encloses.
   final double spreadMultiplier;
 
-  /// Bewahrung modifier: share of the natural fallback prevented.
+  /// Bewahrung modifier: share of the red pressure held off.
   final double decayReduction;
 
   const WorldTuning({
@@ -57,10 +57,34 @@ class WorldTuning {
 /// pastor. Pure rules on the city grid, independent of any player, so the
 /// same day can later run on a server for a shared city.
 abstract final class WorldSimulation {
-  // ── Ground among itself ─────────────────────────────────────────────────
+  // ── Ground among itself (playtest 2026-11-20: like the Game of Life) ──
+  //
+  // Each cell looks at its 8 neighbours. Red presses by its depth – deep
+  // red fronts eat in, a shallow red speck hardly does. Green neighbours
+  // hold it off and heal shallow red they enclose, but green never spreads
+  // on its own (that is prayer, Christians and holy houses). No drift of
+  // its own: grey stays grey and green stays green until red reaches it.
 
-  /// How much a cell moves towards its neighbours' average per day.
-  static const double spreadFactor = 0.04;
+  /// A neighbour counts as green above this.
+  static const double greenAbove = 0.3;
+
+  /// A neighbour presses from here down (0 at −0.2 … 1 at −1, squared).
+  static const double pressFrom = -0.2;
+
+  /// Loss per day per unit of red pressure.
+  static const double redPressure = 0.02;
+
+  /// Share of the pressure each green neighbour holds off.
+  static const double greenShield = 0.075;
+
+  /// Healing per day per green neighbour, from [healNeighbours] on.
+  static const double greenHealing = 0.001;
+  static const int healNeighbours = 5;
+
+  /// Shallow red heals fully down to [healableTo]; from [deepRed] down only
+  /// prayer frees it.
+  static const double healableTo = -0.3;
+  static const double deepRed = -0.7;
 
   /// Decay towards neutral for weakly held cells (|state| < 0.08).
   static const double decayRate = 0.98;
@@ -68,17 +92,31 @@ abstract final class WorldSimulation {
   /// Church cells: constant light per day.
   static const double churchBonus = 0.02;
 
-  /// Natural drift into darkness per day (a fallen world).
-  static const double fallbackRate = 0.002;
+  /// How hard a neighbour in [state] presses (0 … 1).
+  static double press(double state) {
+    final d = ((pressFrom - state) / (1 + pressFrom)).clamp(0.0, 1.0);
+    return d * d;
+  }
 
-  /// Extra darkness a strongly dark neighbour seeps into a cell.
-  static const double darkSeepageFactor = 0.004;
+  /// Share of the green healing a cell in [state] takes (1 … 0 for deep red).
+  static double healable(double state) =>
+      ((state - deepRed) / (healableTo - deepRed)).clamp(0.0, 1.0);
 
-  /// Below this a cell is a dark bastion: it seeps and resists light.
-  static const double darkBastion = -0.55;
-
-  /// Share of a positive change a dark bastion lets through.
-  static const double darkResistanceFactor = 0.55;
+  /// One day's change of a cell in [state] among its neighbours: red
+  /// [pressure] (sum of [press]), [green] neighbours, [christians] in reach.
+  static double groundDelta(double state,
+      {required double pressure, required int green, int christians = 0, WorldTuning t = const WorldTuning()}) {
+    var delta = -redPressure *
+        pressure *
+        (1 - greenShield * green) *
+        (1 - t.decayReduction) *
+        ChristianSupport.fallbackFactor(christians);
+    if (green >= healNeighbours && state < 1) {
+      delta += greenHealing * green * healable(state) * t.spreadMultiplier;
+    }
+    if (state.abs() < 0.08) delta += -state * (1 - decayRate);
+    return delta;
+  }
 
   // ── People and houses on the ground ─────────────────────────────────────
 
@@ -96,6 +134,9 @@ abstract final class WorldSimulation {
 
   /// Hostile people (faith < −50) darken their cell per faith point.
   static const double hostilePerFaith = 0.002;
+
+  /// The undecided (faith −50 … 0) darken it much less.
+  static const double undecidedPerFaith = 0.0002;
 
   /// A house's holiness (−100 … 100) at its centre, per 100 points; it
   /// fades to nothing at the edge of its radius.
@@ -234,6 +275,9 @@ abstract final class WorldSimulation {
   }
 
   static const List<(int, int)> _dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+  static const List<(int, int)> _around = [
+    (-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1),
+  ];
 
   static int _key(int x, int y) => ((x + 0x100000) << 21) | (y + 0x100000);
 
@@ -271,33 +315,24 @@ abstract final class WorldSimulation {
           final cell = chunk.at(lx, ly);
           if (cell == null) continue;
           final st = cell.spiritualState;
-          var delta = 0.0;
-          var sum = 0.0;
-          var count = 0;
-          var bastions = 0;
-          for (final (dx, dy) in _dirs) {
+          var pressure = 0.0;
+          var green = 0;
+          for (final (dx, dy) in _around) {
             final nx = lx + dx, ny = ly + dy;
             final n = (nx >= 0 && nx < size && ny >= 0 && ny < size)
                 ? chunk.at(nx, ny)
                 : grid.getCell(cell.x + dx, cell.y + dy);
             if (n == null) continue;
-            sum += n.spiritualState;
-            count++;
-            if (n.spiritualState < darkBastion) bastions++;
+            pressure += press(n.spiritualState);
+            if (n.spiritualState > greenAbove) green++;
           }
-          if (count > 0) delta += (sum / count - st) * spreadFactor * t.spreadMultiplier;
-          delta -= bastions * darkSeepageFactor;
+          var delta = groundDelta(st,
+              pressure: pressure, green: green, christians: christiansNear[_key(cell.x, cell.y)] ?? 0, t: t);
           final data = cell.data;
           if (data is BuildingData &&
               (data.type == BuildingType.church || data.type == BuildingType.cathedral)) {
             delta += churchBonus;
           }
-          if (st > -0.05) {
-            delta -= fallbackRate *
-                (1.0 - t.decayReduction) *
-                ChristianSupport.fallbackFactor(christiansNear[_key(cell.x, cell.y)] ?? 0);
-          }
-          if (st.abs() < 0.08) delta += -st * (1.0 - decayRate);
           out[ly * size + lx] = delta;
         }
       }
@@ -308,8 +343,7 @@ abstract final class WorldSimulation {
       for (var i = 0; i < size * size; i++) {
         final cell = chunk.at(i % size, i ~/ size);
         if (cell == null) continue;
-        var d = out[i];
-        if (cell.spiritualState < darkBastion && d > 0) d *= darkResistanceFactor;
+        final d = out[i];
         if (d != 0) _add(cell, d);
       }
     }
@@ -332,8 +366,13 @@ abstract final class WorldSimulation {
       }
     } else if (npc.faith > 50) {
       _add(cell, sympathetic * t.personFactor);
-    } else if (npc.faith < -50) {
-      _add(cell, -npc.faith.abs() * hostilePerFaith * t.personFactor);
+    } else if (npc.faith < 0) {
+      // Hostile people darken where they stand, the undecided a little
+      // (grey is drawn slowly into red) – less the greener it is around
+      // them; there their faith opens too, so it gives with time.
+      final perFaith = npc.faith < -50 ? hostilePerFaith : undecidedPerFaith;
+      final light = surroundings(grid, r.x, r.y).clamp(0.0, 1.0);
+      _add(cell, npc.faith * perFaith * t.personFactor * (1 - light));
     }
   }
 }
