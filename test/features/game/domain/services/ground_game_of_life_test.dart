@@ -48,10 +48,10 @@ void main() {
     expect(g.getCell(40, 40)!.spiritualState, 0);
   });
 
-  test('a freed quarter in deep red holds 4 h from the edge in, its middle untouched', () {
+  test('a freed quarter in deep red holds 6 h from the edge in, its middle untouched', () {
     final g = _quarter(inside: 1, outside: -1);
-    _days(g, 240); // 4 h
-    expect(_green(g), greaterThan(48 * 48 * 0.55));
+    _days(g, 360); // 6 h, not a single Christian
+    expect(_green(g), greaterThan(48 * 48 * 0.7));
     expect(g.getCell(40, 40)!.spiritualState, greaterThan(0.9));
     expect(g.getCell(16, 40)!.spiritualState, lessThan(-0.3), reason: 'the edge is eaten');
   });
@@ -60,7 +60,7 @@ void main() {
     final g = _quarter(inside: 1, outside: 1);
     g.getCell(30, 30)!.spiritualState = -0.4;
     g.getCell(50, 50)!.spiritualState = -1;
-    _days(g, 180);
+    _days(g, 360);
     expect(g.getCell(30, 30)!.spiritualState, greaterThan(WorldSimulation.greenAbove));
     expect(g.getCell(50, 50)!.spiritualState, -1, reason: 'only prayer frees deep red');
     expect(g.getCell(51, 50)!.spiritualState, greaterThan(WorldSimulation.greenAbove));
