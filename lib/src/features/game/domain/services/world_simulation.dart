@@ -72,13 +72,13 @@ abstract final class WorldSimulation {
   static const double pressFrom = -0.2;
 
   /// Loss per day per unit of red pressure.
-  static const double redPressure = 0.02;
+  static const double redPressure = 0.008;
 
   /// Share of the pressure each green neighbour holds off.
   static const double greenShield = 0.075;
 
   /// Healing per day per green neighbour, from [healNeighbours] on.
-  static const double greenHealing = 0.001;
+  static const double greenHealing = 0.0004;
   static const int healNeighbours = 5;
 
   /// Shallow red heals fully down to [healableTo]; from [deepRed] down only
