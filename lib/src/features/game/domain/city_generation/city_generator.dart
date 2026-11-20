@@ -4,6 +4,7 @@ import '../../../../core/utils/seed_manager.dart';
 import '../models/city_cell.dart';
 import '../models/city_chunk.dart';
 import '../models/cell_object.dart';
+import 'city_layout.dart';
 import 'district_selector.dart';
 import 'road_generator.dart';
 import 'lot_generator.dart';
@@ -33,6 +34,20 @@ class CityGenerator {
         final worldX = chunk.getWorldX(x);
         final worldY = chunk.getWorldY(y);
         
+        // Beyond the city's neighbourhoods: forest with a river – the city
+        // is closed (playtest 2026-11-20).
+        final layout = CityLayout.current;
+        if (!layout.containsCell(worldX, worldY)) {
+          chunk.cells['$x,$y'] = CityCell(
+            x: worldX,
+            y: worldY,
+            data: NatureData(
+                type: layout.isBorderRiver(worldX, worldY) ? NatureType.water : NatureType.forest),
+            density: 0.0,
+          );
+          continue;
+        }
+
         final cellRand = Random(seedManager.seed ^ (worldX * 374761393) ^ (worldY * 668265263));
         
         if (_districtSelector.isWater(worldX, worldY)) {

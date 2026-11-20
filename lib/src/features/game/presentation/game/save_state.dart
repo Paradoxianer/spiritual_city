@@ -97,6 +97,25 @@ extension GameSaveState on SpiritWorldGame {
     trackedMission.value = state['trackedMission'] as String?;
   }
 
+  /// Saves from before the city was closed (playtest 2026-11-20): ground,
+  /// people and neighbourhoods beyond its edge are forest now – they no
+  /// longer count.
+  void _dropBeyondCity() {
+    final layout = CityLayout.current;
+    _savedCellStates?.removeWhere((key, _) {
+      final comma = key.indexOf(',');
+      final x = int.tryParse(key.substring(0, comma < 0 ? 0 : comma));
+      final y = int.tryParse(key.substring(comma + 1));
+      return x == null || y == null || !layout.containsCell(x, y);
+    });
+    _savedNPCStates?.removeWhere((id, _) => !layout.containsNpcId(id));
+    progress.church.members.removeWhere((id, _) => !layout.containsNpcId(id));
+    for (final keys in [progress.awakenedQuarters, progress.celebratedQuarters, progress.christianQuarters]) {
+      keys.removeWhere((k) => !layout.containsQuarterKey(k));
+    }
+    missionService.stage = progress.awakenedQuarters.length;
+  }
+
   /// Called by [ChunkManager] immediately after a chunk's cells are generated.
   ///
   /// Applies any saved spiritual-state overrides so the world looks exactly as
@@ -104,6 +123,7 @@ extension GameSaveState on SpiritWorldGame {
   void applySavedCellStatesToChunk(CityChunk chunk) {
     final overrides = _savedCellStates;
     if (overrides == null || overrides.isEmpty) return;
+    if (!CityLayout.current.containsChunk(chunk.chunkX, chunk.chunkY)) return;
     for (final entry in chunk.cells.entries) {
       final localKey = entry.key; // 'lx,ly'
       final parts    = localKey.split(',');
@@ -210,7 +230,7 @@ extension GameSaveState on SpiritWorldGame {
   Map<String, dynamic> captureGameState() {
     // ── Cell states ──────────────────────────────────────────────────────────
     final Map<String, Map<String, dynamic>> cellStates = {};
-    for (final chunk in grid.getLoadedChunks()) {
+    for (final chunk in cityChunks) {
       for (final entry in chunk.cells.entries) {
         final cell = entry.value;
         if (cell.spiritualState != 0.0 || cell.hasResiduum) {

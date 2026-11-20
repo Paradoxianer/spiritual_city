@@ -45,6 +45,9 @@ abstract final class KenneyCityRenderer {
   static const (int, int) _grass = (0, 24);
   static const List<(int, int)> _bushes = [(31, 13), (32, 13), (33, 13), (34, 13), (36, 13)];
   static const (int, int) _tombstone = (28, 7);
+
+  /// The dense forest around the city: bushes in deep shade.
+  static final Paint _forestShade = Paint()..color = const Color(0x66052E0B);
   static const List<(int, int)> _roofDecor = [(25, 14), (26, 14), (27, 14)];
 
   static const _Material _red = _Material(roof: (4, 2), plain: (6, 0), wall: [0, 1, 2, 3]);
@@ -178,6 +181,10 @@ abstract final class KenneyCityRenderer {
       case NatureType.tree:
         _tile(canvas, _grass, r);
         _tile(canvas, _bushes[h % _bushes.length], r);
+      case NatureType.forest:
+        _tile(canvas, _grass, r);
+        _tile(canvas, _bushes[h % _bushes.length], r);
+        canvas.drawRect(r, _forestShade);
       case NatureType.park:
         _tile(canvas, _grass, r);
         if (h % 12 == 0) _tile(canvas, _bushes[(h >> 4) % _bushes.length], r);

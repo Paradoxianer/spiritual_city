@@ -49,6 +49,7 @@ class CityTileRenderer {
 
   static final Paint _water = Paint()..color = const Color(0xFF1565C0);
   static final Paint _tree  = Paint()..color = const Color(0xFF388E3C);
+  static final Paint _forest = Paint()..color = const Color(0xFF1B5E20);
   static final Paint _park  = Paint()..color = const Color(0xFF4CAF50);
 
   // ── Buildings – fill colours ──────────────────────────────────────────────
@@ -163,6 +164,9 @@ class CityTileRenderer {
         break;
       case NatureType.tree:
         canvas.drawRect(r, _tree);
+        break;
+      case NatureType.forest:
+        canvas.drawRect(r, _forest);
         break;
       case NatureType.park:
         canvas.drawRect(r, _park);

@@ -49,7 +49,8 @@ extension GameQuarters on SpiritWorldGame {
     }
 
     _checkCityQuarters();
-    if (isSpiritualWorld) _ensureStronghold(status);
+    // Strongholds only in the city's neighbourhoods.
+    if (isSpiritualWorld && CityLayout.current.containsQuarter(q)) _ensureStronghold(status);
     _updateCityProgress(q);
   }
 
@@ -59,7 +60,7 @@ extension GameQuarters on SpiritWorldGame {
   /// per call; the rest keep their last tally.
   void _updateCityProgress(Quarter q) {
     final tallies = _chunkTallies ??= Liberation.savedByChunk(_savedCellStates ?? const {});
-    final chunks = grid.getLoadedChunks();
+    final chunks = cityChunks;
     void count(CityChunk chunk) {
       if (chunk.cells.isEmpty) return;
       final key = chunk.id;
@@ -81,8 +82,10 @@ extension GameQuarters on SpiritWorldGame {
 
     var quarter = Tally.zero;
     var city = Tally.zero;
-    for (final t in tallies.values) {
-      city += t;
+    for (final e in tallies.entries) {
+      final comma = e.key.indexOf(',');
+      final cx = int.parse(e.key.substring(0, comma)), cy = int.parse(e.key.substring(comma + 1));
+      if (CityLayout.current.containsChunk(cx, cy)) city += e.value;
     }
     const side = Quarter.chunksPerSide;
     for (var dy = 0; dy < side; dy++) {

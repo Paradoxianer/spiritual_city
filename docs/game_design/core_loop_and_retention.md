@@ -39,6 +39,7 @@ Statt nur "die ganze Stadt gewinnen" gibt es **Stadtteile** (Distrikte, vgl. `Di
 - Erreichen löst aus: Fanfare, Toast "Erweckung in <Stadtteil>", sichtbarer Wechsel (Aura/Farbe des Stadtteils), **Freischaltung** (z. B. erste Erweckung schaltet Predigen frei, #172; weitere: permanenter Gebietseffekt, Rolle in der Gemeinde).
 - Der Gesamtstadt-Sieg (#143) bleibt Endziel; er ergibt sich aus allen Stadtteilen und ersetzt den bisherigen Radius-Check (#176).
 - Voraussetzung: ein zentraler NPC-/Zellzustand, der unabhängig vom Chunk-Laden zählt (#170).
+- **Geschlossene Stadt (Playtest 2026-11-20):** Die Stadt besteht genau aus ihren Vierteln (`CityLayout.quarters`). Dahinter liegt dichter Wald mit einem Fluss drei bis sechs Felder vor dem Rand (Ps 125,2), beides nicht begehbar. Dort gibt es keine Häuser, keine Menschen und keine Bollwerke. Boden, Fortschritt und Speicherstand zählen nur in der Stadt. Alte Spielstände verlieren beim Laden das Land, die Bewohner und die Viertel jenseits des Randes. Vorher sank der Fortschritt mit jedem entdeckten Randfeld, und Randviertel ohne Menschen ließen sich nie gewinnen. Später denkbar: Brücken als Ausgang, die zur Stadtwahl führen.
 
 ---
 

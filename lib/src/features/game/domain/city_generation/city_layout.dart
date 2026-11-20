@@ -55,6 +55,62 @@ class CityLayout {
     ];
   }();
 
+  late final Set<Quarter> _quarterSet = quarters.toSet();
+
+  /// [q] is one of the city's neighbourhoods.
+  bool containsQuarter(Quarter q) => _quarterSet.contains(q);
+
+  /// The cell lies in the city – beyond it only forest and the river
+  /// around it (playtest 2026-11-20: discovered land without people could
+  /// never be won and lowered the progress).
+  bool containsCell(int x, int y) => containsQuarter(Quarter.ofCell(x, y));
+
+  /// The chunk belongs to the city (a neighbourhood is whole chunks).
+  bool containsChunk(int cx, int cy) => containsQuarter(Liberation.quarterOfChunk(cx, cy));
+
+  /// A neighbourhood key `'qx,qy'` of the city.
+  bool containsQuarterKey(String key) {
+    final parts = key.split(',');
+    if (parts.length != 2) return false;
+    final qx = int.tryParse(parts[0]), qy = int.tryParse(parts[1]);
+    return qx != null && qy != null && containsQuarter(Quarter(qx, qy));
+  }
+
+  /// A person lives in the city: their id names their house
+  /// (`npc_b_<x>_<y>_<i>`); other ids count as in it.
+  bool containsNpcId(String id) {
+    final m = _npcHome.firstMatch(id);
+    if (m == null) return true;
+    return containsCell(int.parse(m[1]!), int.parse(m[2]!));
+  }
+
+  static final RegExp _npcHome = RegExp(r'^npc_b_(-?\d+)_(-?\d+)_');
+
+  /// Cells from the cell to the nearest cell of the city (0 inside it),
+  /// at most [Quarter.sizeCells] – for the border's river.
+  int edgeDistance(int x, int y) {
+    final q = Quarter.ofCell(x, y);
+    if (containsQuarter(q)) return 0;
+    const n = Quarter.sizeCells;
+    var best = n;
+    for (var dy = -1; dy <= 1; dy++) {
+      for (var dx = -1; dx <= 1; dx++) {
+        final o = Quarter(q.qx + dx, q.qy + dy);
+        if (!containsQuarter(o)) continue;
+        final ox = x - x.clamp(o.qx * n, o.qx * n + n - 1);
+        final oy = y - y.clamp(o.qy * n, o.qy * n + n - 1);
+        best = min(best, max(ox.abs(), oy.abs()));
+      }
+    }
+    return best;
+  }
+
+  /// The river around the city, a few cells into the forest (Ps 125,2).
+  bool isBorderRiver(int x, int y) {
+    final d = edgeDistance(x, y);
+    return d >= 3 && d <= 6;
+  }
+
   static bool _inCity(Quarter q, double edge) {
     final (cx, cy) = q.centerCell;
     return cx * cx + cy * cy <= edge * edge;
