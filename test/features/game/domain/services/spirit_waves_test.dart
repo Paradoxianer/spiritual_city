@@ -28,10 +28,10 @@ void main() {
 
   test('later waves are bigger, stronger and mixed', () {
     final plan = SpiritWaves.plan(5, Difficulty.normal, Random(4));
-    expect(plan, hasLength(4));
+    expect(plan, hasLength(6));
     expect(plan.toSet(), SpiritWaves.joining.toSet());
-    expect(SpiritWaves.size(9, Difficulty.normal), 12);
-    expect(SpiritWaves.energy(9), greaterThan(1.75));
+    expect(SpiritWaves.size(9, Difficulty.normal), 18);
+    expect(SpiritWaves.energy(9), greaterThan(2.4));
   });
 
   test('waves grow ever steeper (playtest 2026-11-18)', () {
@@ -48,15 +48,25 @@ void main() {
   });
 
   test('every beaten wave gives more wisdom, without a cap', () {
-    expect(SpiritWaves.insight(1), closeTo(0.77, 1e-9));
-    expect(SpiritWaves.insight(9), closeTo(20.79, 1e-9));
+    expect(SpiritWaves.insight(1), closeTo(0.7, 1e-9));
+    expect(SpiritWaves.insight(9), closeTo(18.9, 1e-9));
     expect(SpiritWaves.insight(30), greaterThan(SpiritWaves.insight(20)));
   });
 
-  test('🪫 tires within a visit, down to 25 %, and costs 🍞', () {
+  test('🪫 tires within a visit, down to 5 %, and costs 🍞', () {
     expect(CombatAbilities.drainFatigue(0), 1.0);
-    expect(CombatAbilities.drainFatigue(5), closeTo(0.59, 0.01));
-    expect(CombatAbilities.drainFatigue(100), 0.25);
+    expect(CombatAbilities.drainFatigue(5), closeTo(0.44, 0.01));
+    expect(CombatAbilities.drainFatigue(100), 0.05);
     expect(CombatAbilities.drainHunger, greaterThan(0));
+  });
+
+  // Playtest 2026-11-20: high waves strike far harder, and look it.
+  test('later waves strike harder and come bigger', () {
+    expect(SpiritWaves.might(1), 1.0);
+    expect(SpiritWaves.might(9), closeTo(3.06, 0.01));
+    expect(SpiritWaves.might(12), greaterThan(4.5));
+    expect(SpiritWaves.growth(1), 1.0);
+    expect(SpiritWaves.growth(5), closeTo(1.32, 1e-9));
+    expect(SpiritWaves.growth(40), 2.0);
   });
 }

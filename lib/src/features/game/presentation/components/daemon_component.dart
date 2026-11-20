@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../../domain/models/daemon_kind.dart';
 import '../../domain/models/daemon_model.dart';
+import '../../domain/services/spirit_waves.dart';
 import '../../domain/services/combat_abilities.dart';
 import '../../domain/services/daemon_combat_rules.dart';
 import '../../domain/models/city_cell.dart';
@@ -32,6 +33,13 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   /// Body size: base × type × tier (tier 3 is 50 % bigger than tier 1).
   final double _daemonSize;
+
+  /// Base × type × tier × 🌊 wave – later waves come bigger.
+  static double _sizeOf(DaemonModel m) =>
+      _baseSize *
+      m.kind.sizeFactor *
+      DaemonCombatRules.tierSize(m.tier) *
+      (m.wave > 0 ? SpiritWaves.growth(m.wave) : 1.0);
 
   /// A 🦇 leech closer than this pulls faith from the pastor.
   static const double leechReach = 140.0;
@@ -115,14 +123,10 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   static final Color _auraLerpTo    = Colors.black.withValues(alpha: 0.9);
 
   DaemonComponent(this.model)
-      : _daemonSize = _baseSize *
-            model.kind.sizeFactor *
-            DaemonCombatRules.tierSize(model.tier),
+      : _daemonSize = _sizeOf(model),
         super(
           position: model.position.clone(),
-          size: Vector2.all(_baseSize *
-              model.kind.sizeFactor *
-              DaemonCombatRules.tierSize(model.tier)),
+          size: Vector2.all(_sizeOf(model)),
           anchor: Anchor.center,
           priority: 95,
         );
@@ -411,11 +415,13 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // (kind × tier, playtest 2026-11-15: a 🪨 tier 3 hit like a small 🐍).
     final amp = _cellDrainMultiplier * // easy=0.67, normal=1.0, hard=2.0
         DaemonCombatRules.strikeFactor(model.kind, model.tier);
+    // Later 🌊 waves strike far harder (playtest 2026-11-20).
+    final might = model.wave > 0 ? SpiritWaves.might(model.wave) : 1.0;
 
-    final hpDamage     = (8.0 * strength * amp).clamp(1.0, 30.0);
-    final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0) *
+    final hpDamage     = (8.0 * strength * amp).clamp(1.0, 30.0) * might;
+    final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0) * might *
         (1.0 - game.progress.combatProfile.shieldDamageReduction);
-    final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0) *
+    final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0) * might *
         (1.0 - game.progress.combatProfile.helmHungerReduction);
 
     game.spendHealth(hpDamage);

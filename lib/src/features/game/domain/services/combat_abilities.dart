@@ -85,9 +85,10 @@ abstract final class CombatAbilities {
 
   /// 🪫 tires within one visit to the invisible world (playtest
   /// 2026-11-18: with many Christians around, draining refilled faith
-  /// for ever). Each absorb gives 10 % less, down to 25 %; leaving and
-  /// coming back rests it (Ex 17:12 – even Moses' arms grew tired).
-  static double drainFatigue(int absorbed) => max(0.25, pow(0.9, absorbed).toDouble());
+  /// for ever; -20: still almost endless in the waves). Each absorb gives
+  /// 15 % less, down to 5 %; leaving and coming back rests it (Ex 17:12 –
+  /// even Moses' arms grew tired).
+  static double drainFatigue(int absorbed) => max(0.05, pow(0.85, absorbed).toDouble());
 
   /// 🍞 a drain kill costs – drawing a daemon's strength wears the pastor
   /// out (playtest 2026-11-18).

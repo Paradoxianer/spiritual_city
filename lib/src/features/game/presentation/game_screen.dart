@@ -355,9 +355,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _ResourceHud(gameRef: _game),
+                        _WaveHud(game: _game),
                         _PastorhouseHud(game: _game),
                         _TrackedMissionHud(game: _game),
-                        _WaveHud(game: _game),
                         _LessonChip(game: _game),
                       ],
                     ),

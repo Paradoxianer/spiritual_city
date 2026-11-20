@@ -36,19 +36,28 @@ class SpiritWaves {
   static const List<DaemonKind> joining = [DaemonKind.brute, DaemonKind.lurker, DaemonKind.leech];
 
   /// Daemons in [wave]: 1 / 2 / 3 to start, growing with the square
-  /// (playtest 2026-11-18: easier at first, much harder later) –
-  /// normal: 2 2 2 3 4 6 8 10 12 … 22 in 🌊12.
+  /// (playtests 2026-11-18 and -20: easier at first, far more later) –
+  /// normal: 2 2 3 4 6 8 11 14 18 22 27 32 in 🌊12.
   static int size(int wave, Difficulty d) =>
       switch (d) {
         Difficulty.easy => 1,
         Difficulty.normal => 2,
         Difficulty.hard => 3,
       } +
-      (wave - 1) * (wave - 1) ~/ 6;
+      (wave - 1) * (wave - 1) ~/ 4;
 
-  /// Energy factor of the daemons in [wave]: 30 % in the first, +25 % each
-  /// wave – about full strength in 🌊6, 1.8× in 🌊9, 3.5× in 🌊12.
-  static double energy(int wave) => 0.3 * pow(1.25, wave - 1);
+  /// Energy factor of the daemons in [wave]: 30 % in the first, +30 % each
+  /// wave – full strength in 🌊6, 2.4× in 🌊9, 5.4× in 🌊12.
+  static double energy(int wave) => 0.3 * pow(1.3, wave - 1);
+
+  /// How hard a daemon of [wave] strikes (playtest 2026-11-20: in high
+  /// waves a hit hardly hurt): +15 % each wave – 1.7× in 🌊5, 3× in 🌊9,
+  /// 4.7× in 🌊12.
+  static double might(int wave) => wave <= 1 ? 1.0 : pow(1.15, wave - 1).toDouble();
+
+  /// The daemons of [wave] grow, too: +8 % each wave, at most twice the
+  /// size – you see the later waves are stronger.
+  static double growth(int wave) => min(2.0, 1 + 0.08 * max(0, wave - 1));
 
   /// Radius (cells) of the breakthrough after [wave] – no cap: whoever
   /// holds out long is rewarded, never punished.
@@ -58,9 +67,9 @@ class SpiritWaves {
   static double breakthroughStrength(int wave) => 50.0 + 10 * wave;
 
   /// Wisdom 📖 for beating [wave] – growing with the waves' steepness, no
-  /// cap (playtests 2026-11-18): 0.77 for 🌊1, 20.8 for 🌊9, about 85 up to
-  /// there – later upgrades cost 100 📖 and more.
-  static double insight(int wave) => 0.77 * pow(wave, 1.5);
+  /// cap (playtests 2026-11-18, a touch less on -20): 0.7 for 🌊1, 18.9
+  /// for 🌊9, about 77 up to there – later upgrades cost 100 📖 and more.
+  static double insight(int wave) => 0.7 * pow(wave, 1.5);
 
   /// Faith people in the breakthrough gain – more open for the gospel.
   static double openness(int wave) => 2.0 * wave;

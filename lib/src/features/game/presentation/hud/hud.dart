@@ -440,7 +440,8 @@ class _PastorhouseHud extends StatelessWidget {
       valueListenable: game.playerWorldPosition,
       builder: (context, playerPx, _) {
         final housePx = game.pastorhousePosition.value;
-        if (housePx == null) return const SizedBox.shrink();
+        // Not in the invisible world: room for the 🌊 waves (playtest).
+        if (housePx == null || game.isSpiritualWorld) return const SizedBox.shrink();
 
         final dx = housePx.x - playerPx.x;
         final dy = housePx.y - playerPx.y;
@@ -564,18 +565,23 @@ class _WaveHud extends StatelessWidget {
         final text = w.pause > 0
             ? '🌊${w.wave - 1} ✅   ⏳${w.pause} ➡️ ${_preview(w.next)}'
             : '🌊${w.wave}  👹 ${w.left}/${w.total}   ➡️ ${_preview(w.next)}';
-        return Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF66BB6A).withValues(alpha: 0.8)),
-            ),
-            child: Text(
-              text,
-              style: const TextStyle(color: Color(0xFFA5D6A7), fontSize: 15, fontWeight: FontWeight.bold),
+        // Tap: the next wave now ⏩ (playtest 2026-11-20).
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: game.spiritualDynamics.callNextWave,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF66BB6A).withValues(alpha: 0.8)),
+              ),
+              child: Text(
+                '$text  ⏩',
+                style: const TextStyle(color: Color(0xFFA5D6A7), fontSize: 15, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         );
