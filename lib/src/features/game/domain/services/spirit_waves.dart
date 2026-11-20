@@ -55,9 +55,14 @@ class SpiritWaves {
   /// 4.7× in 🌊12.
   static double might(int wave) => wave <= 1 ? 1.0 : pow(1.15, wave - 1).toDouble();
 
-  /// The daemons of [wave] grow, too: +8 % each wave, at most twice the
-  /// size – you see the later waves are stronger.
-  static double growth(int wave) => min(2.0, 1 + 0.08 * max(0, wave - 1));
+  /// How dark a daemon of [wave] is: 0 in 🌊1, 1 from 🌊12 on – the later
+  /// waves are stronger and you see it (playtest 2026-11-20; growing in
+  /// size looked worse than the two or three sizes of the tiers).
+  static double darkness(int wave) => ((wave - 1) / 11).clamp(0.0, 1.0);
+
+  /// 🙏 it costs to call the next wave while [wave] still runs – no
+  /// tapping up to 🌊10 for free (playtest 2026-11-20). In the pause free.
+  static double callCost(int wave) => 5.0 * wave;
 
   /// Radius (cells) of the breakthrough after [wave] – no cap: whoever
   /// holds out long is rewarded, never punished.

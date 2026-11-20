@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:logging/logging.dart';
+import '../../../../core/audio/game_sound.dart';
 import '../../../../core/utils/game_time.dart';
 import '../../../menu/domain/models/difficulty.dart';
 import '../spirit_world_game.dart';
@@ -178,13 +179,19 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
   /// Tapping the 🌊 badge (playtest 2026-11-20): in the pause the wave
   /// comes at once; while one runs, the next comes now – what is left of
   /// the skipped one stays and its breakthrough and 📖
-  /// are forfeit.
+  /// are forfeit – and it costs 🙏 [SpiritWaves.callCost].
   void callNextWave() {
     if (waves.current.isEmpty) return;
     if (waves.pause > 0) {
       waves.pause = 0.001; // spawned on the next update
       return;
     }
+    final cost = SpiritWaves.callCost(waves.wave);
+    if (game.faith < cost) {
+      GameSound.play(Sfx.denied, volume: 0.5);
+      return;
+    }
+    game.spendFaith(cost);
     // The left-overs keep their wave (and strength) but no longer count.
     waves.cleared(game.difficulty, _rng);
     waves.pause = 0;

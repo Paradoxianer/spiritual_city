@@ -5,6 +5,7 @@ import '../spirit_world_game.dart';
 import 'daemon_component.dart';
 import 'stronghold_component.dart';
 import '../../domain/services/combat_abilities.dart';
+import '../../domain/services/daemon_combat_rules.dart';
 import 'cell_component.dart';
 import '../../domain/models/prayer_combat.dart';
 
@@ -31,6 +32,10 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
   
   // Track which entities have already been hit by this specific wave
   final Set<String> _hitIds = {};
+
+  /// Daemons this wave has hit – the prayer spreads over them
+  /// ([DaemonCombatRules.spread]).
+  int _daemonsHit = 0;
 
   /// Share of a wave's strength that liberates the cells it passes over.
   ///
@@ -121,7 +126,8 @@ class ShockwaveComponent extends PositionComponent with HasGameReference<SpiritW
       final dist = center.distanceTo(daemon.position);
       if (dist <= _currentRadius && dist > _currentRadius - 25) {
         final falloff = 1.0 - (dist / maxRadius).clamp(0.0, 1.0);
-        daemon.takeDamage(strength * 5.0 * falloff, mode: mode, duration: duration);
+        daemon.takeDamage(strength * 5.0 * falloff * DaemonCombatRules.spread(_daemonsHit++),
+            mode: mode, duration: duration);
         _hitIds.add(daemon.model.id);
       }
     }

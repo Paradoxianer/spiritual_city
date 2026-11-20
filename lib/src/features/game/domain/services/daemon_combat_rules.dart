@@ -44,8 +44,23 @@ abstract final class DaemonCombatRules {
   /// Rebuke on a brute pushes 1.5× as far.
   static const double rebukeWeaknessKnockback = 1.5;
 
-  /// Drain on a leech, or Liberation on a possessor: 1.5× damage.
-  static const double damageWeakness = 1.5;
+  /// Drain on a leech, or Liberation on a possessor: 2× damage (1.5 until
+  /// playtest 2026-11-20 – the kinds hardly differed).
+  static const double damageWeakness = 2.0;
+
+  // ── Resistance (playtest 2026-11-20) ────────────────────────────────────
+  /// A mode on the kind that resists it: half the damage, half as long,
+  /// half as far.
+  static const double resistFactor = 0.5;
+
+  // ── One prayer, many daemons (playtest 2026-11-20) ──────────────────────
+  /// A prayer wave spends itself on whom it meets: the n-th daemon it hits
+  /// takes 1 / (1 + 0.5·(n−1)) of the damage – 1, ⅔, ½, ⅖ … – so a crowd
+  /// is harder than a few, and pushing them apart (🫸) pays. Effects last
+  /// as long for each.
+  static const double spreadPerHit = 0.5;
+
+  static double spread(int alreadyHit) => 1 / (1 + spreadPerHit * alreadyHit);
 
   // ── Combo ───────────────────────────────────────────────────────────────
   /// Drain on a slowed target lasts 25 % longer.
@@ -77,6 +92,11 @@ abstract final class DaemonCombatRules {
     var knock = 1.0;
     var chain = false;
 
+    if (kind.resistance == mode) {
+      dmg *= resistFactor;
+      dur *= resistFactor;
+      knock *= resistFactor;
+    }
     if (active.contains(PrayerMode.drain)) dmg *= drainedDamageFactor;
     if (active.contains(PrayerMode.slow) && t(PrayerMode.slow) >= 2) {
       dmg *= CombatAbilities.slowedDamage;

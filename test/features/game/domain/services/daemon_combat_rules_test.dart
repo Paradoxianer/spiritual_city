@@ -33,6 +33,29 @@ void main() {
       expect(_hit(DaemonKind.leech, PrayerMode.drain).weaknessHit, isTrue);
     });
 
+    // Playtest 2026-11-20: the kinds should differ more.
+    test('every mode is one kind\'s weakness and another\'s resistance', () {
+      expect(DaemonKind.values.map((k) => k.resistance).toSet(), PrayerMode.values.toSet());
+      for (final k in DaemonKind.values) {
+        expect(k.resistance, isNot(k.weakness));
+      }
+      expect(_hit(DaemonKind.brute, PrayerMode.liberation).damage,
+          closeTo(_hit(DaemonKind.leech, PrayerMode.liberation).damage / 2, 1e-9));
+      expect(_hit(DaemonKind.leech, PrayerMode.slow).effectDuration,
+          lessThan(_hit(DaemonKind.brute, PrayerMode.slow).effectDuration));
+      expect(_hit(DaemonKind.lurker, PrayerMode.rebuke).knockbackFactor, 0.5);
+    });
+
+    test('one prayer wave spreads over the daemons it hits', () {
+      expect(DaemonCombatRules.spread(0), 1.0);
+      expect(DaemonCombatRules.spread(2), 0.5);
+      var total = 0.0;
+      for (var n = 0; n < 20; n++) {
+        total += DaemonCombatRules.spread(n);
+      }
+      expect(total, lessThan(7), reason: '20 daemons take far less than 20 single hits');
+    });
+
     test('combo: the Slow → Drain → Rebuke chain does clearly more than the '
         'same three modes without combo', () {
       const k = DaemonKind.brute;

@@ -60,13 +60,15 @@ void main() {
     expect(CombatAbilities.drainHunger, greaterThan(0));
   });
 
-  // Playtest 2026-11-20: high waves strike far harder, and look it.
-  test('later waves strike harder and come bigger', () {
+  // Playtest 2026-11-20: high waves strike far harder, look darker, and
+  // calling one early costs.
+  test('later waves strike harder and look darker', () {
     expect(SpiritWaves.might(1), 1.0);
     expect(SpiritWaves.might(9), closeTo(3.06, 0.01));
     expect(SpiritWaves.might(12), greaterThan(4.5));
-    expect(SpiritWaves.growth(1), 1.0);
-    expect(SpiritWaves.growth(5), closeTo(1.32, 1e-9));
-    expect(SpiritWaves.growth(40), 2.0);
+    expect(SpiritWaves.darkness(1), 0.0);
+    expect(SpiritWaves.darkness(12), 1.0);
+    expect(SpiritWaves.darkness(40), 1.0);
+    expect(SpiritWaves.callCost(10), greaterThan(SpiritWaves.callCost(2)));
   });
 }
