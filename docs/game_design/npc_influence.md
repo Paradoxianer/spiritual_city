@@ -37,8 +37,19 @@ So erkennt der Spieler beim Kämpfen, **wer** für Dunkelheit oder Licht verantw
 
 ## 4. Bekehrte stützen befreite Zellen (#180)
 
-- Zellen mit ≥ 1 Christen im Radius (Startwert 2 Zellen) haben einen **reduzierten Rückfall** (Bonus auf `decayReduction` in `SpiritualDynamicsSystem`; Größenordnung wie Modifier "Bewahrung", nicht additiv unbegrenzt).
+- Zellen mit ≥ 1 Christen im Radius (Startwert 2 Zellen) bekommen **weniger roten Druck** (Bonus auf `decayReduction` in `SpiritualDynamicsSystem`; Größenordnung wie Modifier "Bewahrung", nicht additiv unbegrenzt).
 - Mehrere Christen stapeln mit abnehmendem Ertrag, damit keine Explosion entsteht (offene Frage in Lastenheft §6.2).
+
+### Boden wie im Game of Life (Playtest 2026-11-20)
+
+Vorher sank jede nicht-rote Zelle täglich um 0,002 („gefallene Welt“) und glich sich an ihre 4 Nachbarn an – große befreite Gebiete wurden überall gleichzeitig rot. Jetzt (`WorldSimulation.groundDelta`, 8 Nachbarn):
+
+- **Rot drückt nach seiner Tiefe:** Druck je Nachbar `((−0,2 − s) / 0,8)²` – ab −0,2, quadratisch. Tiefe rote Fronten fressen sich hinein, ein flacher roter Fleck kaum. Verlust/Tag = 0,02 × Druck.
+- **Grün stützt sich:** Jeder grüne Nachbar (> 0,3) hält 7,5 % des Drucks ab. Ab 5 grünen Nachbarn heilt Grün flaches Rot (voll bis −0,3, nichts mehr ab −0,7 – tiefes Rot befreit nur Gebet). Grün breitet sich nicht von selbst aus.
+- **Kein eigener Rückfall:** Grau bleibt grau, Grün bleibt grün, bis Rot es erreicht. Grün neben Grün hält für immer.
+- **Christen schützen stark:** Druck × 1/(1 + 2·Christen) (1 → 33 %, 2 → 20 %, mind. 5 %). Reichweite 2 + Stabilität × 8 Zellen (bis 9) – Seelsorge, Lebensthemen, Gemeinde und 🌱-Lehre (📖) vergrößern sie.
+- **Menschen:** Feindselige (< −50) verdunkeln ihre Zelle (× 0,002/Glaubenspunkt), Unentschiedene (< 0) leicht (× 0,0002) – je grüner die Umgebung, desto weniger; dort öffnet sich zugleich ihr Glaube.
+- **Eichung** (`ground_game_of_life_test.dart`): ein befreites Viertel (48×48) ohne Christen in tiefem Rot ist nach 4 h zu ~60 % grün, nach 6 h zu ~40 %, die Mitte unberührt; mit 16 Christen (Stabilität 0,3) nach 6 h ~65 %, nach 12 h ~40 %.
 
 ## 5. Gemeinde (#181)
 

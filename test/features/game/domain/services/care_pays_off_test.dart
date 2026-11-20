@@ -42,7 +42,7 @@ void main() {
 
   test('firm Christians protect further', () {
     expect(ChristianSupport.radiusFor(0), 2);
-    expect(ChristianSupport.radiusFor(0.45), 3);
-    expect(ChristianSupport.radiusFor(0.9), 5);
+    expect(ChristianSupport.radiusFor(0.45), 5);
+    expect(ChristianSupport.radiusFor(0.9), 9);
   });
 }
