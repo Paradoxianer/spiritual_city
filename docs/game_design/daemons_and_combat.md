@@ -71,11 +71,20 @@ Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, u
   - Größe 1/2/3 + (Welle−1)²/4: normal 2 2 3 4 6 8 11 14 18 22 27 32 bis 🌊12.
   - Energie 0,3 × 1,3^(Welle−1): 🌊9 2,4×, 🌊12 5,4×.
   - Treffer-Schaden × 1,15^(Welle−1) (`SpiritWaves.might`): 🌊9 3×, 🌊12 4,7×.
-  - Dämonen wachsen sichtbar: +8 % Größe je Welle, höchstens doppelt so groß.
   - 🪫 gibt je Entzug 15 % weniger, bis auf 5 %.
   - 📖 0,7 × Welle^1,5.
   - Tipp auf das 🌊-Badge ⏩: In der Pause kommt die Welle sofort. Während einer Welle kommt die nächste gleich dazu. Die Reste der übersprungenen Welle bleiben, ihr Durchbruch und ihre 📖 entfallen.
   - Der 🏠-Kompass ist in der unsichtbaren Welt ausgeblendet, das Badge steht direkt unter den Leisten.
+- **Gebet verteilt sich, Resistenzen** (Playtest 2026-11-20, zweite Runde: Bis 🌊10 durchgetippt, und eine Menge war nicht schwerer als wenige):
+  - Eine Gebetswelle verteilt ihren Schaden auf die getroffenen Dämonen. Der n-te Getroffene bekommt 1/(1+0,5·(n−1)), also 1, ⅔, ½, ⅖ usw. (`DaemonCombatRules.spread`). Wirkdauer und Rückstoß bleiben voll. Eine Menge ist damit schwerer, und Auseinanderdrängen mit 🫸 lohnt sich.
+  - Jede Art hat eine Schwäche und eine Resistenz. Bei einem Treffer auf die Resistenz gibt es halben Schaden, halbe Dauer und halben Rückstoß:
+    - 🐍 widersteht 🫸.
+    - 🪨 widersteht 🕊️.
+    - 🦇 widersteht ⏳.
+    - 👁️ widersteht 🪫.
+  - Schwäche-Schaden ×2, vorher ×1,5.
+  - Die Stärke einer Welle zeigt sich nicht mehr an der Größe, sondern an einem dunkleren Rot im Kern, ab 🌊12 fast schwarz (`SpiritWaves.darkness`).
+  - Mitten in einer Welle die nächste zu rufen kostet 🙏 5 × Welle. In der Pause ist es frei.
 - Keine Resistenzen, kein Jünger-Schaden (siehe unten, zurückgenommen).
 - 👁️ Besetzer: kein schwarzer Ring mehr – immer angreifbar, Befreiung ist seine Schwäche; besiegt ist der Mensch frei (npc_influence.md §3, Playtest 2026-11-16).
 - Code: `SpiritWaves`, `WaveStatus`, `SpiritualDynamicsSystem.startWaves`, `GameSpiritWaves`, `_WaveHud`.

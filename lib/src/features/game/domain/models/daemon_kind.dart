@@ -4,13 +4,17 @@ import 'dart:ui' show Color;
 import 'prayer_combat.dart';
 
 /// Daemon types (docs/game_design/daemons_and_combat.md §3, #178). Each has
-/// its own look, size and trail and exactly one weakness.
+/// its own look, size and trail, exactly one weakness and one resistance
+/// (playtest 2026-11-20) – every prayer mode is someone's weakness and
+/// someone else's resistance: 🐍 slips away from 🫸, 🪨 shrugs off 🕊️,
+/// 🦇 flutters out of ⏳, 👁️ holds on against 🪫.
 enum DaemonKind {
   /// Fast, little energy, comes in numbers; thin trail. Weak to Slow.
   lurker(
     glyph: '🐍',
     color: Color(0xFF2E7D32),
     weakness: PrayerMode.slow,
+    resistance: PrayerMode.rebuke,
     energyFactor: 0.6,
     speedFactor: 1.5,
     sizeFactor: 0.8,
@@ -22,6 +26,7 @@ enum DaemonKind {
     glyph: '🪨',
     color: Color(0xFF6D4C41),
     weakness: PrayerMode.rebuke,
+    resistance: PrayerMode.liberation,
     energyFactor: 1.8,
     speedFactor: 0.6,
     sizeFactor: 1.4,
@@ -33,6 +38,7 @@ enum DaemonKind {
     glyph: '🦇',
     color: Color(0xFF6A1B9A),
     weakness: PrayerMode.drain,
+    resistance: PrayerMode.slow,
     energyFactor: 1.0,
     speedFactor: 1.0,
     sizeFactor: 1.0,
@@ -45,6 +51,7 @@ enum DaemonKind {
     glyph: '👁️',
     color: Color(0xFF263238),
     weakness: PrayerMode.liberation,
+    resistance: PrayerMode.drain,
     energyFactor: 1.4,
     speedFactor: 0.8,
     sizeFactor: 1.2,
@@ -54,6 +61,7 @@ enum DaemonKind {
   final String glyph;
   final Color color;
   final PrayerMode weakness;
+  final PrayerMode resistance;
   final double energyFactor;
   final double speedFactor;
   final double sizeFactor;
@@ -63,6 +71,7 @@ enum DaemonKind {
     required this.glyph,
     required this.color,
     required this.weakness,
+    required this.resistance,
     required this.energyFactor,
     required this.speedFactor,
     required this.sizeFactor,

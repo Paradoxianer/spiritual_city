@@ -34,12 +34,15 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
   /// Body size: base × type × tier (tier 3 is 50 % bigger than tier 1).
   final double _daemonSize;
 
-  /// Base × type × tier × 🌊 wave – later waves come bigger.
-  static double _sizeOf(DaemonModel m) =>
-      _baseSize *
-      m.kind.sizeFactor *
-      DaemonCombatRules.tierSize(m.tier) *
-      (m.wave > 0 ? SpiritWaves.growth(m.wave) : 1.0);
+  static double _sizeOf(DaemonModel m) => _baseSize * m.kind.sizeFactor * DaemonCombatRules.tierSize(m.tier);
+
+  /// The core darkens with the 🌊 wave: the deeper the red, the stronger.
+  late final Color _coreRed = _darkened(_coreNormal);
+  late final Color _coreKind = _darkened(model.kind.color.withValues(alpha: 0.95));
+
+  Color _darkened(Color c) => model.wave > 0
+      ? Color.lerp(c, const Color(0xF2140000), SpiritWaves.darkness(model.wave) * 0.85)!
+      : c;
 
   /// A 🦇 leech closer than this pulls faith from the pastor.
   static const double leechReach = 140.0;
@@ -493,7 +496,7 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // all daemons look alike (only size tells the tier).
     _corePaint.color = isFlickering
         ? _coreFlicker
-        : (discern ? model.kind.color.withValues(alpha: 0.95) : _coreNormal);
+        : (discern ? _coreKind : _coreRed);
     canvas.drawCircle(center, _daemonSize * 0.35, _corePaint);
 
     if (discern) {

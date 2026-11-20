@@ -579,7 +579,7 @@ class _WaveHud extends StatelessWidget {
                 border: Border.all(color: const Color(0xFF66BB6A).withValues(alpha: 0.8)),
               ),
               child: Text(
-                '$text  ⏩',
+                w.pause > 0 ? '$text  ⏩' : '$text  ⏩🙏${SpiritWaves.callCost(w.wave).round()}',
                 style: const TextStyle(color: Color(0xFFA5D6A7), fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ),
