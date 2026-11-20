@@ -568,7 +568,7 @@ class NPCComponent extends PositionComponent
     if (cell == null) return false;
     final data = cell.data;
     if (data is BuildingData) return false;
-    if (data is NatureData && data.type == NatureType.water) return false;
+    if (data is NatureData && data.blocks) return false;
     return true;
   }
 

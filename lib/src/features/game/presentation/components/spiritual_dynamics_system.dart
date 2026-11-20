@@ -218,14 +218,14 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     game.worldDay++;
     _day = WorldDay(
       game.grid,
-      chunks: game.grid.getLoadedChunks(),
+      chunks: game.cityChunks,
       residents: game.residents(),
       anchors: game.houseAnchors(),
       tuning: game.worldTuning,
     );
     // During the 🌊 waves nothing comes from outside – only the wave.
     if (!game.tutorialCalmSpirit && !game.isSpiritualWorld) {
-      _maybeSpawnDaemons(game.grid.getLoadedChunks());
+      _maybeSpawnDaemons(game.cityChunks);
     }
   }
 

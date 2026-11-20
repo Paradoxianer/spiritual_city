@@ -826,6 +826,7 @@ class SpiritWorldGame extends FlameGame
         _applyPlayerState(savedState);
         _savedCellStates     = _parseSavedCellStates(savedState);
         _savedNPCStates      = _parseSavedNPCStates(savedState);
+        _dropBeyondCity();
         _savedBuildingStates = _parseSavedBuildingStates(savedState);
         _savedLootState      = _parseSavedLootState(savedState);
         worldDay = (savedState['worldDay'] as num?)?.toInt() ?? 0;
@@ -850,6 +851,14 @@ class SpiritWorldGame extends FlameGame
             )
           : Vector2(CityLayout.current.spawnCell.$1 * CellComponent.cellSize,
               CityLayout.current.spawnCell.$2 * CellComponent.cellSize);
+      final layout = CityLayout.current;
+      if (hasSavedState &&
+          !layout.containsCell((player.position.x / CellComponent.cellSize).floor(),
+              (player.position.y / CellComponent.cellSize).floor())) {
+        // Saved out in the land that is forest now: back home.
+        player.position = Vector2(layout.spawnCell.$1 * CellComponent.cellSize,
+            layout.spawnCell.$2 * CellComponent.cellSize);
+      }
       if (hasSavedState) player.position = _walkableNear(player.position);
       await world.add(player);
 
@@ -1004,6 +1013,13 @@ class SpiritWorldGame extends FlameGame
   /// `_checkWinCondition` only takes once the game is nearly won, see
   /// #176); it is the best count obtainable without that cost.
   int get knownChristianCount => knownNpcCounts.converted;
+
+  /// The loaded chunks of the city – the forest around it stays as it is
+  /// and does not count (playtest 2026-11-20).
+  List<CityChunk> get cityChunks => [
+        for (final c in grid.getLoadedChunks())
+          if (CityLayout.current.containsChunk(c.chunkX, c.chunkY)) c,
+      ];
 
   /// Merged live+saved (converted, total) NPC counts – see
   /// [knownChristianCount].  Returned together so UI that shows "X / Y"

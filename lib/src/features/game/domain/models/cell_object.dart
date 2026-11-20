@@ -45,7 +45,8 @@ enum BuildingType {
   powerPlant,   // Power plant (industrial edge)      (unique)
 }
 
-enum NatureType { park, water, tree }
+/// [forest]: the dense forest around the city – nobody walks into it.
+enum NatureType { park, water, tree, forest }
 
 abstract class CellData {
   String get categoryId;
@@ -98,6 +99,9 @@ class NatureData extends CellData {
   final NatureType type;
 
   NatureData({required this.type});
+
+  /// Water and the forest around the city block the way.
+  bool get blocks => type == NatureType.water || type == NatureType.forest;
 
   @override
   String get categoryId => 'nature_${type.name}';

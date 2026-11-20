@@ -216,7 +216,13 @@ class _MinimapPainter extends CustomPainter {
   Color _cityColor(CellData? d) {
     if (d == null) return _walk;
     if (d is RoadData) return d.type == RoadType.small ? _road : _bigRoad;
-    if (d is NatureData) return d.type == NatureType.water ? _water : _green;
+    if (d is NatureData) {
+      return switch (d.type) {
+        NatureType.water => _water,
+        NatureType.forest => const Color(0xFF1B4D20),
+        _ => _green,
+      };
+    }
     if (d is BuildingData) {
       return switch (d.type) {
         BuildingType.pastorHouse => const Color(0xFFFFD54F),

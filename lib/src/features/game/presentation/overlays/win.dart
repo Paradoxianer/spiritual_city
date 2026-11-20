@@ -112,7 +112,7 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
 
     int totalCells = 0;
     int positiveCells = 0;
-    for (final chunk in game.grid.getLoadedChunks()) {
+    for (final chunk in game.cityChunks) {
       for (final cell in chunk.cells.values) {
         totalCells++;
         if (cell.spiritualState > 0) positiveCells++;
