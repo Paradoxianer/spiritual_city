@@ -175,6 +175,24 @@ class SpiritualDynamicsSystem extends Component with HasGameReference<SpiritWorl
     game.onWaveCleared(beaten);
   }
 
+  /// Tapping the 🌊 badge (playtest 2026-11-20): in the pause the wave
+  /// comes at once; while one runs, the next comes now – what is left of
+  /// the skipped one stays and its breakthrough and 📖
+  /// are forfeit.
+  void callNextWave() {
+    if (waves.current.isEmpty) return;
+    if (waves.pause > 0) {
+      waves.pause = 0.001; // spawned on the next update
+      return;
+    }
+    // The left-overs keep their wave (and strength) but no longer count.
+    waves.cleared(game.difficulty, _rng);
+    waves.pause = 0;
+    _spawnWave();
+    game.onWaveStarted(waves.wave);
+    _waveCheck = 0.0;
+  }
+
   /// Tells the HUD: while a wave runs the next one is the preview, in the
   /// pause the one coming.
   void _publish(int left) {
