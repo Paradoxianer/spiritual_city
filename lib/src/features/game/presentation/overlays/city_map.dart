@@ -272,6 +272,9 @@ class _CityMapPainter extends CustomPainter {
       if (done.contains(quarter.key)) {
         canvas.drawRect(r, fill);
         if (zoom >= 1.2) _emojiAt(canvas, '✝️', r.center, (11 / zoom).clamp(3.0, 11.0));
+      } else if (game.openPeople[quarter.key] case final n?) {
+        // 🧍 How many here still have to hear (playtest 2026-11-21).
+        _emojiAt(canvas, '🧍$n', r.center, (9 / zoom).clamp(3.0, 9.0));
       }
       canvas.drawRect(r, outline);
     }

@@ -93,4 +93,13 @@ abstract final class CombatAbilities {
   /// 🍞 a drain kill costs – drawing a daemon's strength wears the pastor
   /// out (playtest 2026-11-18).
   static const double drainHunger = 5.0;
+
+  /// With an empty stomach 🪫 draws no more 🙏 (playtest 2026-11-21: it
+  /// stayed endless while starving). Fasting is real, but even Jesus was
+  /// hungry after forty days (Mt 4:2) – the pastor must eat.
+  static bool drainFed(double hunger) => hunger >= drainHunger;
+
+  /// ❤️ per second while starving (🍞 below 10) – before only 1 every 30 s,
+  /// hardly felt; now a full 160 ❤️ is gone in about five minutes.
+  static const double starveHealthPerSecond = 0.5;
 }

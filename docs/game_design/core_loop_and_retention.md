@@ -40,6 +40,8 @@ Statt nur "die ganze Stadt gewinnen" gibt es **Stadtteile** (Distrikte, vgl. `Di
 - Der Gesamtstadt-Sieg (#143) bleibt Endziel; er ergibt sich aus allen Stadtteilen und ersetzt den bisherigen Radius-Check (#176).
 - Voraussetzung: ein zentraler NPC-/Zellzustand, der unabhängig vom Chunk-Laden zählt (#170).
 - **Geschlossene Stadt (Playtest 2026-11-20):** Die Stadt besteht genau aus ihren Vierteln (`CityLayout.quarters`). Dahinter liegt dichter Wald mit einem Fluss drei bis sechs Felder vor dem Rand (Ps 125,2), beides nicht begehbar. Dort gibt es keine Häuser, keine Menschen und keine Bollwerke. Boden, Fortschritt und Speicherstand zählen nur in der Stadt. Alte Spielstände verlieren beim Laden das Land, die Bewohner und die Viertel jenseits des Randes. Vorher sank der Fortschritt mit jedem entdeckten Randfeld, und Randviertel ohne Menschen ließen sich nie gewinnen. Später denkbar: Brücken als Ausgang, die zur Stadtwahl führen.
+- **Viertel ganz christlich (Playtest 2026-11-21):** Sind alle Bewohner eines Viertels Christen, kommt derselbe große 🎉-Bildschirm wie beim Freibeten, mit 🏘️✝️ statt 🏘️🟩 und 📖 10 statt 3. Das ist das schwerere, größere Ziel; vorher gab es nur einen kleinen Toast.
+- **Die Letzten finden (Playtest 2026-11-21):** Der Stadtplan zeigt in jedem offenen Viertel 🧍 N, also wie viele dort noch nicht Christen sind. Sind es höchstens fünf (`Awakening.lastSeekers`), erscheinen sie auf der Minimap als weiße Punkte. Im Testspielstand fehlten am Ende 19 Menschen in fünf Vierteln, alle mit 🙏 100, aber nie angesprochen.
 
 ---
 

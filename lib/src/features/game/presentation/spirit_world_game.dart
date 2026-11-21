@@ -628,6 +628,10 @@ class SpiritWorldGame extends FlameGame
   /// A neighbourhood just prayed free – the celebration screen 🎉.
   final ValueNotifier<QuarterCelebration?> quarterCelebration = ValueNotifier(null);
 
+  /// People of each known neighbourhood (key) who are not Christians yet –
+  /// for the plan and the minimap. Refreshed about once a second.
+  Map<String, int> openPeople = const {};
+
   /// Days of the invisible world so far (one per [SpiritualDynamicsSystem]
   /// tick) – world time, saved with the game (#194).
   int worldDay = 0;
@@ -1504,12 +1508,9 @@ class SpiritWorldGame extends FlameGame
     if (_hungerDrainTimer >= hungerDrainInterval) {
       _hungerDrainTimer = 0.0;
       spendHunger(hungerDrainAmount);
-      // If critically hungry (hunger < 10), health starts draining (1 HP per
-      // hunger tick, i.e. every [hungerDrainInterval] seconds)
-      if (hunger < 10.0) {
-        spendHealth(1.0);
-      }
     }
+    // Critically hungry (🍞 below 10): ❤️ drains steadily.
+    if (hunger < 10.0) spendHealth(CombatAbilities.starveHealthPerSecond * dt);
     // Check faint condition every frame (health can drop from combat too)
     _checkFaintCondition();
   }
@@ -1615,6 +1616,12 @@ class SpiritWorldGame extends FlameGame
       radius: 12.0,
       durationType: InfluenceDurationType.permanent,
     );
+  }
+
+  /// 🪫 absorbed with an empty stomach – nothing drawn, say why.
+  void drainStarved() {
+    GameSound.play(Sfx.denied, volume: 0.5);
+    _toast('🪫 🚫🍞', 'drainStarved');
   }
 
   /// Faith cost multiplier from hunger: +50% when hunger is critically low
