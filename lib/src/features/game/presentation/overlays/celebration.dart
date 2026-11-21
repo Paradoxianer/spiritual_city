@@ -56,9 +56,11 @@ class _QuarterCelebrationOverlayState extends State<_QuarterCelebrationOverlay>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(c.everyoneChristian ? '🏘️✝️' : '🏘️🟩', style: TextStyle(fontSize: c.everyoneChristian ? 72 : 56)),
+                    Text(c.wholeCity ? '🏙️🟩' : c.everyoneChristian ? '🏘️✝️' : '🏘️🟩',
+                        style: TextStyle(fontSize: c.wholeCity || c.everyoneChristian ? 72 : 56)),
                     const SizedBox(height: 4),
-                    Text(c.everyoneChristian ? '⛪ 🙌 🎉 🕊️ 🎺' : '🙌 🎉 🕊️', style: const TextStyle(fontSize: 28)),
+                    Text(c.wholeCity ? '🌐 🙌 🎉 🕊️ 🎺 ☀️' : c.everyoneChristian ? '⛪ 🙌 🎉 🕊️ 🎺' : '🙌 🎉 🕊️',
+                        style: const TextStyle(fontSize: 28)),
                     const SizedBox(height: 24),
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -73,7 +75,7 @@ class _QuarterCelebrationOverlayState extends State<_QuarterCelebrationOverlay>
                             _WinStatRow(emoji: '🌐🟩', label: '', value: '${c.percent} %'),
                             const SizedBox(height: 10),
                           ],
-                          _WinStatRow(emoji: '🏘️✝️', label: '', value: '${c.christians} / ${c.people}'),
+                          _WinStatRow(emoji: c.wholeCity ? '🏙️✝️' : '🏘️✝️', label: '', value: '${c.christians} / ${c.people}'),
                           const SizedBox(height: 10),
                           _WinStatRow(emoji: '⛪👥', label: '', value: '${c.church}'),
                           const SizedBox(height: 10),

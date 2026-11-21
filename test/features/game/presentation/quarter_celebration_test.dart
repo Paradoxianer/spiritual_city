@@ -65,6 +65,38 @@ void main() {
     await tester.pump(const Duration(seconds: 5)); // narrator toasts
   });
 
+  test('the whole city prayed free is saved', () {
+    final p = PlayerProgress()..cityPrayedFree = true;
+    expect((PlayerProgress()..loadFromJson(p.toJson())).cityPrayedFree, isTrue);
+    expect((PlayerProgress()..loadFromJson(PlayerProgress().toJson())).cityPrayedFree, isFalse);
+  });
+
+  // Playtest 2026-11-21: all green – a celebration of its own, also for a
+  // save where every neighbourhood was already prayed free.
+  testWidgets('the whole village prayed free is celebrated once', (tester) async {
+    final save = GameSave(id: 'w', name: 'w', createdAt: DateTime(2026),
+        difficulty: Difficulty.normal, seed: 3, citySize: CitySize.village);
+    final g = SpiritWorldGame(difficulty: Difficulty.normal, gameSave: save);
+    await tester.runAsync(() async {
+      g.onGameResize(Vector2(800, 600));
+      // ignore: invalid_use_of_internal_member
+      await g.load();
+      // ignore: invalid_use_of_internal_member
+      g.mount();
+      g.update(0);
+      await g.ready();
+    });
+    g.progress.celebratedQuarters.addAll([for (final q in CityLayout.current.quarters) q.key]);
+    g.update(1.5);
+    expect(g.quarterCelebration.value?.wholeCity, isTrue);
+    expect(g.progress.cityPrayedFree, isTrue);
+    g.quarterCelebration.value = null;
+    g.update(1.5);
+    expect(g.quarterCelebration.value, isNull, reason: 'only once');
+    await tester.pump(const Duration(seconds: 5));
+    CityLayout.current = CityLayout(CitySize.metropolis);
+  });
+
   // Playtest 2026-11-13: the big goal – everyone in the city a Christian.
   testWidgets('a village is won when the last neighbourhood is all Christian', (tester) async {
     final save = GameSave(id: 'v', name: 'v', createdAt: DateTime(2026),
