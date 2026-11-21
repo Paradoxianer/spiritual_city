@@ -99,6 +99,30 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
     if (context.mounted) context.go('/game', extra: save);
   }
 
+  /// 🌉 Over the bridge into the next, bigger city: the pastor comes
+  /// along, the city stays behind (playtest 2026-11-21).
+  Future<void> _crossBridge(BuildContext context) async {
+    final game = widget.game;
+    final now = DateTime.now();
+    final next = CityCrossing.next(CityLayout.current.size);
+    final day = now.day.toString().padLeft(2, '0');
+    final month = now.month.toString().padLeft(2, '0');
+    final prefix = AppStrings.get('game.saveName.prefix');
+    final seed = now.millisecondsSinceEpoch;
+    final save = GameSave(
+      id: now.millisecondsSinceEpoch.toString(),
+      name: '$prefix $day.$month.${now.year} ${next.emoji}',
+      createdAt: now,
+      difficulty: game.difficulty,
+      seed: seed,
+      citySize: next,
+      gameState: CityCrossing.startState(game.progress.toJson(),
+          schemaVersion: SpiritWorldGame.kSaveDataVersion, worldSeed: seed),
+    );
+    await getIt<MenuService>().writeSave(save);
+    if (context.mounted) context.go('/game', extra: save);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_visible) return const SizedBox.shrink();
@@ -232,6 +256,22 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                       ),
                     ),
                     const SizedBox(height: 32),
+                    // 🌉 On to the next, bigger city – with the pastor.
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => _crossBridge(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFB300),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text('🌉 ➡️ ${CityCrossing.next(CityLayout.current.size).emoji}',
+                            style: const TextStyle(fontSize: 22)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     // Buttons
                     SizedBox(
                       width: double.infinity,

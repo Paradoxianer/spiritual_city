@@ -850,7 +850,8 @@ class SpiritWorldGame extends FlameGame
       // (Previously (7000, 7000) = cell (218, 218) which ended up inside the
       // pastor-house lot block after the lot-wide special-building scan was
       // introduced, making the player spawn inside a solid building.)
-      player.position = hasSavedState
+      // A state without a position (🌉 the next city) starts at home.
+      player.position = hasSavedState && savedState['playerX'] is num
           ? Vector2(
               (savedState['playerX'] as num).toDouble(),
               (savedState['playerY'] as num).toDouble(),
