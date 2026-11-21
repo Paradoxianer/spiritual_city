@@ -452,16 +452,20 @@ extension GameBuildingActions on SpiritWorldGame {
       _toast(blocker, 'openAirDenied');
       return;
     }
+    final faithBefore = faith;
     spendFaith(openAirFaithCost);
     spendHealth(progress.maxHealth * openAirHealthShare);
     spendHunger(progress.maxHunger * openAirHungerShare);
     final reached = _preachAround(player.position, radiusCells: openAirRadiusCells, strength: openAirStrength);
+    final converted = _openAirHarvest(player.position, faithBefore);
     _brightenspiritualAreaAroundPosition(player.position, radius: 10, amount: 0.15);
     recordPractice(Discipline.bible);
     GameSound.playAction('preach', Discipline.bible.name);
     // The disciples nearby come together as a prayer circle.
     final gathered = gatherDisciples(player.position);
-    _toast('📢🎺👥 $reached  −${openAirFaithCost.round()}🙏${gathered > 0 ? '  🌱🙏 $gathered' : ''}',
+    _toast(
+        '📢🎺👥 $reached${converted > 0 ? '  ✝️ $converted' : ''}  −${openAirFaithCost.round()}🙏'
+        '${gathered > 0 ? '  🌱🙏 $gathered' : ''}',
         gathered > 0 ? 'openAirGathered' : 'openAir');
     // …and then God fills up what was given.
     add(TimerComponent(
@@ -473,6 +477,38 @@ extension GameBuildingActions on SpiritWorldGame {
         _toast('✨🙏💯', 'faithRefilled');
       },
     ));
+  }
+
+  /// Those ready come to faith ([OpenAirHarvest]); returns how many.
+  int _openAirHarvest(Vector2 at, double pastorFaith) {
+    const cell = CellComponent.cellSize;
+    const reach = openAirRadiusCells * cell;
+    final near = chunkManager.allActiveNPCs.where((c) => c.position.distanceTo(at) <= reach).toList();
+    final chance = OpenAirHarvest.chance(pastorFaith, near.where((c) => c.model.isChristian).length);
+    final rng = Random();
+    var converted = 0;
+    for (final c in near) {
+      final npc = c.model;
+      if (npc.isChristian) continue;
+      final st = grid.getCell((c.position.x / cell).floor(), (c.position.y / cell).floor())?.spiritualState ?? 0.0;
+      if (!OpenAirHarvest.ready(npc.faith, st) || rng.nextDouble() >= chance) continue;
+      npc.isConverted = true;
+      npc.unlockChristPhaseIfConverted();
+      npc.applyInfluence(100);
+      progress.church.join(npc);
+      progress.recordConversion();
+      progress.addInsight(NpcInteractionService.conversionInsightReward * OpenAirHarvest.insightShare);
+      dayStats.conversions++;
+      c.flash('✝️🕊️');
+      converted++;
+    }
+    if (converted > 0) {
+      GameSound.play(Sfx.conversion);
+      conversionToastMessage.value = '+$converted ✝';
+      _checkAndApplyModifiers();
+      _checkWinCondition();
+    }
+    return converted;
   }
 
   /// Applies [delta] spiritual influence to the city cell directly beneath

@@ -40,6 +40,8 @@ import 'components/stronghold_component.dart';
 import '../domain/models/skills.dart';
 import '../domain/services/combat_abilities.dart';
 import '../domain/services/daemon_combat_rules.dart';
+import '../domain/services/npc_interaction_service.dart';
+import '../domain/services/open_air_harvest.dart';
 import '../domain/services/learning_service.dart';
 import '../domain/services/world_simulation.dart';
 import '../domain/help/help_content.dart';
