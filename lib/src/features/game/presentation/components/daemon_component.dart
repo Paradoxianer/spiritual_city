@@ -354,15 +354,20 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
 
   void _absorb() {
     model.dissolved = true;
+    final fed = CombatAbilities.drainFed(game.hunger);
     // Energy transfer: Pastor gains 5-15 Faith depending on daemon strength
-    final faithGain = (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0) *
+    final faithGain = !fed ? 0.0 : (model.initialEnergy.abs() / 10.0).clamp(5.0, 15.0) *
         ((game.combatAbilityTiers[PrayerMode.drain] ?? 0) >= 1
             ? CombatAbilities.drainKillFaith
             : 1.0) *
         _upgradeStrength(PrayerMode.drain) * // ⚡ of 🪫 draws more
         CombatAbilities.drainFatigue(game.drainedThisVisit++);
-    game.gainFaith(faithGain);
-    game.spendHunger(CombatAbilities.drainHunger);
+    if (fed) {
+      game.gainFaith(faithGain);
+      game.spendHunger(CombatAbilities.drainHunger);
+    } else {
+      game.drainStarved();
+    }
     game.progress.addInsight(_killInsightReward);
     game.onDaemonKilled(model, mode: PrayerMode.drain, helpers: _hitBy);
     _cleanseAroundDeathPoint();

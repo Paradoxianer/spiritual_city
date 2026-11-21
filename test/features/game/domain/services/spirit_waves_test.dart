@@ -60,6 +60,13 @@ void main() {
     expect(CombatAbilities.drainHunger, greaterThan(0));
   });
 
+  // Playtest 2026-11-21: draining stayed endless while starving.
+  test('🪫 draws nothing on an empty stomach, starving hurts', () {
+    expect(CombatAbilities.drainFed(CombatAbilities.drainHunger), isTrue);
+    expect(CombatAbilities.drainFed(2), isFalse);
+    expect(160 / CombatAbilities.starveHealthPerSecond, lessThan(6 * 60));
+  });
+
   // Playtest 2026-11-20: high waves strike far harder, look darker, and
   // calling one early costs.
   test('later waves strike harder and look darker', () {

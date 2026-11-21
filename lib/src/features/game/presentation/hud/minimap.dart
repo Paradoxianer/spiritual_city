@@ -146,6 +146,16 @@ class _MinimapPainter extends CustomPainter {
         if (o != null) markers.add((o, const Color(0xFFB000FF), 4.5));
       }
     } else {
+      // 🧍 The last few of a neighbourhood who are not Christians yet
+      // (playtest 2026-11-21: hard to find).
+      for (final npc in game.chunkManager.allActiveNPCs) {
+        if (npc.model.isChristian) continue;
+        final home = npc.model.homePosition;
+        final q = Quarter.ofCell((home.x / cs).floor(), (home.y / cs).floor());
+        if ((game.openPeople[q.key] ?? Awakening.lastSeekers + 1) > Awakening.lastSeekers) continue;
+        final o = toMap(npc.position);
+        if (o != null) markers.add((o, Colors.white, 2.4));
+      }
       // 📋 Mission targets.
       for (final npc in game.chunkManager.allActiveNPCs) {
         if (npc.model.activeMission == null) continue;

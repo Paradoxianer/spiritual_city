@@ -50,6 +50,15 @@ abstract final class Awakening {
   /// Insight for an awakening – the biggest single reward in the game.
   static const double insightReward = 3.0;
 
+  /// 📖 when everyone in a neighbourhood is a Christian – the harder,
+  /// greater goal, worth more than praying it free.
+  static const double christianInsightReward = 10.0;
+
+  /// With this many people or fewer still to reach, a neighbourhood shows
+  /// them on the minimap (playtest 2026-11-21: the last ones were hard to
+  /// find).
+  static const int lastSeekers = 5;
+
   /// Extra daemon power per awakened neighbourhood (#178 scaling).
   static const int powerPerAwakening = 3;
 
@@ -138,6 +147,10 @@ class QuarterCelebration {
   /// Neighbourhoods where everyone is a Christian.
   final int allChristian;
 
+  /// Everyone who lives here came to faith (playtest 2026-11-21: a bigger
+  /// reason to celebrate than the green) – not the prayed-free screen.
+  final bool everyoneChristian;
+
   const QuarterCelebration({
     required this.quarter,
     required this.percent,
@@ -149,6 +162,7 @@ class QuarterCelebration {
     required this.prayedFree,
     this.cityQuarters = 0,
     this.allChristian = 0,
+    this.everyoneChristian = false,
   });
 }
 

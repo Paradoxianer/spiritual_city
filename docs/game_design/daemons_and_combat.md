@@ -67,6 +67,7 @@ Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, u
 - **Steilere Wellen** (Playtest 2026-11-18: oben zu leicht): Größe 1/2/3 + (Welle−1)²/6 (normal: 2 2 2 3 4 6 8 10 12 … 22 in 🌊12), Energie 0,3 × 1,25^(Welle−1) (🌊6 ≈ volle Stärke, 🌊9 1,8×, 🌊12 3,5×) – anfangs leichter, hinten heraus immer schwerer.
 - **Weisheit je Welle** (Playtest 2026-11-18): 📖 0,77 × Welle^1,5 (🌊1: 0,77, 🌊9: 20,8, bis 🌊9 zusammen ≈ 85; vorher linear 0,25 → 0,33 → 0,77 × Welle), ohne Deckel – Durchhalten lohnt sich.
 - **🪫 ermüdet** (Playtest 2026-11-18): Mit vielen Christen ringsum ließ sich der Glaube per Entziehen endlos nachladen. Jeder Entzug im selben Besuch gibt 10 % weniger Glauben, bis auf 25 %, und kostet 🍞 5; Rausgehen und Wiederkommen setzt es zurück (2. Mose 17,12). `CombatAbilities.drainFatigue`.
+- **🪫 braucht 🍞 (Playtest 2026-11-21):** Mit weniger als 🍞 5 bringt ein Entzug keinen Glauben mehr (🪫 🚫🍞), und Hungern (🍞 unter 10) kostet stetig ❤️ 0,5 pro Sekunde statt 1 alle 30 Sekunden. Vorher ließ sich hungernd endlos weiter entziehen. Fasten ist biblisch, doch auch Jesus hungerte nach vierzig Tagen (Mt 4,2). `CombatAbilities.drainFed`.
 - **Nachschärfen** (Playtest 2026-11-20: hohe Wellen zu leicht, Treffer taten kaum weh, 🪫 hielt einen fast ewig drin):
   - Größe 1/2/3 + (Welle−1)²/4: normal 2 2 3 4 6 8 11 14 18 22 27 32 bis 🌊12.
   - Energie 0,3 × 1,3^(Welle−1): 🌊9 2,4×, 🌊12 5,4×.

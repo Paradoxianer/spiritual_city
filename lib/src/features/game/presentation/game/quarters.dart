@@ -153,15 +153,41 @@ extension GameQuarters on SpiritWorldGame {
       people[key] = (people[key] ?? 0) + 1;
       if (npc.isChristian) christians[key] = (christians[key] ?? 0) + 1;
     }
-    var added = false;
+    openPeople = {
+      for (final q in open)
+        if ((people[q.key] ?? 0) > (christians[q.key] ?? 0)) q.key: people[q.key]! - (christians[q.key] ?? 0),
+    };
+    Quarter? celebrate;
     for (final q in open) {
       final n = people[q.key] ?? 0;
       if ((christians[q.key] ?? 0) < n || !_quarterKnown(q)) continue;
       progress.christianQuarters.add(q.key);
-      added = true;
-      if (n > 0) _toast('🏘️ ✝️✝️✝️ 🙌', 'allChristian');
+      if (n > 0) celebrate = q;
     }
-    if (added) _checkWinCondition();
+    _checkWinCondition();
+    if (celebrate != null && !isWon.value) _celebrateChristianQuarter(celebrate, people[celebrate.key]!);
+  }
+
+  /// Everyone in [q] came to faith – the big 🎉 screen, not only a toast.
+  void _celebrateChristianQuarter(Quarter q, int n) {
+    progress.addInsight(Awakening.christianInsightReward);
+    GameSound.play(Sfx.awakening, volume: 0.9);
+    final quarters = CityLayout.current.quarters;
+    quarterCelebration.value = QuarterCelebration(
+      quarter: q,
+      percent: 0,
+      christians: n,
+      people: n,
+      church: progress.church.members.length,
+      day: progress.dayStats.day,
+      awakened: progress.awakenedQuarters.contains(q.key),
+      prayedFree: quarters.where((q) => progress.celebratedQuarters.contains(q.key)).length,
+      cityQuarters: quarters.length,
+      allChristian: quarters.where((q) => progress.christianQuarters.contains(q.key)).length,
+      everyoneChristian: true,
+    );
+    Narrator.say('celebrate', '🏘️', '', HelpContent.toasts['allChristian']?.text,
+        force: true, figure: officerFigure);
   }
 
   /// All houses of [q] are known: each chunk generated, or open water.
