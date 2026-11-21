@@ -70,14 +70,6 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
     super.dispose();
   }
 
-  /// Formats a [Duration] as "X m Y s" (or just "Y s" for < 60 s).
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes;
-    final seconds = d.inSeconds % 60;
-    if (minutes == 0) return '${seconds}s';
-    return '${minutes}min ${seconds}s';
-  }
-
   /// Starts a brand-new game with the same difficulty.
   Future<void> _startNewGame(BuildContext context) async {
     final game = widget.game;
@@ -143,7 +135,6 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
       }
     }
 
-    final playTime = _formatDuration(game.sessionPlayTime);
     final faithCollected = game.progress.faithStage.totalAccumulated.round();
 
     return FadeTransition(
@@ -242,9 +233,9 @@ class _WinScreenOverlayState extends State<_WinScreenOverlay> with TickerProvide
                           ),
                           const SizedBox(height: 10),
                           _WinStatRow(
-                            emoji: '⏱️',
+                            emoji: '📅',
                             label: '',
-                            value: playTime,
+                            value: '${game.progress.dayStats.day}',
                           ),
                           const SizedBox(height: 10),
                           _WinStatRow(

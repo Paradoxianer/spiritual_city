@@ -11,7 +11,7 @@ import 'spirit_world_game.dart';
 /// Share the game (social media, messenger): a picture of the city as
 /// it is now plus the progress and the link.
 class ShareProgress {
-  static const String url = 'https://paradoxianer.github.io/spiritual_city/';
+  static const String url = 'https://spiritual-city.org';
 
   /// The post in the player's language – outside the game, where whoever
   /// reads it does not know the game's emoji (playtest 2026-11-04).
@@ -36,12 +36,12 @@ class ShareProgress {
     final files = <XFile>[];
     final png = await _capture(shot);
     if (png != null) {
-      files.add(XFile.fromData(png, mimeType: 'image/png', name: 'spiritworld-city.png'));
+      files.add(XFile.fromData(png, mimeType: 'image/png', name: 'spiritual-city.png'));
     }
     final result = await SharePlus.instance.share(ShareParams(
       text: text(g),
       files: files.isEmpty ? null : files,
-      fileNameOverrides: files.isEmpty ? null : ['spiritworld-city.png'],
+      fileNameOverrides: files.isEmpty ? null : ['spiritual-city.png'],
       sharePositionOrigin: origin,
     ));
     if (result.status == ShareResultStatus.unavailable) {

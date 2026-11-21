@@ -180,7 +180,9 @@ extension GameQuarters on SpiritWorldGame {
     progress.addInsight(Awakening.cityInsightReward);
     GameSound.play(Sfx.awakening);
     final cells = cityProgress.value?.cityCells ?? Tally.zero;
-    final people = cityProgress.value?.cityPeople ?? Tally.zero;
+    // Counted here: right after loading, cityProgress is not there yet.
+    final known = knownNpcCounts;
+    final people = Tally(known.converted, known.total);
     quarterCelebration.value = QuarterCelebration(
       quarter: currentQuarter,
       percent: cells.total == 0 ? 100 : (cells.free * 100 ~/ cells.total).clamp(0, 100),
