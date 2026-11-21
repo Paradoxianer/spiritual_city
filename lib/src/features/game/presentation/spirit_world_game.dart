@@ -1765,6 +1765,9 @@ class SpiritWorldGame extends FlameGame
   /// The narrator tells what the person or building the pastor just came
   /// near is about (playtest 2026-10-31).
   void _narrateNear(Interactable i) {
+    // During a celebration or the victory the officer speaks – passers-by
+    // must not take his bubble (playtest 2026-11-21).
+    if (quarterCelebration.value != null || isWon.value) return;
     if (i is NPCComponent) {
       final npc = i.model;
       final kind = npc.isShakenChristian ? 'shaken' : (npc.isChristian ? 'christian' : 'person');
