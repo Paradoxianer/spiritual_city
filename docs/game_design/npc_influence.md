@@ -51,6 +51,13 @@ Vorher sank jede nicht-rote Zelle täglich um 0,002 („gefallene Welt“) und g
 - **Menschen:** Feindselige (< −50) verdunkeln ihre Zelle (× 0,002/Glaubenspunkt), Unentschiedene (< 0) leicht (× 0,0002) – je grüner die Umgebung, desto weniger; dort öffnet sich zugleich ihr Glaube.
 - **Eichung** (`ground_game_of_life_test.dart`): ein befreites Viertel (48×48) ohne einen Christen in tiefem Rot ist nach 6 h zu ~75 % grün, nach 12 h zu ~50 %, die Mitte unberührt. Flaches Rot im Grün heilt in ~4 h; neben einem tiefroten Fleck ist das Grün nach 12 h noch nicht gekippt.
 
+### Bekehrung bei der 📢🎺 Freiversammlung (Playtest 2026-11-21)
+
+Bei einer Freiversammlung können sich mehrere Zuhörer auf einmal bekehren (Apg 2,41). Das soll am Ende die vielen Einzelgespräche ersparen. Es bekehren sich aber nur Menschen, die schon bereit sind: Glaube plus Boden × 50 muss über 60 liegen, im Gespräch reichen 50. Die Freiversammlung erntet also, was über Beziehungen gewachsen ist (Mt 9,37).
+- **Chance je bereitem Zuhörer:** (Glaube des Pastors vor den Kosten / 400, höchstens 1) × (20 % + 3 % je Christ in Reichweite, höchstens 90 %). Beispiele: 340 🙏 mit 20 Christen ergibt etwa 68 %, 100 🙏 etwa 20 %.
+- **Belohnung:** 📖 halb so viel wie bei einer Bekehrung im Gespräch.
+- **Code:** `OpenAirHarvest`.
+
 ## 5. Gemeinde (#181)
 
 Details zu Rollen und passivem Ertrag siehe `progression_and_unlocks.md`, Abschnitt "Gemeinde". Voraussetzung ist ein zentraler NPC-Zustandsspeicher (#170).
