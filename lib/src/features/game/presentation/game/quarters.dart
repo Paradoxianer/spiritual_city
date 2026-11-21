@@ -49,6 +49,7 @@ extension GameQuarters on SpiritWorldGame {
     }
 
     _checkCityQuarters();
+    _checkCityPrayedFree();
     // Strongholds only in the city's neighbourhoods.
     if (isSpiritualWorld && CityLayout.current.containsQuarter(q)) _ensureStronghold(status);
     _updateCityProgress(q);
@@ -166,6 +167,35 @@ extension GameQuarters on SpiritWorldGame {
     }
     _checkWinCondition();
     if (celebrate != null && !isWon.value) _celebrateChristianQuarter(celebrate, people[celebrate.key]!);
+  }
+
+  /// Every neighbourhood of the city prayed free: once, in the visible
+  /// world, after any other celebration – also for older saves where it
+  /// already was.
+  void _checkCityPrayedFree() {
+    if (progress.cityPrayedFree || isSpiritualWorld || quarterCelebration.value != null || isWon.value) return;
+    final quarters = CityLayout.current.quarters;
+    if (quarters.isEmpty || !quarters.every((q) => progress.celebratedQuarters.contains(q.key))) return;
+    progress.cityPrayedFree = true;
+    progress.addInsight(Awakening.cityInsightReward);
+    GameSound.play(Sfx.awakening);
+    final cells = cityProgress.value?.cityCells ?? Tally.zero;
+    final people = cityProgress.value?.cityPeople ?? Tally.zero;
+    quarterCelebration.value = QuarterCelebration(
+      quarter: currentQuarter,
+      percent: cells.total == 0 ? 100 : (cells.free * 100 ~/ cells.total).clamp(0, 100),
+      christians: people.free,
+      people: people.total,
+      church: progress.church.members.length,
+      day: progress.dayStats.day,
+      awakened: false,
+      prayedFree: quarters.length,
+      cityQuarters: quarters.length,
+      allChristian: quarters.where((q) => progress.christianQuarters.contains(q.key)).length,
+      wholeCity: true,
+    );
+    Narrator.say('celebrate', '🏙️', '', HelpContent.toasts['cityPrayedFree']?.text,
+        force: true, figure: officerFigure);
   }
 
   /// Everyone in [q] came to faith – the big 🎉 screen, not only a toast.

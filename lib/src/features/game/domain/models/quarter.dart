@@ -54,6 +54,9 @@ abstract final class Awakening {
   /// greater goal, worth more than praying it free.
   static const double christianInsightReward = 10.0;
 
+  /// 📖 when the whole city is prayed free.
+  static const double cityInsightReward = 20.0;
+
   /// With this many people or fewer still to reach, a neighbourhood shows
   /// them on the minimap (playtest 2026-11-21: the last ones were hard to
   /// find).
@@ -151,6 +154,10 @@ class QuarterCelebration {
   /// reason to celebrate than the green) – not the prayed-free screen.
   final bool everyoneChristian;
 
+  /// Every neighbourhood of the city is prayed free – the whole city green
+  /// in the invisible world (playtest 2026-11-21).
+  final bool wholeCity;
+
   const QuarterCelebration({
     required this.quarter,
     required this.percent,
@@ -163,6 +170,7 @@ class QuarterCelebration {
     this.cityQuarters = 0,
     this.allChristian = 0,
     this.everyoneChristian = false,
+    this.wholeCity = false,
   });
 }
 
