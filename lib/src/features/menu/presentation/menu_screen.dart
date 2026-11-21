@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../domain/legal_texts.dart';
 import '../domain/menu_service.dart';
@@ -21,6 +23,9 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
+  /// Where 💛 leads: the game's PayPal.me page.
+  static const String supportUrl = 'https://paypal.me/spiritualcity';
+
   @override
   void initState() {
     super.initState();
@@ -161,6 +166,50 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
+  /// 💛 Three amounts and a free one – a concrete amount with what it does
+  /// motivates more than an empty field (playtest 2026-11-21).
+  void _showSupport(BuildContext context) {
+    void open(String amount) {
+      Navigator.of(context).pop();
+      launchUrl(Uri.parse('$supportUrl$amount'), webOnlyWindowName: '_blank');
+    }
+
+    Widget option(String emoji, String amount, String key, String path) => ListTile(
+          leading: Text(emoji, style: const TextStyle(fontSize: 28)),
+          title: Text(amount, style: const TextStyle(color: Colors.white, fontSize: 18)),
+          subtitle: Text(AppStrings.get(key), style: TextStyle(color: Colors.blueGrey.shade300)),
+          onTap: () => open(path),
+        );
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF14263A),
+      builder: (context) => SafeArea(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 20, 8, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('💛', style: TextStyle(fontSize: 36)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Text(AppStrings.get('menu.support.text'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4)),
+                ),
+                option('☕', '3 €', 'menu.support.coffee', '/3EUR'),
+                option('🏠', '7 €', 'menu.support.month', '/7EUR'),
+                option('💛', '… €', 'menu.support.free', ''),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMenuButtons(BuildContext context) {
     return Column(
       children: [
@@ -179,6 +228,15 @@ class _MenuScreenState extends State<MenuScreen> {
           label: AppStrings.get('menu.settings'),
           onPressed: () => context.go('/settings'),
         ),
+        // 💛 Support the game – only on the web (playtest 2026-11-21): the
+        // Play Store allows no payment links past its own billing.
+        if (kIsWeb)
+          MenuButton(
+            icon: Icons.favorite,
+            label: AppStrings.get('menu.support'),
+            onPressed: () => _showSupport(context),
+            color: Colors.amber.shade200,
+          ),
         MenuButton(
           icon: Icons.exit_to_app,
           label: AppStrings.get('menu.quit'),

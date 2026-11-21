@@ -18,6 +18,11 @@ class AppStrings {
       'menu.newGame': 'Neues Spiel',
       'menu.loadGame': 'Spiel laden',
       'menu.settings': 'Einstellungen',
+      'menu.support': 'Unterstützen 💛',
+      'menu.support.text': 'Spiritual City ist kostenlos und ohne Werbung. Wenn es dir gefällt, hilf mit, es online zu halten.',
+      'menu.support.coffee': 'Ein Kaffee für den Entwickler',
+      'menu.support.month': 'Hält das Spiel einen Monat online',
+      'menu.support.free': 'Eigener Betrag',
       'menu.quit': 'Beenden',
       'menu.subtitle': 'Psalm 27,4',
 
@@ -194,6 +199,11 @@ class AppStrings {
       'menu.newGame': 'New Game',
       'menu.loadGame': 'Load Game',
       'menu.settings': 'Settings',
+      'menu.support': 'Support 💛',
+      'menu.support.text': 'Spiritual City is free and without ads. If you enjoy it, help keep it online.',
+      'menu.support.coffee': 'A coffee for the developer',
+      'menu.support.month': 'Keeps the game online for a month',
+      'menu.support.free': 'Your own amount',
       'menu.quit': 'Quit',
       'menu.subtitle': 'Psalm 27:4',
 

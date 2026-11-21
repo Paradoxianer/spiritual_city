@@ -6,6 +6,11 @@ const Map<String, String> stringsPt = {
   'menu.newGame': 'Novo jogo',
   'menu.loadGame': 'Carregar jogo',
   'menu.settings': 'Configurações',
+  'menu.support': 'Apoiar 💛',
+  'menu.support.text': 'Spiritual City é gratuito e sem anúncios. Se você gosta, ajude a mantê-lo online.',
+  'menu.support.coffee': 'Um café para o desenvolvedor',
+  'menu.support.month': 'Mantém o jogo online por um mês',
+  'menu.support.free': 'Outro valor',
   'menu.quit': 'Sair',
   'menu.subtitle': 'Salmos 27:4',
 
