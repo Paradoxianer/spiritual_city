@@ -14,7 +14,7 @@ class SpiritWorldCityApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'SpiritWorld City',
+      title: 'Spiritual City',
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,

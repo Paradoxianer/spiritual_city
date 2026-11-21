@@ -2,7 +2,7 @@
 /// Bible verses: Louis Segond 1910 (public domain).
 const Map<String, String> stringsFr = {
   // Main Menu
-  'menu.title': 'SpiritWorld City',
+  'menu.title': 'Spiritual City',
   'menu.newGame': 'Nouvelle partie',
   'menu.loadGame': 'Charger une partie',
   'menu.settings': 'Paramètres',
@@ -62,7 +62,7 @@ const Map<String, String> stringsFr = {
   'game.pause.title': 'Pause',
   'game.pause.resume': 'Reprendre',
   'game.pause.help': 'Aide',
-  'share.title': 'Je bâtis l\'Église dans SpiritWorld City – jour {day}',
+  'share.title': 'Je bâtis l\'Église dans Spiritual City – jour {day}',
   'share.converted': 'personnes ont trouvé Jésus',
   'share.church': 'dans mon Église',
   'share.awakened': 'quartiers réveillés',

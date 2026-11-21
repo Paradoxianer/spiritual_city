@@ -2,7 +2,7 @@
 /// to English. Bible verses: Almeida Revista e Corrigida (public domain).
 const Map<String, String> stringsPt = {
   // Main Menu
-  'menu.title': 'SpiritWorld City',
+  'menu.title': 'Spiritual City',
   'menu.newGame': 'Novo jogo',
   'menu.loadGame': 'Carregar jogo',
   'menu.settings': 'Configurações',
@@ -62,7 +62,7 @@ const Map<String, String> stringsPt = {
   'game.pause.title': 'Pausa',
   'game.pause.resume': 'Continuar',
   'game.pause.help': 'Ajuda',
-  'share.title': 'Construindo igreja em SpiritWorld City – dia {day}',
+  'share.title': 'Construindo igreja em Spiritual City – dia {day}',
   'share.converted': 'pessoas encontraram Jesus',
   'share.church': 'na minha igreja',
   'share.awakened': 'bairros despertados',
