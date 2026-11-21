@@ -14,7 +14,7 @@ class AppStrings {
     'pt': stringsPt,
     'de': {
       // Main Menu
-      'menu.title': 'SpiritWorld City',
+      'menu.title': 'Spiritual City',
       'menu.newGame': 'Neues Spiel',
       'menu.loadGame': 'Spiel laden',
       'menu.settings': 'Einstellungen',
@@ -74,7 +74,7 @@ class AppStrings {
       'game.pause.title': 'Pause',
       'game.pause.resume': 'Fortsetzen',
       'game.pause.help': 'Hilfe',
-      'share.title': 'Ich baue Gemeinde in SpiritWorld City – Tag {day}',
+      'share.title': 'Ich baue Gemeinde in Spiritual City – Tag {day}',
       'share.converted': 'Menschen zu Jesus gefunden',
       'share.church': 'in meiner Gemeinde',
       'share.awakened': 'Stadtviertel erweckt',
@@ -195,7 +195,7 @@ class AppStrings {
     },
     'en': {
       // Main Menu
-      'menu.title': 'SpiritWorld City',
+      'menu.title': 'Spiritual City',
       'menu.newGame': 'New Game',
       'menu.loadGame': 'Load Game',
       'menu.settings': 'Settings',
@@ -255,7 +255,7 @@ class AppStrings {
       'game.pause.title': 'Paused',
       'game.pause.resume': 'Resume',
       'game.pause.help': 'Help',
-      'share.title': 'Building church in SpiritWorld City – day {day}',
+      'share.title': 'Building church in Spiritual City – day {day}',
       'share.converted': 'people found Jesus',
       'share.church': 'in my church',
       'share.awakened': 'neighbourhoods awakened',

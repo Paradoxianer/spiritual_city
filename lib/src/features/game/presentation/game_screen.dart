@@ -565,7 +565,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                 ),
                 const SizedBox(height: 32),
                 const Text(
-                  'SPIRITWORLD CITY',
+                  'SPIRITUAL CITY',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 22,

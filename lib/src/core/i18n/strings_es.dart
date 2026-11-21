@@ -2,7 +2,7 @@
 /// Bible verses: Reina-Valera 1909 (public domain).
 const Map<String, String> stringsEs = {
   // Main Menu
-  'menu.title': 'SpiritWorld City',
+  'menu.title': 'Spiritual City',
   'menu.newGame': 'Nueva partida',
   'menu.loadGame': 'Cargar partida',
   'menu.settings': 'Ajustes',
@@ -62,7 +62,7 @@ const Map<String, String> stringsEs = {
   'game.pause.title': 'Pausa',
   'game.pause.resume': 'Continuar',
   'game.pause.help': 'Ayuda',
-  'share.title': 'Construyendo iglesia en SpiritWorld City – día {day}',
+  'share.title': 'Construyendo iglesia en Spiritual City – día {day}',
   'share.converted': 'personas encontraron a Jesús',
   'share.church': 'en mi iglesia',
   'share.awakened': 'barrios despertados',

@@ -35,7 +35,7 @@ Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV:
 
 ⚠️ Diese Angaben müssen vor der Veröffentlichung im Store vom Herausgeber ausgefüllt werden.''',
       'privacy.title': 'Datenschutz',
-      'privacy.body': '''Kurz gesagt: SpiritWorld City sammelt keine persönlichen Daten.
+      'privacy.body': '''Kurz gesagt: Spiritual City sammelt keine persönlichen Daten.
 
 • Spielstände und Einstellungen (Sprache, Ton, Schwierigkeit) werden nur auf deinem Gerät gespeichert. Sie verlassen das Gerät nicht.
 • Es gibt kein Benutzerkonto, keine Anmeldung, keine Werbung, keine In-App-Käufe und keine Analyse- oder Tracking-Dienste.
@@ -45,14 +45,14 @@ Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV:
 
 Verantwortlicher: siehe Impressum. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Beschwerde bei einer Aufsichtsbehörde; da wir keine Daten von dir speichern, liegen bei uns keine vor.''',
       'terms.title': 'Nutzungsbedingungen',
-      'terms.body': '''• SpiritWorld City ist ein kostenloses Spiel. Es wird ohne Gewähr bereitgestellt; für Datenverlust (z. B. verlorene Spielstände) wird nicht gehaftet, soweit gesetzlich zulässig.
+      'terms.body': '''• Spiritual City ist ein kostenloses Spiel. Es wird ohne Gewähr bereitgestellt; für Datenverlust (z. B. verlorene Spielstände) wird nicht gehaftet, soweit gesetzlich zulässig.
 • Das Spiel stellt geistliche Themen vereinfacht und spielerisch dar. Es ersetzt keine Seelsorge, Beratung oder Therapie. Wenn es dir nicht gut geht, sprich mit Menschen, denen du vertraust.
 • Bibelzitate: Lutherbibel 1912 (deutsch), King James Version (englisch), Reina-Valera 1909 (spanisch), Louis Segond 1910 (französisch) und Almeida Revista e Corrigida (portugiesisch), alle gemeinfrei.
 • Grafiken und Töne: siehe Credits.''',
       'parents.title': 'Hinweis für Eltern',
       'parents.body': '''Liebe Eltern,
 
-SpiritWorld City ist ein Spiel über einen Pastor, der in einer Stadt Menschen hilft und für sie betet. Es zeigt dabei auch eine „unsichtbare Welt“ mit Dämonen, die durch Gebet besiegt werden – ohne Blut und ohne Gewaltdarstellung.
+Spiritual City ist ein Spiel über einen Pastor, der in einer Stadt Menschen hilft und für sie betet. Es zeigt dabei auch eine „unsichtbare Welt“ mit Dämonen, die durch Gebet besiegt werden – ohne Blut und ohne Gewaltdarstellung.
 
 • Es werden keine Daten Ihres Kindes gesammelt; alles bleibt auf dem Gerät.
 • Keine Werbung, keine Käufe, kein Chat mit Fremden.
@@ -68,7 +68,7 @@ Eltern finden alle Infos unter Einstellungen → Hinweis für Eltern, Datenschut
       'consent.accept': 'Los geht\'s',
       'consent.leave': 'Verlassen',
       'credits.title': 'Credits & Lizenzen',
-      'credits.body': '''SpiritWorld City
+      'credits.body': '''Spiritual City
 Idee und Entwicklung: Matthias Lindner
 
 Grafik und Töne
@@ -101,7 +101,7 @@ Email: ⟨email address⟩
 
 ⚠️ The publisher must fill in these details before a store release.''',
       'privacy.title': 'Privacy',
-      'privacy.body': '''In short: SpiritWorld City collects no personal data.
+      'privacy.body': '''In short: Spiritual City collects no personal data.
 
 • Saves and settings (language, sound, difficulty) are stored only on your device. They never leave it.
 • No account, no sign-in, no ads, no in-app purchases, no analytics or tracking.
@@ -111,14 +111,14 @@ Email: ⟨email address⟩
 
 Controller: see imprint. You have the right to access, rectification, erasure and to complain to a supervisory authority; since we store no data about you, we hold none.''',
       'terms.title': 'Terms of use',
-      'terms.body': '''• SpiritWorld City is a free game, provided as is; to the extent permitted by law there is no liability for data loss (e.g. lost saves).
+      'terms.body': '''• Spiritual City is a free game, provided as is; to the extent permitted by law there is no liability for data loss (e.g. lost saves).
 • The game presents spiritual topics in a simplified, playful way. It does not replace pastoral care, counselling or therapy. If you are not doing well, talk to people you trust.
 • Bible quotes: King James Version (English), Luther Bible 1912 (German), Reina-Valera 1909 (Spanish), Louis Segond 1910 (French) and Almeida Revista e Corrigida (Portuguese), all in the public domain.
 • Graphics and sounds: see credits.''',
       'parents.title': 'For parents',
       'parents.body': '''Dear parents,
 
-SpiritWorld City is a game about a pastor who helps people in a city and prays for them. It also shows an "invisible world" with demons that are overcome by prayer – without blood or depictions of violence.
+Spiritual City is a game about a pastor who helps people in a city and prays for them. It also shows an "invisible world" with demons that are overcome by prayer – without blood or depictions of violence.
 
 • No data about your child is collected; everything stays on the device.
 • No ads, no purchases, no chat with strangers.
@@ -134,7 +134,7 @@ Parents find everything under Settings → For parents, Privacy and Imprint.''',
       'consent.accept': 'Let\'s go',
       'consent.leave': 'Leave',
       'credits.title': 'Credits & licences',
-      'credits.body': '''SpiritWorld City
+      'credits.body': '''Spiritual City
 Idea and development: Matthias Lindner
 
 Graphics and sounds
@@ -167,7 +167,7 @@ Correo: ⟨dirección de correo⟩
 
 ⚠️ El editor debe completar estos datos antes de publicar en la tienda.''',
       'privacy.title': 'Privacidad',
-      'privacy.body': '''En resumen: SpiritWorld City no recoge datos personales.
+      'privacy.body': '''En resumen: Spiritual City no recoge datos personales.
 
 • Las partidas y los ajustes (idioma, sonido, dificultad) se guardan solo en tu dispositivo. Nunca salen de él.
 • Sin cuenta, sin inicio de sesión, sin anuncios, sin compras dentro de la app, sin analítica ni seguimiento.
@@ -177,14 +177,14 @@ Correo: ⟨dirección de correo⟩
 
 Responsable: ver el aviso legal. Tienes derecho de acceso, rectificación, supresión y a reclamar ante una autoridad de control; como no guardamos datos sobre ti, no tenemos ninguno.''',
       'terms.title': 'Condiciones de uso',
-      'terms.body': '''• SpiritWorld City es un juego gratuito, ofrecido tal cual; en la medida que permita la ley, no hay responsabilidad por pérdida de datos (p. ej. partidas perdidas).
+      'terms.body': '''• Spiritual City es un juego gratuito, ofrecido tal cual; en la medida que permita la ley, no hay responsabilidad por pérdida de datos (p. ej. partidas perdidas).
 • El juego presenta temas espirituales de forma simplificada y lúdica. No sustituye el acompañamiento pastoral, el asesoramiento ni la terapia. Si no estás bien, habla con personas de confianza.
 • Citas bíblicas: Reina-Valera 1909, Louis Segond 1910, Almeida Revista e Corrigida, King James Version y Biblia de Lutero 1912, todas de dominio público.
 • Gráficos y sonidos: ver créditos.''',
       'parents.title': 'Para padres',
       'parents.body': '''Queridos padres:
 
-SpiritWorld City es un juego sobre un pastor que ayuda a las personas de una ciudad y ora por ellas. También muestra un «mundo invisible» con demonios que se vencen con la oración, sin sangre ni escenas de violencia.
+Spiritual City es un juego sobre un pastor que ayuda a las personas de una ciudad y ora por ellas. También muestra un «mundo invisible» con demonios que se vencen con la oración, sin sangre ni escenas de violencia.
 
 • No se recoge ningún dato de su hijo; todo queda en el dispositivo.
 • Sin anuncios, sin compras, sin chat con desconocidos.
@@ -200,7 +200,7 @@ Los padres encuentran todo en Ajustes → Para padres, Privacidad y Aviso legal.
       'consent.accept': '¡Vamos!',
       'consent.leave': 'Salir',
       'credits.title': 'Créditos y licencias',
-      'credits.body': '''SpiritWorld City
+      'credits.body': '''Spiritual City
 Idea y desarrollo: Matthias Lindner
 
 Gráficos y sonidos
@@ -233,7 +233,7 @@ E-mail : ⟨adresse e-mail⟩
 
 ⚠️ L’éditeur doit compléter ces informations avant une publication dans le store.''',
       'privacy.title': 'Confidentialité',
-      'privacy.body': '''En bref : SpiritWorld City ne collecte aucune donnée personnelle.
+      'privacy.body': '''En bref : Spiritual City ne collecte aucune donnée personnelle.
 
 • Les sauvegardes et les paramètres (langue, son, difficulté) sont enregistrés uniquement sur ton appareil. Ils ne le quittent jamais.
 • Pas de compte, pas de connexion, pas de publicité, pas d’achats intégrés, pas d’analyse ni de suivi.
@@ -243,14 +243,14 @@ E-mail : ⟨adresse e-mail⟩
 
 Responsable : voir les mentions légales. Tu as un droit d’accès, de rectification, d’effacement et de réclamation auprès d’une autorité de contrôle ; comme nous ne conservons aucune donnée sur toi, nous n’en détenons aucune.''',
       'terms.title': 'Conditions d’utilisation',
-      'terms.body': '''• SpiritWorld City est un jeu gratuit, fourni tel quel ; dans la mesure permise par la loi, aucune responsabilité n’est assumée pour la perte de données (p. ex. sauvegardes perdues).
+      'terms.body': '''• Spiritual City est un jeu gratuit, fourni tel quel ; dans la mesure permise par la loi, aucune responsabilité n’est assumée pour la perte de données (p. ex. sauvegardes perdues).
 • Le jeu présente des thèmes spirituels de manière simplifiée et ludique. Il ne remplace ni l’accompagnement pastoral, ni le conseil, ni la thérapie. Si tu ne vas pas bien, parle à des personnes de confiance.
 • Citations bibliques : Louis Segond 1910, Reina-Valera 1909, Almeida Revista e Corrigida, King James Version et Bible de Luther 1912, toutes dans le domaine public.
 • Graphismes et sons : voir les crédits.''',
       'parents.title': 'Pour les parents',
       'parents.body': '''Chers parents,
 
-SpiritWorld City est un jeu sur un pasteur qui aide les habitants d’une ville et prie pour eux. Il montre aussi un « monde invisible » avec des démons vaincus par la prière – sans sang ni scènes de violence.
+Spiritual City est un jeu sur un pasteur qui aide les habitants d’une ville et prie pour eux. Il montre aussi un « monde invisible » avec des démons vaincus par la prière – sans sang ni scènes de violence.
 
 • Aucune donnée sur votre enfant n’est collectée ; tout reste sur l’appareil.
 • Pas de publicité, pas d’achats, pas de discussion avec des inconnus.
@@ -266,7 +266,7 @@ Les parents trouvent tout sous Paramètres → Pour les parents, Confidentialit�
       'consent.accept': 'C’est parti',
       'consent.leave': 'Quitter',
       'credits.title': 'Crédits et licences',
-      'credits.body': '''SpiritWorld City
+      'credits.body': '''Spiritual City
 Idée et développement : Matthias Lindner
 
 Graphismes et sons
@@ -299,7 +299,7 @@ E-mail: ⟨endereço de e-mail⟩
 
 ⚠️ O editor deve preencher estes dados antes de publicar na loja.''',
       'privacy.title': 'Privacidade',
-      'privacy.body': '''Resumindo: SpiritWorld City não coleta dados pessoais.
+      'privacy.body': '''Resumindo: Spiritual City não coleta dados pessoais.
 
 • Jogos salvos e configurações (idioma, som, dificuldade) ficam apenas no seu aparelho. Nunca saem dele.
 • Sem conta, sem login, sem anúncios, sem compras no app, sem análise ou rastreamento.
@@ -309,14 +309,14 @@ E-mail: ⟨endereço de e-mail⟩
 
 Responsável: veja as informações legais. Você tem direito de acesso, retificação, exclusão e de reclamar a uma autoridade de controle; como não guardamos dados sobre você, não temos nenhum.''',
       'terms.title': 'Termos de uso',
-      'terms.body': '''• SpiritWorld City é um jogo gratuito, oferecido como está; na medida permitida por lei, não há responsabilidade por perda de dados (p. ex. jogos salvos perdidos).
+      'terms.body': '''• Spiritual City é um jogo gratuito, oferecido como está; na medida permitida por lei, não há responsabilidade por perda de dados (p. ex. jogos salvos perdidos).
 • O jogo apresenta temas espirituais de forma simplificada e lúdica. Não substitui o cuidado pastoral, o aconselhamento ou a terapia. Se você não estiver bem, converse com pessoas de confiança.
 • Citações bíblicas: Almeida Revista e Corrigida, Reina-Valera 1909, Louis Segond 1910, King James Version e Bíblia de Lutero 1912, todas em domínio público.
 • Gráficos e sons: veja os créditos.''',
       'parents.title': 'Para os pais',
       'parents.body': '''Queridos pais,
 
-SpiritWorld City é um jogo sobre um pastor que ajuda as pessoas de uma cidade e ora por elas. Ele também mostra um "mundo invisível" com demônios vencidos pela oração – sem sangue nem cenas de violência.
+Spiritual City é um jogo sobre um pastor que ajuda as pessoas de uma cidade e ora por elas. Ele também mostra um "mundo invisível" com demônios vencidos pela oração – sem sangue nem cenas de violência.
 
 • Nenhum dado sobre seu filho é coletado; tudo fica no aparelho.
 • Sem anúncios, sem compras, sem chat com estranhos.
@@ -332,7 +332,7 @@ Os pais encontram tudo em Configurações → Para os pais, Privacidade e Inform
       'consent.accept': 'Vamos lá',
       'consent.leave': 'Sair',
       'credits.title': 'Créditos e licenças',
-      'credits.body': '''SpiritWorld City
+      'credits.body': '''Spiritual City
 Ideia e desenvolvimento: Matthias Lindner
 
 Gráficos e sons

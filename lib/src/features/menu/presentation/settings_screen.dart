@@ -133,7 +133,7 @@ class InfoScreen extends StatelessWidget {
                   OutlinedButton(
                     onPressed: () => showLicensePage(
                       context: context,
-                      applicationName: 'SpiritWorld City',
+                      applicationName: 'Spiritual City',
                       applicationIcon: const Text('✝️', style: TextStyle(fontSize: 40)),
                     ),
                     child: Text(LegalTexts.get('credits.licenses')),
