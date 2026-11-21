@@ -30,6 +30,11 @@ abstract final class KenneyCityRenderer {
   static Image? _sheet;
   static bool get ready => _sheet != null;
 
+  /// The old town hall with its clock tower (docs/art/city_hall): one
+  /// picture for the whole lot, 16 px per cell like the sheet.
+  static const String cityHallAsset = 'city_hall_112px.png';
+  static Image? _cityHall;
+
   static final Paint _paint = Paint()
     ..filterQuality = FilterQuality.none
     ..isAntiAlias = false;
@@ -37,6 +42,7 @@ abstract final class KenneyCityRenderer {
   static Future<void> load(Images images) async {
     if (_sheet != null) return;
     await loadImageWithRetry(images, asset, (i) => _sheet = i);
+    await loadImageWithRetry(images, cityHallAsset, (i) => _cityHall = i);
   }
 
   // ── Sheet coordinates (column, row) ──────────────────────────────────────
@@ -375,7 +381,17 @@ abstract final class KenneyCityRenderer {
     final pitch = _lotPitch(cell.district);
     final (rootX, rootY) = _lotRoot(data.buildingId, wx, wy, pitch);
     if (wx - rootX == pitch ~/ 2 && wy - rootY == (pitch - 1) ~/ 2) {
-      _landmark(canvas, r, typeOf(data));
+      final type = typeOf(data);
+      final hall = _cityHall;
+      if (type == BuildingType.cityHall && hall != null) {
+        // Over the whole lot (the street takes its first row and column);
+        // the door in the picture sits where [isDoor] expects it.
+        final lot = Rect.fromLTWH(r.left + (rootX + 1 - wx) * r.width,
+            r.top + (rootY + 1 - wy) * r.height, (pitch - 1) * r.width, (pitch - 1) * r.height);
+        canvas.drawImageRect(hall, Rect.fromLTWH(0, 0, hall.width.toDouble(), hall.height.toDouble()), lot, _paint);
+        return;
+      }
+      _landmark(canvas, r, type);
     }
   }
 
