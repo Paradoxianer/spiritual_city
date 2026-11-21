@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-import 'dart:math' show atan2, pi, Random, sin;
+import 'dart:math' show atan2, cos, pi, Random, sin;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
