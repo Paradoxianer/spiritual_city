@@ -14,6 +14,7 @@ import '../../../core/i18n/app_strings.dart';
 import '../../../features/menu/domain/menu_service.dart';
 import '../domain/services/combat_abilities.dart';
 import '../domain/services/spirit_waves.dart';
+import '../domain/services/city_crossing.dart';
 import '../domain/models/skills.dart';
 import '../domain/actions/building_actions.dart';
 import '../domain/actions/game_action.dart';
