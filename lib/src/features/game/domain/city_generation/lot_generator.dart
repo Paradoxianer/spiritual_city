@@ -28,8 +28,7 @@ class LotGenerator {
   CellData? generateLotContent(
       int wx, int wy, DistrictType district, Random rand) {
     // ---- 1. Lot grid: carve sidewalk buffers ----------------------------
-    // Grid pitch varies by district for visual variety
-    final int grid = _gridPitch(district);
+    final int grid = lotPitchAt(wx, wy, district);
     final int modX = wx % grid;
     final int modY = wy % grid;
     // Lot root (top-left corner of this grid block)
@@ -95,6 +94,17 @@ class LotGenerator {
       }
     }
     return first;
+  }
+
+  /// Lot pitch at ([wx], [wy]): varies by district for visual variety –
+  /// but a special building (school, fire station, church …) always gets
+  /// the whole block, also in the slums (playtest 2026-11-21: a school in a
+  /// 3×3 slum lot looked like a hut with a crowd inside).
+  int lotPitchAt(int wx, int wy, DistrictType district) {
+    final grid = _gridPitch(district);
+    if (grid == lotBlock) return grid;
+    final bx = wx - wx % lotBlock, by = wy - wy % lotBlock;
+    return _lotSpecial(bx, by, lotBlock, district) != null ? lotBlock : grid;
   }
 
   int _gardenInset(BuildingType type, DistrictType district) {
