@@ -23,8 +23,10 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
-  /// Where 💛 leads: the game's PayPal.me page.
-  static const String supportUrl = 'https://paypal.me/spiritualcity';
+  /// Where 💛 leads: the donation page of the Salvation Army corps
+  /// Chemnitz-Kaßberg (purpose 273 = the corps), which is responsible for
+  /// the game.
+  static const String supportUrl = 'https://www.heilsarmee.de/chemnitzkassberg/spenden-ssl.html?rnw-purpose=273';
 
   @override
   void initState() {
@@ -166,21 +168,8 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  /// 💛 Three amounts and a free one – a concrete amount with what it does
-  /// motivates more than an empty field (playtest 2026-11-21).
+  /// 💛 What the gift is for, then on to the corps' donation page.
   void _showSupport(BuildContext context) {
-    void open(String amount) {
-      Navigator.of(context).pop();
-      launchUrl(Uri.parse('$supportUrl$amount'), webOnlyWindowName: '_blank');
-    }
-
-    Widget option(String emoji, String amount, String key, String path) => ListTile(
-          leading: Text(emoji, style: const TextStyle(fontSize: 28)),
-          title: Text(amount, style: const TextStyle(color: Colors.white, fontSize: 18)),
-          subtitle: Text(AppStrings.get(key), style: TextStyle(color: Colors.blueGrey.shade300)),
-          onTap: () => open(path),
-        );
-
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xFF14263A),
@@ -199,9 +188,20 @@ class _MenuScreenState extends State<MenuScreen> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4)),
                 ),
-                option('☕', '3 €', 'menu.support.coffee', '/3EUR'),
-                option('🏠', '7 €', 'menu.support.month', '/7EUR'),
-                option('💛', '… €', 'menu.support.free', ''),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    launchUrl(Uri.parse(supportUrl), webOnlyWindowName: '_blank');
+                  },
+                  icon: const Icon(Icons.favorite),
+                  label: Text(AppStrings.get('menu.support.go')),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFDA291C),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  ),
+                ),
+                const SizedBox(height: 8),
               ],
             ),
           ),

@@ -7,10 +7,8 @@ const Map<String, String> stringsFr = {
   'menu.loadGame': 'Charger une partie',
   'menu.settings': 'Paramètres',
   'menu.support': 'Soutenir 💛',
-  'menu.support.text': 'Spiritual City est gratuit et sans publicité. Si tu l\'aimes, aide à le garder en ligne.',
-  'menu.support.coffee': 'Un café pour le développeur',
-  'menu.support.month': 'Garde le jeu en ligne pendant un mois',
-  'menu.support.free': 'Montant libre',
+  'menu.support.text': 'Spiritual City est un projet de l\'Armée du Salut de Chemnitz-Kaßberg : gratuit et sans publicité. Ton don aide le jeu et les habitants de Chemnitz.',
+  'menu.support.go': 'Vers la page de dons de l\'Armée du Salut',
   'menu.quit': 'Quitter',
   'menu.subtitle': 'Psaume 27,4',
 
