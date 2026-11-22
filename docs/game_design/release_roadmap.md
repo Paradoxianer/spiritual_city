@@ -199,7 +199,8 @@ Idee (2026-10-17): Fähigkeiten wie Seelsorge, geistlicher Kampf oder Unterschei
 | **M2 – Der fesselnde Kern** | Dämonentypen + Kombos, Stadtteil-Erweckung + Bollwerk, Tag + Tagesbilanz §3.3, wabernde unsichtbare Welt (Shader) §3.6, erste Sounds §3.7, Lern-Missionen-Rahmen + "Unterscheidung der Geister" §3.9 | #178 #180 #125 #169 #143 |
 | **M3 – Gemeinde & Erkunden** | Rollen, verwundeter Heiler §3.2, Gemeinde-Übersicht, Predigen, Fähigkeiten pro Stufe, weitere Lern-Missionen §3.9, begehbare Innenräume §3.5 | #181 #172 #179 #173 |
 | **M4 – Release 1.0** | Grafik (Kenney-Sprites §3.7, Distrikt-Identität), Audio, Legal/Datenschutz, Store-Assets, i18n-Audit, Credits, Vollbild/Insets auf Android | #13 #18 #182 #10 #93 #94 #95 #150 #151 #152 #153 #190 |
-| **Nach 1.0** | Cloud-Speicher, reale Städte (OSM), dezente Werbung, Minimap | #165 #166 #128 #164 #146 |
+| **Nach 1.0** | Cloud-Speicher (jetzt Teil von M5), reale Städte (OSM), dezente Werbung, Minimap | #165 #166 #128 #164 #146 |
+| **M5 – Gemeinsame Stadt** | Multiplayer (`multiplayer.md`): A Vorbereitung im Einzelspieler (Tagesplan der Menschen, Befehle, Pastor als Parameter, Stadt-/Spielerzustand, Zufall seeden, Wellen pro Kampfort) → B Regelpaket + Cloud-Speicher → C Echtzeit (WebSocket-Server, Einladungslink, Mitspieler, Emoji-Rufe) | Epic #260: #248–#259 |
 
 **Warum diese Reihenfolge:** M1 vor M2, weil jedes neue Feature sonst noch eine sechste UI-Variante und noch mehr String-Aktionen erzeugt. M2 vor M3, weil die Gemeinde erst Sinn ergibt, wenn es Etappen gibt, in denen sie hilft. Grafik und Audio kommen bewusst spät: Sie verstärken den Spaß, ersetzen aber keinen fehlenden Kern.
 
