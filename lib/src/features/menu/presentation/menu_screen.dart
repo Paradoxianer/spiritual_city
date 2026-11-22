@@ -242,16 +242,20 @@ class _MenuScreenState extends State<MenuScreen> {
           label: AppStrings.get('menu.quit'),
           onPressed: () => SystemNavigator.pop(),
           color: Colors.redAccent.shade100,
-        ),        // Imprint and privacy as pages of their own – a website needs them
-        // one click away (§ 5 DDG).
+        ),        // Becoming an Android tester, imprint and privacy as pages of their
+        // own – a website needs the legal ones one click away (§ 5 DDG).
         if (kIsWeb)
           Wrap(
             alignment: WrapAlignment.center,
             children: [
-              for (final (key, page) in const [('imprint.title', 'impressum.html'), ('privacy.title', 'privacy.html')])
+              for (final (label, page) in [
+                (AppStrings.get('menu.tester'), 'tester.html'),
+                (LegalTexts.get('imprint.title'), 'impressum.html'),
+                (LegalTexts.get('privacy.title'), 'privacy.html'),
+              ])
                 TextButton(
                   onPressed: () => launchUrl(Uri.base.resolve(page), webOnlyWindowName: '_blank'),
-                  child: Text(LegalTexts.get(key),
+                  child: Text(label,
                       style: TextStyle(color: Colors.blueGrey.shade300, fontSize: 13)),
                 ),
             ],
