@@ -363,7 +363,8 @@ if __name__ == '__main__':
     write('hall', hall(), 0.5)
     # church.ogg is a Pixabay recording now (see assets/LICENSES.md);
     # church() stays as the synthetic fallback.
-    write('spirit', spirit(), 0.55)
+    # The invisible world has music now (assets/audio/music, Pixabay);
+    # spirit() stays as the synthetic fallback.
     write_once('talk', talk(), 0.5)
     write_once('pray', pray(), 0.6)
     write_once('sleep', sleep(), 0.55)

@@ -15,6 +15,9 @@ class AppSettings {
   /// Sound effects on/off (pause menu 🔊/🔇).
   bool soundOn;
 
+  /// Music on/off (pause menu 🎵) – only with [soundOn].
+  bool musicOn;
+
   /// Version of the first-start notice the player accepted (#153).
   int consentVersion;
 
@@ -26,6 +29,7 @@ class AppSettings {
     this.lastDifficulty = Difficulty.normal,
     this.tutorialCompleted = false,
     this.soundOn = true,
+    this.musicOn = true,
     this.consentVersion = 0,
     this.showTexts = true,
   });
@@ -35,6 +39,7 @@ class AppSettings {
         'lastDifficulty': lastDifficulty.index,
         'tutorialCompleted': tutorialCompleted,
         'soundOn': soundOn,
+        'musicOn': musicOn,
         'consentVersion': consentVersion,
         'showTexts': showTexts,
       };
@@ -45,6 +50,7 @@ class AppSettings {
             Difficulty.values[map['lastDifficulty'] as int? ?? 1],
         tutorialCompleted: map['tutorialCompleted'] as bool? ?? false,
         soundOn: map['soundOn'] as bool? ?? true,
+        musicOn: map['musicOn'] as bool? ?? true,
         consentVersion: map['consentVersion'] as int? ?? 0,
         showTexts: map['showTexts'] as bool? ?? true,
       );
