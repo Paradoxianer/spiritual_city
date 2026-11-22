@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flame_audio/flame_audio.dart';
 import 'package:logging/logging.dart';
@@ -25,7 +26,12 @@ enum Sfx {
   waveRebuke('actions/wave_rebuke.ogg'),
   waveSlow('actions/wave_slow.ogg'),
   waveDrain('actions/wave_drain.ogg'),
-  daemonNear('actions/daemon_near.ogg');
+  daemonNear('actions/daemon_near.ogg'),
+  step0('kenney/rpg_audio/footstep00.ogg'),
+  step1('kenney/rpg_audio/footstep01.ogg'),
+  step2('kenney/rpg_audio/footstep02.ogg'),
+  step3('kenney/rpg_audio/footstep03.ogg'),
+  step4('kenney/rpg_audio/footstep04.ogg');
 
   /// Path below assets/audio/.
   final String file;
@@ -137,6 +143,26 @@ abstract final class GameSound {
       _busy.remove(player);
       _log.fine('Sound ${sfx.name} failed: $e');
     }
+  }
+}
+
+/// The pastor's footsteps (playtest 2026-11-22): one step per [stride] of
+/// distance walked, so sprinting sounds faster and a tired pastor slower –
+/// always another of the Kenney steps, quiet and a little uneven.
+abstract final class Footsteps {
+  static const List<Sfx> _steps = [Sfx.step0, Sfx.step1, Sfx.step2, Sfx.step3, Sfx.step4];
+  static final Random _rng = Random();
+  static double _walked = 0;
+  static int _last = 0;
+
+  static void walked(double distance, {required double stride}) {
+    _walked += distance;
+    if (_walked < stride) return;
+    _walked = 0;
+    var i = _rng.nextInt(_steps.length - 1);
+    if (i >= _last) i++;
+    _last = i;
+    GameSound.play(_steps[i], volume: 0.18 + _rng.nextDouble() * 0.08);
   }
 }
 

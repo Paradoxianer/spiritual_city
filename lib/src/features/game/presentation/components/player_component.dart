@@ -370,6 +370,7 @@ class PlayerComponent extends PositionComponent
     final gx = (newPos.x / CellComponent.cellSize).floor();
     final gy = (newPos.y / CellComponent.cellSize).floor();
 
+    final before = position.clone();
     if (game.grid.isWalkable(gx, gy)) {
       position.setFrom(newPos);
     } else {
@@ -390,6 +391,8 @@ class PlayerComponent extends PositionComponent
         // Both axes blocked – don't move
       }
     }
+    // A step about every 0.35 s at walking pace (not in the invisible world).
+    Footsteps.walked(position.distanceTo(before), stride: speed * 0.35);
   }
 
   void _updatePrayerMechanics(double dt) {
