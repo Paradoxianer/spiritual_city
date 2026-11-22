@@ -242,7 +242,20 @@ class _MenuScreenState extends State<MenuScreen> {
           label: AppStrings.get('menu.quit'),
           onPressed: () => SystemNavigator.pop(),
           color: Colors.redAccent.shade100,
-        ),
+        ),        // Imprint and privacy as pages of their own – a website needs them
+        // one click away (§ 5 DDG).
+        if (kIsWeb)
+          Wrap(
+            alignment: WrapAlignment.center,
+            children: [
+              for (final (key, page) in const [('imprint.title', 'impressum.html'), ('privacy.title', 'privacy.html')])
+                TextButton(
+                  onPressed: () => launchUrl(Uri.base.resolve(page), webOnlyWindowName: '_blank'),
+                  child: Text(LegalTexts.get(key),
+                      style: TextStyle(color: Colors.blueGrey.shade300, fontSize: 13)),
+                ),
+            ],
+          ),
       ],
     );
   }
