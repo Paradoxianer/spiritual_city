@@ -17,6 +17,10 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// Dev build (SC_DEV=1, scripts/install_dev.sh): its own app id and name,
+// so it sits next to the Play Store version on the test phone.
+val devBuild = System.getenv("SC_DEV") == "1"
+
 android {
     namespace = "de.heilsarmee.spiritual_city"
     compileSdk = flutter.compileSdkVersion
@@ -41,6 +45,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        if (devBuild) applicationIdSuffix = ".dev"
+        resValue("string", "app_name", if (devBuild) "Spiritual City Dev" else "Spiritual City")
     }
 
     signingConfigs {
