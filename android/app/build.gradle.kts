@@ -32,8 +32,9 @@ android {
     }
 
     defaultConfig {
-        // Never changes once on the Play Store (spiritual-city.org).
-        applicationId = "org.spiritualcity.game"
+        // Never changes once on the Play Store: the Salvation Army corps
+        // Chemnitz is responsible for the game.
+        applicationId = "de.heilsarmee.spiritual_city"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
