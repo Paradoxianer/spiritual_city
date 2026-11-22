@@ -38,7 +38,7 @@ Matthias Lindner, Anschrift wie oben''',
 • Spielstände und Einstellungen (Sprache, Ton, Schwierigkeit) werden nur auf deinem Gerät gespeichert. Sie verlassen das Gerät nicht.
 • Es gibt kein Benutzerkonto, keine Anmeldung, keine Werbung, keine In-App-Käufe und keine Analyse- oder Tracking-Dienste.
 • Die App selbst stellt keine Verbindungen ins Internet her (zur Web-Version siehe unten).
-• Web-Version: Sie wird über GitHub Pages ausgeliefert. Beim Laden der Seite verarbeitet GitHub technisch notwendige Daten (z. B. IP-Adresse) nach seiner eigenen Datenschutzerklärung. Außerdem lädt die Web-Version die Grafik-Engine und Schriften (für Emojis) von Servern von Google (www.gstatic.com, fonts.gstatic.com); dabei wird deine IP-Adresse an Google übertragen. Wir erhalten diese Daten nicht. Die Android-/iOS-App lädt nichts nach.
+• Web-Version: Sie wird unter spiritual-city.org von hosting.de ausgeliefert (dazu als Kopie über GitHub Pages). Beim Laden der Seite verarbeitet der Anbieter technisch notwendige Daten (z. B. die IP-Adresse in Server-Protokollen). Der Spenden-Knopf öffnet die Spendenseite der Heilsarmee; dort gilt deren Datenschutzerklärung. Außerdem lädt die Web-Version die Grafik-Engine und Schriften (für Emojis) von Servern von Google (www.gstatic.com, fonts.gstatic.com); dabei wird deine IP-Adresse an Google übertragen. Wir erhalten diese Daten nicht. Die Android-/iOS-App lädt nichts nach.
 • Löschen: Deinstalliere die App oder lösche die Spielstände im Menü „Spiel laden“; in der Web-Version die Website-Daten im Browser.
 
 Verantwortlicher: siehe Impressum. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Beschwerde bei einer Aufsichtsbehörde; da wir keine Daten von dir speichern, liegen bei uns keine vor.''',
@@ -104,7 +104,7 @@ Email: matthias.lindner@heilsarmee.de''',
 • Saves and settings (language, sound, difficulty) are stored only on your device. They never leave it.
 • No account, no sign-in, no ads, no in-app purchases, no analytics or tracking.
 • The app itself makes no internet connections (for the web version see below).
-• Web version: it is served by GitHub Pages. When the page loads, GitHub processes technically necessary data (e.g. IP address) under its own privacy policy. The web version also loads its graphics engine and fonts (for emoji) from Google servers (www.gstatic.com, fonts.gstatic.com), which transfers your IP address to Google. We do not receive this data. The Android/iOS app loads nothing from the internet.
+• Web version: it is served at spiritual-city.org by hosting.de (with a copy on GitHub Pages). When the page loads, the provider processes technically necessary data (e.g. your IP address in server logs). The donate button opens The Salvation Army's donation page, where its own privacy policy applies. The web version also loads its graphics engine and fonts (for emoji) from Google servers (www.gstatic.com, fonts.gstatic.com), which transfers your IP address to Google. We do not receive this data. The Android/iOS app loads nothing from the internet.
 • Deleting: uninstall the app or delete saves in "Load Game"; on the web, clear the site data in your browser.
 
 Controller: see imprint. You have the right to access, rectification, erasure and to complain to a supervisory authority; since we store no data about you, we hold none.''',
@@ -170,7 +170,7 @@ Correo: matthias.lindner@heilsarmee.de''',
 • Las partidas y los ajustes (idioma, sonido, dificultad) se guardan solo en tu dispositivo. Nunca salen de él.
 • Sin cuenta, sin inicio de sesión, sin anuncios, sin compras dentro de la app, sin analítica ni seguimiento.
 • La app no se conecta a internet (para la versión web, ver abajo).
-• Versión web: la sirve GitHub Pages. Al cargar la página, GitHub procesa datos técnicamente necesarios (p. ej. la dirección IP) según su propia política de privacidad. La versión web también carga su motor gráfico y fuentes (para los emojis) desde servidores de Google (www.gstatic.com, fonts.gstatic.com), lo que transmite tu dirección IP a Google. Nosotros no recibimos esos datos. La app de Android/iOS no carga nada de internet.
+• Versión web: la sirve hosting.de en spiritual-city.org (con una copia en GitHub Pages). Al cargar la página, el proveedor procesa datos técnicamente necesarios (p. ej. tu dirección IP en los registros del servidor). El botón de donar abre la página de donativos del Ejército de Salvación, donde rige su propia política de privacidad. La versión web también carga su motor gráfico y fuentes (para los emojis) desde servidores de Google (www.gstatic.com, fonts.gstatic.com), lo que transmite tu dirección IP a Google. Nosotros no recibimos esos datos. La app de Android/iOS no carga nada de internet.
 • Borrar: desinstala la app o borra las partidas en «Cargar partida»; en la web, borra los datos del sitio en tu navegador.
 
 Responsable: ver el aviso legal. Tienes derecho de acceso, rectificación, supresión y a reclamar ante una autoridad de control; como no guardamos datos sobre ti, no tenemos ninguno.''',
@@ -236,7 +236,7 @@ E-mail : matthias.lindner@heilsarmee.de''',
 • Les sauvegardes et les paramètres (langue, son, difficulté) sont enregistrés uniquement sur ton appareil. Ils ne le quittent jamais.
 • Pas de compte, pas de connexion, pas de publicité, pas d’achats intégrés, pas d’analyse ni de suivi.
 • L’application elle-même n’établit aucune connexion Internet (pour la version web, voir ci-dessous).
-• Version web : elle est hébergée par GitHub Pages. Au chargement de la page, GitHub traite des données techniquement nécessaires (p. ex. l’adresse IP) selon sa propre politique de confidentialité. La version web charge aussi son moteur graphique et des polices (pour les emojis) depuis des serveurs de Google (www.gstatic.com, fonts.gstatic.com), ce qui transmet ton adresse IP à Google. Nous ne recevons pas ces données. L’application Android/iOS ne charge rien depuis Internet.
+• Version web : elle est hébergée par hosting.de sur spiritual-city.org (avec une copie sur GitHub Pages). Au chargement de la page, l’hébergeur traite des données techniquement nécessaires (p. ex. ton adresse IP dans les journaux du serveur). Le bouton de don ouvre la page de dons de l’Armée du Salut, où s’applique sa propre politique de confidentialité. La version web charge aussi son moteur graphique et des polices (pour les emojis) depuis des serveurs de Google (www.gstatic.com, fonts.gstatic.com), ce qui transmet ton adresse IP à Google. Nous ne recevons pas ces données. L’application Android/iOS ne charge rien depuis Internet.
 • Suppression : désinstalle l’application ou supprime les sauvegardes dans « Charger une partie » ; sur le web, efface les données du site dans ton navigateur.
 
 Responsable : voir les mentions légales. Tu as un droit d’accès, de rectification, d’effacement et de réclamation auprès d’une autorité de contrôle ; comme nous ne conservons aucune donnée sur toi, nous n’en détenons aucune.''',
@@ -302,7 +302,7 @@ E-mail: matthias.lindner@heilsarmee.de''',
 • Jogos salvos e configurações (idioma, som, dificuldade) ficam apenas no seu aparelho. Nunca saem dele.
 • Sem conta, sem login, sem anúncios, sem compras no app, sem análise ou rastreamento.
 • O app em si não faz conexões com a internet (para a versão web, veja abaixo).
-• Versão web: é hospedada pelo GitHub Pages. Ao carregar a página, o GitHub processa dados tecnicamente necessários (p. ex. o endereço IP) segundo sua própria política de privacidade. A versão web também carrega seu motor gráfico e fontes (para os emojis) de servidores do Google (www.gstatic.com, fonts.gstatic.com), o que transmite seu endereço IP ao Google. Nós não recebemos esses dados. O app Android/iOS não carrega nada da internet.
+• Versão web: é hospedada pela hosting.de em spiritual-city.org (com uma cópia no GitHub Pages). Ao carregar a página, o provedor processa dados tecnicamente necessários (p. ex. seu endereço IP nos registros do servidor). O botão de doação abre a página de doações do Exército de Salvação, onde vale a política de privacidade dela. A versão web também carrega seu motor gráfico e fontes (para os emojis) de servidores do Google (www.gstatic.com, fonts.gstatic.com), o que transmite seu endereço IP ao Google. Nós não recebemos esses dados. O app Android/iOS não carrega nada da internet.
 • Apagar: desinstale o app ou apague os jogos salvos em "Carregar jogo"; na web, limpe os dados do site no navegador.
 
 Responsável: veja as informações legais. Você tem direito de acesso, retificação, exclusão e de reclamar a uma autoridade de controle; como não guardamos dados sobre você, não temos nenhum.''',
