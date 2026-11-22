@@ -8,6 +8,7 @@ const Map<String, String> stringsFr = {
   'menu.settings': 'Paramètres',
   'menu.support': 'Soutenir 💛',
   'menu.support.text': 'Spiritual City est un projet de l\'Armée du Salut de Chemnitz-Kaßberg : gratuit et sans publicité. Ton don aide le jeu et les habitants de Chemnitz.',
+  'menu.tester': '🧪 Devenir testeur',
   'menu.support.go': 'Vers la page de dons de l\'Armée du Salut',
   'menu.quit': 'Quitter',
   'menu.subtitle': 'Psaume 27,4',
