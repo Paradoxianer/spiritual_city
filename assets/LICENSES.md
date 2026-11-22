@@ -23,6 +23,7 @@ Alle Dateien unter `assets/images/kenney/` und `assets/audio/kenney/` stammen vo
 | `audio/actions/wave_slow.ogg` | „Bass Drop“ von youssefmizani, https://pixabay.com/sound-effects/musical-bass-drop-407122/ | Anfang 1,6 s, ausgeblendet, −13 dB, mono, OGG (2026-10-18) |
 | `audio/actions/wave_drain.ogg` | „High Battery Charge“ von snorcon, https://pixabay.com/sound-effects/film-special-effects-high-battery-charge-421821/ | komplett (1,5 s), kurz ausgeblendet, mono, 44,1 kHz, OGG (2026-10-18) |
 | `audio/ambience/church.ogg` | „Sacral Chant“ von samuelfjohanns, https://pixabay.com/sound-effects/sacral-chant-99557/ | 0,42–19,46 s als nahtlose 16,5-s-Schleife (Ende in den Anfang überblendet), mono, lauter, OGG (2026-10-18) |
+| `audio/music/spirit_battle.ogg` | „Epic War Background Music“ von hitslab, Pixabay-Musik Nr. 333128 | Stille am Ende entfernt, auf −20 LUFS angeglichen, OGG (2026-11-22) |
 
 Vorschaubilder der Grafik-Pakete: `docs/assets_preview/` (nicht im App-Bundle).
 

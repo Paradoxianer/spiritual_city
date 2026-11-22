@@ -45,6 +45,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                   SwitchListTile(
+                    secondary: Opacity(
+                      opacity: GameSound.musicOn ? 1 : 0.35,
+                      child: const Text('🎵', style: TextStyle(fontSize: 24)),
+                    ),
+                    title: Text(LegalTexts.get('settings.music')),
+                    value: GameSound.musicOn,
+                    onChanged: (on) async {
+                      await widget.menuService.setMusicOn(on);
+                      setState(() {});
+                    },
+                  ),
+                  SwitchListTile(
                     secondary: const Text('💬', style: TextStyle(fontSize: 24)),
                     title: Text(LegalTexts.get('settings.texts')),
                     subtitle: Text(LegalTexts.get('settings.texts.hint'),

@@ -41,6 +41,9 @@ abstract final class GameSound {
   /// Set from the app settings (MenuService) and the pause-menu toggle.
   static bool enabled = true;
 
+  /// Music on/off (🎵), separate from the sounds (playtest 2026-11-22).
+  static bool musicOn = true;
+
   static bool _failed = false;
 
   static Future<void> preload() async {
@@ -138,18 +141,28 @@ abstract final class GameSound {
 }
 
 /// Looping background sound per place (playtest 2026-10-18). Synthesised by
-/// tools/gen_ambience.py, except the church chant (Pixabay, assets/LICENSES.md).
+/// tools/gen_ambience.py, except the church chant and the music of the
+/// invisible world (Pixabay, assets/LICENSES.md).
 enum Ambience {
   none('', 0),
   city('ambience/city.ogg', 0.2),
   home('ambience/home.ogg', 0.55),
   hall('ambience/hall.ogg', 0.4),
   church('ambience/church.ogg', 0.45),
-  spirit('ambience/spirit.ogg', 0.3);
+  // Playtest 2026-11-22: "Epic War" felt like spiritual warfare and fits
+  // the battle sounds – a little quieter than in the probe (0.6).
+  spirit('music/spirit_battle.ogg', 0.45, long: true, quiet: ('ambience/spirit.ogg', 0.3));
 
   final String file;
   final double volume;
-  const Ambience(this.file, this.volume);
+
+  /// The sound instead of the music when music is off ([GameSound.musicOn]).
+  final (String, double)? quiet;
+
+  /// Music of several minutes: the low-latency player (SoundPool) keeps
+  /// only its first seconds and starts over.
+  final bool long;
+  const Ambience(this.file, this.volume, {this.long = false, this.quiet});
 }
 
 /// Plays one [Ambience] at a time and cross-fades on change.
@@ -158,29 +171,47 @@ abstract final class GameAmbience {
   static Ambience _current = Ambience.none;
   static AudioPlayer? _player;
   static int _generation = 0;
+  static double _fromVolume = 0;
   static bool _failed = false;
 
   static const Duration _fade = Duration(milliseconds: 1200);
+
+  /// What [a] plays now: its music, or the quiet sound when music is off.
+  static (String file, double volume, bool long) _sound(Ambience a) {
+    final q = a.quiet;
+    if (a.long && !GameSound.musicOn && q != null) return (q.$1, q.$2, false);
+    return (a.file, a.volume, a.long);
+  }
+
+  /// Music switched on or off: start the current place's sound again.
+  static Future<void> refresh() async {
+    final a = _current;
+    await set(Ambience.none);
+    await set(a);
+  }
 
   /// Switches to [a] (cheap no-op when it is already playing).
   static Future<void> set(Ambience a) async {
     if (!GameSound.enabled || _failed) a = Ambience.none;
     if (a == _current) return;
-    final from = _current;
     _current = a;
     final gen = ++_generation;
     final old = _player;
     _player = null;
-    if (old != null) _ramp(old, from.volume, 0, stopAfter: true);
+    if (old != null) _ramp(old, _fromVolume, 0, stopAfter: true);
     if (a == Ambience.none) return;
     try {
-      final p = await FlameAudio.loop(a.file, volume: 0);
+      final (file, volume, long) = _sound(a);
+      final p = long
+          ? await FlameAudio.loopLongAudio(file, volume: 0)
+          : await FlameAudio.loop(file, volume: 0);
       if (gen != _generation) {
         await p.dispose();
         return;
       }
       _player = p;
-      _ramp(p, 0, a.volume);
+      _fromVolume = volume;
+      _ramp(p, 0, volume);
     } catch (e) {
       _failed = true;
       _log.warning('Ambience failed, off: $e');

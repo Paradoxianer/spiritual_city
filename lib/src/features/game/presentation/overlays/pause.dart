@@ -89,7 +89,7 @@ class PauseMenuOverlay extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 12),
-                      // Sound on/off and share – emoji only, no label to translate.
+                      // Sound, music and share – emoji only, no label to translate.
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -107,7 +107,23 @@ class PauseMenuOverlay extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 8),
+                          // Music on/off – the sounds stay (playtest 2026-11-22).
+                          StatefulBuilder(
+                            builder: (context, setState) => IconButton(
+                              iconSize: 30,
+                              onPressed: () async {
+                                await getIt<MenuService>()
+                                    .setMusicOn(!GameSound.musicOn);
+                                setState(() {});
+                              },
+                              icon: Opacity(
+                                opacity: GameSound.musicOn ? 1 : 0.35,
+                                child: const Text('🎵', style: TextStyle(fontSize: 28)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           IconButton(
                             iconSize: 30,
                             onPressed: onShare,

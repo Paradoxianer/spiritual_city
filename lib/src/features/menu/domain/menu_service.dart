@@ -38,6 +38,7 @@ class MenuService {
     difficultyNotifier.value = settings.lastDifficulty;
     _isTutorialCompleted = settings.tutorialCompleted;
     GameSound.enabled = settings.soundOn;
+    GameSound.musicOn = settings.musicOn;
     _consentVersion = settings.consentVersion;
     TextMode.enabled.value = settings.showTexts;
     Narrator.persist = () => _persistSettings();
@@ -79,6 +80,15 @@ class MenuService {
   Future<void> setSoundOn(bool on) async {
     GameSound.enabled = on;
     if (!on) GameAmbience.stop();
+    await _persistSettings();
+  }
+
+  bool get musicOn => GameSound.musicOn;
+
+  /// Music off: the invisible world keeps its quiet sound instead.
+  Future<void> setMusicOn(bool on) async {
+    GameSound.musicOn = on;
+    await GameAmbience.refresh();
     await _persistSettings();
   }
 
@@ -176,6 +186,7 @@ class MenuService {
       lastDifficulty: difficultyNotifier.value,
       tutorialCompleted: _isTutorialCompleted,
       soundOn: GameSound.enabled,
+      musicOn: GameSound.musicOn,
       consentVersion: _consentVersion,
       showTexts: TextMode.on,
     );
