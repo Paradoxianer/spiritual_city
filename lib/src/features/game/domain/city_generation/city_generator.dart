@@ -67,10 +67,34 @@ class CityGenerator {
         // building (playtest 2026-11-01).
         final (bx, by) = LotGenerator.blockCentre(worldX, worldY);
         final lotDistrict = _districtSelector.getDistrictType(bx, by);
-        final lotContent = _lotGenerator.generateLotContent(worldX, worldY, lotDistrict, cellRand);
+        var lotContent = _lotGenerator.generateLotContent(worldX, worldY, lotDistrict, cellRand);
+        // A lake must not cut a building down to a hut (playtest
+        // 2026-11-21): a lot that reaches into the water stays green – the
+        // pastor's house excepted, it is always there.
+        if (lotContent is BuildingData &&
+            lotContent.type != BuildingType.pastorHouse &&
+            _lotTouchesWater(worldX, worldY, lotDistrict)) {
+          lotContent = NatureData(type: cellRand.nextDouble() < 0.3 ? NatureType.tree : NatureType.park);
+        }
         chunk.cells['$x,$y'] = _createCell(worldX, worldY, lotContent, lotDistrict, _getDensity(lotDistrict));
       }
     }
+  }
+
+  /// Lot roots that reach into the water, cached per root.
+  final Map<(int, int), bool> _wetLots = {};
+
+  bool _lotTouchesWater(int wx, int wy, DistrictType district) {
+    final pitch = _lotGenerator.lotPitchAt(wx, wy, district);
+    final rx = wx - wx % pitch, ry = wy - wy % pitch;
+    return _wetLots.putIfAbsent((rx, ry), () {
+      for (var y = ry + 1; y < ry + pitch; y++) {
+        for (var x = rx + 1; x < rx + pitch; x++) {
+          if (_districtSelector.isWater(x, y)) return true;
+        }
+      }
+      return false;
+    });
   }
 
   CityCell _createCell(int wx, int wy, CellData? data, DistrictType district, double density) {
