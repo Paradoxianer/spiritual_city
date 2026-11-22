@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart' show VoidCallback, Colors, TextPainter, TextSpan, TextStyle, FontWeight;
 
+import '../../../../../core/audio/game_sound.dart';
 import '../../../../../core/utils/stable_hash.dart';
 import '../../../domain/interior/interior_layout.dart';
 import '../../../domain/models/building_model.dart';
@@ -305,6 +306,7 @@ class InteriorPastor extends PositionComponent with HasGameReference<SpiritWorld
     }
     if (dir.isZero()) return;
     final step = dir * speed * dt;
+    final before = position.clone();
     final nx = position.x + step.x, ny = position.y + step.y;
     if (_free(nx, ny)) {
       position.setValues(nx, ny);
@@ -313,6 +315,7 @@ class InteriorPastor extends PositionComponent with HasGameReference<SpiritWorld
     } else if (_free(position.x, ny)) {
       position.y = ny;
     }
+    Footsteps.walked(position.distanceTo(before), stride: speed * 0.35);
     final (dx, dy) = room.layout.door;
     if (cellPos == (dx, dy) && position.y > (dy + 0.35) * InteriorWorld.cell) {
       game.leaveInterior();
