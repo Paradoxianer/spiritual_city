@@ -6,9 +6,8 @@ import '../../../core/i18n/app_strings.dart';
 /// no account, no analytics, no ads, no in-app purchases, no network
 /// requests by the game itself.
 ///
-/// ⚠️ The imprint contains PLACEHOLDERS (marked with ⟨…⟩) that the publisher
-/// must fill in with their real details before a store release – they are
-/// deliberately not invented here.
+/// The imprint names the person responsible, c/o the Salvation Army corps
+/// Chemnitz, which is responsible for the game (2026-11-22).
 abstract final class LegalTexts {
   /// Bump when the privacy notice changes materially: the first-start
   /// notice (#153) is then shown again.
@@ -22,18 +21,17 @@ abstract final class LegalTexts {
       'imprint.title': 'Impressum',
       'imprint.body': '''Angaben gemäß § 5 DDG
 
-⟨Vor- und Nachname / Verein⟩
-⟨Straße Hausnummer⟩
-⟨PLZ Ort⟩
-⟨Land⟩
+Matthias Lindner
+c/o Die Heilsarmee in Chemnitz
+Horst-Menzel-Str. 5
+09112 Chemnitz
+Deutschland
 
 Kontakt
-E-Mail: ⟨E-Mail-Adresse⟩
+E-Mail: matthias.lindner@heilsarmee.de
 
 Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV:
-⟨Name, Anschrift wie oben⟩
-
-⚠️ Diese Angaben müssen vor der Veröffentlichung im Store vom Herausgeber ausgefüllt werden.''',
+Matthias Lindner, Anschrift wie oben''',
       'privacy.title': 'Datenschutz',
       'privacy.body': '''Kurz gesagt: Spiritual City sammelt keine persönlichen Daten.
 
@@ -92,15 +90,14 @@ Technik
       'imprint.title': 'Imprint',
       'imprint.body': '''Information according to § 5 DDG (German law)
 
-⟨Full name / organisation⟩
-⟨Street and number⟩
-⟨Postcode City⟩
-⟨Country⟩
+Matthias Lindner
+c/o Die Heilsarmee in Chemnitz
+Horst-Menzel-Str. 5
+09112 Chemnitz
+Germany
 
 Contact
-Email: ⟨email address⟩
-
-⚠️ The publisher must fill in these details before a store release.''',
+Email: matthias.lindner@heilsarmee.de''',
       'privacy.title': 'Privacy',
       'privacy.body': '''In short: Spiritual City collects no personal data.
 
@@ -159,15 +156,14 @@ Technology
       'imprint.title': 'Aviso legal',
       'imprint.body': '''Información según el § 5 DDG (ley alemana)
 
-⟨Nombre completo / organización⟩
-⟨Calle y número⟩
-⟨Código postal Ciudad⟩
-⟨País⟩
+Matthias Lindner
+c/o Die Heilsarmee in Chemnitz
+Horst-Menzel-Str. 5
+09112 Chemnitz
+Alemania
 
 Contacto
-Correo: ⟨dirección de correo⟩
-
-⚠️ El editor debe completar estos datos antes de publicar en la tienda.''',
+Correo: matthias.lindner@heilsarmee.de''',
       'privacy.title': 'Privacidad',
       'privacy.body': '''En resumen: Spiritual City no recoge datos personales.
 
@@ -226,15 +222,14 @@ Tecnología
       'imprint.title': 'Mentions légales',
       'imprint.body': '''Informations selon le § 5 DDG (droit allemand)
 
-⟨Nom complet / organisation⟩
-⟨Rue et numéro⟩
-⟨Code postal Ville⟩
-⟨Pays⟩
+Matthias Lindner
+c/o Die Heilsarmee in Chemnitz
+Horst-Menzel-Str. 5
+09112 Chemnitz
+Allemagne
 
 Contact
-E-mail : ⟨adresse e-mail⟩
-
-⚠️ L’éditeur doit compléter ces informations avant une publication dans le store.''',
+E-mail : matthias.lindner@heilsarmee.de''',
       'privacy.title': 'Confidentialité',
       'privacy.body': '''En bref : Spiritual City ne collecte aucune donnée personnelle.
 
@@ -293,15 +288,14 @@ Technique
       'imprint.title': 'Informações legais',
       'imprint.body': '''Informações conforme o § 5 DDG (lei alemã)
 
-⟨Nome completo / organização⟩
-⟨Rua e número⟩
-⟨CEP Cidade⟩
-⟨País⟩
+Matthias Lindner
+c/o Die Heilsarmee in Chemnitz
+Horst-Menzel-Str. 5
+09112 Chemnitz
+Alemanha
 
 Contato
-E-mail: ⟨endereço de e-mail⟩
-
-⚠️ O editor deve preencher estes dados antes de publicar na loja.''',
+E-mail: matthias.lindner@heilsarmee.de''',
       'privacy.title': 'Privacidade',
       'privacy.body': '''Resumindo: Spiritual City não coleta dados pessoais.
 
