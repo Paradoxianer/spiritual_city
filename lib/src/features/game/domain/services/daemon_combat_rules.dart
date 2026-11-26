@@ -143,6 +143,17 @@ abstract final class DaemonCombatRules {
   /// (🐍 0.8 … 🪨 tier 3 2.1). Its remaining life scales it further.
   static double strikeFactor(DaemonKind kind, int tier) => kind.sizeFactor * tierSize(tier);
 
+  /// Share of the pastor's maximum ❤️ (and 🙏, 🍞) a daemon takes when it
+  /// reaches him (playtest 2026-11-26: three hits in 🌊1 cost about one
+  /// point of 160 – nothing). A share, not fixed points, so it still hurts
+  /// at higher levels. A weakened daemon ([strength] 0 … 1) still does half;
+  /// [amp] is difficulty × size, [might] the wave's.
+  static double strikeShare({required double strength, required double amp, required double might}) =>
+      (strikeBase * (0.5 + 0.5 * strength.clamp(0.0, 1.0)) * amp * might).clamp(0.02, 0.35);
+
+  /// ❤️ share of one full-strength hit at normal difficulty, size 1, 🌊1.
+  static const double strikeBase = 0.10;
+
   /// Size grows by 25 % per tier above 1.
   static double tierSize(int tier) => 1.0 + 0.25 * (tier - 1);
 

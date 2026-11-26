@@ -72,6 +72,7 @@ Das Dauer-Nachspawnen war das eigentliche Problem: Es gab keine klaren Wellen, u
   - Größe 1/2/3 + (Welle−1)²/4: normal 2 2 3 4 6 8 11 14 18 22 27 32 bis 🌊12.
   - Energie 0,3 × 1,3^(Welle−1): 🌊9 2,4×, 🌊12 5,4×.
   - Treffer-Schaden × 1,15^(Welle−1) (`SpiritWaves.might`): 🌊9 3×, 🌊12 4,7×.
+  - **Treffer als Anteil (Playtest 2026-11-26):** Drei Treffer in 🌊1 kosteten etwa 1 von 160 ❤️. Jetzt nimmt ein Treffer einen Anteil der Höchstwerte: 10 % × (½ + ½ × Restenergie) × Schwierigkeit × Größe × Welle, höchstens 35 % (`DaemonCombatRules.strikeShare`). Gilt für ❤️ und 🙏, 🍞 × 1,2; Schild und Helm mindern wie bisher.
   - 🪫 gibt je Entzug 15 % weniger, bis auf 5 %.
   - 📖 0,7 × Welle^1,5.
   - Tipp auf das 🌊-Badge ⏩: In der Pause kommt die Welle sofort. Während einer Welle kommt die nächste gleich dazu. Die Reste der übersprungenen Welle bleiben, ihr Durchbruch und ihre 📖 entfallen.
