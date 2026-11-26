@@ -426,11 +426,11 @@ class DaemonComponent extends PositionComponent with HasGameReference<SpiritWorl
     // Later 🌊 waves strike far harder (playtest 2026-11-20).
     final might = model.wave > 0 ? SpiritWaves.might(model.wave) : 1.0;
 
-    final hpDamage     = (8.0 * strength * amp).clamp(1.0, 30.0) * might;
-    final faithDamage  = (10.0 * strength * amp).clamp(1.0, 40.0) * might *
-        (1.0 - game.progress.combatProfile.shieldDamageReduction);
-    final hungerDamage = (12.0 * strength * amp).clamp(1.0, 50.0) * might *
-        (1.0 - game.progress.combatProfile.helmHungerReduction);
+    final share = DaemonCombatRules.strikeShare(strength: strength, amp: amp, might: might);
+    final p = game.progress;
+    final hpDamage     = p.maxHealth * share;
+    final faithDamage  = p.maxFaith * share * (1.0 - p.combatProfile.shieldDamageReduction);
+    final hungerDamage = p.maxHunger * share * 1.2 * (1.0 - p.combatProfile.helmHungerReduction);
 
     game.spendHealth(hpDamage);
     game.spendFaith(faithDamage);

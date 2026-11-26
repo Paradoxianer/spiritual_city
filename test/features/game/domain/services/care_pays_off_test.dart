@@ -25,12 +25,14 @@ void main() {
     expect(firm / fresh, greaterThan(6));
   });
 
-  test('filling up faith takes three prayers or more, even with full practice', () {
+  test('filling up faith takes three prayers or more, even with full practice – reading half', () {
     expect(BuildingInteractionService.homePrayFaith(maxFaith), 65);
     for (final max in [100.0, maxFaith, 600.0]) {
+      // 📖 at home gives half (playtest 2026-11-26): with full practice
+      // three quarters, never all of it at once.
+      expect(BuildingInteractionService.homeBibleFaith(max) * 1.5, lessThan(max * 0.8));
       for (final gain in [
         BuildingInteractionService.homePrayFaith(max),
-        BuildingInteractionService.homeBibleFaith(max),
         BuildingInteractionService.worshipFaith(max),
         BuildingInteractionService.fellowshipFaithFor(max, 0.9),
       ]) {

@@ -191,8 +191,9 @@ class BuildingInteractionService {
   /// 🤲 worship in a church: a quarter, like praying at home.
   static double worshipFaith(double maxFaith) => max(worshipSeconds * worshipFaithPerSecond, maxFaith / 4);
 
-  /// 📖 at home: a fifth.
-  static double homeBibleFaith(double maxFaith) => max(pastorHouseReadBibleFaith, maxFaith / 5);
+  /// 📖 at home: half (playtest 2026-11-26) – reading has to hold its own
+  /// against prayer, which also works in the invisible world.
+  static double homeBibleFaith(double maxFaith) => max(pastorHouseReadBibleFaith, maxFaith / 2);
 
   /// 🙏👥 with a Christian household: more the more stable they are – care
   /// (👂, 📜), church and discipleship make Christians who carry others

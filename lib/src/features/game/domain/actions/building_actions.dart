@@ -27,7 +27,7 @@ abstract final class BuildingActions {
     id: ActionId.readBible,
     type: 'readBible',
     emoji: '📖',
-    effect: '🙏+⅕',
+    effect: '🙏+½',
     baseSeconds: BuildingInteractionService.pastorHouseReadBibleSeconds,
     discipline: Discipline.bible,
   );
