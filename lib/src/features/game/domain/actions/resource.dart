@@ -21,6 +21,14 @@ abstract interface class ResourceWallet {
   double amountOf(Resource r);
 }
 
+/// What the pastor has built up so far – for the few progress locks of the
+/// big actions (`🔒⛪👥 12/20`, playtest 2026-11-26: a lock must say what is
+/// missing, in emojis the HUD already uses).
+abstract interface class PastorProgress {
+  /// Members of the pastor's church (⛪👥).
+  int get congregation;
+}
+
 /// What an action costs, e.g. `{faith: 5, health: 2}`.
 ///
 /// The same object is used for the affordability check *and* for the hint on

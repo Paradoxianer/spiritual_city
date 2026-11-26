@@ -126,13 +126,6 @@ class BuildingModel extends BaseInteractableEntity {
   /// Day on which the pastor last interceded for this house (🙏🏠).
   int intercededDay = 0;
 
-  /// Day on which the pastor last preached here (📢, once a day).
-  int preachedDay = 0;
-
-  /// Day on which the pastor last prayed with this household (🙏👥, once
-  /// a day – free faith, but not to be repeated at will).
-  int fellowshipDay = 0;
-
   BuildingModel({
     required this.buildingId,
     required this.type,
@@ -213,7 +206,8 @@ class BuildingModel extends BaseInteractableEntity {
     return (faith + avg * 0.5).clamp(-100.0, 100.0);
   }
 
-  /// Extra interactions for actions of greater effort (#168): every
+  /// Extra interactions for actions of greater effort (#168) – they fill
+  /// the ♥ relationship faster ([sessionBonus]): every
   /// successful action counts at least +1, a long or costly one more.
   static int effortBonus({required double faithCost, required int seconds}) =>
       (faithCost >= 50 || seconds >= 10) ? 2 : ((faithCost >= 25 || seconds >= 6) ? 1 : 0);

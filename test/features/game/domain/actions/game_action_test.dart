@@ -14,9 +14,11 @@ import 'package:spiritual_city/src/features/game/domain/models/player_progress.d
 import 'package:spiritual_city/src/features/game/domain/services/building_interaction_service.dart';
 import 'package:spiritual_city/src/features/menu/domain/models/difficulty.dart';
 
-class _Wallet implements ResourceWallet {
+class _Wallet implements ResourceWallet, PastorProgress {
   final Map<Resource, double> values;
-  _Wallet([Map<Resource, double>? v])
+  @override
+  final int congregation;
+  _Wallet([Map<Resource, double>? v, this.congregation = 100])
       : values = v ?? {for (final r in Resource.values) r: 1000};
   @override
   double amountOf(Resource r) => values[r] ?? 0;
@@ -75,10 +77,31 @@ void main() {
   });
 
   group('BuildingActions', () {
-    test('locked actions show how many visits are missing', () {
-      final b = BuildingModel(buildingId: 'h', type: BuildingType.house, interactionCount: 3);
-      final a = BuildingActions.houseVisit.availability(b, _Wallet(), Difficulty.normal);
-      expect(a.reason, '🔒3');
+    // Playtest 2026-11-26 („🔒59 – wo sehe ich mein Level 59?“): how often
+    // the pastor came never locks anything; a lock says what is missing.
+    test('no action is locked by the number of visits', () {
+      for (final type in BuildingType.values) {
+        final fresh = BuildingModel(buildingId: 'b', type: type);
+        for (final a in BuildingActions.forType(type)) {
+          final reason = a.availability(fresh, _Wallet(), Difficulty.normal).reason;
+          expect(reason == null || !RegExp(r'^🔒\d').hasMatch(reason), isTrue,
+              reason: '${type.name}/${a.type}: $reason');
+        }
+      }
+    });
+
+    test('a big event shows how much church is still missing', () {
+      final b = BuildingModel(buildingId: 's', type: BuildingType.stadium);
+      final a = BuildingActions.majorEvent.availability(b, _Wallet(null, 12), Difficulty.normal);
+      expect(a.reason, '🔒⛪👥 12/${BuildingActions.majorEventChurch}');
+      expect(BuildingActions.majorEvent.availability(b, _Wallet(null, 20), Difficulty.normal).isOk, isTrue);
+    });
+
+    test('a group in a house needs a Christian living there', () {
+      final b = BuildingModel(buildingId: 'h', type: BuildingType.house, residents: [_npc('x')]);
+      expect(BuildingActions.discipleshipGroup.availability(b, _Wallet(), Difficulty.normal).reason, '🔒✝️');
+      b.residents.first.isConverted = true;
+      expect(BuildingActions.discipleshipGroup.availability(b, _Wallet(), Difficulty.normal).isOk, isTrue);
     });
 
     // The registry is the single source for what the UI shows and checks;

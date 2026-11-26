@@ -1,6 +1,7 @@
 import 'dart:math';
 import '../models/building_model.dart';
 import '../models/cell_object.dart';
+import '../actions/practice.dart';
 
 /// Result returned by [BuildingInteractionService.performAction].
 class BuildingInteractionResult {
@@ -253,6 +254,10 @@ class BuildingInteractionService {
   // Base duration (seconds) for time-based residential actions.
   static const int houseVisitSeconds = 10;
 
+  /// ❤️ and 🍞 a coffee visit gives with [hearts] ♥ of relationship: 40 for
+  /// a house met for the first time, 100 from four ♥ on.
+  static double houseVisitRefill(int hearts) => min(100.0, 40.0 + 15.0 * hearts);
+
   BuildingInteractionResult _residentialAction(
     String actionType,
     BuildingModel building,
@@ -285,38 +290,36 @@ class BuildingInteractionService {
           success: false,
         );
 
-      // ── Hausbesuch: >5 Interaktionen, Zeit → Health/Hunger Refill, Spenden-Chance
+      // ── Hausbesuch (☕): open from the first visit (playtest 2026-11-26);
+      //    the better the pastor knows the house (♥), the more it refreshes
+      //    and the likelier a gift.
       case 'houseVisit':
-        if (building.interactionCount <= 5) {
-          return const BuildingInteractionResult(
-            reactionEmoji: '🚫☕',
-            success: false,
-          );
-        }
+        final hearts = Relationship.level(building.sessionBonus);
         building.interactionCount++;
-        final donationChance = (0.45 + _wealthModifier(building)).clamp(0.05, 0.9);
+        final refill = houseVisitRefill(hearts);
+        final donationChance =
+            (0.2 + 0.1 * hearts + _wealthModifier(building)).clamp(0.05, 0.9);
         final hasDonation = _rng.nextDouble() < donationChance;
         if (hasDonation) {
           building.interactionCount += 4;
           final materials = (building.interactionCount * 0.5).clamp(3.0, 20.0);
           building.applyInfluence(3.0);
           return BuildingInteractionResult(
-            playerHealthDelta: 100.0,
-            playerHungerDelta: 100.0,
+            playerHealthDelta: refill,
+            playerHungerDelta: refill,
             playerFaithDelta: 5.0,
             playerMaterialsDelta: materials,
             reactionEmoji: '☕🎁',
             actionDurationSeconds: houseVisitSeconds,
           );
         }
-        return const BuildingInteractionResult(
-          playerHealthDelta: 100.0,
-          playerHungerDelta: 100.0,
+        return BuildingInteractionResult(
+          playerHealthDelta: refill,
+          playerHungerDelta: refill,
           reactionEmoji: '☕❤️',
           actionDurationSeconds: houseVisitSeconds,
         );
 
-      // ── Jüngerschaftsgruppe: >20 Interaktionen + 1 Bekehrter, -50 Faith
       case 'fellowship':
         if (!isChristianHousehold(building)) {
           return const BuildingInteractionResult(reactionEmoji: '🚫✝️', success: false);
@@ -329,9 +332,10 @@ class BuildingInteractionService {
           actionDurationSeconds: fellowshipSeconds,
         );
 
+      // ── Jüngerschaftsgruppe: a Christian lives here, -50 Faith
       case 'discipleshipGroup':
         final hasChristianResident = building.residents.any((n) => n.isChristian);
-        if (building.interactionCount <= 20 || !hasChristianResident) {
+        if (!hasChristianResident) {
           return const BuildingInteractionResult(
             reactionEmoji: '🚫📖',
             success: false,
@@ -405,14 +409,8 @@ class BuildingInteractionService {
           reactionEmoji: '🕊️🙌🙏',
         );
 
-      // ── Um Spenden bitten: >2 Interaktionen, -10 Health/Hunger
+      // ── Um Spenden bitten: -10 Health/Hunger, likelier the better known
       case 'requestDonation':
-        if (building.interactionCount <= 2) {
-          return const BuildingInteractionResult(
-            reactionEmoji: '🚫🤲',
-            success: false,
-          );
-        }
         building.interactionCount++;
         final faithScore = building.faith + building.interactionCount;
         final successChance = (faithScore / 200.0 + 0.2 + _wealthModifier(building))
@@ -516,14 +514,8 @@ class BuildingInteractionService {
           reactionEmoji: '🏥💊❤️',
         );
 
-      // ── Seelsorge: >3 Interaktionen, Zeit → zufälliger NPC +15 Interaktionen
+      // ── Seelsorge: Zeit → the people here are strengthened
       case 'counseling':
-        if (building.interactionCount <= 3) {
-          return const BuildingInteractionResult(
-            reactionEmoji: '🚫👂',
-            success: false,
-          );
-        }
         building.interactionCount++;
         // Give all residents a boost (+15 faith ≈ proxy for +15 interactions)
         building.influenceResidents(8.0);
@@ -532,14 +524,8 @@ class BuildingInteractionService {
           actionDurationSeconds: counselingSeconds,
         );
 
-      // ── Gottesdienst (Kapelle): >10 Interaktionen, -30 Faith → alle NPCs +15 Faith
+      // ── Gottesdienst (Kapelle): -30 Faith → alle NPCs +15 Faith
       case 'chapelService':
-        if (building.interactionCount <= 10) {
-          return const BuildingInteractionResult(
-            reactionEmoji: '🚫⛪',
-            success: false,
-          );
-        }
         building.interactionCount++;
         building.influenceResidents(15.0);
         building.applyInfluence(10.0);
@@ -575,14 +561,8 @@ class BuildingInteractionService {
           reactionEmoji: '✉️🏫',
         );
 
-      // ── Gespräch mit Direktor: >5 Interaktionen, Zeit → +5 Interaktionen, unlock Vortrag
+      // ── Gespräch mit Direktor: Zeit → +5 Interaktionen, unlock Vortrag
       case 'talkDirector':
-        if (building.interactionCount <= 5) {
-          return const BuildingInteractionResult(
-            reactionEmoji: '🚫🏫',
-            success: false,
-          );
-        }
         building.interactionCount += 5;
         building.isLecturePrepared = true;
         building.applyInfluence(3.0);
@@ -591,9 +571,9 @@ class BuildingInteractionService {
           actionDurationSeconds: talkDirectorSeconds,
         );
 
-      // ── Werte-Vortrag: >15 Interaktionen + isLecturePrepared, Zeit → viele NPC-Interaktionen
+      // ── Werte-Vortrag: after the talk with the director, Zeit → NPCs
       case 'valueLecture':
-        if (building.interactionCount <= 15 || !building.isLecturePrepared) {
+        if (!building.isLecturePrepared) {
           return const BuildingInteractionResult(
             reactionEmoji: '🚫🎤',
             success: false,
@@ -607,14 +587,9 @@ class BuildingInteractionService {
           actionDurationSeconds: valueLectureSeconds,
         );
 
-      // ── Gebetskreis: >30 Interaktionen, -60 Faith → täglicher Faith-Boost, +0.5 Insight
+      // ── Gebetskreis: -60 Faith (church size checked by the action's
+      //    lock) → Faith-Boost, +0.5 Insight
       case 'prayerCircle':
-        if (building.interactionCount <= 30) {
-          return const BuildingInteractionResult(
-            reactionEmoji: '🚫⭕',
-            success: false,
-          );
-        }
         building.interactionCount++;
         building.applyInfluence(20.0);
         building.influenceResidents(10.0);
@@ -719,14 +694,8 @@ class BuildingInteractionService {
           actionDurationSeconds: mayorAudienceSeconds,
         );
 
-      // ── Für Politiker beten: >20 Interaktionen, -Max Faith, -50 Health/Hunger
+      // ── Für Politiker beten (1 Tim 2:1–2): -100 Faith, -50 Health/Hunger
       case 'prayForPoliticians':
-        if (building.interactionCount <= 20) {
-          return const BuildingInteractionResult(
-            reactionEmoji: '🚫🏛️',
-            success: false,
-          );
-        }
         building.interactionCount++;
         building.applyInfluence(50.0);
         return const BuildingInteractionResult(
@@ -770,14 +739,9 @@ class BuildingInteractionService {
     BuildingModel building,
   ) {
     switch (actionType) {
-      // ── Großveranstaltung: >50 Interaktionen, -100 Faith, -100 Materials
+      // ── Großveranstaltung: -100 Faith, -100 Materials (church size
+      //    checked by the action's lock)
       case 'majorEvent':
-        if (building.interactionCount <= 50) {
-          return const BuildingInteractionResult(
-            reactionEmoji: '🚫🏟️',
-            success: false,
-          );
-        }
         building.interactionCount++;
         building.applyInfluence(100.0);
         building.influenceResidents(20.0);

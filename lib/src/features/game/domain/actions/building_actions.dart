@@ -13,10 +13,31 @@ import 'resource.dart';
 /// service runs. A test keeps them in line with the deltas of
 /// [BuildingInteractionService].
 abstract final class BuildingActions {
-  /// Lock emoji while the building has been visited [n] times or fewer:
-  /// `🔒3` = three more visits needed.
-  static String? _needsVisits(BuildingModel b, int n) =>
-      b.interactionCount <= n ? '🔒${n + 1 - b.interactionCount}' : null;
+  // ── Locks (playtest 2026-11-26) ────────────────────────────────────────
+  // How often the pastor came never locks anything: actions are held back by
+  // what they cost and by the interaction points of a visit (●●○, like with
+  // people); ♥ relationship only makes them easier. The few locks left
+  // each say what is missing, in emojis the HUD already uses:
+  //   🔒✝️          a Christian has to live / work here (groups)
+  //   🔒⛪👥 12/20   your church is not big enough yet (big events)
+  //   🔒🏫 🔒⚰️      the step before first (talk to the director, funeral)
+
+  /// `🔒✝️` until someone here is a Christian – a group needs a believer
+  /// on the spot to carry it.
+  static String? _needsChristian(BuildingModel b) =>
+      b.residents.any((n) => n.isChristian) ? null : '🔒✝️';
+
+  /// `🔒⛪👥 have/n` until the pastor's church has [n] members.
+  static String? _needsChurch(ResourceWallet w, int n) {
+    final have = w is PastorProgress ? (w as PastorProgress).congregation : 0;
+    return have >= n ? null : '🔒⛪👥 $have/$n';
+  }
+
+  /// Church members a prayer circle in a school needs.
+  static const int prayerCircleChurch = 5;
+
+  /// Church members a stadium event needs – a crowd has to carry it.
+  static const int majorEventChurch = 20;
 
   static ResourceCost Function(Difficulty) _c(Map<Resource, double> m) =>
       (_) => ResourceCost(m);
@@ -78,14 +99,13 @@ abstract final class BuildingActions {
     cost: _c({Resource.faith: 10}),
     discipline: Discipline.prayer,
   );
-  static final houseVisit = GameAction<BuildingModel>(
+  static const houseVisit = GameAction<BuildingModel>(
     id: ActionId.houseVisit,
     type: 'houseVisit',
     emoji: '☕',
     effect: '❤️🍞',
     baseSeconds: BuildingInteractionService.houseVisitSeconds,
     discipline: Discipline.conversation,
-    lockedBy: (b) => _needsVisits(b, 5),
   );
   static final discipleshipGroup = GameAction<BuildingModel>(
     id: ActionId.discipleshipGroup,
@@ -94,9 +114,7 @@ abstract final class BuildingActions {
     effect: '📖+0.5',
     cost: _c({Resource.faith: 50}),
     discipline: Discipline.bible,
-    lockedBy: (b) =>
-        _needsVisits(b, 20) ??
-        (b.residents.any((n) => n.isChristian) ? null : '🔒✝️'),
+    lockedBy: (b, _) => _needsChristian(b),
   );
   /// 🙏👥 Praying with the brothers and sisters in a house where everyone
   /// is a Christian (Mt 18:20, Acts 2:46): faith like at home – a converted
@@ -106,10 +124,10 @@ abstract final class BuildingActions {
     id: ActionId.fellowship,
     type: 'fellowship',
     emoji: '🙏👥',
-    effect: '🙏⬆️',
+    effect: '🙏+',
     baseSeconds: BuildingInteractionService.fellowshipSeconds,
     discipline: Discipline.prayer,
-    lockedBy: (b) => BuildingInteractionService.isChristianHousehold(b) ? null : '🔒✝️',
+    lockedBy: (b, _) => BuildingInteractionService.isChristianHousehold(b) ? null : '🔒✝️',
   );
   static final blessHousehold = GameAction<BuildingModel>(
     id: ActionId.blessHousehold,
@@ -152,14 +170,13 @@ abstract final class BuildingActions {
     effect: '❤️🍞💯',
     cost: _c({Resource.materials: 15}),
   );
-  static final counseling = GameAction<BuildingModel>(
+  static const counseling = GameAction<BuildingModel>(
     id: ActionId.counseling,
     type: 'counseling',
     emoji: '👂',
     effect: '✝️👥',
     baseSeconds: BuildingInteractionService.counselingSeconds,
     discipline: Discipline.counsel,
-    lockedBy: (b) => _needsVisits(b, 3),
   );
   static final chapelService = GameAction<BuildingModel>(
     id: ActionId.chapelService,
@@ -168,7 +185,6 @@ abstract final class BuildingActions {
     effect: '✝️+15👥',
     cost: _c({Resource.faith: 30}),
     discipline: Discipline.worship,
-    lockedBy: (b) => _needsVisits(b, 10),
   );
 
   // ── School / university ─────────────────────────────────────────────────
@@ -180,14 +196,13 @@ abstract final class BuildingActions {
     effect: '✝️+2',
     cost: _c({Resource.materials: 5}),
   );
-  static final talkDirector = GameAction<BuildingModel>(
+  static const talkDirector = GameAction<BuildingModel>(
     id: ActionId.talkDirector,
     type: 'talkDirector',
     emoji: '🏫',
     effect: '✝️+5🎤',
     baseSeconds: BuildingInteractionService.talkDirectorSeconds,
     discipline: Discipline.conversation,
-    lockedBy: (b) => _needsVisits(b, 5),
   );
   static final valueLecture = GameAction<BuildingModel>(
     id: ActionId.valueLecture,
@@ -196,8 +211,7 @@ abstract final class BuildingActions {
     effect: '✝️👥',
     baseSeconds: BuildingInteractionService.valueLectureSeconds,
     discipline: Discipline.bible,
-    lockedBy: (b) =>
-        _needsVisits(b, 15) ?? (b.isLecturePrepared ? null : '🔒🏫'),
+    lockedBy: (b, _) => b.isLecturePrepared ? null : '🔒🏫',
   );
   static final prayerCircle = GameAction<BuildingModel>(
     id: ActionId.prayerCircle,
@@ -206,7 +220,7 @@ abstract final class BuildingActions {
     effect: '📖+0.5',
     cost: _c({Resource.faith: 60}),
     discipline: Discipline.prayer,
-    lockedBy: (b) => _needsVisits(b, 30),
+    lockedBy: (_, w) => _needsChurch(w, prayerCircleChurch),
   );
 
   // ── Cemetery ────────────────────────────────────────────────────────────
@@ -226,7 +240,7 @@ abstract final class BuildingActions {
     effect: '✝️!',
     cost: _c({Resource.health: 75, Resource.hunger: 75}),
     discipline: Discipline.counsel,
-    lockedBy: (b) => b.hasFuneralCompleted ? null : '🔒⚰️',
+    lockedBy: (b, _) => b.hasFuneralCompleted ? null : '🔒⚰️',
   );
 
   // ── Police / city hall / station / stadium ──────────────────────────────
@@ -235,7 +249,7 @@ abstract final class BuildingActions {
     id: ActionId.blessPolice,
     type: 'blessPolice',
     emoji: '👮',
-    effect: '🛡️',
+    effect: '🌍',
     cost: _c({Resource.faith: 15}),
     discipline: Discipline.prayer,
   );
@@ -255,7 +269,6 @@ abstract final class BuildingActions {
     cost: _c({Resource.faith: 100, Resource.health: 50, Resource.hunger: 50}),
     baseSeconds: BuildingInteractionService.prayForPoliticiansSeconds,
     discipline: Discipline.prayer,
-    lockedBy: (b) => _needsVisits(b, 20),
   );
   static final travel = GameAction<BuildingModel>(
     id: ActionId.travel,
@@ -271,7 +284,7 @@ abstract final class BuildingActions {
     effect: '📖+0.5',
     cost: _c({Resource.faith: 100, Resource.materials: 100}),
     discipline: Discipline.worship,
-    lockedBy: (b) => _needsVisits(b, 50),
+    lockedBy: (_, w) => _needsChurch(w, majorEventChurch),
   );
 
   // ── Commercial ──────────────────────────────────────────────────────────
@@ -305,7 +318,6 @@ abstract final class BuildingActions {
     emoji: '🤲',
     effect: '📦?',
     cost: _c({Resource.health: 10, Resource.hunger: 10}),
-    lockedBy: (b) => _needsVisits(b, 2),
   );
 
   // ── Generic ─────────────────────────────────────────────────────────────
@@ -357,7 +369,6 @@ abstract final class BuildingActions {
     cost: _c({Resource.health: 10, Resource.hunger: 8}),
     baseSeconds: 8,
     discipline: Discipline.counsel,
-    lockedBy: (b) => _needsVisits(b, 2),
   );
 
   /// 🍲 Bringing a meal to the shift.
@@ -365,7 +376,7 @@ abstract final class BuildingActions {
     id: ActionId.bringMeal,
     type: 'bringMeal',
     emoji: '🍲',
-    effect: '✝️😊',
+    effect: '✝️👥',
     cost: _c({Resource.materials: 10}),
     discipline: Discipline.service,
   );
@@ -399,7 +410,6 @@ abstract final class BuildingActions {
     effect: '✝️👥',
     cost: _c({Resource.materials: 3}),
     discipline: Discipline.conversation,
-    lockedBy: (b) => _needsVisits(b, 2),
   );
 
   /// 🖼️ Church history in the exhibition: a little insight.
@@ -475,7 +485,8 @@ abstract final class BuildingActions {
     discipline: Discipline.bible,
     needsSkill: Skill.preaching,
   );
-  static ResourceCost _preachCost(Difficulty _) => const ResourceCost({Resource.faith: 30});
+  static ResourceCost _preachCost(Difficulty _) =>
+      const ResourceCost({Resource.faith: 30, Resource.health: 10});
 
   /// Actions of a building type, in keyboard order (key 1 = first).
   static List<GameAction<BuildingModel>> forType(BuildingType type) =>
