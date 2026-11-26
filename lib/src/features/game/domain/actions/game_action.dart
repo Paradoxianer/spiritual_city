@@ -105,7 +105,8 @@ class AvailableNow extends Availability {
   const AvailableNow();
 }
 
-/// A precondition of the subject is not met yet (e.g. too few visits).
+/// A precondition is not met yet – the emoji says which (`🔒✝️`,
+/// `🔒⛪👥 12/20`).
 class Locked extends Availability {
   final String emoji;
   const Locked(this.emoji);
@@ -152,8 +153,9 @@ class GameAction<T> {
   /// Shown at all for this subject? (e.g. 📦 only when the NPC wants a gift)
   final bool Function(T subject)? _visible;
 
-  /// Returns a lock emoji while a precondition of the subject is unmet.
-  final String? Function(T subject)? _lockedBy;
+  /// Returns a lock emoji while a precondition is unmet – of the subject or
+  /// of the pastor's progress ([PastorProgress] behind the wallet).
+  final String? Function(T subject, ResourceWallet wallet)? _lockedBy;
 
   const GameAction({
     required this.id,
@@ -166,7 +168,7 @@ class GameAction<T> {
     this.discipline,
     this.needsSkill,
     bool Function(T subject)? visible,
-    String? Function(T subject)? lockedBy,
+    String? Function(T subject, ResourceWallet wallet)? lockedBy,
   })  : _cost = cost,
         _visible = visible,
         _lockedBy = lockedBy;
@@ -178,7 +180,7 @@ class GameAction<T> {
   bool isVisibleFor(T subject) => _visible?.call(subject) ?? true;
 
   Availability availability(T subject, ResourceWallet wallet, Difficulty d) {
-    final lock = _lockedBy?.call(subject);
+    final lock = _lockedBy?.call(subject, wallet);
     if (lock != null) return Locked(lock);
     final missing = cost(d).missing(wallet);
     if (missing != null) return CannotAfford(missing);

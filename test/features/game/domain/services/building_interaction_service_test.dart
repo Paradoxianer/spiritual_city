@@ -338,11 +338,13 @@ void main() {
         expect(b.interactionCount, greaterThanOrEqualTo(1));
       });
 
-      test('houseVisit: blocked when interactionCount ≤ 5', () {
+      test('houseVisit: open on the first visit, refreshes more with ♥', () {
         final b = house();
-        b.interactionCount = 5;
-        final result = BuildingInteractionService().performAction('houseVisit', b, 0.0);
-        expect(result.success, isFalse);
+        final first = BuildingInteractionService().performAction('houseVisit', b, 0.0);
+        expect(first.success, isTrue);
+        expect(first.playerHealthDelta, BuildingInteractionService.houseVisitRefill(0));
+        expect(BuildingInteractionService.houseVisitRefill(0), lessThan(BuildingInteractionService.houseVisitRefill(2)));
+        expect(BuildingInteractionService.houseVisitRefill(5), 100.0);
       });
 
       test('houseVisit: succeeds when interactionCount > 5, refills health/hunger', () {
@@ -390,11 +392,10 @@ void main() {
         expect(result.success, isFalse);
       });
 
-      test('discipleshipGroup: blocked when interactionCount ≤ 20', () {
+      test('discipleshipGroup: blocked without a Christian living there', () {
         final resident = NPCModel(id: 'n', name: 'X', type: NPCType.citizen,
-            homePosition: Vector2.zero(), faith: 0.0, isConverted: true);
+            homePosition: Vector2.zero(), faith: 0.0);
         final b = house(residents: [resident]);
-        b.interactionCount = 20;
         final result = BuildingInteractionService().performAction('discipleshipGroup', b, 0.0);
         expect(result.success, isFalse);
       });
@@ -450,11 +451,11 @@ void main() {
         expect(b.faith, greaterThan(0));
       });
 
-      test('requestDonation: blocked when interactionCount ≤ 2', () {
+      test('requestDonation: open on the first visit (playtest 2026-11-26)', () {
         final b = shop();
-        b.interactionCount = 2;
-        final result = BuildingInteractionService().performAction('requestDonation', b, 0.0);
-        expect(result.success, isFalse);
+        BuildingInteractionService().performAction('requestDonation', b, 0.0);
+        // May be refused by chance, but it was really asked – it counts.
+        expect(b.interactionCount, greaterThan(0));
       });
 
       test('requestDonation: success returns materials + faith, uses health/hunger', () {
@@ -535,10 +536,9 @@ void main() {
         expect(result.success, isTrue);
       });
 
-      test('counseling: blocked when interactionCount ≤ 3', () {
+      test('counseling: open on the first visit (playtest 2026-11-26)', () {
         final b = hospital();
-        b.interactionCount = 3;
-        expect(BuildingInteractionService().performAction('counseling', b, 0.0).success, isFalse);
+        expect(BuildingInteractionService().performAction('counseling', b, 0.0).success, isTrue);
       });
 
       test('counseling: succeeds when interactionCount > 3, has duration', () {
@@ -549,10 +549,9 @@ void main() {
         expect(result.actionDurationSeconds, greaterThan(0));
       });
 
-      test('chapelService: blocked when interactionCount ≤ 10', () {
+      test('chapelService: open on the first visit (playtest 2026-11-26)', () {
         final b = hospital();
-        b.interactionCount = 10;
-        expect(BuildingInteractionService().performAction('chapelService', b, 0.0).success, isFalse);
+        expect(BuildingInteractionService().performAction('chapelService', b, 0.0).success, isTrue);
       });
 
       test('chapelService: −30 faith, NPCs +15 faith when interactionCount > 10', () {
@@ -574,10 +573,9 @@ void main() {
         expect(b.interactionCount, 2);
       });
 
-      test('talkDirector: blocked when interactionCount ≤ 5', () {
+      test('talkDirector: open on the first visit (playtest 2026-11-26)', () {
         final b = school();
-        b.interactionCount = 5;
-        expect(BuildingInteractionService().performAction('talkDirector', b, 0.0).success, isFalse);
+        expect(BuildingInteractionService().performAction('talkDirector', b, 0.0).success, isTrue);
       });
 
       test('talkDirector: unlocks lecture when interactionCount > 5', () {
@@ -604,10 +602,9 @@ void main() {
         expect(result.actionDurationSeconds, greaterThan(0));
       });
 
-      test('prayerCircle: blocked when interactionCount ≤ 30', () {
+      test('prayerCircle: open on the first visit (playtest 2026-11-26)', () {
         final b = school();
-        b.interactionCount = 30;
-        expect(BuildingInteractionService().performAction('prayerCircle', b, 0.0).success, isFalse);
+        expect(BuildingInteractionService().performAction('prayerCircle', b, 0.0).success, isTrue);
       });
 
       test('prayerCircle: −60 faith, +0.5 insight when interactionCount > 30', () {
@@ -806,10 +803,9 @@ void main() {
         expect(result.actionDurationSeconds, greaterThan(0));
       });
 
-      test('prayForPoliticians: blocked when interactionCount ≤ 20', () {
+      test('prayForPoliticians: open on the first visit (playtest 2026-11-26)', () {
         final b = cityHall();
-        b.interactionCount = 20;
-        expect(BuildingInteractionService().performAction('prayForPoliticians', b, 0.0).success, isFalse);
+        expect(BuildingInteractionService().performAction('prayForPoliticians', b, 0.0).success, isTrue);
       });
 
       test('prayForPoliticians: −100 faith, −50 health, −50 hunger when interactionCount > 20', () {
@@ -840,10 +836,9 @@ void main() {
       BuildingModel stadium() =>
           BuildingModel(buildingId: 'st', type: BuildingType.stadium);
 
-      test('majorEvent: blocked when interactionCount ≤ 50', () {
+      test('majorEvent: open on the first visit (playtest 2026-11-26)', () {
         final b = stadium();
-        b.interactionCount = 50;
-        expect(BuildingInteractionService().performAction('majorEvent', b, 0.0).success, isFalse);
+        expect(BuildingInteractionService().performAction('majorEvent', b, 0.0).success, isTrue);
       });
 
       test('majorEvent: −100 faith, −100 materials, +0.5 insight when interactionCount > 50', () {

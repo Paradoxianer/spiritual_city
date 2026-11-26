@@ -7,6 +7,7 @@ import 'package:flutter/material.dart' show VoidCallback, Colors, TextPainter, T
 
 import '../../../../../core/audio/game_sound.dart';
 import '../../../../../core/utils/stable_hash.dart';
+import '../../../domain/actions/practice.dart';
 import '../../../domain/interior/interior_layout.dart';
 import '../../../domain/models/building_model.dart';
 import '../../../domain/models/npc_model.dart';
@@ -446,7 +447,8 @@ class _TutorialGuide extends Component {
   }
 }
 
-/// Visit points on the top wall (like the dialog header) and the house's
+/// ♥ relationship and interaction points on the top wall (like the dialog
+/// header with people) and the house's
 /// ✝️ holiness as a bar in the right wall (playtest 2026-10-18).
 class _WallStatus extends Component {
   final InteriorWorld room;
@@ -454,19 +456,39 @@ class _WallStatus extends Component {
 
   static final Paint _p = Paint();
 
+  // The pink ♥ of the people dialog (RelationshipHearts) – not ❤️, which is
+  // the pastor's health.
+  static final TextPainter _heart = _heartPainter(const Color(0xFFFF8A80));
+  static TextPainter _heartPainter(Color color) => TextPainter(
+        text: TextSpan(
+          text: '♥',
+          style: TextStyle(fontSize: 13, color: color, shadows: const [Shadow(blurRadius: 3, color: Color(0xFF000000))]),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
   @override
   void render(Canvas canvas) {
     const c = InteriorWorld.cell;
     final b = room.building;
     final l = room.layout;
 
-    // ●●○ – used points bright; all used → the visit ends.
+    // ●●○ interaction points of this visit – used ones bright; all used →
+    // the visit ends. To their left the ♥ relationship (like the dialog
+    // header with people): it never locks, it only makes things easier.
     final max = b.maxSessionInteractions.clamp(1, 12);
     final done = b.currentSessionInteractions.clamp(0, max);
     const r = 6.0, gap = 18.0;
-    final x0 = l.width * c / 2 - (max - 1) * gap / 2;
+    final hearts = Relationship.level(b.sessionBonus);
+    final width = (max - 1) * gap + (hearts > 0 ? hearts * 12.0 + 10 : 0);
+    var hx = l.width * c / 2 - width / 2;
+    for (var i = 0; i < hearts; i++) {
+      _heart.paint(canvas, Offset(hx - _heart.width / 2, c * 0.5 - _heart.height / 2));
+      hx += 12;
+    }
+    if (hearts > 0) hx += 10;
     for (var i = 0; i < max; i++) {
-      final o = Offset(x0 + i * gap, c * 0.5);
+      final o = Offset(hx + i * gap, c * 0.5);
       _p.color = const Color(0xAA000000);
       canvas.drawCircle(o, r + 1.5, _p);
       _p.color = i < done ? const Color(0xFFFFD54F) : const Color(0x55FFFFFF);

@@ -13,6 +13,19 @@ Dieses Dokument definiert die Aktionen, Kosten und Auswirkungen für die verschi
     - Ab **20 Interaktionen**: Erfolg ist garantiert (100%).
 - **Alle anderen Gebäude:** Sind **frei zugänglich** 🚪🔓. Der Pastor kann jederzeit eintreten und das Aktions-Menü öffnen.
 
+### Sperren, ♥ und Aktionspunkte (Playtest 2026-11-26)
+
+Tester fanden „🔒59“ im Stadion und hielten es für ein Level. Die Zahl hieß „noch 59 Besuche“. Sie war nirgends erklärt, und das Spiel lief auf „3× rein, beten, raus“ hinaus. Seitdem gilt:
+
+- **Wie oft der Pastor kam, sperrt nichts mehr.** Die Tabellen unten nennen noch Schwellen wie „>20 Interaktionen“; die gelten nicht mehr. Aktionen werden durch ihre **Kosten** gebremst (🙏 ❤️ 🍞 📦) und durch die **Aktionspunkte ●●○ eines Besuchs** (wie bei Menschen: sind sie verbraucht, endet der Besuch).
+- **♥ Beziehung** gibt es bei Häusern wie bei Menschen (`Relationship.level(sessionBonus)`). Nur echte Aktionen lassen sie wachsen. Sie **sperrt nie**, sie macht nur leichter: mehr Aktionspunkte, die Tür geht leichter auf, ☕ stärkt mehr (`houseVisitRefill`: 40 → 100), Spenden werden wahrscheinlicher.
+- **Wenige Sperren bleiben.** Jede sagt mit bekannten Emojis, was fehlt:
+  - `🔒✝️`: Ein Christ wohnt bzw. arbeitet hier. Gilt für Gruppen (📖👥) und für 🙏👥, wo alle Bewohner Christen sein müssen.
+  - `🔒⛪👥 12/20`: Die Gemeinde ist noch zu klein. ⭕ Gebetskreis braucht 5, 🏟️ Großevent 20.
+  - `🔒🏫` und `🔒⚰️`: Erst muss der Schritt davor passieren.
+- **Keine Tagesgrenzen** mehr für 🙏👥, 🙏🏠 und 📢. Predigen kostet dafür zusätzlich 10 ❤️.
+- Ein Test (`help_audit_test.dart`) prüft, dass jede Sperre und jedes Wirkungs-Emoji in der ❓ Hilfe erklärt ist.
+
 ### Gebäude-Statistiken (AoE & Power)
 | Kategorie | Radius (Zellen) | Power (Spirituell) | Beschreibung |
 | :--- | :--- | :--- | :--- |

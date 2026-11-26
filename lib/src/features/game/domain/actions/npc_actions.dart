@@ -93,7 +93,7 @@ abstract final class NpcActions {
       Resource.health: lifeTalkHealthCost,
     }),
     discipline: Discipline.counsel,
-    lockedBy: (npc) => npc.backstory.currentChallenge == null ? '🌱✨' : null,
+    lockedBy: (npc, _) => npc.backstory.currentChallenge == null ? '🌱✨' : null,
   );
 
   /// Chat-tab actions in fixed keyboard order: key 1 = [talk] … key 6 =

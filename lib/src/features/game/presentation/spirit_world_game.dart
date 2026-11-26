@@ -99,7 +99,7 @@ bool _shouldShowKeyHints() {
 
 class SpiritWorldGame extends FlameGame
     with HasKeyboardHandlerComponents, HasCollisionDetection, TapCallbacks
-    implements ResourceWallet {
+    implements ResourceWallet, PastorProgress {
   final _log = Logger('SpiritWorldGame');
 
   // ── Spiritual-world button dock constants (Issue #174) ────────────────────
@@ -530,6 +530,9 @@ class SpiritWorldGame extends FlameGame
 
   @override
   double amountOf(Resource r) => resources.amountOf(r);
+
+  @override
+  int get congregation => progress.church.members.length;
 
   void spendFaith(double amount) => resources.spendFaith(amount);
   void spendHealth(double amount) => resources.spendHealth(amount);

@@ -29,11 +29,6 @@ extension GameBuildingActions on SpiritWorldGame {
       }
     }
 
-    // 🙏👥 Prayer with a Christian household: once a day per household.
-    if (actionType == 'fellowship' && data.building.fellowshipDay == dayStats.day) {
-      return const BuildingInteractionResult(reactionEmoji: '🙏👥✅', success: false);
-    }
-
     // Learned abilities are handled here, not in the service (§3.9, M3).
     final special = _learnedAbility(actionType, data.building);
     if (special != null) return special;
@@ -44,9 +39,9 @@ extension GameBuildingActions on SpiritWorldGame {
       data.building,
       faith,
     );
+
     // Tried but it did not work out (e.g. 🙏 rejected): it still was a step
-    // of the visit – the same point on the wall as the counter that unlocks
-    // the next actions (playtest 2026-11-15: they did not match).
+    // of the visit – one interaction point on the wall.
     final tried = result.success || data.building.interactionCount > countBefore;
 
     // Faith that grows with the pastor (playtest 2026-11-13).
@@ -63,7 +58,6 @@ extension GameBuildingActions on SpiritWorldGame {
         _ => null,
       };
       if (scaled != null) result = result.withFaithDelta(scaled.roundToDouble());
-      if (actionType == 'fellowship') b.fellowshipDay = dayStats.day;
     }
 
     // Practice ("Übung", §3.4): the more often the pastor reads, prays and
@@ -151,9 +145,8 @@ extension GameBuildingActions on SpiritWorldGame {
         );
       }
     }
-    // Increment session interaction counter for buildings (mirrors NPC dialog
-    // behaviour).  The homebase has an unlimited limit so this counter never
-    // triggers an auto-leave there.
+    // Interaction points of this visit (like with people): all used, the
+    // pastor is shown out. Only real actions count – towards ♥ too.
     if (tried) data.building.currentSessionInteractions++;
     if (result.success) {
       if (action != null) {
@@ -335,9 +328,6 @@ extension GameBuildingActions on SpiritWorldGame {
   BuildingInteractionResult? _learnedAbility(String actionType, BuildingModel building) {
     switch (actionType) {
       case 'intercede':
-        if (building.intercededDay == dayStats.day) {
-          return const BuildingInteractionResult(reactionEmoji: '🙏🏠✅', success: false);
-        }
         spendFaith(BuildingActions.intercessionFaithCost);
         building.intercededDay = dayStats.day;
         building.applyInfluence(5.0);
@@ -358,18 +348,17 @@ extension GameBuildingActions on SpiritWorldGame {
         recordPractice(Discipline.prayer);
         return const BuildingInteractionResult(reactionEmoji: '➖🍞🙏', playerHungerDelta: -30);
       case 'preach':
-        if (building.preachedDay == dayStats.day) {
-          return const BuildingInteractionResult(reactionEmoji: '📢✅', success: false);
-        }
-        spendFaith(30);
-        building.preachedDay = dayStats.day;
+        // No daily limit (playtest 2026-11-26) – preaching costs 🙏 and ❤️.
+        final cost = BuildingActions.preach.cost(difficulty);
+        spendFaith(cost.of(Resource.faith));
+        spendHealth(cost.of(Resource.health));
         final reached = _preachAround(player.position);
         building.interactionCount += 3;
         recordPractice(Discipline.bible);
         building.currentSessionInteractions++;
         return BuildingInteractionResult(
           reactionEmoji: '📢👥 $reached',
-          playerFaithDelta: -30,
+          playerFaithDelta: -cost.of(Resource.faith),
         );
     }
     return null;

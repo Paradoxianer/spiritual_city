@@ -103,10 +103,17 @@ class _BuildingInteriorOverlayState extends State<BuildingInteriorOverlay> {
         children: [
           const Text('🚪', style: TextStyle(fontSize: 56)),
           const SizedBox(height: 8),
-          // Success chance, with the known-house bonus as 🤝.
-          Text(
-            '🎲 $chance %${building.interactionCount >= 3 ? '  🤝' : ''}',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 15),
+          // Success chance, and how well the house knows the pastor (♥,
+          // like with people – it raises the chance).
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '🎲 $chance %  ',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 15),
+              ),
+              RelationshipHearts(level: Relationship.level(building.sessionBonus)),
+            ],
           ),
           if (building.residents.isNotEmpty) ...[
             const SizedBox(height: 14),
